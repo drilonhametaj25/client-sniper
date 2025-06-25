@@ -19,9 +19,11 @@ STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 
 - **Framework**: Next.js
 - **Root Directory**: `apps/frontend-app`
-- **Build Command**: `cd apps/frontend-app && npm run build`
-- **Install Command**: `npm install && cd apps/frontend-app && npm install`
+- **Build Command**: `npm run build`
+- **Install Command**: `npm install`
 - **Output Directory**: `.next`
+
+⚠️ **Nota**: Il file `vercel.json` è configurato specificamente per monorepo Vercel. Non utilizza la proprietà `projects` (non supportata) ma configura direttamente il progetto frontend con `rootDirectory`.
 
 ### 3. Deploy:
 
@@ -34,3 +36,30 @@ STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 
 - Timeout massimo: 30 secondi per le API routes
 - Edge Runtime supportato per performance ottimali
+
+## Troubleshooting
+
+### Errore "should NOT have additional property 'projects'"
+
+Se ricevi questo errore, significa che stai usando una configurazione `vercel.json` non supportata. La proprietà `projects` non è valida. Usa invece:
+
+```json
+{
+  "version": 2,
+  "name": "clientsniper-frontend",
+  "framework": "nextjs",
+  "rootDirectory": "apps/frontend-app"
+}
+```
+
+### Deploy fallisce con errori di build
+
+1. Verifica che tutte le variabili d'ambiente siano configurate su Vercel
+2. Controlla che il `package.json` nel root abbia le dipendenze necessarie
+3. Verifica che il `turbo.json` sia configurato correttamente
+
+### Errori di Stripe Webhook
+
+1. Configura l'endpoint webhook su Stripe Dashboard: `https://your-domain.vercel.app/api/stripe/webhook`
+2. Assicurati che `STRIPE_WEBHOOK_SECRET` sia configurato correttamente
+3. Verifica che la signature del webhook sia validata correttamente

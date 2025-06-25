@@ -1,28 +1,21 @@
 {
   "version": 2,
-  "projects": [
-    {
-      "name": "clientsniper-frontend",
-      "source": "apps/frontend-app",
-      "framework": "nextjs",
-      "outputDirectory": ".next",
-      "buildCommand": "cd apps/frontend-app && npm run build",
-      "installCommand": "npm install && cd apps/frontend-app && npm install",
-      "rootDirectory": "apps/frontend-app"
-    }
-  ],
-  "build": {
-    "env": {
-      "NEXT_PUBLIC_SUPABASE_URL": "@next_public_supabase_url",
-      "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@next_public_supabase_anon_key",
-      "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
-      "STRIPE_SECRET_KEY": "@stripe_secret_key",
-      "STRIPE_PUBLISHABLE_KEY": "@stripe_publishable_key",
-      "STRIPE_WEBHOOK_SECRET": "@stripe_webhook_secret"
-    }
+  "name": "clientsniper-frontend",
+  "framework": "nextjs",
+  "rootDirectory": "apps/frontend-app",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "outputDirectory": ".next",
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": "@next_public_supabase_url",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@next_public_supabase_anon_key",
+    "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
+    "STRIPE_SECRET_KEY": "@stripe_secret_key",
+    "STRIPE_PUBLISHABLE_KEY": "@stripe_publishable_key",
+    "STRIPE_WEBHOOK_SECRET": "@stripe_webhook_secret"
   },
   "functions": {
-    "apps/frontend-app/app/api/*/route.ts": {
+    "app/api/*/route.ts": {
       "maxDuration": 30
     }
   }
