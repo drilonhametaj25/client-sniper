@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { getDaysUntilReset, formatResetDate } from '@/lib/auth'
 import { 
   Target, 
   CreditCard,
@@ -24,21 +25,25 @@ import {
   Settings,
   ChevronDown,
   Users,
-  Calendar
+  Calendar,
+  Eye
 } from 'lucide-react'
 
 interface Lead {
   id: string
   business_name: string
   website_url: string
-  phone: string
-  email: string
+  phone?: string
+  email?: string
+  address?: string
   city: string
   category: string
   score: number
-  needed_roles: string[]
-  issues: string[]
+  analysis?: any
   created_at: string
+  last_seen_at?: string
+  needed_roles?: string[] // Può essere null o undefined
+  issues?: string[] // Può essere null o undefined
 }
 
 interface Settings {
@@ -51,9 +56,17 @@ export default function ClientDashboard() {
   const { user, loading, refreshProfile } = useAuth()
   const router = useRouter()
   const [leads, setLeads] = useState<Lead[]>([])
-  const [filteredLeads, setFilteredLeads] = useState<Lead[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [settings, setSettings] = useState<Settings>({ free_limit: 2, starter_limit: 50, pro_limit: 200 })
+  
+  // Stato per paginazione
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalLeads, setTotalLeads] = useState(0)
+  const LEADS_PER_PAGE = 20
+
+  // Stato per API
+  const [userProfile, setUserProfile] = useState<{role: string, plan: string, credits_remaining: number} | null>(null)
   
   // Filtri
   const [filterCategory, setFilterCategory] = useState<string>('')
@@ -73,14 +86,32 @@ export default function ClientDashboard() {
   useEffect(() => {
     if (user) {
       loadSettings()
-      loadLeads()
+      console.log('� Caricando leads via API con paginazione')
+      loadLeadsFromAPI(1, true) // Metodo API con paginazione
+      loadUnlockedLeads() // Carica i lead sbloccati dal database
     }
   }, [user])
 
-  // Applica filtri quando cambiano
+  // Ricarica quando cambiano i filtri (con debounce) - solo se user è presente e stabile
   useEffect(() => {
-    applyFilters()
-  }, [leads, filterCategory, filterCity, filterRole, searchTerm])
+    if (!user) return
+    
+    const timeoutId = setTimeout(() => {
+      console.log('🔄 Ricaricando leads per filtri cambiati:', { filterCategory, filterCity, filterRole, searchTerm })
+      loadLeadsFromAPI(1, false) // Reset alla pagina 1, no cache per filtri
+    }, 300) // Debounce di 300ms
+    
+    return () => clearTimeout(timeoutId)
+  }, [filterCategory, filterCity, filterRole, searchTerm]) // Rimuovi user dalle dependencies
+
+  // Effetto per cambio pagina (usa cache se disponibile)
+  useEffect(() => {
+    if (!user) return
+    if (currentPage <= 1) return // Evita chiamate duplicate per pagina 1
+    
+    console.log('📄 Caricando pagina:', currentPage)
+    loadLeadsFromAPI(currentPage, true)
+  }, [currentPage]) // Rimuovi user dalle dependencies
 
   const loadSettings = async () => {
     try {
@@ -128,6 +159,165 @@ export default function ClientDashboard() {
     }
   }
 
+  // Stato per evitare chiamate multiple
+  const [isLoadingLeads, setIsLoadingLeads] = useState(false)
+
+  // Nuova funzione per caricare via API con paginazione e cache
+  const loadLeadsFromAPI = async (page = 1, useCache = false) => {
+    console.log('🚀 loadLeadsFromAPI chiamata con:', { page, useCache })
+    
+    // Evita chiamate multiple contemporanee
+    if (isLoadingLeads) {
+      console.log('⏸️ Chiamata API già in corso, saltata')
+      return
+    }
+
+    try {
+      setIsLoadingLeads(true)
+      setLoadingData(true)
+      
+      console.log('✅ Inizio processo di caricamento leads...')
+      
+      // ⚡ CACHE semplice per evitare richieste duplicate
+      const cacheKey = `leads-${page}-${filterCategory}-${filterCity}-${filterRole}-${searchTerm}`
+      if (useCache && localStorage.getItem(cacheKey)) {
+        try {
+          const cached = JSON.parse(localStorage.getItem(cacheKey)!)
+          if (Date.now() - cached.timestamp < 30000) { // Cache per 30 secondi
+            console.log('📦 Usando cache per:', cacheKey)
+            setLeads(cached.data.leads)
+            setUserProfile(cached.data.user_profile)
+            setTotalLeads(cached.data.pagination.total)
+            setTotalPages(cached.data.pagination.totalPages)
+            setCurrentPage(cached.data.pagination.page)
+            return
+          }
+        } catch (e) {
+          console.warn('Cache corrotta, rimuovo:', e)
+          localStorage.removeItem(cacheKey)
+        }
+      }
+      
+      console.log('🔐 Controllo sessione utente...')
+      const session = await supabase.auth.getSession()
+      if (!session.data.session) {
+        console.error('❌ Nessuna sessione attiva')
+        return
+      }
+      console.log('✅ Sessione trovata, access_token presente:', !!session.data.session.access_token)
+
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: LEADS_PER_PAGE.toString(),
+        ...(filterCategory && { category: filterCategory }),
+        ...(filterCity && { city: filterCity }),
+        ...(filterRole && { neededRoles: filterRole }),
+        ...(searchTerm && { search: searchTerm })
+      })
+
+      console.log(`🚀 Chiamando API leads: ${params.toString()}`)
+      console.log('🔗 URL completo:', `/api/leads?${params}`)
+      console.log('🎫 Token parziale:', session.data.session.access_token.substring(0, 20) + '...')
+      
+      const startTime = Date.now()
+      const response = await fetch(`/api/leads?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${session.data.session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        signal: AbortSignal.timeout(10000) // Timeout di 10 secondi
+      })
+      const requestTime = Date.now() - startTime
+      
+      console.log('📡 Risposta ricevuta:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries()),
+        time: requestTime + 'ms'
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error(`❌ Errore HTTP ${response.status}:`, errorText)
+        
+        if (response.status === 401) {
+          console.log('🔑 Token scaduto, necessario re-login')
+          // Qui potresti reindirizzare al login
+        }
+        return
+      }
+
+      const result = await response.json()
+      
+      if (result.success) {
+        console.log(`✅ Lead caricati: ${result.data.leads.length} items in ${requestTime}ms`)
+        
+        setLeads(result.data.leads)
+        setUserProfile(result.data.user_profile)
+        setTotalLeads(result.data.pagination.total)
+        setTotalPages(result.data.pagination.totalPages)
+        setCurrentPage(result.data.pagination.page)
+        
+        // I lead sono già filtrati dall'API, non serve più setFilteredLeads
+        
+        // Cache dei risultati (solo se validi)
+        if (result.data.leads.length >= 0) {
+          localStorage.setItem(cacheKey, JSON.stringify({
+            data: result.data,
+            timestamp: Date.now()
+          }))
+        }
+        
+        console.log(`⚡ Performance: ${requestTime}ms total, ${result.data.performance?.query_time_ms || 'N/A'}ms DB query`)
+      } else {
+        console.error('❌ Errore API:', result.error)
+      }
+
+    } catch (error) {
+      console.error('💥 Errore caricamento leads da API:', error)
+      
+      if (error instanceof Error) {
+        if (error.name === 'TimeoutError') {
+          console.error('⏰ Timeout della richiesta API')
+        } else if (error.name === 'AbortError') {
+          console.error('🛑 Richiesta API interrotta')
+        }
+      }
+    } finally {
+      setIsLoadingLeads(false)
+      setLoadingData(false)
+    }
+  }
+
+  // Carica i lead sbloccati dall'utente dal database
+  const loadUnlockedLeads = async () => {
+    if (!user) return
+
+    try {
+      const { data, error } = await supabase.rpc('get_user_unlocked_leads', {
+        p_user_id: user.id
+      })
+
+      if (error) {
+        console.error('Errore caricamento lead sbloccati:', error)
+        return
+      }
+
+      // Controll che data sia definito e sia un array
+      if (data && Array.isArray(data)) {
+        const unlockedSet = new Set(data.map((item: any) => String(item.lead_id)))
+        setUnlockedLeads(unlockedSet)
+      }
+    } catch (error) {
+      console.error('Errore caricamento lead sbloccati:', error)
+    }
+  }
+
+  // Ora i filtri sono gestiti completamente lato API, non serve più il metodo applyFilters lato client
+
+  // Filtri gestiti lato API, non più necessario (COMMENTATO per debug)
+  /*
   const applyFilters = () => {
     let filtered = [...leads]
 
@@ -161,6 +351,7 @@ export default function ClientDashboard() {
 
     setFilteredLeads(filtered)
   }
+  */
 
   const getPlanLimit = () => {
     switch (user?.plan) {
@@ -216,6 +407,8 @@ export default function ClientDashboard() {
 
   // Funzione per sbloccare i dettagli di un lead
   const unlockLead = async (leadId: string) => {
+    if (!user) return
+    
     const remainingCredits = getAvailableCredits()
     if (remainingCredits <= 0) {
       alert('Non hai più crediti disponibili. Aggiorna il tuo piano per continuare.')
@@ -225,12 +418,31 @@ export default function ClientDashboard() {
 
     const success = await consumeCredit('lead_unlock', leadId)
     if (success) {
-      setUnlockedLeads(prev => {
-        const newSet = new Set(prev)
-        newSet.add(leadId)
-        return newSet
-      })
-      refreshProfile() // Aggiorna i crediti mostrati
+      // Salva nel database che questo lead è stato sbloccato
+      try {
+        const { error } = await supabase.rpc('unlock_lead_for_user', {
+          p_user_id: user.id,
+          p_lead_id: leadId
+        })
+
+        if (error) {
+          console.error('Errore salvataggio lead sbloccato:', error)
+          alert('Errore nel salvare il lead sbloccato. Riprova.')
+          return
+        }
+
+        // Aggiorna lo stato locale
+        setUnlockedLeads(prev => {
+          const newSet = new Set(prev)
+          newSet.add(leadId)
+          return newSet
+        })
+        
+        refreshProfile() // Aggiorna i crediti mostrati
+      } catch (error) {
+        console.error('Errore generale:', error)
+        alert('Errore nel sbloccare il lead. Riprova.')
+      }
     } else {
       alert('Errore nel consumo del credito. Riprova.')
     }
@@ -238,7 +450,7 @@ export default function ClientDashboard() {
 
   const exportToCSV = async () => {
     // Solo i lead sbloccati possono essere esportati
-    const exportableLeads = filteredLeads.filter(lead => unlockedLeads.has(lead.id))
+    const exportableLeads = leads.filter(lead => unlockedLeads.has(lead.id))
     
     if (exportableLeads.length === 0) {
       alert('Nessun lead sbloccato da esportare. Sblocca prima i dettagli dei lead che vuoi esportare.')
@@ -256,8 +468,8 @@ export default function ClientDashboard() {
         lead.city,
         lead.category,
         lead.score,
-        lead.issues.join('; '),
-        lead.needed_roles.join('; ')
+        (lead.issues && Array.isArray(lead.issues)) ? lead.issues.join('; ') : '',
+        (lead.needed_roles && Array.isArray(lead.needed_roles)) ? lead.needed_roles.join('; ') : ''
       ].map(field => `"${field}"`).join(','))
     ].join('\n')
 
@@ -309,6 +521,8 @@ export default function ClientDashboard() {
     return badges[user?.plan as keyof typeof badges] || badges.free
   }
 
+  // Opzioni per i filtri - per ora uso i dati della pagina corrente
+  // TODO: In futuro potremmo creare un endpoint separato per ottenere tutte le categorie/città
   const categories = Array.from(new Set(leads.map(lead => lead.category)))
   const cities = Array.from(new Set(leads.map(lead => lead.city)))
   const roles = ['designer', 'developer', 'seo', 'copywriter', 'photographer', 'adv', 'social', 'gdpr']
@@ -348,7 +562,7 @@ export default function ClientDashboard() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-12">
             {/* Piano Attuale */}
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50">
               <div className="flex items-center justify-between">
@@ -389,13 +603,34 @@ export default function ClientDashboard() {
               )}
             </div>
 
-            {/* Lead Totali */}
+            {/* Reset Crediti */}
+            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Prossimo Reset</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {user?.credits_reset_date ? getDaysUntilReset(user) : 'N/A'}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {user?.credits_reset_date ? 'giorni' : 'Non disponibile'}
+                  </p>
+                </div>
+                <RefreshCw className="h-8 w-8 text-green-500" />
+              </div>
+              {user?.credits_reset_date && (
+                <p className="text-xs text-gray-500 mt-2">
+                  {formatResetDate(user)}
+                </p>
+              )}
+            </div>
+
+            {/* Lead Disponibili */}
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Lead Disponibili</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{filteredLeads.length}</p>
-                  <p className="text-xs text-gray-500">su {currentLimit} max</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalLeads}</p>
+                  <p className="text-xs text-gray-500">totali nel database</p>
                 </div>
                 <Users className="h-8 w-8 text-green-500" />
               </div>
@@ -452,7 +687,7 @@ export default function ClientDashboard() {
                   placeholder="Cerca aziende..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 />
               </div>
 
@@ -468,7 +703,7 @@ export default function ClientDashboard() {
                 </button>
 
                 <button
-                  onClick={loadLeads}
+                  onClick={() => loadLeadsFromAPI(currentPage, false)}
                   className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors"
                 >
                   <RefreshCw className="h-4 w-4" />
@@ -499,7 +734,7 @@ export default function ClientDashboard() {
                     <select
                       value={filterCategory}
                       onChange={(e) => setFilterCategory(e.target.value)}
-                      className="w-full p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      className="w-full p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:text-white"
                     >
                       <option value="">Tutte le categorie</option>
                       {categories.map(category => (
@@ -515,7 +750,7 @@ export default function ClientDashboard() {
                       placeholder="Filtra per città..."
                       value={filterCity}
                       onChange={(e) => setFilterCity(e.target.value)}
-                      className="w-full p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      className="w-full p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                     />
                   </div>
 
@@ -524,7 +759,7 @@ export default function ClientDashboard() {
                     <select
                       value={filterRole}
                       onChange={(e) => setFilterRole(e.target.value)}
-                      className="w-full p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      className="w-full p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:text-white"
                     >
                       <option value="">Tutti i ruoli</option>
                       {roles.map(role => (
@@ -539,14 +774,14 @@ export default function ClientDashboard() {
 
           {/* Lista Lead */}
           <div className="space-y-4">
-            {filteredLeads.length === 0 ? (
+            {leads.length === 0 ? (
               <div className="text-center py-12">
                 <Target className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Nessun lead trovato</h3>
                 <p className="text-gray-600 dark:text-gray-400">Prova a modificare i filtri o aggiorna i dati</p>
               </div>
             ) : (
-              filteredLeads.map((lead, index) => {
+              leads.map((lead, index) => {
                 const isUnlocked = unlockedLeads.has(lead.id)
                 
                 return (
@@ -628,17 +863,25 @@ export default function ClientDashboard() {
                         {/* Ruoli Necessari - Solo se sbloccato */}
                         {isUnlocked ? (
                           <div className="flex flex-wrap gap-2">
-                            {lead.needed_roles.slice(0, 3).map(role => (
-                              <span 
-                                key={role}
-                                className={`px-2 py-1 text-xs font-medium rounded-lg ${getRoleColor(role)}`}
-                              >
-                                {role}
-                              </span>
-                            ))}
-                            {lead.needed_roles.length > 3 && (
-                              <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 rounded-lg">
-                                +{lead.needed_roles.length - 3} altri
+                            {(lead.needed_roles && Array.isArray(lead.needed_roles) && lead.needed_roles.length > 0) ? (
+                              <>
+                                {lead.needed_roles.slice(0, 3).map(role => (
+                                  <span 
+                                    key={role}
+                                    className={`px-2 py-1 text-xs font-medium rounded-lg ${getRoleColor(role)}`}
+                                  >
+                                    {role}
+                                  </span>
+                                ))}
+                                {lead.needed_roles.length > 3 && (
+                                  <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 rounded-lg">
+                                    +{lead.needed_roles.length - 3} altri
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <span className="px-2 py-1 text-xs bg-gray-100 text-gray-500 rounded-lg">
+                                Nessun ruolo specificato
                               </span>
                             )}
                           </div>
@@ -686,6 +929,20 @@ export default function ClientDashboard() {
                         ) : (
                           <div className="flex space-x-2">
                             <button
+                              onClick={() => router.push(`/lead/${lead.id}`)}
+                              className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-xl transition-colors relative disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={remainingCredits <= 0}
+                              title={remainingCredits <= 0 ? "Non hai crediti sufficienti" : "Costa 1 credito per vedere l'analisi completa"}
+                            >
+                              <Eye className="h-4 w-4" />
+                              {remainingCredits > 0 && (
+                                <span className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                                  1
+                                </span>
+                              )}
+                            </button>
+                            
+                            <button
                               onClick={async () => {
                                 const remainingCredits = getAvailableCredits()
                                 if (remainingCredits <= 0) {
@@ -722,6 +979,54 @@ export default function ClientDashboard() {
               })
             )}
           </div>
+
+          {/* Controlli Paginazione */}
+          {totalPages > 1 && (
+            <div className="mt-8 flex items-center justify-between">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Showing {((currentPage - 1) * LEADS_PER_PAGE) + 1} to {Math.min(currentPage * LEADS_PER_PAGE, totalLeads)} of {totalLeads} leads
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Previous
+                </button>
+                
+                <div className="flex items-center space-x-1">
+                  {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                    const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i
+                    if (pageNum > totalPages) return null
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                          pageNum === currentPage
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    )
+                  })}
+                </div>
+                
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { debugUserSession } from '@/lib/auth'
 import { 
   Target, 
   Users, 
@@ -258,6 +259,29 @@ export default function AdminDashboard() {
                 className="bg-white/20 hover:bg-white/30 rounded-lg p-2 transition-colors"
               >
                 <Target className="h-6 w-6" />
+              </button>
+            </div>
+          </div>
+
+          {/* DEBUG - Rimuovi in produzione */}
+          <div className="bg-gradient-to-r from-red-500 to-orange-600 rounded-lg shadow p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <AlertTriangle className="h-8 w-8 text-white" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-red-100">Debug</p>
+                  <p className="text-lg font-bold text-white">Sessione</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  console.log('🔍 DEBUG SESSIONE ADMIN:')
+                  console.log('User attuale:', user)
+                  debugUserSession()
+                }}
+                className="bg-white/20 hover:bg-white/30 rounded-lg p-2 transition-colors"
+              >
+                <Shield className="h-6 w-6" />
               </button>
             </div>
           </div>

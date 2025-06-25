@@ -35,37 +35,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Funzione per caricare il profilo utente
+  // Funzione per caricare il profilo utente (ottimizzata)
   const loadUserProfile = async (session: Session | null) => {
     try {
       if (session?.user) {
         console.log('🔄 Caricamento profilo per utente:', session.user.id)
         
-        // Timeout aumentato a 10 secondi
-        const profilePromise = getUserProfile(session.user.id)
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Profile loading timeout')), 10000)
-        )
+        // ⚡ OTTIMIZZAZIONE: Passa l'utente della sessione per evitare chiamate duplicate
+        const profile = await getUserProfileWithRetry(session.user.id, session.user, 3)
         
-        const profile = await Promise.race([profilePromise, timeoutPromise]) as any
-        console.log('✅ Profilo caricato:', profile?.plan)
-        setUser(profile)
+        if (profile) {
+          console.log('✅ Profilo caricato:', profile?.plan, profile?.role)
+          setUser(profile)
+        } else {
+          console.error('❌ Impossibile caricare profilo dopo retry')
+          // Mantieni sessione attiva ma senza dati specifici
+          setUser({
+            ...session.user,
+            role: undefined,
+            plan: undefined,
+            credits_remaining: undefined,
+          } as AuthUser)
+        }
       } else {
         console.log('❌ Nessuna sessione')
         setUser(null)
       }
     } catch (error) {
-      console.error('Errore caricamento profilo:', error)
+      console.error('Errore critico caricamento profilo:', error)
+      
+      // EVITA FALLBACK AUTOMATICO AL PIANO FREE
       if (session?.user) {
-        console.log('🔄 Usando profilo fallback')
-        // Fallback semplificato: usa dati della sessione
-        const fallbackUser = {
+        console.log('⚠️ Mantengo sessione senza dati di piano')
+        setUser({
           ...session.user,
-          role: 'client' as const,
-          plan: 'free' as const,
-          credits_remaining: 2
-        }
-        setUser(fallbackUser)
+          role: undefined,
+          plan: undefined, 
+          credits_remaining: undefined,
+        } as AuthUser)
       } else {
         setUser(null)
       }
@@ -73,6 +80,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false)
       console.log('✅ Loading completato')
     }
+  }
+
+  // Funzione con retry per il profilo (ottimizzata)
+  const getUserProfileWithRetry = async (userId: string, sessionUser: any, retries: number): Promise<AuthUser | null> => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        console.log(`🔄 Tentativo ${i + 1}/${retries} caricamento profilo...`)
+        
+        // ⚡ OTTIMIZZAZIONE: Passa l'utente della sessione per evitare chiamate duplicate
+        const profile = await getUserProfile(userId, sessionUser)
+        
+        if (profile?.plan && profile?.role) {
+          console.log(`✅ Profilo completo trovato al tentativo ${i + 1}`)
+          return profile
+        }
+        
+        // Se profilo incompleto, riprova
+        if (i < retries - 1) {
+          console.log(`⏳ Profilo incompleto, retry in ${(i + 1)}s...`)
+          await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)))
+        }
+      } catch (error) {
+        console.error(`❌ Tentativo ${i + 1} fallito:`, error)
+        if (i < retries - 1) {
+          console.log(`⏳ Retry in ${(i + 1)}s...`)
+          await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)))
+        }
+      }
+    }
+    
+    console.error('❌ Tutti i retry falliti per getUserProfile')
+    return null
   }
 
   // Funzione per aggiornare il profilo

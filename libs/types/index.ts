@@ -8,6 +8,11 @@ export interface User {
   email: string;
   plan: 'free' | 'starter' | 'pro';
   credits_remaining: number;
+  billing_cycle_start?: string;
+  credits_reset_date?: string;
+  total_credits_used_this_cycle?: number;
+  stripe_subscription_id?: string;
+  stripe_current_period_end?: string;
   created_at: string;
 }
 
