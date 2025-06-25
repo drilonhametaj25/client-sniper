@@ -2,7 +2,6 @@
   "version": 2,
   "name": "clientsniper-frontend",
   "framework": "nextjs",
-  "rootDirectory": "apps/frontend-app",
   "buildCommand": "npm run build",
   "installCommand": "npm install",
   "outputDirectory": ".next",
