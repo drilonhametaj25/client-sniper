@@ -11,9 +11,16 @@ NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key  
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 STRIPE_SECRET_KEY=your_stripe_secret_key
-STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
+STRIPE_PUBLIC_KEY=your_stripe_public_key
 STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+STRIPE_STARTER_PRICE_ID=your_stripe_starter_price_id
+STRIPE_PRO_PRICE_ID=your_stripe_pro_price_id
 ```
+
+⚠️ **IMPORTANTE**: 
+- Usa `SUPABASE_SERVICE_ROLE_KEY` (NON `NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY`)
+- Usa `STRIPE_PUBLIC_KEY` (NON `STRIPE_PUBLISHABLE_KEY`)
+- Configura TUTTE le variabili nel dashboard Vercel prima del deploy
 
 ### 2. Impostazioni progetto Vercel:
 
