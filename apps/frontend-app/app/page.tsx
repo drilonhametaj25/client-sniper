@@ -287,13 +287,13 @@ export default function HomePage() {
                   </div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-4">Starter</h3>
                   <div className="mb-6">
-                    <span className="text-4xl font-bold text-gray-900">€29</span>
+                    <span className="text-4xl font-bold text-gray-900">€19</span>
                     <span className="text-gray-600 ml-2">/mese</span>
                   </div>
                   <ul className="space-y-4 mb-8 text-left">
                     <li className="flex items-center">
                       <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                      <span className="text-gray-700">50 lead qualificati al mese</span>
+                      <span className="text-gray-700">25 lead qualificati al mese</span>
                     </li>
                     <li className="flex items-center">
                       <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
@@ -327,13 +327,13 @@ export default function HomePage() {
                   </div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-4">Pro</h3>
                   <div className="mb-6">
-                    <span className="text-4xl font-bold text-gray-900">€79</span>
+                    <span className="text-4xl font-bold text-gray-900">€49</span>
                     <span className="text-gray-600 ml-2">/mese</span>
                   </div>
                   <ul className="space-y-4 mb-8 text-left">
                     <li className="flex items-center">
                       <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                      <span className="text-gray-700">200 lead qualificati al mese</span>
+                      <span className="text-gray-700">100 lead qualificati al mese</span>
                     </li>
                     <li className="flex items-center">
                       <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
@@ -397,7 +397,7 @@ export default function HomePage() {
 
             {/* Trust indicators */}
             <div className="mt-16 pt-12 border-t border-white/20">
-              <p className="text-blue-100 mb-8">Unisciti a centinaia di agenzie che hanno già trovato clienti con ClientSniper</p>
+              <p className="text-blue-100 mb-8">Unisciti a centinaia di agenzie e freelancer che hanno già trovato clienti con ClientSniper</p>
               <div className="flex flex-wrap justify-center items-center gap-8 opacity-60">
                 <div className="flex items-center space-x-2">
                   <Shield className="w-5 h-5 text-white" />

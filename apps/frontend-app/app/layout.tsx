@@ -8,6 +8,7 @@ import { Metadata, Viewport } from 'next'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ToastProvider } from '@/components/ToastProvider'
 import Navbar from '@/components/Navbar'
+import CookieConsent from '@/components/CookieConsent'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -45,6 +46,7 @@ export default function RootLayout({
               <main className="min-h-screen">
                 {children}
               </main>
+              <CookieConsent />
             </div>
           </AuthProvider>
         </ToastProvider>
