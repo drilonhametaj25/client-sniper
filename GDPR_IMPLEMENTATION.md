@@ -133,7 +133,7 @@ psql -d your_database -f database/contact-messages.sql
 ### Test API
 ```bash
 # Test registrazione consenso
-curl -X POST http://localhost:3000/api/gdpr/consent \
+curl -X POST https://client-sniper-frontend-app.vercel.app/api/gdpr/consent \
   -H "Content-Type: application/json" \
   -d '{
     "consents": {
@@ -147,7 +147,7 @@ curl -X POST http://localhost:3000/api/gdpr/consent \
   }'
 
 # Test export dati
-curl -X GET http://localhost:3000/api/gdpr/data-export \
+curl -X GET https://clientsniper.vercel.app/api/gdpr/data-export \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 

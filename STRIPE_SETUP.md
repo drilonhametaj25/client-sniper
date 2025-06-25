@@ -48,7 +48,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
 # App
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=http://https://client-sniper-frontend-app.vercel.app
 
 # Stripe
 STRIPE_SECRET_KEY=sk_test_your_secret_key
@@ -90,7 +90,7 @@ Per testare i webhook in sviluppo:
 
 1. Installa Stripe CLI: `brew install stripe/stripe-cli/stripe`
 2. Login: `stripe login`
-3. Forward webhook: `stripe listen --forward-to localhost:3000/api/stripe/webhook`
+3. Forward webhook: `stripe listen --forward-to https://client-sniper-frontend-app.vercel.app/api/stripe/webhook`
 4. Usa il webhook secret mostrato nel comando
 
 ## Carta di test Stripe

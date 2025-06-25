@@ -82,8 +82,18 @@ export default function LeadDetailPage() {
     try {
       setLoading(true)
       
-      // Prima verifica se l'utente ha crediti sufficienti
-      if (!user || (user.credits_remaining || 0) <= 0) {
+      // Prima verifica se l'utente ha già sbloccato questo lead
+      const { data: unlockedLeads, error: unlockedError } = await supabase
+        .rpc('get_user_unlocked_leads', { p_user_id: user?.id })
+
+      if (unlockedError) {
+        console.error('Errore verifica lead sbloccati:', unlockedError)
+      }
+
+      const isAlreadyUnlocked = unlockedLeads?.some((ul: any) => ul.lead_id === leadId)
+      
+      // Se non è già sbloccato, verifica che l'utente abbia crediti sufficienti
+      if (!isAlreadyUnlocked && (!user || (user.credits_remaining || 0) <= 0)) {
         setError('Crediti insufficienti per visualizzare i dettagli del lead')
         return
       }
@@ -101,7 +111,7 @@ export default function LeadDetailPage() {
       }
 
       // Verifica se l'utente può vedere questo lead
-      if (user.role !== 'admin' && leadData.assigned_to && leadData.assigned_to !== user.id) {
+      if (user?.role !== 'admin' && leadData.assigned_to && leadData.assigned_to !== user?.id) {
         setError('Non hai i permessi per visualizzare questo lead')
         return
       }
@@ -113,9 +123,11 @@ export default function LeadDetailPage() {
         setAnalysis(leadData.analysis)
       }
 
-      // Consuma 1 credito se non già consumato
-      if (!creditConsumed) {
+      // Consuma 1 credito solo se non già sbloccato
+      if (!isAlreadyUnlocked && !creditConsumed) {
         await consumeCredit()
+      } else if (isAlreadyUnlocked) {
+        setCreditConsumed(true) // Marca come già consumato per evitare doppi consumi
       }
 
     } catch (error) {
@@ -142,6 +154,17 @@ export default function LeadDetailPage() {
         .eq('id', user.id)
 
       if (error) throw error
+
+      // Registra il lead come sbloccato
+      const { error: unlockError } = await supabase
+        .rpc('unlock_lead_for_user', { 
+          p_user_id: user.id, 
+          p_lead_id: leadId 
+        })
+
+      if (unlockError) {
+        console.error('Errore registrazione lead sbloccato:', unlockError)
+      }
 
       // Log dell'utilizzo
       await supabase

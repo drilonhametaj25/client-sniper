@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
     // Invia email di test
     const success = await emailService.sendConfirmationEmail(
       testEmail,
-      `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/confirm?token=test123`
+      `${process.env.NEXT_PUBLIC_SITE_URL || 'https://client-sniper-frontend-app.vercel.app'}/confirm?token=test123`
     )
 
     return NextResponse.json({

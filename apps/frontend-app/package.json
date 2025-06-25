@@ -9,7 +9,9 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "clean": "rm -rf .next dist"
+    "clean": "rm -rf .next dist",
+    "test:gdpr": "node test-gdpr.js",
+    "test:unlock": "node test-unlock-system.js"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.0",

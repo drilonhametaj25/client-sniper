@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       console.log('👤 Nuovo utente registrato:', user.email)
       
       // Genera URL di conferma personalizzato
-      const confirmationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/confirm?token=${user.confirmation_token}&type=signup&redirect_to=${encodeURIComponent('/dashboard')}`
+      const confirmationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://client-sniper-frontend-app.vercel.app'}/auth/confirm?token=${user.confirmation_token}&type=signup&redirect_to=${encodeURIComponent('/dashboard')}`
       
       // Invia email di conferma personalizzata
       const emailSent = await emailService.sendConfirmationEmail(
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     if (event.type === 'UPDATE' && user && user.email && user.email_confirmed_at && !event.old_record?.email_confirmed_at) {
       console.log('✅ Utente ha confermato l\'email:', user.email)
       
-      const dashboardUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard`
+      const dashboardUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://client-sniper-frontend-app.vercel.app'}/dashboard`
       
       // Invia email di benvenuto
       const welcomeSent = await emailService.sendWelcomeEmail(

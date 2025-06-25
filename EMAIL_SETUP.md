@@ -155,7 +155,7 @@ Aggiorna i metodi:
 
 ```bash
 # Test email di conferma
-curl "http://localhost:3000/api/email?email=test@example.com"
+curl "https://client-sniper-frontend-app.vercel.app/api/email?email=test@example.com"
 ```
 
 ### Test Template
