@@ -23,10 +23,21 @@ export interface AuthState {
   loading: boolean
 }
 
-// Funzione per ottenere il profilo utente completo (ottimizzata)
+// ⚡ CACHE INTELLIGENTE per profili utente
+let profileCache: { [key: string]: { profile: AuthUser, timestamp: number } } = {}
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minuti di cache
+
+// Funzione per ottenere il profilo utente completo (ULTRA-OTTIMIZZATA con cache)
 export async function getUserProfile(userId: string, sessionUser?: User): Promise<AuthUser | null> {
   try {
     console.log('🔍 Cercando profilo per utente:', userId)
+    
+    // ⚡ CONTROLLO CACHE: Se abbiamo dati recenti, usali immediatamente
+    const cached = profileCache[userId]
+    if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+      console.log('⚡ Usando profilo dalla cache (ultra-veloce)')
+      return cached.profile
+    }
     
     const startTime = Date.now()
     
@@ -81,7 +92,13 @@ export async function getUserProfile(userId: string, sessionUser?: User): Promis
       stripe_current_period_end: data.stripe_current_period_end,
     }
 
-    console.log('✅ Profilo completo assemblato:', {
+    // ⚡ SALVA NELLA CACHE per accessi futuri ultra-veloci
+    profileCache[userId] = {
+      profile: completeProfile,
+      timestamp: Date.now()
+    }
+
+    console.log('✅ Profilo completo assemblato e salvato in cache:', {
       email: completeProfile.email,
       role: completeProfile.role,
       plan: completeProfile.plan,
@@ -93,6 +110,17 @@ export async function getUserProfile(userId: string, sessionUser?: User): Promis
   } catch (error) {
     console.error('❌ Errore getUserProfile:', error)
     return null
+  }
+}
+
+// Funzione per invalidare la cache (da chiamare dopo aggiornamenti)
+export function invalidateProfileCache(userId?: string) {
+  if (userId) {
+    delete profileCache[userId]
+    console.log('🗑️ Cache profilo invalidata per utente:', userId)
+  } else {
+    profileCache = {}
+    console.log('🗑️ Cache profilo completamente svuotata')
   }
 }
 

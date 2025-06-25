@@ -1,0 +1,88 @@
+# GitHub Actions workflow per scraping engine automatico
+# Esegue lo scraping engine ogni ora e permette esecuzione manuale
+# Utilizza Node.js + Playwright in ambiente headless Ubuntu
+# Configurato per il progetto ClientSniper monorepo
+
+name: Run Scraping Engine
+
+on:
+  schedule:
+    # Esegui ogni ora alle 0 minuti
+    - cron: '0 * * * *'
+  
+  # Permetti esecuzione manuale del workflow
+  workflow_dispatch:
+    inputs:
+      scrape_mode:
+        description: 'Modalità scraping (full/incremental)'
+        required: false
+        default: 'incremental'
+        type: choice
+        options:
+          - incremental
+          - full
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: services/scraping-engine
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'services/scraping-engine/package-lock.json'
+
+      - name: Install root dependencies
+        run: |
+          cd ../../
+          npm install
+
+      - name: Install scraping engine dependencies
+        run: npm install
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify Playwright installation
+        run: npx playwright --version
+
+      - name: Run scraping engine
+        run: npm run scrape
+        env:
+          # Database configuration
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          
+          # Scraping configuration
+          SCRAPE_MODE: ${{ github.event.inputs.scrape_mode || 'incremental' }}
+          MAX_CONCURRENT_SCRAPERS: 3
+          SCRAPE_TIMEOUT_MS: 30000
+          
+          # Performance settings per GitHub Actions
+          NODE_ENV: production
+          PLAYWRIGHT_HEADLESS: true
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: false
+
+      - name: Upload scraping logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: scraping-logs-${{ github.run_number }}
+          path: services/scraping-engine/logs/
+          retention-days: 7
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Scraping engine failed! Check logs for details."
+          echo "Run number: ${{ github.run_number }}"
+          echo "Commit: ${{ github.sha }}"

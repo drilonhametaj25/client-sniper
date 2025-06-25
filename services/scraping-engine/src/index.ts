@@ -21,9 +21,18 @@ async function main() {
   logger.info('🚀 Avvio ClientSniper Scraping Engine (Sistema Distribuito)')
   
   // Verifica configurazione
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     logger.error('❌ Variabili d\'ambiente Supabase mancanti')
     process.exit(1)
+  }
+
+  // Rileva modalità GitHub Actions
+  const isGitHubActions = process.env.GITHUB_ACTIONS === 'true'
+  const scrapeMode = process.env.SCRAPE_MODE || 'incremental'
+  
+  if (isGitHubActions) {
+    logger.info('🔧 Modalità GitHub Actions rilevata')
+    logger.info(`📊 Modalità scraping: ${scrapeMode}`)
   }
 
   // Esegui migrazione e seeding automatico all'avvio
@@ -32,7 +41,7 @@ async function main() {
     const migrator = new DatabaseMigrator()
     
     // In produzione usa migrazione sicura, altrimenti migrazione completa
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV === 'production' || isGitHubActions) {
       await migrator.safeMigrate()
     } else {
       await migrator.migrate()
@@ -44,8 +53,8 @@ async function main() {
     // Non bloccare l'avvio per errori di migrazione
   }
 
-  // Esegui scraping iniziale se richiesto
-  if (process.argv.includes('--run-now')) {
+  // Se è GitHub Actions, esegui subito lo scraping e termina
+  if (isGitHubActions || process.argv.includes('--run-now')) {
     logger.info('📊 Esecuzione scraping distribuito manuale...')
     try {
       await orchestrator.runDistributedScraping()

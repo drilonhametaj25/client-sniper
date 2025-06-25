@@ -3,8 +3,9 @@
 // UI restyling stile Apple + Linear: Dashboard client completamente ridisegnata
 // Layout moderno con cards glassmorphism, tipografia pulita, spaziature ampie
 // Aggiunta gestione limiti configurabili e filtri avanzati
+// FIX: Risolto loop infinito di autenticazione e caricamento
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -75,94 +76,15 @@ export default function ClientDashboard() {
   const [searchTerm, setSearchTerm] = useState<string>('')
   const [showFilters, setShowFilters] = useState(false)
 
-  // Redirect se non autenticato
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login')
-    }
-  }, [user, loading, router])
+  // Stato per tracciare quali lead sono stati "sbloccati"
+  const [unlockedLeads, setUnlockedLeads] = useState<Set<string>>(new Set())
 
-  // Carica settings e leads
-  useEffect(() => {
-    if (user) {
-      loadSettings()
-      console.log('� Caricando leads via API con paginazione')
-      loadLeadsFromAPI(1, true) // Metodo API con paginazione
-      loadUnlockedLeads() // Carica i lead sbloccati dal database
-    }
-  }, [user])
-
-  // Ricarica quando cambiano i filtri (con debounce) - solo se user è presente e stabile
-  useEffect(() => {
-    if (!user) return
-    
-    const timeoutId = setTimeout(() => {
-      console.log('🔄 Ricaricando leads per filtri cambiati:', { filterCategory, filterCity, filterRole, searchTerm })
-      loadLeadsFromAPI(1, false) // Reset alla pagina 1, no cache per filtri
-    }, 300) // Debounce di 300ms
-    
-    return () => clearTimeout(timeoutId)
-  }, [filterCategory, filterCity, filterRole, searchTerm]) // Rimuovi user dalle dependencies
-
-  // Effetto per cambio pagina (usa cache se disponibile)
-  useEffect(() => {
-    if (!user) return
-    if (currentPage <= 1) return // Evita chiamate duplicate per pagina 1
-    
-    console.log('📄 Caricando pagina:', currentPage)
-    loadLeadsFromAPI(currentPage, true)
-  }, [currentPage]) // Rimuovi user dalle dependencies
-
-  const loadSettings = async () => {
-    try {
-      const { data } = await supabase
-        .from('settings')
-        .select('key, value')
-        .in('key', ['free_limit', 'starter_limit', 'pro_limit'])
-
-      if (data && data.length > 0) {
-        const settingsObj = data.reduce((acc, item) => {
-          acc[item.key as keyof Settings] = parseInt(item.value)
-          return acc
-        }, {} as Settings)
-        
-        const newSettings = {
-          free_limit: settingsObj.free_limit || 2,
-          starter_limit: settingsObj.starter_limit || 50,
-          pro_limit: settingsObj.pro_limit || 200
-        }
-        
-        setSettings(newSettings)
-      }
-    } catch (error) {
-      console.error('Errore caricamento settings:', error)
-    }
-  }
-
-  const loadLeads = async () => {
-    try {
-      setLoadingData(true)
-      
-      const { data, error } = await supabase
-        .from('leads')
-        .select('*')
-        .order('score', { ascending: true })
-        .limit(1000) // Carichiamo tutti, poi filtriamo lato client per rispettare i limiti
-
-      if (error) throw error
-      setLeads(data || [])
-
-    } catch (error) {
-      console.error('Errore caricamento leads:', error)
-    } finally {
-      setLoadingData(false)
-    }
-  }
-
-  // Stato per evitare chiamate multiple
+  // ⚡ REF per controllo anti-loop (definiti prima dei useEffect)
   const [isLoadingLeads, setIsLoadingLeads] = useState(false)
+  const hasInitialized = useRef(false)
+  const lastUserRef = useRef<string | null>(null)
 
-  // Nuova funzione per caricare via API con paginazione e cache
+  // Funzione per caricare via API - NON MEMOIZZATA per evitare loop infiniti
   const loadLeadsFromAPI = async (page = 1, useCache = false) => {
     console.log('🚀 loadLeadsFromAPI chiamata con:', { page, useCache })
     
@@ -259,8 +181,6 @@ export default function ClientDashboard() {
         setTotalPages(result.data.pagination.totalPages)
         setCurrentPage(result.data.pagination.page)
         
-        // I lead sono già filtrati dall'API, non serve più setFilteredLeads
-        
         // Cache dei risultati (solo se validi)
         if (result.data.leads.length >= 0) {
           localStorage.setItem(cacheKey, JSON.stringify({
@@ -290,6 +210,88 @@ export default function ClientDashboard() {
     }
   }
 
+  // ⚡ ULTRA-OTTIMIZZATO: Redirect ottimizzato per performance
+  useEffect(() => {
+    // ⚡ CONTROLLO IMMEDIATO: Se non c'è sessione o loading è false e nessun user, redirect veloce
+    if (!loading && !user) {
+      console.log('🔄 Redirect immediato a login - nessuna autenticazione')
+      router.push('/login')
+      return
+    }
+    
+    // ⚡ TIMEOUT AGGRESSIVO: Se il loading dura troppo, mostra comunque la UI
+    const maxLoadingTime = setTimeout(() => {
+      if (loading && !user) {
+        console.log('⏰ Loading troppo lungo, assumo fallback di autenticazione')
+        // Non possiamo forzare setLoading dal contesto, ma possiamo assumere che l'auth sia fallita
+        router.push('/login')
+      }
+    }, 3000) // Dopo 3 secondi di loading, redirect per non bloccare
+    
+    return () => clearTimeout(maxLoadingTime)
+  }, [user, loading, router])
+
+  // Carica settings e leads - CON CONTROLLO ANTI-LOOP
+  useEffect(() => {
+    if (!user?.id) return
+    
+    // Evita chiamate multiple per lo stesso utente
+    if (lastUserRef.current === user.id) return
+    lastUserRef.current = user.id
+    
+    console.log('🚀 Caricando leads via API per utente:', user.id)
+    hasInitialized.current = true
+    loadSettings()
+    loadLeadsFromAPI(1, true) // Metodo API con paginazione
+    loadUnlockedLeads() // Carica i lead sbloccati dal database
+  }, [user?.id]) // Solo user.id come dipendenza
+
+  // Ricarica quando cambiano i filtri (con debounce) - CON CONTROLLO INIZIALIZZAZIONE
+  useEffect(() => {
+    if (!user?.id || !hasInitialized.current) return
+    
+    const timeoutId = setTimeout(() => {
+      console.log('🔄 Ricaricando leads per filtri cambiati:', { filterCategory, filterCity, filterRole, searchTerm })
+      loadLeadsFromAPI(1, false) // Reset alla pagina 1, no cache per filtri
+    }, 300) // Debounce di 300ms
+    
+    return () => clearTimeout(timeoutId)
+  }, [filterCategory, filterCity, filterRole, searchTerm]) // Senza loadLeadsFromAPI
+
+  // Effetto per cambio pagina (usa cache se disponibile) - CON CONTROLLO INIZIALIZZAZIONE
+  useEffect(() => {
+    if (!user?.id || !hasInitialized.current || currentPage <= 1) return
+    
+    console.log('📄 Caricando pagina:', currentPage)
+    loadLeadsFromAPI(currentPage, true)
+  }, [currentPage, user?.id]) // Senza loadLeadsFromAPI
+
+  const loadSettings = async () => {
+    try {
+      const { data } = await supabase
+        .from('settings')
+        .select('key, value')
+        .in('key', ['free_limit', 'starter_limit', 'pro_limit'])
+
+      if (data && data.length > 0) {
+        const settingsObj = data.reduce((acc, item) => {
+          acc[item.key as keyof Settings] = parseInt(item.value)
+          return acc
+        }, {} as Settings)
+        
+        const newSettings = {
+          free_limit: settingsObj.free_limit || 2,
+          starter_limit: settingsObj.starter_limit || 50,
+          pro_limit: settingsObj.pro_limit || 200
+        }
+        
+        setSettings(newSettings)
+      }
+    } catch (error) {
+      console.error('Errore caricamento settings:', error)
+    }
+  }
+
   // Carica i lead sbloccati dall'utente dal database
   const loadUnlockedLeads = async () => {
     if (!user) return
@@ -304,7 +306,7 @@ export default function ClientDashboard() {
         return
       }
 
-      // Controll che data sia definito e sia un array
+      // Controlla che data sia definito e sia un array
       if (data && Array.isArray(data)) {
         const unlockedSet = new Set(data.map((item: any) => String(item.lead_id)))
         setUnlockedLeads(unlockedSet)
@@ -313,45 +315,6 @@ export default function ClientDashboard() {
       console.error('Errore caricamento lead sbloccati:', error)
     }
   }
-
-  // Ora i filtri sono gestiti completamente lato API, non serve più il metodo applyFilters lato client
-
-  // Filtri gestiti lato API, non più necessario (COMMENTATO per debug)
-  /*
-  const applyFilters = () => {
-    let filtered = [...leads]
-
-    // Applica filtri
-    if (filterCategory) {
-      filtered = filtered.filter(lead => lead.category === filterCategory)
-    }
-
-    if (filterCity) {
-      filtered = filtered.filter(lead => 
-        lead.city.toLowerCase().includes(filterCity.toLowerCase())
-      )
-    }
-
-    if (filterRole) {
-      filtered = filtered.filter(lead => 
-        lead.needed_roles.includes(filterRole)
-      )
-    }
-
-    if (searchTerm) {
-      filtered = filtered.filter(lead =>
-        lead.business_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        lead.website_url.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    }
-
-    // Applica limiti del piano
-    const limit = getPlanLimit()
-    filtered = filtered.slice(0, limit)
-
-    setFilteredLeads(filtered)
-  }
-  */
 
   const getPlanLimit = () => {
     switch (user?.plan) {
@@ -364,9 +327,6 @@ export default function ClientDashboard() {
   const getAvailableCredits = () => {
     return user?.credits_remaining || 0
   }
-
-  // Stato per tracciare quali lead sono stati "sbloccati"
-  const [unlockedLeads, setUnlockedLeads] = useState<Set<string>>(new Set())
 
   // Funzione per consumare un credito
   const consumeCredit = async (action: string, leadId?: string): Promise<boolean> => {
@@ -527,12 +487,14 @@ export default function ClientDashboard() {
   const cities = Array.from(new Set(leads.map(lead => lead.city)))
   const roles = ['designer', 'developer', 'seo', 'copywriter', 'photographer', 'adv', 'social', 'gdpr']
 
+  // ⚡ ULTRA-VELOCITÀ: Rendering semplice e diretto (ora che l'auth è veloce con cache)
   if (loading || loadingData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="text-gray-600 dark:text-gray-400 font-medium">Caricamento dashboard...</p>
+          <p className="text-gray-600 dark:text-gray-400 font-medium">Caricamento ultra-veloce dashboard...</p>
+          <p className="text-sm text-gray-500 dark:text-gray-500">Cache intelligente attiva</p>
         </div>
       </div>
     )

@@ -475,7 +475,7 @@ export default function HomePage() {
             <div className="flex items-center space-x-6 text-sm text-gray-400">
               <span>Made in Italy 🇮🇹</span>
               <span>•</span>
-              <span>Powered by AI-free Technology</span>
+              <span>Powered by Drilon Hametaj</span>
             </div>
           </div>
         </div>

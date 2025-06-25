@@ -1,0 +1,72 @@
+# GitHub Actions workflow per build e test del frontend Next.js
+# Esegue build e type checking su ogni push e pull request  
+# Verifica che il frontend sia pronto per il deploy su Vercel
+# Configurato per il progetto ClientSniper monorepo
+
+name: Frontend Build & Test
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths: 
+      - 'apps/frontend-app/**'
+      - 'libs/**'
+      - 'package.json'
+      - 'turbo.json'
+  
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'apps/frontend-app/**'
+      - 'libs/**'
+      - 'package.json'
+      - 'turbo.json'
+
+jobs:
+  frontend-build:
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: apps/frontend-app
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'apps/frontend-app/package-lock.json'
+
+      - name: Install root dependencies
+        run: |
+          cd ../../
+          npm install
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Run type checking
+        run: npm run type-check
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Build application
+        run: npm run build
+        env:
+          # Dummy environment variables per build test
+          NEXT_PUBLIC_SUPABASE_URL: https://dummy.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy_anon_key
+          SUPABASE_SERVICE_ROLE_KEY: dummy_service_role_key
+          STRIPE_PUBLISHABLE_KEY: pk_test_dummy
+          STRIPE_SECRET_KEY: sk_test_dummy
+          STRIPE_WEBHOOK_SECRET: whsec_dummy
+
+      - name: Check build output
+        run: |
+          ls -la .next/
+          echo "✅ Frontend build completato con successo"

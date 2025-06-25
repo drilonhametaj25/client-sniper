@@ -88,3 +88,17 @@ temp/
 test-results/
 playwright-report/
 playwright/.cache/
+
+# Logs (keep .gitkeep)
+*.log
+services/scraping-engine/logs/*.log
+services/scraping-engine/logs/*.txt
+
+# Vercel
+.vercel
+
+# Coverage reports
+coverage/
+
+# Cache directories
+.turbo/
