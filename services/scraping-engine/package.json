@@ -1,0 +1,40 @@
+{
+  "name": "@clientsniper/scraping-engine",
+  "version": "1.0.0",
+  "description": "Engine di scraping per ClientSniper",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint src --ext .ts",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "scrape": "tsx src/scraper.ts",
+    "analyze": "tsx src/analyzer.ts",
+    "setup-db": "tsx src/scripts/setup-database-simple.ts",
+    "seed": "tsx src/scripts/seed-database.ts seed",
+    "seed:reset": "tsx src/scripts/seed-database.ts reset",
+    "seed:stats": "tsx src/scripts/seed-database.ts stats",
+    "migrate": "tsx src/scripts/migrate-database.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.0",
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12",
+    "dotenv": "^16.3.0",
+    "node-cron": "^3.0.3",
+    "playwright": "^1.40.0",
+    "puppeteer": "^21.0.0",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/node-cron": "^3.0.11",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}

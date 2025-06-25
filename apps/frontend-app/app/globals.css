@@ -1,0 +1,75 @@
+/* Questo file contiene gli stili globali dell'applicazione */
+/* È parte del modulo apps/frontend-app */
+/* Viene importato nel layout principale */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200;
+  }
+  
+  .btn-primary {
+    @apply btn bg-brand-600 text-white hover:bg-brand-700 focus:ring-brand-500;
+  }
+  
+  .btn-secondary {
+    @apply btn bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500;
+  }
+  
+  .btn-success {
+    @apply btn bg-success-600 text-white hover:bg-success-700 focus:ring-success-500;
+  }
+  
+  .btn-warning {
+    @apply btn bg-warning-600 text-white hover:bg-warning-700 focus:ring-warning-500;
+  }
+  
+  .btn-danger {
+    @apply btn bg-danger-600 text-white hover:bg-danger-700 focus:ring-danger-500;
+  }
+  
+  .card {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6;
+  }
+  
+  .input {
+    @apply block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm;
+  }
+  
+  .label {
+    @apply block text-sm font-medium text-gray-700 mb-1;
+  }
+  
+  .score-critical {
+    @apply bg-danger-100 text-danger-800 border-danger-200;
+  }
+  
+  .score-poor {
+    @apply bg-warning-100 text-warning-800 border-warning-200;
+  }
+  
+  .score-average {
+    @apply bg-yellow-100 text-yellow-800 border-yellow-200;
+  }
+  
+  .score-good {
+    @apply bg-success-100 text-success-800 border-success-200;
+  }
+  
+  .score-excellent {
+    @apply bg-green-100 text-green-800 border-green-200;
+  }
+}

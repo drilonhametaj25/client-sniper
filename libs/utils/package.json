@@ -1,0 +1,15 @@
+{
+  "name": "@clientsniper/utils",
+  "version": "1.0.0",
+  "description": "Funzioni di utilità condivise per ClientSniper",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
