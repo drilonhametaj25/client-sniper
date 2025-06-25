@@ -32,6 +32,7 @@ STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 3. Configura le variabili d'ambiente nel dashboard Vercel
 4. Deploy automatico ad ogni push su main
 
+
 ### 4. Funzioni API:
 
 - Timeout massimo: 30 secondi per le API routes
