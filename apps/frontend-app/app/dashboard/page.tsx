@@ -48,7 +48,7 @@ interface Settings {
 }
 
 export default function ClientDashboard() {
-  const { user, loading } = useAuth()
+  const { user, loading, refreshProfile } = useAuth()
   const router = useRouter()
   const [leads, setLeads] = useState<Lead[]>([])
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([])
@@ -174,11 +174,81 @@ export default function ClientDashboard() {
     return user?.credits_remaining || 0
   }
 
-  const exportToCSV = () => {
+  // Stato per tracciare quali lead sono stati "sbloccati"
+  const [unlockedLeads, setUnlockedLeads] = useState<Set<string>>(new Set())
+
+  // Funzione per consumare un credito
+  const consumeCredit = async (action: string, leadId?: string): Promise<boolean> => {
+    if (!user) return false
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update({ 
+          credits_remaining: Math.max(0, (user.credits_remaining || 0) - 1)
+        })
+        .eq('id', user.id)
+        .select()
+
+      if (error) {
+        console.error('Errore consumo credito:', error)
+        return false
+      }
+
+      // Log dell'azione per audit
+      await supabase
+        .from('credit_usage_log')
+        .insert({
+          user_id: user.id,
+          action: action,
+          lead_id: leadId || null,
+          credits_consumed: 1,
+          credits_remaining: Math.max(0, (user.credits_remaining || 0) - 1),
+          created_at: new Date().toISOString()
+        })
+
+      return true
+    } catch (error) {
+      console.error('Errore nel consumo credito:', error)
+      return false
+    }
+  }
+
+  // Funzione per sbloccare i dettagli di un lead
+  const unlockLead = async (leadId: string) => {
+    const remainingCredits = getAvailableCredits()
+    if (remainingCredits <= 0) {
+      alert('Non hai più crediti disponibili. Aggiorna il tuo piano per continuare.')
+      router.push('/upgrade')
+      return
+    }
+
+    const success = await consumeCredit('lead_unlock', leadId)
+    if (success) {
+      setUnlockedLeads(prev => {
+        const newSet = new Set(prev)
+        newSet.add(leadId)
+        return newSet
+      })
+      refreshProfile() // Aggiorna i crediti mostrati
+    } else {
+      alert('Errore nel consumo del credito. Riprova.')
+    }
+  }
+
+  const exportToCSV = async () => {
+    // Solo i lead sbloccati possono essere esportati
+    const exportableLeads = filteredLeads.filter(lead => unlockedLeads.has(lead.id))
+    
+    if (exportableLeads.length === 0) {
+      alert('Nessun lead sbloccato da esportare. Sblocca prima i dettagli dei lead che vuoi esportare.')
+      return
+    }
+
     const headers = ['Nome Business', 'Sito Web', 'Telefono', 'Email', 'Città', 'Categoria', 'Score', 'Problemi', 'Ruoli Necessari']
     const csvContent = [
       headers.join(','),
-      ...filteredLeads.map(lead => [
+      ...exportableLeads.map(lead => [
         lead.business_name,
         lead.website_url,
         lead.phone || '',
@@ -197,6 +267,9 @@ export default function ClientDashboard() {
     a.href = url
     a.download = `clientsniper-leads-${new Date().toISOString().split('T')[0]}.csv`
     a.click()
+
+    // Aggiorna il profilo per mostrare i crediti aggiornati
+    refreshProfile()
   }
 
   const getRoleColor = (role: string) => {
@@ -297,10 +370,23 @@ export default function ClientDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Crediti</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{remainingCredits}</p>
+                  <p className={`text-2xl font-bold mb-1 ${remainingCredits <= 1 ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
+                    {remainingCredits}
+                  </p>
+                  {remainingCredits <= 1 && (
+                    <p className="text-xs text-red-500 font-medium">Crediti in esaurimento!</p>
+                  )}
                 </div>
-                <CreditCard className="h-8 w-8 text-blue-500" />
+                <CreditCard className={`h-8 w-8 ${remainingCredits <= 1 ? 'text-red-500' : 'text-blue-500'}`} />
               </div>
+              {remainingCredits === 0 && (
+                <button
+                  onClick={() => router.push('/upgrade')}
+                  className="mt-3 w-full bg-red-500 hover:bg-red-600 text-white text-sm py-2 rounded-lg transition-colors"
+                >
+                  Ricarica Crediti
+                </button>
+              )}
             </div>
 
             {/* Lead Totali */}
@@ -331,6 +417,29 @@ export default function ClientDashboard() {
               </div>
             </div>
           </div>
+
+          {/* Banner Informativo sui Crediti */}
+          {remainingCredits <= 2 && remainingCredits > 0 && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 mb-8">
+              <div className="flex items-center space-x-3">
+                <div className="bg-yellow-100 rounded-full p-2">
+                  <CreditCard className="h-5 w-5 text-yellow-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-yellow-800 font-semibold">Crediti in esaurimento</h3>
+                  <p className="text-yellow-700 text-sm">
+                    Ti rimangono solo {remainingCredits} crediti. Ogni azione (visualizza sito, export CSV) costa 1 credito.
+                  </p>
+                </div>
+                <button
+                  onClick={() => router.push('/upgrade')}
+                  className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Ricarica Ora
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Filtri e Controlli */}
           <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 mb-8">
@@ -368,10 +477,15 @@ export default function ClientDashboard() {
 
                 <button
                   onClick={exportToCSV}
-                  className="flex items-center space-x-2 px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors"
+                  className="flex items-center space-x-2 px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={unlockedLeads.size === 0}
+                  title={unlockedLeads.size === 0 ? "Sblocca alcuni lead prima di esportare" : `Esporta ${unlockedLeads.size} lead sbloccati`}
                 >
                   <Download className="h-4 w-4" />
                   <span>Export CSV</span>
+                  <span className="text-xs bg-white/20 px-2 py-1 rounded-full">
+                    {unlockedLeads.size} sbloccati
+                  </span>
                 </button>
               </div>
             </div>
@@ -432,100 +546,180 @@ export default function ClientDashboard() {
                 <p className="text-gray-600 dark:text-gray-400">Prova a modificare i filtri o aggiorna i dati</p>
               </div>
             ) : (
-              filteredLeads.map((lead, index) => (
-                <div
-                  key={lead.id}
-                  className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg transition-all duration-300"
-                >
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-                    {/* Info Principale */}
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                          {lead.business_name}
-                        </h3>
-                        <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getScoreColor(lead.score)}`}>
-                          {getScoreLabel(lead.score)} ({lead.score})
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
-                        <div className="flex items-center space-x-1">
-                          <ExternalLink className="h-4 w-4" />
-                          <a 
-                            href={lead.website_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="hover:text-blue-600 transition-colors"
-                          >
-                            {lead.website_url}
-                          </a>
+              filteredLeads.map((lead, index) => {
+                const isUnlocked = unlockedLeads.has(lead.id)
+                
+                return (
+                  <div
+                    key={lead.id}
+                    className={`bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border transition-all duration-300 ${
+                      isUnlocked 
+                        ? 'border-green-200 dark:border-green-700 shadow-lg shadow-green-100 dark:shadow-green-900/20'
+                        : 'border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg'
+                    }`}
+                  >
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+                      {/* Info Principale */}
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            {lead.business_name}
+                          </h3>
+                          <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getScoreColor(lead.score)}`}>
+                            {getScoreLabel(lead.score)} ({lead.score})
+                          </div>
+                          {isUnlocked && (
+                            <div className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full border border-green-200">
+                              ✓ Sbloccato
+                            </div>
+                          )}
                         </div>
                         
-                        <div className="flex items-center space-x-1">
-                          <MapPin className="h-4 w-4" />
-                          <span>{lead.city}</span>
+                        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
+                          <div className="flex items-center space-x-1">
+                            <ExternalLink className="h-4 w-4" />
+                            <span className="hover:text-blue-600 transition-colors">
+                              {lead.website_url}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center space-x-1">
+                            <MapPin className="h-4 w-4" />
+                            <span>{lead.city}</span>
+                          </div>
+                          
+                          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full">
+                            {lead.category}
+                          </span>
+                        </div>
+
+                        {/* Contatti - Solo se sbloccato */}
+                        {isUnlocked ? (
+                          <div className="flex flex-wrap gap-4 mb-3">
+                            {lead.phone && (
+                              <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-400">
+                                <Phone className="h-4 w-4" />
+                                <span>{lead.phone}</span>
+                              </div>
+                            )}
+                            {lead.email && (
+                              <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-400">
+                                <Mail className="h-4 w-4" />
+                                <span>{lead.email}</span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap gap-4 mb-3">
+                            <div className="flex items-center space-x-1 text-sm text-gray-400">
+                              <Phone className="h-4 w-4" />
+                              <span className="blur-sm">•••••••••••</span>
+                              <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                                Sblocca per vedere
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-1 text-sm text-gray-400">
+                              <Mail className="h-4 w-4" />
+                              <span className="blur-sm">•••••••••••</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Ruoli Necessari - Solo se sbloccato */}
+                        {isUnlocked ? (
+                          <div className="flex flex-wrap gap-2">
+                            {lead.needed_roles.slice(0, 3).map(role => (
+                              <span 
+                                key={role}
+                                className={`px-2 py-1 text-xs font-medium rounded-lg ${getRoleColor(role)}`}
+                              >
+                                {role}
+                              </span>
+                            ))}
+                            {lead.needed_roles.length > 3 && (
+                              <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 rounded-lg">
+                                +{lead.needed_roles.length - 3} altri
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            <span className="px-2 py-1 text-xs bg-gray-100 text-gray-500 rounded-lg blur-sm">
+                              ••••••••••
+                            </span>
+                            <span className="px-2 py-1 text-xs bg-gray-100 text-gray-500 rounded-lg blur-sm">
+                              ••••••••
+                            </span>
+                            <span className="text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-200">
+                              Dettagli nascosti - Sblocca per vedere
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Score e Actions */}
+                      <div className="flex items-center space-x-3">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                            {lead.score}
+                          </div>
+                          <div className="text-xs text-gray-500">Score</div>
                         </div>
                         
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="h-4 w-4" />
-                          <span>{new Date(lead.created_at).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-
-                      {/* Contatti */}
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {lead.phone && (
-                          <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-400">
-                            <Phone className="h-4 w-4" />
-                            <span>{lead.phone}</span>
-                          </div>
-                        )}
-                        {lead.email && (
-                          <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-400">
-                            <Mail className="h-4 w-4" />
-                            <span>{lead.email}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Ruoli Necessari */}
-                      <div className="flex flex-wrap gap-2">
-                        {lead.needed_roles.slice(0, 3).map(role => (
-                          <span 
-                            key={role}
-                            className={`px-2 py-1 text-xs font-medium rounded-lg ${getRoleColor(role)}`}
+                        {!isUnlocked ? (
+                          <button
+                            onClick={() => unlockLead(lead.id)}
+                            className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-4 py-2 rounded-xl transition-all duration-300 relative disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                            disabled={remainingCredits <= 0}
+                            title={remainingCredits <= 0 ? "Non hai crediti sufficienti" : "Costa 1 credito per sbloccare i dettagli"}
                           >
-                            {role}
-                          </span>
-                        ))}
-                        {lead.needed_roles.length > 3 && (
-                          <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 rounded-lg">
-                            +{lead.needed_roles.length - 3} altri
-                          </span>
+                            <div className="flex items-center space-x-2">
+                              <Zap className="h-4 w-4" />
+                              <span>Sblocca</span>
+                            </div>
+                            {remainingCredits > 0 && (
+                              <span className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                                1
+                              </span>
+                            )}
+                          </button>
+                        ) : (
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={async () => {
+                                const remainingCredits = getAvailableCredits()
+                                if (remainingCredits <= 0) {
+                                  alert('Non hai più crediti disponibili. Aggiorna il tuo piano per continuare.')
+                                  router.push('/upgrade')
+                                  return
+                                }
+
+                                const success = await consumeCredit('site_visit', lead.id)
+                                if (success) {
+                                  window.open(lead.website_url, '_blank')
+                                  refreshProfile()
+                                } else {
+                                  alert('Errore nel consumo del credito. Riprova.')
+                                }
+                              }}
+                              className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-xl transition-colors relative disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={remainingCredits <= 0}
+                              title={remainingCredits <= 0 ? "Non hai crediti sufficienti" : "Costa 1 credito per visitare il sito"}
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                              {remainingCredits > 0 && (
+                                <span className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                                  1
+                                </span>
+                              )}
+                            </button>
+                          </div>
                         )}
                       </div>
-                    </div>
-
-                    {/* Score e Actions */}
-                    <div className="flex items-center space-x-3">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-                          {lead.score}
-                        </div>
-                        <div className="text-xs text-gray-500">Score</div>
-                      </div>
-                      
-                      <button
-                        onClick={() => window.open(lead.website_url, '_blank')}
-                        className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-xl transition-colors"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </button>
                     </div>
                   </div>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         </div>
