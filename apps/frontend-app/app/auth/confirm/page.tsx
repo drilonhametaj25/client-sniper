@@ -6,12 +6,12 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { CheckCircle, XCircle, Loader } from 'lucide-react'
 
-export default function ConfirmPage() {
+function ConfirmPageContent() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [message, setMessage] = useState('')
   const router = useRouter()
@@ -111,5 +111,20 @@ export default function ConfirmPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ConfirmPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="h-8 w-8 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Caricamento...</p>
+        </div>
+      </div>
+    }>
+      <ConfirmPageContent />
+    </Suspense>
   )
 }
