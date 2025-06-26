@@ -127,21 +127,28 @@ export function invalidateProfileCache(userId?: string) {
 // Funzione per registrare un nuovo utente
 export async function signUp(email: string, password: string) {
   try {
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://client-sniper-frontend-app.vercel.app'
+    
+    console.log('🔄 Registrando utente:', email)
+    console.log('🔗 Redirect URL:', `${baseUrl}/auth/callback`)
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`
+        emailRedirectTo: `${baseUrl}/auth/callback`
       }
     })
 
     if (error) {
+      console.error('❌ Errore registrazione:', error)
       throw error
     }
 
+    console.log('✅ Registrazione completata:', data)
     return { data, error: null }
   } catch (error) {
-    console.error('Errore registrazione:', error)
+    console.error('❌ Errore registrazione:', error)
     return { data: null, error }
   }
 }

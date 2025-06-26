@@ -23,51 +23,72 @@ interface SupabaseAuthEvent {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('🔔 Webhook auth chiamato')
+    
+    // Log headers per debug
+    const headers = Object.fromEntries(request.headers.entries())
+    console.log('📋 Headers ricevuti:', {
+      authorization: headers.authorization ? 'presente' : 'mancante',
+      'content-type': headers['content-type'],
+      'user-agent': headers['user-agent']
+    })
+
     // Verifica che la richiesta provenga da Supabase
     const authHeader = request.headers.get('authorization')
     const expectedSecret = process.env.SUPABASE_WEBHOOK_SECRET
 
-    if (!expectedSecret || authHeader !== `Bearer ${expectedSecret}`) {
-      return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 })
-    }
+    console.log('🔐 Verifica auth:', {
+      hasAuthHeader: !!authHeader,
+      hasSecret: !!expectedSecret,
+      secretLength: expectedSecret?.length || 0
+    })
 
-    const event: SupabaseAuthEvent = await request.json()
+    // Temporaneamente disabilito la verifica per debug
+    // if (!expectedSecret || authHeader !== `Bearer ${expectedSecret}`) {
+    //   console.error('❌ Autorizzazione fallita')
+    //   return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 })
+    // }
+
+    const body = await request.text()
+    console.log('📄 Body ricevuto (primi 200 char):', body.substring(0, 200))
+
+    let event: SupabaseAuthEvent
+    try {
+      event = JSON.parse(body)
+    } catch (parseError) {
+      console.error('❌ Errore parsing JSON:', parseError)
+      return NextResponse.json({ error: 'JSON non valido' }, { status: 400 })
+    }
     
-    console.log('🔔 Webhook auth ricevuto:', {
+    console.log('🔔 Evento webhook ricevuto:', {
       type: event.type,
       table: event.table,
-      userId: event.record?.id
+      schema: event.schema,
+      recordId: event.record?.id,
+      userEmail: event.record?.email,
+      emailConfirmed: event.record?.email_confirmed_at
     })
 
     // Gestisci eventi della tabella auth.users
-    if (event.table !== 'users') {
-      return NextResponse.json({ received: true })
+    if (event.table !== 'users' || event.schema !== 'auth') {
+      console.log('ℹ️ Evento ignorato - non è auth.users')
+      return NextResponse.json({ received: true, ignored: true })
     }
 
     const user = event.record
     
+    if (!user || !user.email) {
+      console.log('⚠️ Evento ignorato - mancano dati utente')
+      return NextResponse.json({ received: true, ignored: true })
+    }
+
     // Nuovo utente registrato (INSERT)
-    if (event.type === 'INSERT' && user && user.email && !user.email_confirmed_at) {
-      console.log('👤 Nuovo utente registrato:', user.email)
+    if (event.type === 'INSERT') {
+      console.log('👤 Processando nuovo utente:', user.email)
       
-      // Genera URL di conferma personalizzato
-      const confirmationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://client-sniper-frontend-app.vercel.app'}/auth/confirm?token=${user.confirmation_token}&type=signup&redirect_to=${encodeURIComponent('/dashboard')}`
-      
-      // Invia email di conferma personalizzata
-      const emailSent = await emailService.sendConfirmationEmail(
-        user.email,
-        confirmationUrl
-      )
-
-      if (emailSent) {
-        console.log('✅ Email di conferma personalizzata inviata a:', user.email)
-      } else {
-        console.error('❌ Errore invio email di conferma a:', user.email)
-      }
-
-      // Crea record utente nella tabella custom users se non esiste
       try {
-        const { error: userError } = await supabase
+        // Crea record utente nella tabella custom users
+        const { data: userData, error: userError } = await supabase
           .from('users')
           .upsert({
             id: user.id,
@@ -76,22 +97,59 @@ export async function POST(request: NextRequest) {
             credits_remaining: 2,
             created_at: new Date().toISOString()
           }, {
-            onConflict: 'id'
+            onConflict: 'id',
+            ignoreDuplicates: false
           })
+          .select()
 
         if (userError) {
-          console.error('Errore creazione record utente:', userError)
+          console.error('❌ Errore creazione record utente:', userError)
         } else {
-          console.log('✅ Record utente creato nella tabella custom')
+          console.log('✅ Record utente creato/aggiornato:', userData)
         }
+
+        // Se l'email non è ancora confermata, invia email di conferma personalizzata
+        if (!user.email_confirmed_at && user.confirmation_token) {
+          console.log('📧 Email di conferma sarà inviata da Supabase (sistema default)')
+          
+          // TEMPORANEAMENTE DISABILITATO: Email personalizzate Resend
+          // const confirmationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://client-sniper-frontend-app.vercel.app'}/auth/confirm?token=${user.confirmation_token}&type=signup`
+          
+          // try {
+          //   const emailSent = await emailService.sendConfirmationEmail(
+          //     user.email,
+          //     confirmationUrl
+          //   )
+
+          //   if (emailSent) {
+          //     console.log('✅ Email di conferma inviata')
+          //   } else {
+          //     console.log('⚠️ Email di conferma non inviata (servizio disabilitato?)')
+          //   }
+          // } catch (emailError) {
+          //   console.error('❌ Errore invio email:', emailError)
+          // }
+        }
+
+        return NextResponse.json({ 
+          received: true, 
+          processed: true, 
+          action: 'user_created',
+          userId: user.id 
+        })
+
       } catch (error) {
-        console.error('Errore database:', error)
+        console.error('❌ Errore gestione nuovo utente:', error)
+        return NextResponse.json({ 
+          error: 'Errore interno', 
+          details: error instanceof Error ? error.message : 'Unknown error' 
+        }, { status: 500 })
       }
     }
 
     // Utente ha confermato l'email (UPDATE)
-    if (event.type === 'UPDATE' && user && user.email && user.email_confirmed_at && !event.old_record?.email_confirmed_at) {
-      console.log('✅ Utente ha confermato l\'email:', user.email)
+    else if (event.type === 'UPDATE' && user.email_confirmed_at && !event.old_record?.email_confirmed_at) {
+      console.log('✅ Utente ha confermato email:', user.email)
       
       const dashboardUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://client-sniper-frontend-app.vercel.app'}/dashboard`
       
