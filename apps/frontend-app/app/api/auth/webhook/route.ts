@@ -110,25 +110,24 @@ export async function POST(request: NextRequest) {
 
         // Se l'email non è ancora confermata, invia email di conferma personalizzata
         if (!user.email_confirmed_at && user.confirmation_token) {
-          console.log('📧 Email di conferma sarà inviata da Supabase (sistema default)')
+          console.log('📧 Inviando email di conferma personalizzata via Resend')
           
-          // TEMPORANEAMENTE DISABILITATO: Email personalizzate Resend
-          // const confirmationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://client-sniper-frontend-app.vercel.app'}/auth/confirm?token=${user.confirmation_token}&type=signup`
+          const confirmationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://client-sniper-frontend-app.vercel.app'}/auth/confirm?token=${user.confirmation_token}&type=signup`
           
-          // try {
-          //   const emailSent = await emailService.sendConfirmationEmail(
-          //     user.email,
-          //     confirmationUrl
-          //   )
+          try {
+            const emailSent = await emailService.sendConfirmationEmail(
+              user.email,
+              confirmationUrl
+            )
 
-          //   if (emailSent) {
-          //     console.log('✅ Email di conferma inviata')
-          //   } else {
-          //     console.log('⚠️ Email di conferma non inviata (servizio disabilitato?)')
-          //   }
-          // } catch (emailError) {
-          //   console.error('❌ Errore invio email:', emailError)
-          // }
+            if (emailSent) {
+              console.log('✅ Email di conferma inviata')
+            } else {
+              console.log('⚠️ Email di conferma non inviata (errore servizio)')
+            }
+          } catch (emailError) {
+            console.error('❌ Errore invio email:', emailError)
+          }
         }
 
         return NextResponse.json({ 
@@ -148,7 +147,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Utente ha confermato l'email (UPDATE)
-    else if (event.type === 'UPDATE' && user.email_confirmed_at && !event.old_record?.email_confirmed_at) {
+    if (event.type === 'UPDATE' && user.email_confirmed_at && !event.old_record?.email_confirmed_at) {
       console.log('✅ Utente ha confermato email:', user.email)
       
       const dashboardUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://client-sniper-frontend-app.vercel.app'}/dashboard`
