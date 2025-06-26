@@ -585,6 +585,7 @@ export default function ClientDashboard() {
                 </p>
               )}
             </div>
+            
 
             {/* Lead Disponibili */}
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50">
