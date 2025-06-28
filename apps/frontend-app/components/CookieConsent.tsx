@@ -41,7 +41,7 @@ export default function CookieConsent({ onConsentChange }: CookieConsentProps) {
 
   useEffect(() => {
     // Controlla se l'utente ha già dato consensi
-    const savedConsents = localStorage.getItem('clientsniper-cookie-consents')
+    const savedConsents = localStorage.getItem('trovami-cookie-consents')
     if (!savedConsents) {
       setShowBanner(true)
     } else {
@@ -138,8 +138,8 @@ export default function CookieConsent({ onConsentChange }: CookieConsentProps) {
 
   const saveConsents = async (preferences: ConsentPreferences) => {
     // Salva in localStorage
-    localStorage.setItem('clientsniper-cookie-consents', JSON.stringify(preferences))
-    localStorage.setItem('clientsniper-consent-date', new Date().toISOString())
+    localStorage.setItem('trovami-cookie-consents', JSON.stringify(preferences))
+    localStorage.setItem('trovami-consent-date', new Date().toISOString())
 
     // Invia al server per tracking GDPR
     try {
@@ -365,7 +365,7 @@ export function CookiePreferences() {
   })
 
   useEffect(() => {
-    const savedConsents = localStorage.getItem('clientsniper-cookie-consents')
+    const savedConsents = localStorage.getItem('trovami-cookie-consents')
     if (savedConsents) {
       try {
         setConsents(JSON.parse(savedConsents))
@@ -376,7 +376,7 @@ export function CookiePreferences() {
   }, [])
 
   const handleSave = async () => {
-    localStorage.setItem('clientsniper-cookie-consents', JSON.stringify(consents))
+    localStorage.setItem('trovami-cookie-consents', JSON.stringify(consents))
     
     try {
       await fetch('/api/gdpr/consent', {

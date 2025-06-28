@@ -1,4 +1,4 @@
-// Sistema di notifiche toast moderno per ClientSniper
+// Sistema di notifiche toast moderno per TrovaMi
 // Utilizzato per mostrare messaggi di successo, errore, info, warning
 // Sostituisce gli alert nativi del browser
 

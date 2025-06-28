@@ -4,6 +4,7 @@
 // Permette all'utente di scegliere il piano durante la registrazione
 // Gestisce sia piani gratuiti che a pagamento
 
+import { Metadata } from 'next'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
@@ -65,6 +66,22 @@ const plans: Plan[] = [
     stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID || 'price_pro_test'
   }
 ]
+
+export const metadata: Metadata = {
+  title: 'Registrati Gratis | TrovaMi - 2 Lead Gratuiti per la Tua Agenzia',
+  description: 'Registrati gratis su TrovaMi e ricevi 2 lead qualificati. Piattaforma di lead generation per agenzie web, freelancer e consulenti SEO. Inizia subito!',
+  keywords: 'registrazione gratuita, lead generation gratis, trovare clienti, agenzia web, freelancer, lead qualificati, 2 lead gratis',
+  robots: 'index, follow',
+  alternates: {
+    canonical: 'https://trovami.pro/register'
+  },
+  openGraph: {
+    title: 'Registrati Gratis | TrovaMi - 2 Lead Gratuiti',
+    description: 'Inizia gratis con TrovaMi! 2 lead qualificati gratuiti per la tua agenzia. Lead generation automatica per web designer e consulenti.',
+    url: 'https://trovami.pro/register',
+    type: 'website'
+  }
+}
 
 export default function RegisterPage() {
   const [selectedPlan, setSelectedPlan] = useState('free')
@@ -188,7 +205,7 @@ export default function RegisterPage() {
         <div className="max-w-6xl w-full">
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Benvenuto in ClientSniper
+              Benvenuto in TrovaMi
             </h1>
             <p className="text-xl text-gray-600">
               Scegli il piano perfetto per te

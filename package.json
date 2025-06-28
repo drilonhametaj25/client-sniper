@@ -1,7 +1,7 @@
 {
-  "name": "clientsniper-monorepo",
+  "name": "trovami-monorepo",
   "version": "1.0.0",
-  "description": "ClientSniper - SaaS per generazione lead attraverso analisi tecnica siti web",
+  "description": "TrovaMi - SaaS per generazione lead attraverso analisi tecnica siti web",
   "private": true,
   "workspaces": [
     "apps/*",

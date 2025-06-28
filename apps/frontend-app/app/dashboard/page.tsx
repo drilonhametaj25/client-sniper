@@ -5,6 +5,7 @@
 // Aggiunta gestione limiti configurabili e filtri avanzati
 // FIX: Risolto loop infinito di autenticazione e caricamento
 
+import { Metadata } from 'next'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
@@ -51,6 +52,16 @@ interface Settings {
   free_limit: number
   starter_limit: number
   pro_limit: number
+}
+
+export const metadata: Metadata = {
+  title: 'Dashboard Lead | TrovaMi - I Tuoi Lead Qualificati',
+  description: 'Visualizza e gestisci i tuoi lead qualificati su TrovaMi. Dashboard completa per agenzie web con analisi dettagliate e contatti verificati.',
+  keywords: 'dashboard lead, gestione lead, lead qualificati, clienti potenziali, agenzia web dashboard',
+  robots: 'noindex, nofollow',
+  alternates: {
+    canonical: 'https://trovami.pro/dashboard'
+  }
 }
 
 export default function ClientDashboard() {
@@ -437,7 +448,7 @@ export default function ClientDashboard() {
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `clientsniper-leads-${new Date().toISOString().split('T')[0]}.csv`
+    a.download = `trovami-leads-${new Date().toISOString().split('T')[0]}.csv`
     a.click()
 
     // Aggiorna il profilo per mostrare i crediti aggiornati

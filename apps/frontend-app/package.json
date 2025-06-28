@@ -1,7 +1,7 @@
 {
-  "name": "@clientsniper/frontend-app",
+  "name": "@trovami/frontend-app",
   "version": "1.0.0",
-  "description": "Frontend Next.js per ClientSniper",
+  "description": "Frontend Next.js per TrovaMi",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",

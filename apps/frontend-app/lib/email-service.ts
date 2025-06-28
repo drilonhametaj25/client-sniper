@@ -1,5 +1,5 @@
 /**
- * Servizio email per ClientSniper
+ * Servizio email per TrovaMi
  * Usato per: Inviare email personalizzate di conferma, benvenuto, notifiche
  * Chiamato da: API di registrazione, webhook, sistemi di notifica
  */
@@ -34,14 +34,14 @@ export class EmailService {
   // Template email di conferma account
   static getConfirmationEmailTemplate(confirmationUrl: string, userEmail: string): EmailTemplate {
     return {
-      subject: '✨ Conferma il tuo account ClientSniper',
+      subject: '✨ Conferma il tuo account TrovaMi',
       html: `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Conferma Account ClientSniper</title>
+          <title>Conferma Account TrovaMi</title>
         </head>
         <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
           <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden; margin-top: 40px;">
@@ -49,7 +49,7 @@ export class EmailService {
             <!-- Header -->
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
               <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">
-                🎯 ClientSniper
+                🎯 TrovaMi
               </h1>
               <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0; font-size: 16px;">
                 Trova clienti potenziali con difetti tecnici
@@ -59,11 +59,11 @@ export class EmailService {
             <!-- Content -->
             <div style="padding: 40px 30px;">
               <h2 style="color: #1a202c; margin: 0 0 20px 0; font-size: 24px; font-weight: 600;">
-                Benvenuto in ClientSniper! 🚀
+                Benvenuto in TrovaMi! 🚀
               </h2>
               
               <p style="color: #4a5568; line-height: 1.6; margin: 0 0 20px 0; font-size: 16px;">
-                Ciao! Grazie per esserti registrato a <strong>ClientSniper</strong>, la piattaforma che ti aiuta a trovare clienti potenziali analizzando siti web con difetti tecnici.
+                Ciao! Grazie per esserti registrato a <strong>TrovaMi</strong>, la piattaforma che ti aiuta a trovare clienti potenziali analizzando siti web con difetti tecnici.
               </p>
               
               <p style="color: #4a5568; line-height: 1.6; margin: 0 0 30px 0; font-size: 16px;">
@@ -111,7 +111,7 @@ export class EmailService {
                 Hai domande? Rispondi a questa email, siamo qui per aiutarti! 💬
               </p>
               <p style="color: #a0aec0; margin: 10px 0 0 0; font-size: 12px;">
-                © 2025 ClientSniper. Tutti i diritti riservati.
+                © 2025 TrovaMi. Tutti i diritti riservati.
               </p>
             </div>
           </div>
@@ -128,7 +128,7 @@ export class EmailService {
         </html>
       `,
       text: `
-Benvenuto in ClientSniper! 🎯
+Benvenuto in TrovaMi! 🎯
 
 Grazie per esserti registrato alla piattaforma che ti aiuta a trovare clienti potenziali analizzando siti web con difetti tecnici.
 
@@ -157,7 +157,7 @@ Hai domande? Rispondi a questa email!
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Benvenuto in ClientSniper</title>
+          <title>Benvenuto in TrovaMi</title>
         </head>
         <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
           <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden; margin-top: 40px;">
@@ -169,7 +169,7 @@ Hai domande? Rispondi a questa email!
                 Account Confermato!
               </h1>
               <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0; font-size: 16px;">
-                Benvenuto ufficialmente in ClientSniper! 🚀
+                Benvenuto ufficialmente in TrovaMi! 🚀
               </p>
             </div>
 
@@ -219,7 +219,7 @@ Hai domande? Rispondi a questa email!
                 Hai bisogno di aiuto? Rispondi a questa email! 💬
               </p>
               <p style="color: #a0aec0; margin: 0; font-size: 12px;">
-                © 2025 ClientSniper
+                © 2025 TrovaMi
               </p>
             </div>
           </div>
@@ -229,7 +229,7 @@ Hai domande? Rispondi a questa email!
       text: `
 🎉 Account Confermato!
 
-Fantastico! Il tuo account ClientSniper è stato confermato con successo.
+Fantastico! Il tuo account TrovaMi è stato confermato con successo.
 
 Accedi alla dashboard: ${dashboardUrl}
 
@@ -243,7 +243,7 @@ Ricorda: ogni lead ha un punteggio di priorità che indica le opportunità di bu
 
 Hai domande? Rispondi a questa email.
 
-© 2025 ClientSniper
+© 2025 TrovaMi
       `
     }
   }
@@ -272,7 +272,7 @@ Hai domande? Rispondi a questa email.
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: 'ClientSniper <noreply@clientsniper.com>',
+          from: 'TrovaMi <noreply@trovami.pro>',
           to: [to],
           subject,
           html,

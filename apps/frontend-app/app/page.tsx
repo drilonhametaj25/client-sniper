@@ -15,6 +15,84 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/30">
       
+      {/* Schema Markup per SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "TrovaMi",
+            "description": "Piattaforma di lead generation automatica per agenzie web e freelancer. Analisi tecnica siti web e identificazione clienti potenziali.",
+            "url": "https://trovami.pro",
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": "Web",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "EUR",
+              "description": "2 lead gratuiti per iniziare"
+            },
+            "creator": {
+              "@type": "Organization",
+              "name": "TrovaMi Team"
+            },
+            "featureList": [
+              "Lead generation automatica",
+              "Analisi tecnica siti web",
+              "Identificazione clienti potenziali",
+              "Dashboard gestione lead",
+              "Esportazione dati CSV"
+            ]
+          })
+        }}
+      />
+      
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "TrovaMi",
+            "url": "https://trovami.pro",
+            "logo": "https://trovami.pro/logo.png",
+            "description": "Piattaforma leader per la lead generation automatica in Italia. Aiutiamo agenzie web e freelancer a trovare clienti qualificati.",
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "contactType": "customer service",
+              "email": "support@trovami.pro"
+            },
+            "sameAs": [
+              "https://linkedin.com/company/trovami",
+              "https://twitter.com/trovami_pro"
+            ]
+          })
+        }}
+      />
+      
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Service",
+            "name": "Lead Generation per Agenzie Web",
+            "description": "Servizio di lead generation automatica che identifica aziende con siti web problematici che necessitano di servizi web, SEO e marketing digitale.",
+            "provider": {
+              "@type": "Organization",
+              "name": "TrovaMi"
+            },
+            "areaServed": "IT",
+            "serviceType": "Lead Generation",
+            "audience": {
+              "@type": "BusinessAudience",
+              "audienceType": "Agenzie Web, Freelancer, Consulenti SEO"
+            }
+          })
+        }}
+      />
+
       {/* Header per utenti non loggati */}
       {!user && (
         <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200/50">
@@ -24,7 +102,7 @@ export default function HomePage() {
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                   <Target className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold text-gray-900">ClientSniper</span>
+                <span className="text-xl font-bold text-gray-900">TrovaMi</span>
               </div>
               <nav className="hidden md:flex items-center space-x-8">
                 <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">
@@ -58,21 +136,21 @@ export default function HomePage() {
               Analisi automatizzata senza GPT, solo logica pura
             </div>
 
-            {/* Titolo principale */}
+            {/* Titolo principale SEO-optimized */}
             <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-              Trova Lead
+              Trova Lead Qualificati
               <span className="block">
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800">
-                  Qualificati
+                  per la Tua Agenzia
                 </span>
               </span>
-              <span className="block">Analizzando Siti Web</span>
+              <span className="block">con l'Analisi Automatica</span>
             </h1>
 
-            {/* Sottotitolo */}
+            {/* Sottotitolo ottimizzato per SEO */}
             <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
-              ClientSniper identifica automaticamente aziende con siti web che necessitano di 
-              <strong className="text-gray-900"> miglioramenti tecnici</strong>, generando lead qualificati per la tua agenzia.
+              <strong>TrovaMi</strong> identifica automaticamente <strong>aziende con siti web problematici</strong> che necessitano di 
+              <strong className="text-gray-900"> servizi web, SEO e marketing digitale</strong>. Lead generation intelligente per agenzie, freelancer e consulenti.
             </p>
 
             {/* CTA Buttons */}
@@ -397,7 +475,7 @@ export default function HomePage() {
 
             {/* Trust indicators */}
             <div className="mt-16 pt-12 border-t border-white/20">
-              <p className="text-blue-100 mb-8">Unisciti a centinaia di agenzie e freelancer che hanno già trovato clienti con ClientSniper</p>
+              <p className="text-blue-100 mb-8">Unisciti a centinaia di agenzie e freelancer che hanno già trovato clienti con TrovaMi</p>
               <div className="flex flex-wrap justify-center items-center gap-8 opacity-60">
                 <div className="flex items-center space-x-2">
                   <Shield className="w-5 h-5 text-white" />
@@ -426,7 +504,7 @@ export default function HomePage() {
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
                   <Target className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-2xl font-bold">ClientSniper</span>
+                <span className="text-2xl font-bold">TrovaMi</span>
               </div>
               <p className="text-gray-400 text-lg leading-relaxed max-w-md">
                 La piattaforma più avanzata per trovare lead qualificati attraverso l'analisi automatizzata di siti web aziendali.
@@ -458,19 +536,19 @@ export default function HomePage() {
             </div>
             
             <div>
-              <h3 className="text-lg font-semibold mb-4">Supporto</h3>
+              <h3 className="text-lg font-semibold mb-4">Risorse</h3>
               <ul className="space-y-3">
-                <li><a href="/privacy" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
-                <li><a href="/terms" className="text-gray-400 hover:text-white transition-colors">Termini di Servizio</a></li>
-                <li><a href="/contact" className="text-gray-400 hover:text-white transition-colors">Contatti</a></li>
-                <li><a href="/help" className="text-gray-400 hover:text-white transition-colors">Centro Assistenza</a></li>
+                <li><Link href="/come-trovare-clienti" className="text-gray-400 hover:text-white transition-colors">Come Trovare Clienti</Link></li>
+                <li><Link href="/lead-generation-agenzie" className="text-gray-400 hover:text-white transition-colors">Lead Generation Agenzie</Link></li>
+                <li><Link href="/help" className="text-gray-400 hover:text-white transition-colors">Centro Assistenza</Link></li>
+                <li><Link href="/contact" className="text-gray-400 hover:text-white transition-colors">Contatti</Link></li>
               </ul>
             </div>
           </div>
           
           <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400 mb-4 md:mb-0">
-              &copy; 2025 ClientSniper. Tutti i diritti riservati.
+              &copy; 2025 TrovaMi. Tutti i diritti riservati.
             </p>
             <div className="flex items-center space-x-6 text-sm text-gray-400">
               <span>Made in Italy 🇮🇹</span>

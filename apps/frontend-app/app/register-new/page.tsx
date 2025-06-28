@@ -130,7 +130,7 @@ export default function RegisterPage() {
         <div className="max-w-6xl w-full">
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Benvenuto in ClientSniper
+              Benvenuto in TrovaMi
             </h1>
             <p className="text-xl text-gray-600">
               Scegli il piano perfetto per te

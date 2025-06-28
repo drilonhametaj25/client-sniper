@@ -54,7 +54,7 @@ export default function Navbar() {
               <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                 <Target className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-gray-900">ClientSniper</span>
+              <span className="text-xl font-bold text-gray-900">TrovaMi</span>
             </Link>
             
             <div className="flex items-center space-x-4">
@@ -110,7 +110,7 @@ export default function Navbar() {
               </div>
               <div className="hidden sm:block">
                 <span className="text-xl font-bold text-gray-900">
-                  ClientSniper
+                  TrovaMi
                 </span>
                 {isAdmin && (
                   <div className="text-xs text-gray-500">

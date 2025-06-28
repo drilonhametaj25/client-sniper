@@ -1,10 +1,10 @@
-# ClientSniper 🎯
+# TrovaMi 🎯
 
 SaaS per la generazione di lead attraverso l'analisi tecnica automatizzata di siti web aziendali.
 
 ## 🚀 Panoramica
 
-ClientSniper identifica automaticamente aziende con siti web che necessitano di miglioramenti tecnici, generando lead qualificati per agenzie digitali e consulenti web.
+TrovaMi identifica automaticamente aziende con siti web che necessitano di miglioramenti tecnici, generando lead qualificati per agenzie digitali e consulenti web.
 
 ### Come Funziona
 1. **Scraping Automatico**: Raccoglie dati da Google Maps, Yelp e directory online
@@ -15,7 +15,7 @@ ClientSniper identifica automaticamente aziende con siti web che necessitano di 
 ## 🏗️ Architettura
 
 ```
-ClientSniper/
+TrovaMi/
 ├── apps/
 │   └── frontend-app/          # Next.js 14 + Supabase + Stripe
 │       ├── app/               # App Router Next.js

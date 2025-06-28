@@ -13,17 +13,39 @@ import CookieConsent from '@/components/CookieConsent'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'ClientSniper - Trova Lead Qualificati',
-  description: 'SaaS per la generazione di lead attraverso l\'analisi tecnica automatizzata di siti web aziendali',
-  keywords: 'lead generation, web analysis, seo audit, digital marketing',
-  authors: [{ name: 'ClientSniper Team' }],
-  robots: 'index, follow',
+  title: 'TrovaMi - Trova Lead Qualificati per la Tua Agenzia | Lead Generation Automatica',
+  description: 'Trova clienti potenziali analizzando siti web con problemi tecnici. Lead generation automatica per agenzie web, freelancer e consulenti SEO. 2 lead gratuiti per iniziare.',
+  keywords: 'lead generation, trova clienti, lead qualificati, agenzia web, freelancer, seo audit, web analysis, clienti potenziali, marketing digitale, prospecting automatico, business development',
+  authors: [{ name: 'TrovaMi Team' }],
+  robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
   openGraph: {
-    title: 'ClientSniper - Trova Lead Qualificati',
-    description: 'Identifica automaticamente aziende con siti web che necessitano di miglioramenti tecnici',
+    title: 'TrovaMi - Trova Lead Qualificati per la Tua Agenzia',
+    description: 'Identifica automaticamente aziende con siti web che necessitano di miglioramenti tecnici. Lead generation intelligente per agenzie e freelancer.',
     type: 'website',
     locale: 'it_IT',
+    url: 'https://trovami.pro',
+    siteName: 'TrovaMi',
+    images: [
+      {
+        url: 'https://trovami.pro/og-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'TrovaMi - Lead Generation Automatica'
+      }
+    ]
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'TrovaMi - Trova Lead Qualificati per la Tua Agenzia',
+    description: 'Lead generation automatica per agenzie web e freelancer. Analisi tecnica siti web e clienti qualificati.',
+    images: ['https://trovami.pro/twitter-image.jpg']
+  },
+  alternates: {
+    canonical: 'https://trovami.pro'
+  },
+  other: {
+    'google-site-verification': 'your-google-verification-code'
+  }
 }
 
 export const viewport: Viewport = {
