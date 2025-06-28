@@ -153,6 +153,85 @@ export async function signUp(email: string, password: string) {
   }
 }
 
+/**
+ * Funzione di registrazione personalizzata che evita email Supabase
+ * Usato per: Bypassare il sistema email di Supabase
+ * Chiamato da: Form di registrazione
+ */
+
+import { emailService } from '@/lib/email-service'
+
+export async function signUpWithCustomEmail(email: string, password: string) {
+  try {
+    console.log('🔄 Registrazione personalizzata per:', email)
+
+    // Step 1: Registra con Supabase MA con email confirmation disabilitata
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+        // Tenta di disabilitare email automatica
+        data: { skip_email_confirmation: true }
+      }
+    })
+
+    if (error) {
+      console.error('❌ Errore registrazione Supabase:', error)
+      return { success: false, error: error.message }
+    }
+
+    if (data.user) {
+      console.log('✅ Utente creato in Supabase:', data.user.id)
+
+      // Step 2: Crea record nella tabella custom
+      const { error: dbError } = await supabase
+        .from('users')
+        .insert({
+          id: data.user.id,
+          email: data.user.email,
+          plan: 'free',
+          credits_remaining: 2,
+          created_at: new Date().toISOString()
+        })
+
+      if (dbError) {
+        console.error('❌ Errore creazione record custom:', dbError)
+      } else {
+        console.log('✅ Record custom creato')
+      }
+
+      // Step 3: Invia la NOSTRA email personalizzata
+      const confirmationUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/confirm?token=${data.user.id}&type=custom&email=${encodeURIComponent(email)}`
+      
+      const emailSent = await emailService.sendConfirmationEmail(email, confirmationUrl)
+      
+      if (emailSent) {
+        console.log('✅ Email personalizzata inviata')
+        return { 
+          success: true, 
+          message: 'Registrazione completata! Controlla la tua email per confermare l\'account.' 
+        }
+      } else {
+        console.log('⚠️ Errore invio email personalizzata')
+        return { 
+          success: true, 
+          message: 'Registrazione completata, ma errore invio email. Contatta il supporto.' 
+        }
+      }
+    }
+
+    return { success: false, error: 'Errore durante la registrazione' }
+
+  } catch (error) {
+    console.error('❌ Errore registrazione personalizzata:', error)
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Errore sconosciuto' 
+    }
+  }
+}
+
 // Funzione per il login
 export async function signIn(email: string, password: string) {
   try {

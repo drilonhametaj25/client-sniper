@@ -24,6 +24,8 @@ interface SupabaseAuthEvent {
 export async function POST(request: NextRequest) {
   try {
     console.log('🔔 Webhook auth chiamato')
+    console.log('📅 Timestamp:', new Date().toISOString())
+    console.log('🔗 URL chiamante:', request.url)
     
     // Log headers per debug
     const headers = Object.fromEntries(request.headers.entries())
