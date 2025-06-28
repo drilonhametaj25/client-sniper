@@ -1,5 +1,5 @@
 /**
- * Pagina Contatti - ClientSniper
+ * Pagina Contatti - TrovaMi
  * Usato per: Informazioni di contatto e form di supporto
  * Chiamato da: Footer, navbar, pagine di supporto
  */
@@ -216,7 +216,7 @@ export default function Contact() {
                   </div>
                   <div>
                     <h3 className="font-medium text-gray-900">Email Generale</h3>
-                    <p className="text-gray-600">info@clientsniper.com</p>
+                    <p className="text-gray-600">info@trovami.pro</p>
                     <p className="text-sm text-gray-500">Risposta entro 24 ore</p>
                   </div>
                 </div>
@@ -230,7 +230,7 @@ export default function Contact() {
                   </div>
                   <div>
                     <h3 className="font-medium text-gray-900">Supporto Tecnico</h3>
-                    <p className="text-gray-600">support@clientsniper.com</p>
+                    <p className="text-gray-600">support@trovami.pro</p>
                     <p className="text-sm text-gray-500">Problemi tecnici e assistenza</p>
                   </div>
                 </div>
@@ -244,7 +244,7 @@ export default function Contact() {
                   </div>
                   <div>
                     <h3 className="font-medium text-gray-900">Vendite e Partnership</h3>
-                    <p className="text-gray-600">sales@clientsniper.com</p>
+                    <p className="text-gray-600">sales@trovami.pro</p>
                     <p className="text-sm text-gray-500">Piani aziendali e collaborazioni</p>
                   </div>
                 </div>

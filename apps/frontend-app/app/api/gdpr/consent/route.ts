@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
             session_id: sessionId,
             user_id: userId,
             cookie_category: consent.type,
-            cookie_name: `clientsniper_${consent.type}`,
+            cookie_name: `trovami_${consent.type}`,
             purpose: consent.purpose,
             consented: consent.granted,
             consent_date: timestamp,

@@ -67,22 +67,6 @@ const plans: Plan[] = [
   }
 ]
 
-export const metadata: Metadata = {
-  title: 'Registrati Gratis | TrovaMi - 2 Lead Gratuiti per la Tua Agenzia',
-  description: 'Registrati gratis su TrovaMi e ricevi 2 lead qualificati. Piattaforma di lead generation per agenzie web, freelancer e consulenti SEO. Inizia subito!',
-  keywords: 'registrazione gratuita, lead generation gratis, trovare clienti, agenzia web, freelancer, lead qualificati, 2 lead gratis',
-  robots: 'index, follow',
-  alternates: {
-    canonical: 'https://trovami.pro/register'
-  },
-  openGraph: {
-    title: 'Registrati Gratis | TrovaMi - 2 Lead Gratuiti',
-    description: 'Inizia gratis con TrovaMi! 2 lead qualificati gratuiti per la tua agenzia. Lead generation automatica per web designer e consulenti.',
-    url: 'https://trovami.pro/register',
-    type: 'website'
-  }
-}
-
 export default function RegisterPage() {
   const [selectedPlan, setSelectedPlan] = useState('free')
   const [email, setEmail] = useState('')

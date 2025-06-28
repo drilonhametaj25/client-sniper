@@ -1,5 +1,5 @@
 /**
- * Pagina Termini di Servizio - ClientSniper
+ * Pagina Termini di Servizio - TrovaMi
  * Usato per: Condizioni di utilizzo e accordi legali
  * Chiamato da: Footer, registrazione, link legali
  */
@@ -7,8 +7,8 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Termini di Servizio | ClientSniper',
-  description: 'Termini e condizioni di utilizzo di ClientSniper - Diritti, responsabilità e accordi legali.',
+  title: 'Termini di Servizio | TrovaMi',
+  description: 'Termini e condizioni di utilizzo di TrovaMi - Diritti, responsabilità e accordi legali.',
 }
 
 export default function TermsOfService() {
@@ -36,9 +36,9 @@ export default function TermsOfService() {
               1. Accettazione dei Termini
             </h2>
             <p className="text-gray-700 leading-7">
-              Benvenuto in ClientSniper. Utilizzando la nostra piattaforma, accetti integralmente questi Termini di Servizio 
+              Benvenuto in TrovaMi. Utilizzando la nostra piattaforma, accetti integralmente questi Termini di Servizio 
               ("Termini"). Se non accetti questi termini, non puoi utilizzare i nostri servizi. Questi termini costituiscono 
-              un accordo legalmente vincolante tra te e ClientSniper.
+              un accordo legalmente vincolante tra te e TrovaMi.
             </p>
           </section>
 
@@ -48,7 +48,7 @@ export default function TermsOfService() {
               2. Descrizione del Servizio
             </h2>
             <p className="text-gray-700 leading-7 mb-4">
-              ClientSniper è una piattaforma SaaS che fornisce:
+              TrovaMi è una piattaforma SaaS che fornisce:
             </p>
             <ul className="list-disc list-inside text-gray-700 space-y-2">
               <li>Ricerca automatizzata di potenziali clienti tramite analisi di siti web</li>
@@ -147,8 +147,8 @@ export default function TermsOfService() {
               6. Proprietà Intellettuale
             </h2>
             <p className="text-gray-700 leading-7 mb-4">
-              ClientSniper e tutti i suoi contenuti, funzionalità e caratteristiche sono di proprietà esclusiva 
-              di ClientSniper e sono protetti da copyright, marchi commerciali e altre leggi sulla proprietà intellettuale.
+              TrovaMi e tutti i suoi contenuti, funzionalità e caratteristiche sono di proprietà esclusiva 
+              di TrovaMi e sono protetti da copyright, marchi commerciali e altre leggi sulla proprietà intellettuale.
             </p>
             <p className="text-gray-700 leading-7">
               Ti viene concessa una licenza limitata, non esclusiva e non trasferibile per utilizzare la piattaforma 
@@ -175,7 +175,7 @@ export default function TermsOfService() {
               7.2 Limitazioni
             </h3>
             <p className="text-gray-700 leading-7">
-              In nessun caso ClientSniper sarà responsabile per danni indiretti, incidentali, 
+              In nessun caso TrovaMi sarà responsabile per danni indiretti, incidentali, 
               speciali o consequenziali derivanti dall'uso dei nostri servizi. La nostra 
               responsabilità totale non supererà l'importo pagato nei 12 mesi precedenti.
             </p>
@@ -213,7 +213,7 @@ export default function TermsOfService() {
             </p>
 
             <h3 className="text-xl font-medium text-gray-800 mb-3">
-              9.2 Da parte di ClientSniper
+              9.2 Da parte di TrovaMi
             </h3>
             <p className="text-gray-700 leading-7">
               Ci riserviamo il diritto di sospendere o terminare il tuo account in caso di 
@@ -253,8 +253,8 @@ export default function TermsOfService() {
               Per questioni relative a questi Termini di Servizio:
             </p>
             <div className="space-y-2 text-gray-700">
-              <p><strong>Email:</strong> legal@clientsniper.com</p>
-              <p><strong>Indirizzo:</strong> ClientSniper S.r.l., Via Roma 123, 20121 Milano, Italia</p>
+              <p><strong>Email:</strong> legal@trovami.pro</p>
+              <p><strong>Indirizzo:</strong> TrovaMi S.r.l., Via Roma 123, 20121 Milano, Italia</p>
               <p><strong>P.IVA:</strong> IT12345678901</p>
             </div>
           </section>

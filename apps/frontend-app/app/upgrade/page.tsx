@@ -41,7 +41,7 @@ export default function UpgradePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">ClientSniper</h1>
+              <h1 className="text-2xl font-bold text-gray-900">TrovaMi</h1>
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">
@@ -81,7 +81,7 @@ export default function UpgradePage() {
         {/* Benefits Section */}
         <div className="mt-16 bg-white rounded-lg shadow-lg p-8">
           <h3 className="text-2xl font-bold text-gray-900 text-center mb-8">
-            Perché scegliere ClientSniper Pro?
+            Perché scegliere TrovaMi Pro?
           </h3>
           
           <div className="grid md:grid-cols-3 gap-8">

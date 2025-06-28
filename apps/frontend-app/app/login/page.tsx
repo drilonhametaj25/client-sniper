@@ -5,23 +5,12 @@
 // Viene utilizzata per l'accesso al sistema
 // ⚠️ Aggiornare se si cambiano i campi di login o validazioni
 
-import { Metadata } from 'next'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { Eye, EyeOff, LogIn, Target } from 'lucide-react'
-
-export const metadata: Metadata = {
-  title: 'Login | TrovaMi - Accedi alla Piattaforma Lead Generation',
-  description: 'Accedi al tuo account TrovaMi per visualizzare i tuoi lead qualificati. Piattaforma di lead generation per agenzie web e freelancer.',
-  keywords: 'login trovami, accesso lead generation, piattaforma lead, agenzia web login',
-  robots: 'noindex, nofollow',
-  alternates: {
-    canonical: 'https://trovami.pro/login'
-  }
-}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')

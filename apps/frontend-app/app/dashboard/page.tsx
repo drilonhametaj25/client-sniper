@@ -54,16 +54,6 @@ interface Settings {
   pro_limit: number
 }
 
-export const metadata: Metadata = {
-  title: 'Dashboard Lead | TrovaMi - I Tuoi Lead Qualificati',
-  description: 'Visualizza e gestisci i tuoi lead qualificati su TrovaMi. Dashboard completa per agenzie web con analisi dettagliate e contatti verificati.',
-  keywords: 'dashboard lead, gestione lead, lead qualificati, clienti potenziali, agenzia web dashboard',
-  robots: 'noindex, nofollow',
-  alternates: {
-    canonical: 'https://trovami.pro/dashboard'
-  }
-}
-
 export default function ClientDashboard() {
   const { user, loading, refreshProfile } = useAuth()
   const router = useRouter()

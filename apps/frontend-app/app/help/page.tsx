@@ -1,5 +1,5 @@
 /**
- * Pagina Centro Assistenza - ClientSniper
+ * Pagina Centro Assistenza - TrovaMi
  * Usato per: FAQ, guide, documentazione e supporto self-service
  * Chiamato da: Footer, navbar, pagine di supporto
  */
@@ -28,7 +28,7 @@ export default function HelpCenter() {
     {
       id: 1,
       category: 'getting-started',
-      question: 'Come iniziare con ClientSniper?',
+      question: 'Come iniziare con TrovaMi?',
       answer: `Iniziare è semplicissimo:
       
       1. **Registrati** con la tua email - ricevi 2 lead gratuiti
@@ -142,11 +142,11 @@ export default function HelpCenter() {
       1. **Spam/Junk folder** - le email potrebbero finire lì
       2. **Email corretta** - verifica di aver inserito l'indirizzo giusto  
       3. **Attendi 5-10 minuti** - i server email possono avere ritardi
-      4. **Whitelist** - aggiungi noreply@clientsniper.com ai contatti
+      4. **Whitelist** - aggiungi noreply@trovami.pro ai contatti
       
       **Se persiste il problema:**
       - Prova con un altro indirizzo email
-      - Contatta support@clientsniper.com
+      - Contatta support@trovami.pro
       - Specifica: browser, dispositivo, e orario del tentativo
       
       **Alternative:**
@@ -269,7 +269,7 @@ export default function HelpCenter() {
       - Supporto dedicato
       - Integrazioni API custom
       
-      **Contatta sales@clientsniper.com** per un preventivo personalizzato.`
+      **Contatta sales@trovami.pro** per un preventivo personalizzato.`
     }
   ]
 
@@ -294,7 +294,7 @@ export default function HelpCenter() {
             Centro Assistenza
           </h1>
           <p className="text-lg text-gray-600 mb-8">
-            Trova risposte alle tue domande e guide per utilizzare al meglio ClientSniper
+            Trova risposte alle tue domande e guide per utilizzare al meglio TrovaMi
           </p>
 
           {/* Search */}
@@ -359,7 +359,7 @@ export default function HelpCenter() {
                     Contatta Supporto
                   </a>
                   <a 
-                    href="mailto:support@clientsniper.com"
+                    href="mailto:support@trovami.pro"
                     className="block w-full text-center px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors text-sm"
                   >
                     Email Diretta

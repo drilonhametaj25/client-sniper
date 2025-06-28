@@ -142,7 +142,7 @@ Cosa ottieni con il piano gratuito:
 
 Hai domande? Rispondi a questa email!
 
-© 2025 ClientSniper
+© 2025 TrovaMi
       `
     }
   }

@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     // Invia email di notifica al team
     try {
       const notificationTemplate = {
-        subject: `[ClientSniper] Nuovo messaggio: ${subject}`,
+        subject: `[TrovaMi] Nuovo messaggio: ${subject}`,
         html: `
           <h2>Nuovo messaggio di contatto</h2>
           <p><strong>Da:</strong> ${name} (${email})</p>
@@ -95,7 +95,7 @@ Data: ${new Date().toLocaleString('it-IT')}
       }
 
       await emailService.sendEmail({
-        to: 'support@clientsniper.com',
+        to: 'support@trovami.pro',
         template: notificationTemplate
       })
     } catch (emailError) {
@@ -106,7 +106,7 @@ Data: ${new Date().toLocaleString('it-IT')}
     // Invia email di conferma all'utente
     try {
       const confirmationTemplate = {
-        subject: '✅ Messaggio ricevuto - ClientSniper',
+        subject: '✅ Messaggio ricevuto - TrovaMi',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #333;">Grazie per averci contattato!</h2>
@@ -119,10 +119,9 @@ Data: ${new Date().toLocaleString('it-IT')}
               <p><strong>Tipo:</strong> ${type}</p>
               <p><strong>Messaggio:</strong> ${message.substring(0, 200)}${message.length > 200 ? '...' : ''}</p>
             </div>
-            
-            <p>Se hai bisogno di assistenza immediata, puoi anche scriverci direttamente a <a href="mailto:support@clientsniper.com">support@clientsniper.com</a>.</p>
-            
-            <p>Cordiali saluti,<br>Il Team ClientSniper</p>
+             <p>Se hai bisogno di assistenza immediata, puoi anche scriverci direttamente a <a href="mailto:support@trovami.pro">support@trovami.pro</a>.</p>
+
+            <p>Cordiali saluti,<br>Il Team TrovaMi</p>
             
             <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
             <p style="font-size: 12px; color: #666;">
@@ -142,10 +141,10 @@ Oggetto: ${subject}
 Tipo: ${type}
 Messaggio: ${message.substring(0, 200)}${message.length > 200 ? '...' : ''}
 
-Se hai bisogno di assistenza immediata, puoi anche scriverci direttamente a support@clientsniper.com.
+Se hai bisogno di assistenza immediata, puoi anche scriverci direttamente a support@trovami.pro.
 
 Cordiali saluti,
-Il Team ClientSniper
+Il Team TrovaMi
         `
       }
 

@@ -4,8 +4,8 @@
  * Eseguire: npm run test:gdpr o node test-gdpr.js
  */
 
-// Test del sistema GDPR - ClientSniper
-console.log('🧪 Avvio test sistema GDPR ClientSniper...\n')
+// Test del sistema GDPR - TrovaMi
+console.log('🧪 Avvio test sistema GDPR TrovaMi...\n')
 
 // Test 1: Verifica localStorage consensi
 const testLocalStorage = () => {
@@ -22,8 +22,8 @@ const testLocalStorage = () => {
   
   // Salva in localStorage (come fa il componente)
   if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('clientsniper-cookie-consents', JSON.stringify(mockConsents))
-    const saved = JSON.parse(localStorage.getItem('clientsniper-cookie-consents') || '{}')
+    localStorage.setItem('trovami-cookie-consents', JSON.stringify(mockConsents))
+    const saved = JSON.parse(localStorage.getItem('trovami-cookie-consents') || '{}')
     
     console.log('✅ Consensi salvati:', saved)
     console.log('✅ Test localStorage: PASSED\n')
@@ -153,7 +153,7 @@ const testEnvironmentVariables = () => {
 
 // Esegui tutti i test
 const runAllTests = async () => {
-  console.log('🚀 === Test Suite GDPR ClientSniper ===\n')
+  console.log('🚀 === Test Suite GDPR TrovaMi ===\n')
   
   testLocalStorage()
   await testGDPRAPI()

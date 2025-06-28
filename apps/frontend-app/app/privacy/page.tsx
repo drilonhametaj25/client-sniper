@@ -1,5 +1,5 @@
 /**
- * Pagina Privacy Policy - ClientSniper
+ * Pagina Privacy Policy - TrovaMi
  * Usato per: Informativa sulla privacy e trattamento dati
  * Chiamato da: Footer, link legali, registrazione utenti
  */
@@ -7,8 +7,8 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | ClientSniper',
-  description: 'Informativa sulla privacy di ClientSniper - Come raccogliamo, utilizziamo e proteggiamo i tuoi dati personali.',
+  title: 'Privacy Policy | TrovaMi',
+  description: 'Informativa sulla privacy di TrovaMi - Come raccogliamo, utilizziamo e proteggiamo i tuoi dati personali.',
 }
 
 export default function PrivacyPolicy() {
@@ -36,7 +36,7 @@ export default function PrivacyPolicy() {
               1. Introduzione
             </h2>
             <p className="text-gray-700 leading-7">
-              ClientSniper ("noi", "nostro" o "la Società") si impegna a proteggere la privacy degli utenti ("tu" o "l'Utente") 
+              TrovaMi ("noi", "nostro" o "la Società") si impegna a proteggere la privacy degli utenti ("tu" o "l'Utente") 
               che utilizzano la nostra piattaforma per la ricerca di lead commerciali. Questa Privacy Policy spiega come 
               raccogliamo, utilizziamo, condividiamo e proteggiamo le tue informazioni personali.
             </p>
@@ -198,9 +198,9 @@ export default function PrivacyPolicy() {
               Per domande riguardo questa Privacy Policy o per esercitare i tuoi diritti, contattaci:
             </p>
             <div className="space-y-2 text-gray-700">
-              <p><strong>Email:</strong> privacy@clientsniper.com</p>
-              <p><strong>Indirizzo:</strong> ClientSniper, Via Roma 123, 20121 Milano, Italia</p>
-              <p><strong>Data Protection Officer:</strong> dpo@clientsniper.com</p>
+              <p><strong>Email:</strong> privacy@trovami.pro</p>
+              <p><strong>Indirizzo:</strong> TrovaMi, Via Roma 123, 20121 Milano, Italia</p>
+              <p><strong>Data Protection Officer:</strong> dpo@trovami.pro</p>
             </div>
           </section>
         </div>

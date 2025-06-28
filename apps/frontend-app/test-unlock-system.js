@@ -4,7 +4,7 @@
  * Eseguire: npm run test:unlock o node test-unlock-system.js
  */
 
-console.log('🧪 Test Sistema Lead Sbloccati - ClientSniper\n')
+console.log('🧪 Test Sistema Lead Sbloccati - TrovaMi\n')
 
 // Simulazione test del flusso di sblocco lead
 const testUnlockSystem = () => {
