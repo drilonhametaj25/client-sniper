@@ -41,7 +41,83 @@ export async function GET(request: NextRequest) {
       if (data.user) {
         console.log('✅ Utente autenticato con successo:', data.user.email)
         
+        // Verifica se è la prima volta (nuovo utente) o conferma email
+        const isNewUser = !data.user.email_confirmed_at
+        
         // Assicurati che l'utente esista nella tabella custom users
+        try {
+          const { data: existingUser } = await supabase
+            .from('users')
+            .select('id')
+            .eq('id', data.user.id)
+            .single()
+
+          if (!existingUser) {
+            console.log('🆕 Creando nuovo utente nella tabella custom')
+            
+            // Nuovo utente - crea record e invia email di conferma
+            const { error: insertError } = await supabase
+              .from('users')
+              .insert({
+                id: data.user.id,
+                email: data.user.email,
+                plan: 'free',
+                credits_remaining: 2,
+                created_at: new Date().toISOString()
+              })
+
+            if (insertError) {
+              console.error('❌ Errore creazione utente:', insertError)
+            } else {
+              console.log('✅ Nuovo utente creato')
+
+              // Invia email di conferma se l'email non è ancora confermata
+              if (!data.user.email_confirmed_at && data.user.email) {
+                console.log('📧 Inviando email di conferma...')
+                
+                // Importa dinamicamente il servizio email
+                const { emailService } = await import('@/lib/email-service')
+                
+                const confirmationUrl = `${requestUrl.origin}/auth/confirm?token=manual-confirm&email=${encodeURIComponent(data.user.email)}`
+                
+                try {
+                  const emailSent = await emailService.sendConfirmationEmail(
+                    data.user.email,
+                    confirmationUrl
+                  )
+
+                  if (emailSent) {
+                    console.log('✅ Email di conferma inviata')
+                  }
+                } catch (emailError) {
+                  console.error('❌ Errore invio email:', emailError)
+                }
+              }
+            }
+          } else {
+            console.log('✅ Utente esistente trovato')
+          }
+
+          // Se l'email è appena stata confermata, invia email di benvenuto
+          if (data.user.email_confirmed_at && isNewUser && data.user.email) {
+            console.log('🎉 Inviando email di benvenuto...')
+            
+            const { emailService } = await import('@/lib/email-service')
+            
+            try {
+              await emailService.sendWelcomeEmail(
+                data.user.email,
+                `${requestUrl.origin}/dashboard`
+              )
+            } catch (emailError) {
+              console.error('❌ Errore invio email di benvenuto:', emailError)
+            }
+          }
+        } catch (userError) {
+          console.error('❌ Errore gestione utente:', userError)
+        }
+
+        // Sincronizza sempre l'utente nella tabella custom (upsert)
         try {
           const { error: upsertError } = await supabase
             .from('users')

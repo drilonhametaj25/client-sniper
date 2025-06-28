@@ -43,11 +43,10 @@ export async function POST(request: NextRequest) {
       secretLength: expectedSecret?.length || 0
     })
 
-    // Temporaneamente disabilito la verifica per debug
-    // if (!expectedSecret || authHeader !== `Bearer ${expectedSecret}`) {
-    //   console.error('❌ Autorizzazione fallita')
-    //   return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 })
-    // }
+    if (!expectedSecret || authHeader !== `Bearer ${expectedSecret}`) {
+      console.error('❌ Autorizzazione fallita')
+      return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 })
+    }
 
     const body = await request.text()
     console.log('📄 Body ricevuto (primi 200 char):', body.substring(0, 200))
