@@ -18,15 +18,15 @@ async function setupDatabase() {
   console.log('🔧 Avvio setup database ClientSniper...');
 
   // Verifica configurazione
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+  if (!process.env.SUPABASE_URL || !(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY)) {
     console.error('❌ Variabili d\'ambiente Supabase mancanti');
     process.exit(1);
   }
 
   // Connetti a Supabase
   const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY
+    process.env.SUPABASE_URL!,
+    (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY)!
   );
 
   try {

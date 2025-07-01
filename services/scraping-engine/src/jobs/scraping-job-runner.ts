@@ -46,10 +46,10 @@ export class ScrapingJobRunner {
     const { createClient } = await import('@supabase/supabase-js')
     
     const supabaseUrl = process.env.SUPABASE_URL
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY
     
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error('❌ Variabili d\'ambiente Supabase mancanti (SUPABASE_URL, SUPABASE_SERVICE_KEY)')
+      throw new Error('❌ Variabili d\'ambiente Supabase mancanti (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)')
     }
     
     const supabase = createClient(supabaseUrl, supabaseKey)
@@ -304,10 +304,10 @@ export class ScrapingJobRunner {
       const { createClient } = await import('@supabase/supabase-js')
       
       const supabaseUrl = process.env.SUPABASE_URL
-      const supabaseKey = process.env.SUPABASE_SERVICE_KEY
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY
       
       if (!supabaseUrl || !supabaseKey) {
-        throw new Error('❌ Variabili d\'ambiente Supabase mancanti (SUPABASE_URL, SUPABASE_SERVICE_KEY)')
+        throw new Error('❌ Variabili d\'ambiente Supabase mancanti (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)')
       }
       
       const supabase = createClient(supabaseUrl, supabaseKey)

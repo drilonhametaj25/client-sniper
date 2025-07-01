@@ -1,6 +1,13 @@
 /**
  * Script di produzione per scraping distribuito intelligente
- * Legge zone e categorie dal database e gestisce scheduling automatico
+ * Legge zone e    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY
+    
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Variabili SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY devono essere configurate nel file .env')
+    }
+    
+    console.log(`🔗 Connettendo a: ${supabaseUrl}`)
+    console.log(`🔑 Tipo chiave: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SERVICE_ROLE' : process.env.SUPABASE_SERVICE_KEY ? 'SERVICE' : 'ANON'}`)ie dal database e gestisce scheduling automatico
  * Implementa la logica distribuita come da s      // 3. Esegue scraping con GoogleMapsScraper
       console.log(`   🔍 Scraping con analisi siti: ${CONFIG.enableSiteAnalysis ? 'ABILITATA' : 'DISABILITATA'}`)
       const result = await this.scraper.scrape({

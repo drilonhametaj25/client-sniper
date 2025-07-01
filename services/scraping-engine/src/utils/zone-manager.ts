@@ -46,10 +46,10 @@ export class ZoneManager {
     
     // Inizializza client Supabase con controllo delle variabili d'ambiente
     const supabaseUrl = process.env.SUPABASE_URL
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY
     
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error('❌ Variabili d\'ambiente Supabase mancanti (SUPABASE_URL, SUPABASE_SERVICE_KEY)')
+      throw new Error('❌ Variabili d\'ambiente Supabase mancanti (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)')
     }
     
     this.supabase = createClient(supabaseUrl, supabaseKey)
