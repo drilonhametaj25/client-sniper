@@ -310,9 +310,20 @@ export default function LoginPage() {
           </div>
           
           <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-400 mb-4 md:mb-0">
-              &copy; 2025 TrovaMi. Tutti i diritti riservati.
-            </p>
+            <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-6 mb-4 md:mb-0">
+              <p className="text-gray-400">
+                &copy; 2025 TrovaMi. Tutti i diritti riservati.
+              </p>
+              <div className="flex items-center space-x-4 text-sm">
+                <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">
+                  Privacy Policy
+                </Link>
+                <span className="text-gray-600">•</span>
+                <Link href="/terms" className="text-gray-400 hover:text-white transition-colors">
+                  Termini e Condizioni
+                </Link>
+              </div>
+            </div>
             <div className="flex items-center space-x-6 text-sm text-gray-400">
               <span>Made in Italy 🇮🇹</span>
               <span>•</span>
