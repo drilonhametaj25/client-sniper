@@ -697,7 +697,24 @@ export default function LeadDetailPage() {
                         Analisi Manuale
                       </span>
                     )}
+                    {!isNewFormat() && (
+                      <span className="ml-2 px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-full">
+                        Analisi Legacy
+                      </span>
+                    )}
                   </h2>
+                  
+                  {!isNewFormat() && (
+                    <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg">
+                      <div className="flex items-center">
+                        <AlertTriangle className="h-4 w-4 text-yellow-600 mr-2" />
+                        <span className="text-sm text-yellow-800 dark:text-yellow-200">
+                          <strong>Analisi Legacy:</strong> Questo lead è stato analizzato con una versione precedente. 
+                          Alcuni dettagli potrebbero essere incompleti o imprecisi.
+                        </span>
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="text-center p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
@@ -837,15 +854,26 @@ export default function LeadDetailPage() {
                           </div>
                         </>
                       ) : (
-                        // Formato vecchio
+                        // Formato vecchio - LOGICA MIGLIORATA PER LEGACY
                         <>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
                             <span className="text-sm text-gray-700 dark:text-gray-300">Sito Web Attivo</span>
-                            {analysis.has_website ? (
-                              <CheckCircle className="h-5 w-5 text-green-500" />
-                            ) : (
-                              <XCircle className="h-5 w-5 text-red-500" />
-                            )}
+                            {(() => {
+                              // LOGICA MIGLIORATA: Se il vecchio analyzer non ha rilevato ma il sito è HTTPS
+                              if (analysis.has_website === true) {
+                                return <CheckCircle className="h-5 w-5 text-green-500" />
+                              }
+                              // Se il sito ha HTTPS o altre analisi positive, probabilmente è attivo
+                              if (lead.website_url?.startsWith('https://') || analysis.website_load_time > 0) {
+                                return (
+                                  <div className="flex items-center">
+                                    <CheckCircle className="h-5 w-5 text-green-500" />
+                                    <span className="text-xs text-gray-500 ml-1">(rilevato URL)</span>
+                                  </div>
+                                )
+                              }
+                              return <XCircle className="h-5 w-5 text-red-500" />
+                            })()}
                           </div>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
                             <span className="text-sm text-gray-700 dark:text-gray-300">Meta Tags</span>
@@ -857,19 +885,38 @@ export default function LeadDetailPage() {
                           </div>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
                             <span className="text-sm text-gray-700 dark:text-gray-300">Mobile Friendly</span>
-                            {analysis.mobile_friendly ? (
-                              <CheckCircle className="h-5 w-5 text-green-500" />
-                            ) : (
-                              <XCircle className="h-5 w-5 text-red-500" />
-                            )}
+                            {(() => {
+                              // LOGICA MIGLIORATA: Se il vecchio analyzer non ha rilevato
+                              if (analysis.mobile_friendly === true) {
+                                return <CheckCircle className="h-5 w-5 text-green-500" />
+                              }
+                              // Per lead legacy senza analisi mobile, mostra come "non verificato"
+                              return (
+                                <div className="flex items-center">
+                                  <XCircle className="h-5 w-5 text-gray-400" />
+                                  <span className="text-xs text-gray-500 ml-1">(non verificato)</span>
+                                </div>
+                              )
+                            })()}
                           </div>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
                             <span className="text-sm text-gray-700 dark:text-gray-300">Certificato SSL</span>
-                            {analysis.ssl_certificate ? (
-                              <CheckCircle className="h-5 w-5 text-green-500" />
-                            ) : (
-                              <XCircle className="h-5 w-5 text-red-500" />
-                            )}
+                            {(() => {
+                              // LOGICA MIGLIORATA: Se il vecchio analyzer non ha rilevato ma URL è HTTPS
+                              if (analysis.ssl_certificate === true) {
+                                return <CheckCircle className="h-5 w-5 text-green-500" />
+                              }
+                              // Se URL è HTTPS, SSL è presente
+                              if (lead.website_url?.startsWith('https://')) {
+                                return (
+                                  <div className="flex items-center">
+                                    <CheckCircle className="h-5 w-5 text-green-500" />
+                                    <span className="text-xs text-gray-500 ml-1">(rilevato URL)</span>
+                                  </div>
+                                )
+                              }
+                              return <XCircle className="h-5 w-5 text-red-500" />
+                            })()}
                           </div>
                         </>
                       )}
@@ -1104,7 +1151,7 @@ export default function LeadDetailPage() {
                             <div className="w-2 h-2 rounded-full bg-blue-500 mr-2"></div>
                             <span className="text-sm text-gray-700 dark:text-gray-300">Pixel Tracking</span>
                           </div>
-                          {analysis.has_tracking_pixel ? (
+                          {analysis.has_tracking_pixel === true ? (
                             <CheckCircle className="h-5 w-5 text-green-500" />
                           ) : (
                             <XCircle className="h-5 w-5 text-red-500" />
@@ -1118,7 +1165,7 @@ export default function LeadDetailPage() {
                             <div className="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
                             <span className="text-sm text-gray-700 dark:text-gray-300">Google Tag Manager</span>
                           </div>
-                          {analysis.gtm_installed ? (
+                          {analysis.gtm_installed === true ? (
                             <CheckCircle className="h-5 w-5 text-green-500" />
                           ) : (
                             <XCircle className="h-5 w-5 text-red-500" />
@@ -1126,7 +1173,7 @@ export default function LeadDetailPage() {
                         </div>
                       )}
 
-                      {!analysis.has_tracking_pixel && !analysis.gtm_installed && (
+                      {analysis.has_tracking_pixel === false && analysis.gtm_installed === false && (
                         <div className="col-span-full text-center p-4 text-gray-500 dark:text-gray-400">
                           Nessun sistema di tracking rilevato
                         </div>
@@ -1175,7 +1222,7 @@ export default function LeadDetailPage() {
                         <>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
                             <span className="text-sm text-gray-700 dark:text-gray-300">Tempo di Caricamento</span>
-                            <span className="text-sm font-medium">
+                            <span className="text-sm font-medium dark:text-gray-300">
                               {analysis.website_load_time ? Math.round(analysis.website_load_time / 1000 * 10) / 10 : 'N/A'}s
                             </span>
                           </div>
@@ -1286,10 +1333,11 @@ export default function LeadDetailPage() {
               </div>
             </div>
 
-            {/* Raccomandazioni */}
+
+            {/* Riepilogo Finale */}
             <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                💡 Raccomandazioni per il Cliente
+                💡 Riepilogo Raccomandazioni
               </h3>
               
               <div className="space-y-3">
@@ -1308,7 +1356,7 @@ export default function LeadDetailPage() {
                     
                     {/* Tracking Issues */}
                     {((isNewFormat() && (!analysis.tracking?.hasGoogleAnalytics && !analysis.tracking?.hasFacebookPixel)) ||
-                      (!isNewFormat() && !analysis.has_tracking_pixel)) && (
+                      (!isNewFormat() && analysis.has_tracking_pixel === false)) && (
                       <div className="flex items-start">
                         <Zap className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
                         <span className="text-sm text-gray-700 dark:text-gray-300">
@@ -1328,46 +1376,25 @@ export default function LeadDetailPage() {
                     )}
                     
                     {/* Mobile Issues */}
-                    {((isNewFormat() && !analysis.performance?.isResponsive) ||
-                      (!isNewFormat() && !analysis.mobile_friendly)) && (
+                    {((isNewFormat() && analysis.performance?.isResponsive === false) ||
+                      (!isNewFormat() && analysis.mobile_friendly === false)) && (
                       <div className="flex items-start">
-                        <Zap className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
+                        <Smartphone className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
                         <span className="text-sm text-gray-700 dark:text-gray-300">
-                          <strong>Mobile:</strong> Rendere il sito completamente responsive per dispositivi mobili
-                        </span>
-                      </div>
-                    )}
-                    
-                    {/* GDPR Issues */}
-                    {isNewFormat() && analysis.gdpr && !analysis.gdpr.hasCookieBanner && (
-                      <div className="flex items-start">
-                        <Zap className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">
-                          <strong>GDPR:</strong> Implementare un banner per i cookie per essere conformi al GDPR
-                        </span>
-                      </div>
-                    )}
-                    
-                    {/* Social Media */}
-                    {isNewFormat() && analysis.social && !analysis.social.hasAnySocial && (
-                      <div className="flex items-start">
-                        <Zap className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">
-                          <strong>Social Media:</strong> Creare profili social e collegarli al sito web per aumentare la visibilità
-                        </span>
-                      </div>
-                    )}
-                    
-                    {/* Website Missing */}
-                    {!isNewFormat() && !analysis.has_website && (
-                      <div className="flex items-start">
-                        <Zap className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">
-                          <strong>Sito Web:</strong> Creare un sito web professionale per stabilire una presenza online
+                          <strong>Mobile:</strong> Rendere il sito responsive per migliorare l'esperienza su dispositivi mobili
                         </span>
                       </div>
                     )}
                   </>
+                )}
+                
+                {!analysis && (
+                  <div className="text-center py-8">
+                    <Activity className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Nessuna analisi disponibile
+                    </p>
+                  </div>
                 )}
               </div>
             </div>

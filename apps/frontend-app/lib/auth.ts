@@ -23,9 +23,10 @@ export interface AuthState {
   loading: boolean
 }
 
-// ⚡ CACHE INTELLIGENTE per profili utente
-let profileCache: { [key: string]: { profile: AuthUser, timestamp: number } } = {}
-const CACHE_DURATION = 5 * 60 * 1000 // 5 minuti di cache
+// ⚡ CACHE INTELLIGENTE E ROBUSTA per profili utente
+let profileCache: { [key: string]: { profile: AuthUser, timestamp: number, hits: number } } = {}
+const CACHE_DURATION = 10 * 60 * 1000 // 10 minuti di cache in-memory
+const MAX_CACHE_ENTRIES = 100 // Limite cache per evitare memory leak
 
 // Funzione per ottenere il profilo utente completo (ULTRA-OTTIMIZZATA con cache)
 export async function getUserProfile(userId: string, sessionUser?: User): Promise<AuthUser | null> {
@@ -35,7 +36,8 @@ export async function getUserProfile(userId: string, sessionUser?: User): Promis
     // ⚡ CONTROLLO CACHE: Se abbiamo dati recenti, usali immediatamente
     const cached = profileCache[userId]
     if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
-      console.log('⚡ Usando profilo dalla cache (ultra-veloce)')
+      console.log(`⚡ Usando profilo dalla cache (ultra-veloce) - hit #${cached.hits + 1}`)
+      cached.hits++
       return cached.profile
     }
     
@@ -95,7 +97,20 @@ export async function getUserProfile(userId: string, sessionUser?: User): Promis
     // ⚡ SALVA NELLA CACHE per accessi futuri ultra-veloci
     profileCache[userId] = {
       profile: completeProfile,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      hits: 1
+    }
+
+    // ⚡ PULIZIA CACHE: Rimuovi entry vecchie se superano il limite
+    const cacheKeys = Object.keys(profileCache)
+    if (cacheKeys.length > MAX_CACHE_ENTRIES) {
+      // Ordina per timestamp e rimuovi le più vecchie
+      const sortedKeys = cacheKeys.sort((a, b) => 
+        profileCache[a].timestamp - profileCache[b].timestamp
+      )
+      const toRemove = sortedKeys.slice(0, 10) // Rimuovi 10 entry più vecchie
+      toRemove.forEach(key => delete profileCache[key])
+      console.log('🧹 Cache pulita, rimossi', toRemove.length, 'profili vecchi')
     }
 
     console.log('✅ Profilo completo assemblato e salvato in cache:', {

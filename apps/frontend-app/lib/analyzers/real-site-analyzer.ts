@@ -139,8 +139,8 @@ export class RealSiteAnalyzer {
       }
     }
 
-    // Verifica responsività
-    const isResponsive = await this.page.locator('meta[name="viewport"]').count() > 0
+    // Verifica responsività con controlli multipli per maggiore accuratezza
+    const isResponsive = await this.checkMobileFriendly()
 
     return {
       loadTime: Date.now() - startTime,
@@ -522,6 +522,80 @@ export class RealSiteAnalyzer {
       await this.browser.close()
       this.browser = null
       this.page = null
+    }
+  }
+
+  /**
+   * Verifica se il sito è mobile-friendly con controlli multipli
+   */
+  private async checkMobileFriendly(): Promise<boolean> {
+    if (!this.page) return false
+
+    try {
+      return await this.page.evaluate(() => {
+        // 1. Controlla meta viewport tag
+        const viewport = document.querySelector('meta[name="viewport"]')
+        const hasViewport = viewport && viewport.getAttribute('content')?.includes('width=device-width')
+        
+        // 2. Controlla CSS responsive
+        const stylesheets = Array.from(document.querySelectorAll('link[rel="stylesheet"], style')) as HTMLElement[]
+        const hasResponsiveCss = stylesheets.some(sheet => {
+          const content = sheet.textContent || ''
+          const href = (sheet as HTMLLinkElement).href || ''
+          // Controlla media queries o framework responsive
+          return content.includes('@media') || 
+                 content.includes('max-width') || 
+                 content.includes('min-width') ||
+                 href.includes('bootstrap') ||
+                 href.includes('tailwind') ||
+                 href.includes('bulma')
+        })
+
+        // 3. Controlla framework CSS responsive comuni
+        const hasResponsiveFramework = document.querySelector([
+          '.container', '.container-fluid', '.row', '.col-', // Bootstrap
+          '.grid', '.flex', '.md\\:', '.lg\\:', '.sm\\:', // Tailwind
+          '.columns', '.column', // Bulma
+          '.pure-g', '.pure-u-', // Pure CSS
+          '.uk-grid', '.uk-width-' // UIKit
+        ].join(', ')) !== null
+
+        // 4. Controlla CSS inline con media queries
+        const allStyles = Array.from(document.querySelectorAll('*')).some(el => {
+          const style = (el as HTMLElement).style.cssText
+          return style.includes('max-width') || style.includes('min-width')
+        })
+
+        // 5. Controlla se il sito ha layout fluido/percentuale
+        const bodyStyle = window.getComputedStyle(document.body)
+        const hasFluidLayout = bodyStyle.width.includes('%') || bodyStyle.maxWidth !== 'none'
+
+        // 6. Test finale: simula resize per vedere se il layout si adatta
+        let respondsToResize = false
+        try {
+          const originalWidth = document.body.offsetWidth
+          // Questo è solo un controllo approssimativo
+          respondsToResize = originalWidth > 0 && (hasViewport || hasResponsiveCss)
+        } catch (e) {
+          respondsToResize = false
+        }
+
+        // Il sito è considerato responsive se soddisfa almeno 2 criteri
+        const responsiveCriteria = [
+          hasViewport,
+          hasResponsiveCss,
+          hasResponsiveFramework,
+          allStyles,
+          hasFluidLayout,
+          respondsToResize
+        ].filter(Boolean).length
+
+        return responsiveCriteria >= 2
+      })
+    } catch (error) {
+      console.warn('Errore controllo mobile-friendly:', error)
+      // Fallback: controlla solo meta viewport
+      return await this.page.locator('meta[name="viewport"]').count() > 0
     }
   }
 }

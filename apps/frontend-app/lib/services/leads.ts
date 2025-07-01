@@ -106,6 +106,7 @@ export async function saveManualLead({
       category,
       score: analysis.overallScore,
       analysis: {
+        // Dati nuovi strutturati
         seo: analysis.seo,
         performance: analysis.performance,
         tracking: analysis.tracking,
@@ -118,7 +119,21 @@ export async function saveManualLead({
         httpStatus: analysis.httpStatus,
         redirectChain: analysis.redirectChain,
         isAccessible: analysis.isAccessible,
-        overallScore: analysis.overallScore // Aggiungiamo esplicitamente lo score
+        overallScore: analysis.overallScore,
+        
+        // COMPATIBILITÀ LEGACY: Mapping preciso dei campi legacy per backward compatibility
+        has_website: analysis.isAccessible && analysis.httpStatus >= 200 && analysis.httpStatus < 400,
+        mobile_friendly: analysis.performance?.isResponsive || false, // Se non rilevato = false
+        website_load_time: analysis.performance?.loadTime || 0,
+        has_tracking_pixel: analysis.tracking?.hasFacebookPixel || analysis.tracking?.hasGoogleAnalytics || false,
+        gtm_installed: analysis.tracking?.hasGoogleTagManager || false,
+        has_ssl: analysis.finalUrl?.startsWith('https://') || false, // Solo se effettivamente HTTPS
+        broken_images: (analysis.performance?.brokenImages || 0) > 0,
+        missing_meta_tags: [
+          ...(analysis.seo?.hasTitle ? [] : ['title']),
+          ...(analysis.seo?.hasMetaDescription ? [] : ['description']),
+          ...(analysis.seo?.hasH1 ? [] : ['h1'])
+        ]
       },
       source: 'manual_scan',
       origin: 'manual',
