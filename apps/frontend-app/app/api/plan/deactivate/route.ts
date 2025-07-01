@@ -7,7 +7,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateUser } from '@/lib/auth-middleware'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@supabase/supabase-js'
+import { cookies } from 'next/headers'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -20,24 +22,57 @@ interface DeactivateRequest {
 
 export async function POST(req: NextRequest) {
   try {
-    // Autentica l'utente con il nuovo middleware unificato
-    const { user, dbClient, error: authError } = await authenticateUser(req)
+    let user = null
+
+    // ESATTA STESSA LOGICA DI /api/stripe/create-checkout CHE FUNZIONA
+    // Prima prova con il cookie (Next.js route handler)
+    const supabase = createRouteHandlerClient({ cookies })
     
-    if (authError || !user || !dbClient) {
-      return NextResponse.json(
-        { error: authError || 'Autenticazione fallita' },
-        { status: 401 }
-      )
+    let sessionResult = await supabase.auth.getSession()
+
+    // Se la sessione del cookie non è valida, prova con l'header Authorization
+    if (sessionResult.error || !sessionResult.data.session?.user) {
+      const authHeader = req.headers.get('authorization')
+      
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7)
+        
+        // Crea un client temporaneo con il token
+        const supabaseWithToken = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        )
+        
+        // Imposta la sessione con il token
+        const { data: { user: tokenUser }, error: tokenError } = await supabaseWithToken.auth.getUser(token)
+        
+        if (tokenError || !tokenUser) {
+          return NextResponse.json(
+            { error: 'Token di autorizzazione non valido' },
+            { status: 401 }
+          )
+        }
+        
+        user = tokenUser
+      } else {
+        return NextResponse.json(
+          { error: 'Sessione non valida e nessun token di autorizzazione fornito' },
+          { status: 401 }
+        )
+      }
+    } else {
+      user = sessionResult.data.session.user
     }
 
     console.log('🔍 Autenticazione riuscita per utente:', user.id)
 
+    // Usa sempre supabase per le operazioni DB (come in create-checkout)
     // Parse del body
     const body: DeactivateRequest = await req.json()
     const { reason } = body
 
     // Recupera dati utente correnti
-    const { data: userData, error: userError } = await dbClient
+    const { data: userData, error: userError } = await supabase
       .from('users')
       .select('id, email, plan, status, stripe_subscription_id')
       .eq('id', user.id)
@@ -81,7 +116,7 @@ export async function POST(req: NextRequest) {
         console.log(`✅ Abbonamento Stripe cancellato. Attivo fino al: ${new Date(subscription.current_period_end * 1000).toISOString()}`)
         
         // **STEP 2: Aggiorna il database - MA mantiene status 'active' fino alla scadenza**
-        const { error: updateError } = await dbClient
+        const { error: updateError } = await supabase
           .from('users')
           .update({
             // NON cambiamo status a 'inactive' subito!
@@ -99,7 +134,7 @@ export async function POST(req: NextRequest) {
         }
 
         // **STEP 3: Log dell'operazione**
-        const { error: logError } = await dbClient
+        const { error: logError } = await supabase
           .from('plan_status_logs')
           .insert({
             user_id: user.id,
@@ -133,7 +168,7 @@ export async function POST(req: NextRequest) {
       }
     } else {
       // Nessun abbonamento Stripe, disattiva direttamente
-      const { error: updateError } = await dbClient
+      const { error: updateError } = await supabase
         .from('users')
         .update({
           status: 'inactive',
@@ -170,20 +205,52 @@ export async function POST(req: NextRequest) {
 // GET per verificare lo stato attuale del piano
 export async function GET(req: NextRequest) {
   try {
-    // Autentica l'utente con il nuovo middleware unificato
-    const { user, dbClient, error: authError } = await authenticateUser(req)
+    let user = null
+
+    // ESATTA STESSA LOGICA DI /api/stripe/create-checkout CHE FUNZIONA
+    // Prima prova con il cookie (Next.js route handler)
+    const supabase = createRouteHandlerClient({ cookies })
     
-    if (authError || !user || !dbClient) {
-      return NextResponse.json(
-        { error: authError || 'Autenticazione fallita' },
-        { status: 401 }
-      )
+    let sessionResult = await supabase.auth.getSession()
+
+    // Se la sessione del cookie non è valida, prova con l'header Authorization
+    if (sessionResult.error || !sessionResult.data.session?.user) {
+      const authHeader = req.headers.get('authorization')
+      
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7)
+        
+        // Crea un client temporaneo con il token
+        const supabaseWithToken = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        )
+        
+        // Imposta la sessione con il token
+        const { data: { user: tokenUser }, error: tokenError } = await supabaseWithToken.auth.getUser(token)
+        
+        if (tokenError || !tokenUser) {
+          return NextResponse.json(
+            { error: 'Token di autorizzazione non valido' },
+            { status: 401 }
+          )
+        }
+        
+        user = tokenUser
+      } else {
+        return NextResponse.json(
+          { error: 'Sessione non valida e nessun token di autorizzazione fornito' },
+          { status: 401 }
+        )
+      }
+    } else {
+      user = sessionResult.data.session.user
     }
 
     console.log('🔍 Autenticazione GET riuscita per utente:', user.id)
 
     // Recupera stato piano
-    const { data: userData, error: userError } = await dbClient
+    const { data: userData, error: userError } = await supabase
       .from('users')
       .select('id, plan, status, deactivated_at, deactivation_reason, reactivated_at')
       .eq('id', user.id)
@@ -194,7 +261,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Recupera ultimi 5 log
-    const { data: logs, error: logsError } = await dbClient
+    const { data: logs, error: logsError } = await supabase
       .from('plan_status_logs')
       .select('action, previous_status, new_status, reason, triggered_by, created_at')
       .eq('user_id', user.id)
