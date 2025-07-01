@@ -6,6 +6,8 @@
 
 import { useState } from 'react'
 import { Check, Star } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
+import { supabase } from '@/lib/supabase'
 
 interface Plan {
   id: string
@@ -73,6 +75,7 @@ export default function PlanSelector({
 }: PlanSelectorProps) {
   const [selectedPlan, setSelectedPlan] = useState(currentPlan)
   const [loading, setLoading] = useState<string | null>(null)
+  const { session } = useAuth()
 
   const visiblePlans = showFree ? plans : plans.filter(p => p.id !== 'free')
 
@@ -87,13 +90,27 @@ export default function PlanSelector({
       return
     }
 
+    if (!session) {
+      console.error('No user session available')
+      alert('Devi essere loggato per effettuare l\'upgrade.')
+      return
+    }
+
     setLoading(plan.id)
 
     try {
+      // Ottieni il token di accesso corrente dalla sessione Supabase
+      const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError || !currentSession?.access_token) {
+        throw new Error('Sessione non valida o token mancante')
+      }
+
       const response = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentSession.access_token}`,
         },
         body: JSON.stringify({
           priceId: plan.stripePriceId,

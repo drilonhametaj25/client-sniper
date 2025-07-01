@@ -35,18 +35,44 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Metodo normale: utente già loggato
+      // Prima prova con il cookie (Next.js route handler)
       const supabase = createRouteHandlerClient({ cookies })
       
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      let sessionResult = await supabase.auth.getSession()
 
-      if (sessionError || !session?.user) {
-        return NextResponse.json(
-          { error: 'Sessione non valida' },
-          { status: 401 }
-        )
+      // Se la sessione del cookie non è valida, prova con l'header Authorization
+      if (sessionResult.error || !sessionResult.data.session?.user) {
+        const authHeader = request.headers.get('authorization')
+        
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+          const token = authHeader.substring(7)
+          
+          // Crea un client temporaneo con il token
+          const supabaseWithToken = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+          )
+          
+          // Imposta la sessione con il token
+          const { data: { user: tokenUser }, error: tokenError } = await supabaseWithToken.auth.getUser(token)
+          
+          if (tokenError || !tokenUser) {
+            return NextResponse.json(
+              { error: 'Token di autorizzazione non valido' },
+              { status: 401 }
+            )
+          }
+          
+          user = tokenUser
+        } else {
+          return NextResponse.json(
+            { error: 'Sessione non valida e nessun token di autorizzazione fornito' },
+            { status: 401 }
+          )
+        }
+      } else {
+        user = sessionResult.data.session.user
       }
-
-      user = session.user
     }
 
     // Crea la sessione di checkout Stripe
