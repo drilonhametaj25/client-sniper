@@ -141,10 +141,18 @@ export default function SettingsPage() {
     setDeactivating(true)
     
     try {
+      // Ottieni il token di accesso corrente dalla sessione Supabase
+      const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError || !currentSession?.access_token) {
+        throw new Error('Sessione non valida o token mancante')
+      }
+
       const response = await fetch('/api/plan/deactivate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentSession.access_token}`,
         },
         credentials: 'include', // Include cookies per l'autenticazione
         body: JSON.stringify({ reason: deactivationReason }),
@@ -180,10 +188,18 @@ export default function SettingsPage() {
     setReactivating(true)
     
     try {
+      // Ottieni il token di accesso corrente dalla sessione Supabase
+      const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError || !currentSession?.access_token) {
+        throw new Error('Sessione non valida o token mancante')
+      }
+
       const response = await fetch('/api/plan/reactivate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentSession.access_token}`,
         },
       })
 

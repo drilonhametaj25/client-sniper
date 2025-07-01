@@ -7,8 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { authenticateUser } from '@/lib/auth-middleware'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -21,33 +20,24 @@ interface DeactivateRequest {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    // Autentica l'utente con il nuovo middleware unificato
+    const { user, dbClient, error: authError } = await authenticateUser(req)
     
-    // Verifica autenticazione con più dettagli per debug
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    console.log('🔍 Debug autenticazione:')
-    console.log('- User:', user?.id || 'null')
-    console.log('- Auth Error:', authError?.message || 'none')
-    
-    if (authError) {
-      console.error('❌ Errore autenticazione Supabase:', authError)
-      return NextResponse.json({ 
-        error: 'Errore di autenticazione: ' + authError.message 
-      }, { status: 401 })
+    if (authError || !user || !dbClient) {
+      return NextResponse.json(
+        { error: authError || 'Autenticazione fallita' },
+        { status: 401 }
+      )
     }
-    
-    if (!user) {
-      console.error('❌ Nessun utente autenticato')
-      return NextResponse.json({ error: 'Non autorizzato - nessun utente' }, { status: 401 })
-    }
+
+    console.log('🔍 Autenticazione riuscita per utente:', user.id)
 
     // Parse del body
     const body: DeactivateRequest = await req.json()
     const { reason } = body
 
     // Recupera dati utente correnti
-    const { data: userData, error: userError } = await supabase
+    const { data: userData, error: userError } = await dbClient
       .from('users')
       .select('id, email, plan, status, stripe_subscription_id')
       .eq('id', user.id)
@@ -91,7 +81,7 @@ export async function POST(req: NextRequest) {
         console.log(`✅ Abbonamento Stripe cancellato. Attivo fino al: ${new Date(subscription.current_period_end * 1000).toISOString()}`)
         
         // **STEP 2: Aggiorna il database - MA mantiene status 'active' fino alla scadenza**
-        const { error: updateError } = await supabase
+        const { error: updateError } = await dbClient
           .from('users')
           .update({
             // NON cambiamo status a 'inactive' subito!
@@ -109,7 +99,7 @@ export async function POST(req: NextRequest) {
         }
 
         // **STEP 3: Log dell'operazione**
-        const { error: logError } = await supabase
+        const { error: logError } = await dbClient
           .from('plan_status_logs')
           .insert({
             user_id: user.id,
@@ -143,7 +133,7 @@ export async function POST(req: NextRequest) {
       }
     } else {
       // Nessun abbonamento Stripe, disattiva direttamente
-      const { error: updateError } = await supabase
+      const { error: updateError } = await dbClient
         .from('users')
         .update({
           status: 'inactive',
@@ -180,28 +170,20 @@ export async function POST(req: NextRequest) {
 // GET per verificare lo stato attuale del piano
 export async function GET(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    // Autentica l'utente con il nuovo middleware unificato
+    const { user, dbClient, error: authError } = await authenticateUser(req)
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    console.log('🔍 Debug autenticazione GET:')
-    console.log('- User:', user?.id || 'null')
-    console.log('- Auth Error:', authError?.message || 'none')
-    
-    if (authError) {
-      console.error('❌ Errore autenticazione Supabase:', authError)
-      return NextResponse.json({ 
-        error: 'Errore di autenticazione: ' + authError.message 
-      }, { status: 401 })
-    }
-    
-    if (!user) {
-      console.error('❌ Nessun utente autenticato')
-      return NextResponse.json({ error: 'Non autorizzato - nessun utente' }, { status: 401 })
+    if (authError || !user || !dbClient) {
+      return NextResponse.json(
+        { error: authError || 'Autenticazione fallita' },
+        { status: 401 }
+      )
     }
 
+    console.log('🔍 Autenticazione GET riuscita per utente:', user.id)
+
     // Recupera stato piano
-    const { data: userData, error: userError } = await supabase
+    const { data: userData, error: userError } = await dbClient
       .from('users')
       .select('id, plan, status, deactivated_at, deactivation_reason, reactivated_at')
       .eq('id', user.id)
@@ -212,7 +194,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Recupera ultimi 5 log
-    const { data: logs, error: logsError } = await supabase
+    const { data: logs, error: logsError } = await dbClient
       .from('plan_status_logs')
       .select('action, previous_status, new_status, reason, triggered_by, created_at')
       .eq('user_id', user.id)

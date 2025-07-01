@@ -5,8 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { authenticateUser } from '@/lib/auth-middleware'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -15,17 +14,20 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    // Autentica l'utente con il nuovo middleware unificato
+    const { user, dbClient, error: authError } = await authenticateUser(req)
     
-    // Verifica autenticazione
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 })
+    if (authError || !user || !dbClient) {
+      return NextResponse.json(
+        { error: authError || 'Autenticazione fallita' },
+        { status: 401 }
+      )
     }
 
+    console.log('🔍 Autenticazione riuscita per utente:', user.id)
+
     // Recupera dati utente correnti
-    const { data: userData, error: userError } = await supabase
+    const { data: userData, error: userError } = await dbClient
       .from('users')
       .select('id, email, plan, status, stripe_subscription_id, stripe_customer_id')
       .eq('id', user.id)
@@ -71,7 +73,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Riattiva il piano
-    const { error: updateError } = await supabase
+    const { error: updateError } = await dbClient
       .from('users')
       .update({
         status: 'active',
@@ -89,7 +91,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Log dell'operazione
-    const { error: logError } = await supabase
+    const { error: logError } = await dbClient
       .from('plan_status_logs')
       .insert({
         user_id: user.id,
