@@ -139,8 +139,8 @@ export class UnifiedLeadManager {
             content_hash: contentHash,
             last_seen_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            // Aggiungi la nuova fonte alle fonti esistenti
-            sources: [...new Set([...(bestMatch.sources || [leadData.source.split('_')[0]]), leadData.source])]
+            // Aggiungi la nuova fonte alle fonti esistenti (compatibilità ES5)
+            sources: Array.from(new Set([...(bestMatch.sources || [leadData.source.split('_')[0]]), leadData.source]))
           })
           .eq('id', bestMatch.id)
 
@@ -207,9 +207,9 @@ export class UnifiedLeadManager {
       // Analisi: merge intelligente
       analysis: this.mergeAnalysis(existing.analysis, newData.analysis),
       
-      // Ruoli e problemi: combina
-      needed_roles: [...new Set([...(existing.needed_roles || []), ...(newData.needed_roles || [])])],
-      issues: [...new Set([...(existing.issues || []), ...(newData.issues || [])])]
+      // Ruoli e problemi: combina (compatibilità ES5)
+      needed_roles: Array.from(new Set([...(existing.needed_roles || []), ...(newData.needed_roles || [])])),
+      issues: Array.from(new Set([...(existing.issues || []), ...(newData.issues || [])]))
     }
   }
 
@@ -301,8 +301,8 @@ export class UnifiedLeadManager {
       ...newAnalysis,
       // Mantieni il timestamp più recente
       analysisDate: newAnalysis.analysisDate || existing.analysisDate,
-      // Combina issues
-      issues: [...new Set([...(existing.issues || []), ...(newAnalysis.issues || [])])]
+      // Combina issues (compatibilità ES5)
+      issues: Array.from(new Set([...(existing.issues || []), ...(newAnalysis.issues || [])]))
     }
   }
 
