@@ -34,20 +34,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Check package files
+        run: |
+          ls -la package.json || echo "⚠️ Frontend package.json not found"
+          ls -la ../../package.json || echo "⚠️ Root package.json not found"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: 'apps/frontend-app/package-lock.json'
 
       - name: Install root dependencies
         run: |
           cd ../../
-          npm install
+          npm ci
 
       - name: Install frontend dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run type checking
         run: npm run type-check

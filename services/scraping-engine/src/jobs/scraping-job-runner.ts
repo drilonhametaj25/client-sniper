@@ -4,10 +4,11 @@
 // Gestisce la concorrenza e i retry automatici
 
 import { ZoneManager, Zone } from '../utils/zone-manager'
-import { GoogleMapsScraper } from '../scrapers/google-maps'
+import { GoogleMapsScraper } from '../scrapers/google-maps-improved'
 import { YelpScraper } from '../scrapers/yelp'
 import { Logger } from '../utils/logger'
 import { BusinessData } from '../scrapers/google-maps'
+import { BusinessLead } from '../types/LeadAnalysis'
 import { LeadGenerator } from '../lead-generator'
 import { WebsiteAnalyzer, TechnicalAnalysis } from '../analyzers/website-analyzer'
 
@@ -249,7 +250,29 @@ export class ScrapingJobRunner {
     switch (zone.source) {
       case 'google_maps':
         const googleScraper = new GoogleMapsScraper()
-        return await googleScraper.scrape(target)
+        // Converti il target nel formato richiesto dal nuovo scraper
+        const options = {
+          query: zone.category,
+          location: zone.location_name,
+          category: zone.category,
+          maxResults: 20,
+          delayBetweenRequests: 1500,
+          enableSiteAnalysis: true
+        }
+        const result = await googleScraper.scrape(options)
+        
+        // Converti BusinessLead[] in BusinessData[] per compatibilità
+        return result.leads.map(lead => ({
+          name: lead.businessName,
+          website: lead.contacts.website,
+          phone: lead.contacts.phone,
+          address: lead.contacts.address,
+          city: lead.city,
+          category: lead.category,
+          rating: undefined, // Non disponibile nel nuovo formato
+          reviews_count: undefined,
+          source: 'google_maps'
+        }))
         
       case 'yelp':
         const yelpScraper = new YelpScraper()

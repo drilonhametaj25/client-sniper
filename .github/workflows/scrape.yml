@@ -34,20 +34,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Check package files
+        run: |
+          ls -la package.json || echo "⚠️ Scraping engine package.json not found"
+          ls -la ../../package.json || echo "⚠️ Root package.json not found"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: 'services/scraping-engine/package-lock.json'
 
       - name: Install root dependencies
         run: |
           cd ../../
-          npm install
+          npm ci
 
       - name: Install scraping engine dependencies
-        run: npm install
+        run: npm ci
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
@@ -74,7 +78,7 @@ jobs:
 
       - name: Upload scraping logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: scraping-logs-${{ github.run_number }}
           path: services/scraping-engine/logs/
