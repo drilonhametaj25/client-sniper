@@ -8,6 +8,7 @@
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { ArrowRight, Target, BarChart3, Users, CheckCircle, Zap, Shield, Globe } from 'lucide-react'
+import NewsletterForm from '@/components/NewsletterForm'
 
 export default function HomePage() {
   const { user } = useAuth()
@@ -503,9 +504,36 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Newsletter Section */}
+      <section className="py-24 bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto">
+            <NewsletterForm
+              title="Ricevi Lead Gratuiti ogni Mese"
+              description="Unisciti a oltre 500+ agenzie e freelancer che ricevono lead qualificati e strategie di acquisizione clienti direttamente nella loro inbox"
+              source="homepage_cta"
+              className="mx-auto"
+            />
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Newsletter compatta nel footer */}
+          <div className="mb-16 p-8 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-2xl border border-white/10">
+            <NewsletterForm
+              title="Newsletter per Professionisti"
+              description="Lead gratuiti e strategie di crescita per la tua agenzia"
+              placeholder="Il tuo indirizzo email"
+              buttonText="Iscriviti"
+              source="footer"
+              variant="compact"
+              className="max-w-2xl mx-auto"
+            />
+          </div>
+
           <div className="grid md:grid-cols-4 gap-8 mb-12">
             <div className="col-span-2">
               <div className="flex items-center space-x-3 mb-6">

@@ -28,6 +28,7 @@ import {
   Mail,
   Lock
 } from 'lucide-react'
+import NewsletterForm from '@/components/NewsletterForm'
 
 interface Plan {
   id: string
@@ -320,7 +321,7 @@ export default function RegisterPage() {
             </section>
 
             {/* CTA Section */}
-            <section className="text-center">
+            <section className="text-center mb-16">
               <p className="text-gray-600 mb-4">
                 Hai già un account?{' '}
                 <Link
@@ -334,11 +335,36 @@ export default function RegisterPage() {
                 Tutti i piani includono una garanzia di rimborso entro 30 giorni
               </p>
             </section>
+
+            {/* Newsletter Section */}
+            <section className="mb-16">
+              <div className="max-w-2xl mx-auto">
+                <NewsletterForm
+                  title="Prima di Iniziare..."
+                  description="Iscriviti alla newsletter e ricevi subito 3 lead gratuiti + strategie di acquisizione clienti"
+                  source="register_page"
+                  variant="default"
+                />
+              </div>
+            </section>
           </main>
 
           {/* Footer */}
           <footer className="bg-gray-900 text-white py-16">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              {/* Newsletter compatta nel footer */}
+              <div className="mb-16 p-8 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-2xl border border-white/10">
+                <NewsletterForm
+                  title="Newsletter Professionale"
+                  description="Lead qualificati e strategie di acquisizione clienti"
+                  placeholder="Il tuo indirizzo email"
+                  buttonText="Iscriviti"
+                  source="register_footer_step1"
+                  variant="compact"
+                  className="max-w-2xl mx-auto"
+                />
+              </div>
+
               <div className="grid md:grid-cols-4 gap-8 mb-12">
                 <div className="col-span-2">
                   <div className="flex items-center space-x-3 mb-6">
@@ -643,6 +669,19 @@ export default function RegisterPage() {
         {/* Footer */}
         <footer className="bg-gray-900 text-white py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Newsletter compatta nel footer */}
+            <div className="mb-16 p-8 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-2xl border border-white/10">
+              <NewsletterForm
+                title="Newsletter Professionale"
+                description="Lead qualificati e strategie di acquisizione clienti"
+                placeholder="Il tuo indirizzo email"
+                buttonText="Iscriviti"
+                source="register_footer_step2"
+                variant="compact"
+                className="max-w-2xl mx-auto"
+              />
+            </div>
+
             <div className="grid md:grid-cols-4 gap-8 mb-12">
               <div className="col-span-2">
                 <div className="flex items-center space-x-3 mb-6">

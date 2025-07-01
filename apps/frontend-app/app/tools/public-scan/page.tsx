@@ -27,6 +27,7 @@ import {
   Globe,
   TrendingUp
 } from 'lucide-react'
+import NewsletterForm from '@/components/NewsletterForm'
 
 interface PublicAnalysisResult {
   url: string
@@ -601,12 +602,37 @@ export default function PublicScanPage() {
               </div>
             </div>
           </section>
+
+          {/* Newsletter Section */}
+          <section className="mb-16" aria-labelledby="newsletter-section">
+            <div className="max-w-2xl mx-auto">
+              <NewsletterForm
+                title="Vuoi Altri Consigli Gratuiti?"
+                description="Iscriviti e ricevi ogni mese lead gratuiti e strategie avanzate per l'acquisizione clienti"
+                source="public_scan"
+                variant="default"
+              />
+            </div>
+          </section>
         </main>
       </div>
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Newsletter compatta nel footer */}
+          <div className="mb-16 p-8 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-2xl border border-white/10">
+            <NewsletterForm
+              title="Newsletter Professionale"
+              description="Lead qualificati e strategie di acquisizione clienti"
+              placeholder="Il tuo indirizzo email"
+              buttonText="Iscriviti"
+              source="public_scan_footer"
+              variant="compact"
+              className="max-w-2xl mx-auto"
+            />
+          </div>
+
           <div className="grid md:grid-cols-4 gap-8 mb-12">
             <div className="col-span-2">
               <div className="flex items-center space-x-3 mb-6">

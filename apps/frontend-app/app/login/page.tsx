@@ -21,6 +21,7 @@ import {
   Lock,
   ExternalLink
 } from 'lucide-react'
+import NewsletterForm from '@/components/NewsletterForm'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -244,6 +245,19 @@ export default function LoginPage() {
       {/* Footer */}
       <footer className="bg-gray-900 text-white" role="contentinfo">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          {/* Newsletter compatta nel footer */}
+          <div className="mb-12 p-6 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-xl border border-white/10">
+            <NewsletterForm
+              title="Prima di Accedere..."
+              description="Iscriviti e ricevi lead gratuiti ogni mese"
+              placeholder="Il tuo indirizzo email"
+              buttonText="Iscriviti"
+              source="login_footer"
+              variant="compact"
+              className="max-w-xl mx-auto"
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {/* Brand */}
             <div className="col-span-1 md:col-span-2">
