@@ -9,7 +9,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabase'
 import { 
   CreditCard, 
   User, 
@@ -55,7 +55,6 @@ interface PlanLog {
 export default function SettingsPage() {
   const { user, signOut, refreshProfile } = useAuth()
   const router = useRouter()
-  const supabase = createClientComponentClient()
   const planStatus = usePlanStatus()
   
   const [userData, setUserData] = useState<UserData | null>(null)
@@ -141,12 +140,21 @@ export default function SettingsPage() {
     setDeactivating(true)
     
     try {
-      // Ottieni il token di accesso corrente dalla sessione Supabase
+      console.log('🔍 Debug: Inizio disattivazione piano')
+      
+      // Usa la stessa logica identica del PlanSelector che funziona
       const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
       
+      console.log('🔍 Debug: sessionError =', sessionError)
+      console.log('🔍 Debug: currentSession =', currentSession)
+      console.log('🔍 Debug: access_token =', currentSession?.access_token ? 'PRESENTE' : 'MANCANTE')
+      
       if (sessionError || !currentSession?.access_token) {
+        console.error('❌ Debug: Sessione invalida - sessionError:', sessionError, 'token:', currentSession?.access_token)
         throw new Error('Sessione non valida o token mancante')
       }
+
+      console.log('🔍 Debug: Sessione valida, invio richiesta...')
 
       const response = await fetch('/api/plan/deactivate', {
         method: 'POST',
@@ -154,7 +162,6 @@ export default function SettingsPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${currentSession.access_token}`,
         },
-        credentials: 'include', // Include cookies per l'autenticazione
         body: JSON.stringify({ reason: deactivationReason }),
       })
 

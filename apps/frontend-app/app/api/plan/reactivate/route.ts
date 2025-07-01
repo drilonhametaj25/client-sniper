@@ -60,15 +60,48 @@ export async function POST(req: NextRequest) {
 
     console.log('🔍 Autenticazione riuscita per utente:', user.id)
 
-    // Recupera dati utente correnti
-    const { data: userData, error: userError } = await supabase
+    // Recupera dati utente correnti con fallback creation
+    let { data: userData, error: userError } = await supabase
       .from('users')
       .select('id, email, plan, status, stripe_subscription_id, stripe_customer_id')
       .eq('id', user.id)
       .single()
 
-    if (userError || !userData) {
-      return NextResponse.json({ error: 'Utente non trovato' }, { status: 404 })
+    // Se l'utente non esiste, crealo con dati di default
+    if (userError && userError.code === 'PGRST116') {
+      console.log('🔧 Utente non trovato, creazione automatica...')
+      
+      const { data: newUser, error: createError } = await supabase
+        .from('users')
+        .insert({
+          id: user.id,
+          email: user.email || 'unknown@example.com',
+          plan: 'free',
+          status: 'active',
+          credits_remaining: 2,
+          created_at: new Date().toISOString()
+        })
+        .select('id, email, plan, status, stripe_subscription_id, stripe_customer_id')
+        .single()
+
+      if (createError) {
+        console.error('❌ Errore creazione utente:', createError)
+        return NextResponse.json({ 
+          error: 'Errore durante la creazione del profilo utente' 
+        }, { status: 500 })
+      }
+
+      userData = newUser
+      console.log('✅ Utente creato automaticamente:', userData)
+    }
+
+    if (userError && userError.code !== 'PGRST116') {
+      console.error('❌ Errore database:', userError)
+      return NextResponse.json({ error: 'Errore del database' }, { status: 500 })
+    }
+
+    if (!userData) {
+      return NextResponse.json({ error: 'Impossibile recuperare i dati utente' }, { status: 500 })
     }
 
     // Verifica che il piano sia effettivamente disattivato

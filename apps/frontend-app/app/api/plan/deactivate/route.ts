@@ -65,18 +65,64 @@ export async function POST(req: NextRequest) {
     }
 
     console.log('🔍 Autenticazione riuscita per utente:', user.id)
+    console.log('🔍 Email utente:', user.email)
 
-    // Usa sempre supabase per le operazioni DB (come in create-checkout)
+    // Usa il service role per TUTTE le operazioni DB (come in /api/leads)
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     // Parse del body
     const body: DeactivateRequest = await req.json()
     const { reason } = body
 
-    // Recupera dati utente correnti
-    const { data: userData, error: userError } = await supabase
+    // Recupera dati utente correnti usando service role
+    let { data: userData, error: userError } = await supabaseAdmin
       .from('users')
       .select('id, email, plan, status, stripe_subscription_id')
       .eq('id', user.id)
       .single()
+
+    console.log('🔍 Query utente con service role - Error:', userError)
+    console.log('🔍 Query utente con service role - Error code:', userError?.code)
+    console.log('🔍 Query utente con service role - Data:', userData)
+
+    // Se l'utente non esiste, crealo con dati di default
+    if (userError && userError.code === 'PGRST116') {
+      console.log('🔧 Utente non trovato, creazione automatica...')
+      
+      const { data: newUser, error: createError } = await supabaseAdmin
+        .from('users')
+        .insert({
+          id: user.id,
+          email: user.email || 'unknown@example.com',
+          plan: 'free',
+          status: 'active',
+          credits_remaining: 2,
+          created_at: new Date().toISOString()
+        })
+        .select('id, email, plan, status, stripe_subscription_id')
+        .single()
+
+      if (createError) {
+        console.error('❌ Errore creazione utente:', createError)
+        return NextResponse.json({ 
+          error: 'Errore durante la creazione del profilo utente: ' + createError.message 
+        }, { status: 500 })
+      }
+
+      userData = newUser
+      console.log('✅ Utente creato automaticamente:', userData)
+    }
+
+    // Se c'è un errore diverso o userData è null, interrompi
+    if (userError && userError.code !== 'PGRST116') {
+      console.error('❌ Errore database diverso da PGRST116:', userError)
+      return NextResponse.json({ 
+        error: 'Errore del database: ' + userError.message 
+      }, { status: 500 })
+    }
 
     if (userError || !userData) {
       return NextResponse.json({ error: 'Utente non trovato' }, { status: 404 })
@@ -116,7 +162,7 @@ export async function POST(req: NextRequest) {
         console.log(`✅ Abbonamento Stripe cancellato. Attivo fino al: ${new Date(subscription.current_period_end * 1000).toISOString()}`)
         
         // **STEP 2: Aggiorna il database - MA mantiene status 'active' fino alla scadenza**
-        const { error: updateError } = await supabase
+        const { error: updateError } = await supabaseAdmin
           .from('users')
           .update({
             // NON cambiamo status a 'inactive' subito!
@@ -134,7 +180,7 @@ export async function POST(req: NextRequest) {
         }
 
         // **STEP 3: Log dell'operazione**
-        const { error: logError } = await supabase
+        const { error: logError } = await supabaseAdmin
           .from('plan_status_logs')
           .insert({
             user_id: user.id,
@@ -168,7 +214,7 @@ export async function POST(req: NextRequest) {
       }
     } else {
       // Nessun abbonamento Stripe, disattiva direttamente
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseAdmin
         .from('users')
         .update({
           status: 'inactive',
@@ -249,19 +295,58 @@ export async function GET(req: NextRequest) {
 
     console.log('🔍 Autenticazione GET riuscita per utente:', user.id)
 
-    // Recupera stato piano
-    const { data: userData, error: userError } = await supabase
+    // Usa il service role per TUTTE le operazioni DB (come in /api/leads)
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    // Recupera stato piano con fallback creation
+    let { data: userData, error: userError } = await supabaseAdmin
       .from('users')
       .select('id, plan, status, deactivated_at, deactivation_reason, reactivated_at')
       .eq('id', user.id)
       .single()
 
-    if (userError || !userData) {
-      return NextResponse.json({ error: 'Utente non trovato' }, { status: 404 })
+    // Se l'utente non esiste, crealo con dati di default
+    if (userError && userError.code === 'PGRST116') {
+      console.log('🔧 Utente non trovato, creazione automatica...')
+      
+      const { data: newUser, error: createError } = await supabaseAdmin
+        .from('users')
+        .insert({
+          id: user.id,
+          email: user.email || 'unknown@example.com',
+          plan: 'free',
+          status: 'active',
+          credits_remaining: 2,
+          created_at: new Date().toISOString()
+        })
+        .select('id, plan, status, deactivated_at, deactivation_reason, reactivated_at')
+        .single()
+
+      if (createError) {
+        console.error('❌ Errore creazione utente:', createError)
+        return NextResponse.json({ 
+          error: 'Errore durante la creazione del profilo utente' 
+        }, { status: 500 })
+      }
+
+      userData = newUser
+      console.log('✅ Utente creato automaticamente per GET:', userData)
+    }
+
+    if (userError && userError.code !== 'PGRST116') {
+      console.error('❌ Errore database:', userError)
+      return NextResponse.json({ error: 'Errore del database' }, { status: 500 })
+    }
+
+    if (!userData) {
+      return NextResponse.json({ error: 'Impossibile recuperare i dati utente' }, { status: 500 })
     }
 
     // Recupera ultimi 5 log
-    const { data: logs, error: logsError } = await supabase
+    const { data: logs, error: logsError } = await supabaseAdmin
       .from('plan_status_logs')
       .select('action, previous_status, new_status, reason, triggered_by, created_at')
       .eq('user_id', user.id)
