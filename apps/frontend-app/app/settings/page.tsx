@@ -146,6 +146,7 @@ export default function SettingsPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include cookies per l'autenticazione
         body: JSON.stringify({ reason: deactivationReason }),
       })
 

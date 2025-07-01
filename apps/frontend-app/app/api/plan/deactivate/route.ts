@@ -23,11 +23,23 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
     
-    // Verifica autenticazione
+    // Verifica autenticazione con più dettagli per debug
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 })
+    console.log('🔍 Debug autenticazione:')
+    console.log('- User:', user?.id || 'null')
+    console.log('- Auth Error:', authError?.message || 'none')
+    
+    if (authError) {
+      console.error('❌ Errore autenticazione Supabase:', authError)
+      return NextResponse.json({ 
+        error: 'Errore di autenticazione: ' + authError.message 
+      }, { status: 401 })
+    }
+    
+    if (!user) {
+      console.error('❌ Nessun utente autenticato')
+      return NextResponse.json({ error: 'Non autorizzato - nessun utente' }, { status: 401 })
     }
 
     // Parse del body
@@ -84,9 +96,7 @@ export async function POST(req: NextRequest) {
           .update({
             // NON cambiamo status a 'inactive' subito!
             // Stripe webhook lo farà quando l'abbonamento scade davvero
-            deactivation_scheduled_at: new Date().toISOString(),
             deactivation_reason: reason || 'Cancellazione richiesta dall\'utente',
-            subscription_end_date: new Date(subscription.current_period_end * 1000).toISOString(),
             updated_at: new Date().toISOString()
           })
           .eq('id', user.id)
@@ -122,8 +132,7 @@ export async function POST(req: NextRequest) {
           message: `Piano cancellato. Continuerai ad avere accesso fino al ${new Date(subscription.current_period_end * 1000).toLocaleDateString('it-IT')}.`,
           status: 'active', // Rimane attivo!
           cancellation_scheduled: true,
-          access_until: new Date(subscription.current_period_end * 1000).toISOString(),
-          deactivation_scheduled_at: new Date().toISOString()
+          access_until: new Date(subscription.current_period_end * 1000).toISOString()
         })
 
       } catch (stripeError: any) {
@@ -175,8 +184,20 @@ export async function GET(req: NextRequest) {
     
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 })
+    console.log('🔍 Debug autenticazione GET:')
+    console.log('- User:', user?.id || 'null')
+    console.log('- Auth Error:', authError?.message || 'none')
+    
+    if (authError) {
+      console.error('❌ Errore autenticazione Supabase:', authError)
+      return NextResponse.json({ 
+        error: 'Errore di autenticazione: ' + authError.message 
+      }, { status: 401 })
+    }
+    
+    if (!user) {
+      console.error('❌ Nessun utente autenticato')
+      return NextResponse.json({ error: 'Non autorizzato - nessun utente' }, { status: 401 })
     }
 
     // Recupera stato piano
