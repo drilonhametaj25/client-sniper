@@ -1,11 +1,12 @@
 /**
  * Servizio per gestire i lead del database
  * Include salvataggio di lead da analisi manuale e scraping automatico
- * Gestisce deduplicazione e calcolo unique_key
+ * Gestisce deduplicazione cross-source tramite UnifiedLeadManager
  */
 
 import { createClient } from '@supabase/supabase-js'
 import { WebsiteAnalysis } from '../../../../services/scraping-engine/src/types/LeadAnalysis'
+import { UnifiedLeadManager } from '../../../../services/scraping-engine/src/utils/unified-lead-manager'
 import crypto from 'crypto'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -63,6 +64,7 @@ function generateContentHash(analysis: WebsiteAnalysis): string {
 
 /**
  * Salva un lead da analisi manuale nel database
+ * Usa il sistema unificato di deduplicazione cross-source
  */
 export async function saveManualLead({
   url,
@@ -76,35 +78,21 @@ export async function saveManualLead({
 }> {
   try {
     const businessName = extractBusinessNameFromUrl(analysis.finalUrl || url)
-    const uniqueKey = generateUniqueKey(analysis.finalUrl || url, 'manual')
-    const contentHash = generateContentHash(analysis)
     
     // Estrai città dall'analisi (se presente nell'indirizzo) o usa "Online"
     const city = analysis.legal?.hasBusinessAddress ? 'Estratto dal sito' : 'Online'
     
-    // Determina categoria basata sull'analisi o URL
-    const category = 'Analisi Manuale'
-    
-    // Controlla se il lead esiste già
-    const { data: existingLead, error: checkError } = await supabaseAdmin
-      .from('leads')
-      .select('id, content_hash')
-      .eq('unique_key', uniqueKey)
-      .single()
-
-    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows
-      return { success: false, error: 'Errore controllo lead esistente' }
-    }
-
+    // Prepara i dati per il sistema unificato
     const leadData = {
       business_name: businessName,
       website_url: analysis.finalUrl || url,
-      phone: null, // Non estratto nell'analisi manuale
-      email: null, // Non estratto nell'analisi manuale  
-      address: null, // Non estratto nell'analisi manuale
+      phone: undefined, // Non estratto nell'analisi manuale
+      email: undefined, // Non estratto nell'analisi manuale  
+      address: undefined, // Non estratto nell'analisi manuale
       city,
-      category,
+      category: 'Analisi Manuale',
       score: analysis.overallScore,
+      source: 'manual_scan',
       analysis: {
         // Dati nuovi strutturati
         seo: analysis.seo,
@@ -135,111 +123,32 @@ export async function saveManualLead({
           ...(analysis.seo?.hasH1 ? [] : ['h1'])
         ]
       },
-      source: 'manual_scan',
-      origin: 'manual',
-      unique_key: uniqueKey,
-      content_hash: contentHash,
-      last_seen_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      needed_roles: ['web-developer'], // Semplificato per ora
+      issues: [] // Semplificato per ora
     }
 
-    if (existingLead) {
-      // Lead esiste già, aggiorna solo se il contenuto è cambiato
-      if (existingLead.content_hash !== contentHash) {
-        const { error: updateError } = await supabaseAdmin
-          .from('leads')
-          .update({
-            ...leadData,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingLead.id)
+    // Usa il sistema unificato di deduplicazione
+    const leadManager = new UnifiedLeadManager(supabaseAdmin)
+    const result = await leadManager.saveOrEnrichLead(leadData)
 
-        if (updateError) {
-          return { success: false, error: 'Errore aggiornamento lead' }
-        }
-
-        return { 
-          success: true, 
-          leadId: existingLead.id,
-          isNewLead: false
-        }
-      } else {
-        // Solo aggiorna last_seen_at
-        const { error: updateError } = await supabaseAdmin
-          .from('leads')
-          .update({ 
-            last_seen_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingLead.id)
-
-        if (updateError) {
-          return { success: false, error: 'Errore aggiornamento timestamp' }
-        }
-
-        return { 
-          success: true, 
-          leadId: existingLead.id,
-          isNewLead: false
-        }
-      }
-    } else {
-      // Crea nuovo lead
-      const { data: newLead, error: insertError } = await supabaseAdmin
-        .from('leads')
-        .insert(leadData)
-        .select('id')
-        .single()
-
-      if (insertError) {
-        return { success: false, error: 'Errore creazione lead' }
-      }
-
-      // Salva anche l'analisi dettagliata nella tabella separata
-      const { error: analysisError } = await supabaseAdmin
-        .from('lead_analysis')
-        .insert({
-          id: newLead.id,
-          has_website: true,
-          website_load_time: analysis.performance.loadTime / 1000, // Converti in secondi
-          missing_meta_tags: [
-            ...(analysis.issues.missingTitle ? ['title'] : []),
-            ...(analysis.issues.missingMetaDescription ? ['description'] : []),
-            ...(analysis.issues.missingH1 ? ['h1'] : [])
-          ],
-          has_tracking_pixel: analysis.tracking.hasFacebookPixel || analysis.tracking.hasGoogleAnalytics,
-          broken_images: analysis.issues.brokenImages,
-          gtm_installed: analysis.tracking.hasGoogleTagManager,
-          has_ssl: !analysis.issues.httpsIssues,
-          mobile_friendly: analysis.performance.isResponsive,
-          overall_score: analysis.overallScore,
-          analysis_data: {
-            fullAnalysis: analysis,
-            scannedAt: new Date().toISOString(),
-            scannedBy: 'manual_user',
-            userId: createdByUserId
-          },
-          created_at: new Date().toISOString()
-        })
-
-      if (analysisError) {
-        console.error('Errore salvataggio analisi dettagliata:', analysisError)
-        // Non bloccare l'operazione se l'analisi dettagliata fallisce
-      }
-
+    if (!result.success) {
       return { 
-        success: true, 
-        leadId: newLead.id,
-        isNewLead: true
+        success: false, 
+        error: result.error || 'Errore salvataggio lead' 
       }
+    }
+
+    return {
+      success: true,
+      leadId: result.leadId,
+      isNewLead: !result.wasUpdated
     }
 
   } catch (error) {
     console.error('Errore saveManualLead:', error)
     return { 
       success: false, 
-      error: 'Errore interno del sistema' 
+      error: error instanceof Error ? error.message : 'Errore sconosciuto' 
     }
   }
 }
