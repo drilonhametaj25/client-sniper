@@ -57,7 +57,7 @@ export default function HomePage() {
             "name": "TrovaMi",
             "url": "https://trovami.pro",
             "logo": "https://trovami.pro/logo.png",
-            "description": "Piattaforma leader per la lead generation automatica in Italia. Aiutiamo agenzie web e freelancer a trovare clienti qualificati.",
+            "description": "Piattaforma professionale per audit digitali automatizzati. Aiutiamo agenzie web e consulenti a identificare opportunità di business attraverso analisi tecniche avanzate.",
             "contactPoint": {
               "@type": "ContactPoint",
               "contactType": "customer service",
@@ -77,17 +77,17 @@ export default function HomePage() {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Service",
-            "name": "Lead Generation per Agenzie Web",
-            "description": "Servizio di lead generation automatica che identifica aziende con siti web problematici che necessitano di servizi web, SEO e marketing digitale.",
+            "name": "Audit Digitale Automatizzato per Agenzie Web",
+            "description": "Servizio professionale di audit digitale che identifica aziende con criticità tecniche attraverso analisi automatizzate di SEO, performance e compliance.",
             "provider": {
               "@type": "Organization",
               "name": "TrovaMi"
             },
             "areaServed": "IT",
-            "serviceType": "Lead Generation",
+            "serviceType": "Audit Digitale Automatizzato",
             "audience": {
               "@type": "BusinessAudience",
-              "audienceType": "Agenzie Web, Freelancer, Consulenti SEO"
+              "audienceType": "Agenzie Web, Consulenti Digitali, SEO Specialist, Web Agency"
             }
           })
         }}
@@ -133,7 +133,7 @@ export default function HomePage() {
             {/* Badge di benvenuto */}
             <div className="inline-flex items-center px-4 py-2 bg-blue-50 border border-blue-200 rounded-full text-blue-700 text-sm font-medium mb-8">
               <Zap className="w-4 h-4 mr-2" />
-              Analisi automatizzata senza GPT, solo logica pura
+              Analisi tecnica avanzata basata su algoritmi proprietari
             </div>
 
             {/* Titolo principale SEO-optimized */}
@@ -144,13 +144,13 @@ export default function HomePage() {
                   per la Tua Agenzia
                 </span>
               </span>
-              <span className="block">con l'Analisi Automatica</span>
+              <span className="block">con l'Audit Automatizzato</span>
             </h1>
 
             {/* Sottotitolo ottimizzato per SEO */}
             <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
-              <strong>TrovaMi</strong> identifica automaticamente <strong>aziende con siti web problematici</strong> che necessitano di 
-              <strong className="text-gray-900"> servizi web, SEO e marketing digitale</strong>. Lead generation intelligente per agenzie, freelancer e consulenti.
+              <strong>TrovaMi</strong> esegue <strong>audit digitali automatizzati</strong> per identificare aziende con 
+              <strong className="text-gray-900"> criticità tecniche sui loro siti web</strong>. La piattaforma professionale per agenzie, freelancer e consulenti digitali.
             </p>
 
             {/* CTA Buttons */}
@@ -180,16 +180,16 @@ export default function HomePage() {
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto">
               <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900 mb-2">1000+</div>
-                <div className="text-gray-600">Siti Analizzati</div>
+                <div className="text-3xl font-bold text-gray-900 mb-2">5000+</div>
+                <div className="text-gray-600">Audit Completati</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900 mb-2">95%</div>
-                <div className="text-gray-600">Precisione</div>
+                <div className="text-3xl font-bold text-gray-900 mb-2">78+</div>
+                <div className="text-gray-600">Parametri Analizzati</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-gray-900 mb-2">24/7</div>
-                <div className="text-gray-600">Monitoraggio</div>
+                <div className="text-gray-600">Monitoraggio Attivo</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-gray-900 mb-2">0€</div>
@@ -206,13 +206,13 @@ export default function HomePage() {
           <div className="text-center mb-20">
             <div className="inline-flex items-center px-4 py-2 bg-green-50 border border-green-200 rounded-full text-green-700 text-sm font-medium mb-6">
               <Shield className="w-4 h-4 mr-2" />
-              Tecnologia avanzata senza AI
+              Tecnologia proprietaria basata su algoritmi deterministici
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
               Come <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-blue-600">Funziona</span>
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Analisi tecnica automatizzata basata su regole precise, performance e controlli SEO
+              Sistema di audit digitale automatizzato che analizza oltre 78 parametri tecnici per identificare opportunità di business
             </p>
           </div>
           
@@ -223,14 +223,14 @@ export default function HomePage() {
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                   <Globe className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Scraping Intelligente</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Ricerca Automatizzata</h3>
                 <p className="text-gray-600 leading-relaxed mb-6">
-                  Raccoglie dati da Google Maps, Yelp e directory online per trovare aziende locali con siti web problematici
+                  Sistema di intelligence digitale che monitora directory business e fonti pubbliche per identificare aziende target
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">Google Maps</span>
-                  <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">Yelp</span>
-                  <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">Directory</span>
+                  <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">Business Directory</span>
+                  <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">Geolocalizzazione</span>
+                  <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">Targeting</span>
                 </div>
               </div>
             </div>
@@ -241,14 +241,14 @@ export default function HomePage() {
                 <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                   <BarChart3 className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Analisi Tecnica</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Audit Digitale Completo</h3>
                 <p className="text-gray-600 leading-relaxed mb-6">
-                  Verifica SEO, performance, tracking pixel e problemi tecnici con oltre 20 controlli automatizzati
+                  Analisi multi-livello che valuta SEO tecnico, performance, sicurezza, UX e compliance GDPR in tempo reale
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <span className="px-3 py-1 bg-green-50 text-green-700 rounded-lg text-sm font-medium">SEO Check</span>
+                  <span className="px-3 py-1 bg-green-50 text-green-700 rounded-lg text-sm font-medium">SEO Tecnico</span>
                   <span className="px-3 py-1 bg-green-50 text-green-700 rounded-lg text-sm font-medium">Performance</span>
-                  <span className="px-3 py-1 bg-green-50 text-green-700 rounded-lg text-sm font-medium">Pixel Tracking</span>
+                  <span className="px-3 py-1 bg-green-50 text-green-700 rounded-lg text-sm font-medium">GDPR Check</span>
                 </div>
               </div>
             </div>
@@ -259,14 +259,14 @@ export default function HomePage() {
                 <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                   <Users className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Lead Qualificati</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Lead Intelligence</h3>
                 <p className="text-gray-600 leading-relaxed mb-6">
-                  Ricevi solo aziende con reali problemi tecnici e punteggio di priorità, pronte per i tuoi servizi
+                  Scoring proprietario che prioritizza le opportunità in base a criticità tecniche e potenziale di conversione
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium">Score 0-100</span>
-                  <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium">Contatti</span>
-                  <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium">Report</span>
+                  <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium">Scoring 0-100</span>
+                  <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium">Priorità</span>
+                  <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium">Report Tecnico</span>
                 </div>
               </div>
             </div>
@@ -275,29 +275,33 @@ export default function HomePage() {
           {/* Demo Section */}
           <div id="demo" className="mt-24 text-center">
             <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-12 text-white">
-              <h3 className="text-3xl font-bold mb-6">Vedi un esempio di Lead</h3>
+              <h3 className="text-3xl font-bold mb-6">Esempio di Audit Completo</h3>
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 max-w-2xl mx-auto text-left">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-xl font-semibold">Ristorante Da Mario</h4>
-                  <span className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">Score: 25</span>
+                  <span className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">Score: 25/100</span>
                 </div>
-                <p className="text-gray-300 mb-4">📍 Milano • 🌐 damario-milano.it</p>
+                <p className="text-gray-300 mb-4">📍 Milano • 🌐 damario-milano.it • ☎️ +39 02 1234567</p>
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center text-red-400">
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    Mancano meta tag SEO essenziali
+                    Meta tag SEO mancanti (Title, Description)
                   </div>
                   <div className="flex items-center text-red-400">
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    Velocità di caricamento molto lenta (4.2s)
+                    Performance critica: 4.2s di caricamento
                   </div>
                   <div className="flex items-center text-red-400">
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    Nessun pixel di tracking installato
+                    Tracking analytics non configurato
+                  </div>
+                  <div className="flex items-center text-orange-400">
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Cookie banner GDPR non conforme
                   </div>
                 </div>
                 <div className="mt-4 pt-4 border-t border-white/20">
-                  <p className="text-green-400 font-medium">💡 Perfect per: Web Designer, SEO Specialist, Marketing</p>
+                  <p className="text-green-400 font-medium">💡 Opportunità ideale per: Web Agency, SEO Specialist, Consulenti Digitali</p>
                 </div>
               </div>
             </div>

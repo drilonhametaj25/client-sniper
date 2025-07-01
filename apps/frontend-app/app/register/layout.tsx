@@ -7,19 +7,19 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Registrati Gratis - Trova Clienti con TrovaMi | Lead Generation',
-  description: 'Registrati gratuitamente su TrovaMi e inizia a trovare clienti potenziali per la tua agenzia web. 2 lead gratuiti per iniziare, piani flessibili per crescere.',
+  title: 'Registrati Gratis - Audit Digitali Automatizzati | TrovaMi Professional',
+  description: 'Registrati gratuitamente su TrovaMi e accedi alla piattaforma professionale per audit digitali automatizzati. 2 audit gratuiti per iniziare, intelligence avanzata per crescere.',
   keywords: [
     'registrazione gratuita',
-    'lead generation agenzie',
-    'trova clienti online',
-    'agenzia web clienti',
-    'piattaforma lead',
-    'clienti potenziali',
-    'business development',
-    'marketing digitale',
+    'audit digitale automatizzato',
+    'piattaforma professionale',
+    'agenzia web intelligence',
+    'audit tecnico siti web',
+    'consulenza digitale',
+    'business intelligence',
+    'analisi automatizzata',
     'crescita agenzia',
-    'acquisizione clienti'
+    'consulenti digitali'
   ],
   authors: [{ name: 'TrovaMi Team' }],
   creator: 'TrovaMi',
@@ -39,8 +39,8 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'it_IT',
     url: 'https://trovami.pro/register',
-    title: 'Registrati Gratis su TrovaMi - Lead Generation per Agenzie',
-    description: 'Piattaforma gratuita per trovare clienti potenziali. Analisi automatica siti web, identificazione opportunità business. Inizia con 2 lead gratuiti.',
+    title: 'Registrati Gratis su TrovaMi - Audit Digitali Professionali',
+    description: 'Piattaforma professionale per audit digitali automatizzati. Analisi tecnica avanzata, intelligence algormica. Inizia con 2 audit gratuiti.',
     siteName: 'TrovaMi',
     images: [
       {
@@ -53,8 +53,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Registrati Gratis su TrovaMi - Lead Generation',
-    description: 'Trova clienti potenziali per la tua agenzia web. Registrazione gratuita con 2 lead inclusi.',
+    title: 'Registrati Gratis su TrovaMi - Audit Digitali',
+    description: 'Piattaforma professionale per audit digitali automatizzati. Registrazione gratuita con 2 audit inclusi.',
     images: ['/og-register.jpg'],
     creator: '@trovami_pro',
   },

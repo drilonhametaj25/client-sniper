@@ -25,6 +25,7 @@ on:
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    environment: Configure Production  # Usa l'environment esatto come mostrato nell'immagine
     
     defaults:
       run:
@@ -59,12 +60,21 @@ jobs:
       - name: Verify Playwright installation
         run: npx playwright --version
 
+      - name: Debug environment variables
+        run: |
+          echo "🔍 Checking environment variables..."
+          echo "SUPABASE_URL (secret): ${{ secrets.SUPABASE_URL != '' && 'SET' || 'NOT SET' }}"
+          echo "SUPABASE_URL (var): ${{ vars.SUPABASE_URL != '' && 'SET' || 'NOT SET' }}"
+          echo "SUPABASE_SERVICE_ROLE_KEY (secret): ${{ secrets.SUPABASE_SERVICE_ROLE_KEY != '' && 'SET' || 'NOT SET' }}"
+          echo "SUPABASE_SERVICE_ROLE_KEY (var): ${{ vars.SUPABASE_SERVICE_ROLE_KEY != '' && 'SET' || 'NOT SET' }}"
+          echo "Environment: Configure Production"
+
       - name: Run scraping engine
         run: npm run scrape
         env:
-          # Database configuration
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Database configuration - prova secrets prima, poi variables come fallback
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || vars.SUPABASE_SERVICE_ROLE_KEY }}
           
           # Scraping configuration
           SCRAPE_MODE: ${{ github.event.inputs.scrape_mode || 'incremental' }}

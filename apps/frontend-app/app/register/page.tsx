@@ -46,8 +46,8 @@ const plans: Plan[] = [
     price: 0,
     credits: 2,
     features: [
-      '2 lead al mese',
-      'Informazioni base',
+      '2 audit al mese',
+      'Report base',
       'Supporto community'
     ]
   },
@@ -57,10 +57,10 @@ const plans: Plan[] = [
     price: 19,
     credits: 25,
     features: [
-      '25 lead al mese',
-      'Analisi tecnica completa',
+      '25 audit completi al mese',
+      'Intelligence tecnica avanzata',
       'Supporto email',
-      'Filtri avanzati'
+      'Filtri di targeting'
     ],
     stripePriceId: process.env.NEXT_PUBLIC_STRIPE_STARTER_PRICE_ID || 'price_starter_test'
   },
@@ -70,12 +70,12 @@ const plans: Plan[] = [
     price: 49,
     credits: 100,
     features: [
-      '100 lead al mese',
-      'Analisi tecnica completa',
+      '100 audit al mese',
+      'Suite completa di analisi',
       'Supporto prioritario',
-      'Filtri avanzati',
+      'Targeting geografico',
       'API access',
-      'Lead scoring avanzato'
+      'Scoring intelligence proprietario'
     ],
     popular: true,
     stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID || 'price_pro_test'
@@ -231,22 +231,22 @@ export default function RegisterPage() {
             {/* Hero Section */}
             <section className="text-center mb-12">
               <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                Scegli il Piano Perfetto per Te
+                Scegli il Piano Professionale per Te
               </h1>
               <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-                Inizia con il piano gratuito e scala in base alle tue esigenze. 
-                Tutti i piani includono l'accesso completo alla piattaforma.
+                Inizia con audit gratuiti e scala verso l'intelligence automatizzata. 
+                Tutti i piani includono accesso alla piattaforma professionale di audit digitale.
               </p>
               
               {/* Features highlights */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 max-w-3xl mx-auto">
                 <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
                   <Search className="h-4 w-4 text-blue-600" />
-                  <span>Analisi Automatica</span>
+                  <span>Audit Automatizzati</span>
                 </div>
                 <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
                   <BarChart3 className="h-4 w-4 text-green-600" />
-                  <span>Dashboard Avanzata</span>
+                  <span>Dashboard Tecnica</span>
                 </div>
                 <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
                   <Shield className="h-4 w-4 text-purple-600" />
@@ -294,7 +294,7 @@ export default function RegisterPage() {
                       </div>
                       
                       <p className="text-gray-600 mb-6">
-                        {plan.credits} lead {plan.price === 0 ? 'gratuiti' : 'inclusi'}
+                        {plan.credits} audit {plan.price === 0 ? 'gratuiti' : 'inclusi'}
                       </p>
                       
                       <ul className="space-y-3 mb-8">

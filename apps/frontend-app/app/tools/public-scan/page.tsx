@@ -200,27 +200,27 @@ export default function PublicScanPage() {
             <div className="flex items-center justify-center mb-4">
               <Gift className="h-8 w-8 text-purple-600 mr-3" />
               <h1 className="text-4xl font-bold text-gray-900">
-                Analisi Gratuita del Sito Web
+                Audit Digitale Gratuito
               </h1>
             </div>
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Scopri gratuitamente i problemi tecnici del tuo sito web con la nostra analisi professionale. 
-              Verifica velocità, SEO, performance e molto altro in pochi secondi.
+              Audit tecnico professionale gratuito del tuo sito web. Analisi completa di oltre 70 parametri: 
+              performance, SEO tecnico, sicurezza e compliance GDPR in tempo reale.
             </p>
             
             {/* Features highlights */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 max-w-2xl mx-auto">
               <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
                 <TrendingUp className="h-4 w-4 text-green-600" />
-                <span>Test Performance</span>
+                <span>Audit Performance</span>
               </div>
               <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
                 <Shield className="h-4 w-4 text-blue-600" />
-                <span>Analisi SEO</span>
+                <span>SEO Tecnico</span>
               </div>
               <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
                 <Globe className="h-4 w-4 text-purple-600" />
-                <span>Controllo Responsive</span>
+                <span>Compliance Check</span>
               </div>
             </div>
           </section>
