@@ -38,10 +38,10 @@ const plans: Plan[] = [
   {
     id: 'starter',
     name: 'Starter',
-    price: 29,
-    credits: 50,
+    price: 19,
+    credits: 25,
     features: [
-      '50 lead al mese',
+      '25 lead al mese',
       'Analisi tecnica completa',
       'Supporto email',
       'Filtri avanzati'
@@ -51,10 +51,10 @@ const plans: Plan[] = [
   {
     id: 'pro',
     name: 'Pro',
-    price: 79,
-    credits: 200,
+    price: 49,
+    credits: 100,
     features: [
-      '200 lead al mese',
+      '100 lead al mese',
       'Analisi tecnica completa',
       'Supporto prioritario',
       'Filtri avanzati',
