@@ -115,13 +115,20 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     return
   }
 
-  // Map plan ID to credits and plan name
-  const planCredits = {
-    starter: 50,
-    pro: 200
+  // Ottieni i crediti dal database invece che hardcoded
+  const { data: planData, error: planError } = await supabase
+    .from('plans')
+    .select('max_credits')
+    .eq('name', planId)
+    .single()
+
+  if (planError) {
+    console.error('Errore durante la query del piano:', planError)
+    return
   }
 
-  const credits = planCredits[planId as keyof typeof planCredits] || 0
+  const credits = planData?.max_credits || 0
+  console.log(`Assegnando ${credits} crediti per piano ${planId} (da database)`)
 
   // Aggiorna l'utente con il nuovo piano
   const { error } = await supabase
@@ -153,13 +160,20 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 
   if (!userId || !planId) return
 
-  // Rinnova i crediti
-  const planCredits = {
-    starter: 50,
-    pro: 200
+  // Ottieni i crediti dal database per il rinnovo
+  const { data: planData, error: planError } = await supabase
+    .from('plans')
+    .select('max_credits')
+    .eq('name', planId)
+    .single()
+
+  if (planError) {
+    console.error('Errore durante la query del piano per rinnovo:', planError)
+    return
   }
 
-  const credits = planCredits[planId as keyof typeof planCredits] || 0
+  const credits = planData?.max_credits || 0
+  console.log(`Rinnovando ${credits} crediti per piano ${planId} (da database)`)
 
   const { error } = await supabase
     .from('users')
@@ -180,12 +194,21 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
   if (!userId) return
 
+  // Ottieni i crediti del piano free dal database
+  const { data: freePlanData } = await supabase
+    .from('plans')
+    .select('max_credits')
+    .eq('name', 'free')
+    .single()
+
+  const freeCredits = freePlanData?.max_credits || 2
+
   // Downgrade a piano gratuito
   const { error } = await supabase
     .from('users')
     .update({
       plan: 'free',
-      credits_remaining: 2,
+      credits_remaining: freeCredits,
       stripe_customer_id: null,
       stripe_subscription_id: null,
     })

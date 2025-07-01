@@ -52,7 +52,7 @@ interface PlanLog {
 }
 
 export default function SettingsPage() {
-  const { user, signOut } = useAuth()
+  const { user, signOut, refreshProfile } = useAuth()
   const router = useRouter()
   const supabase = createClientComponentClient()
   const planStatus = usePlanStatus()
@@ -78,7 +78,11 @@ export default function SettingsPage() {
       router.push('/login')
       return
     }
-    loadUserData()
+    
+    // Forza un refresh del profilo per avere dati aggiornati
+    refreshProfile().then(() => {
+      loadUserData()
+    })
   }, [user])
 
   const loadUserData = async () => {
@@ -87,24 +91,50 @@ export default function SettingsPage() {
     try {
       console.log('📋 Caricando dati utente per:', user.email)
       
-      // Per ora usa solo i dati dell'utente autenticato
-      const fallbackUserData = {
+      // Usa i dati dell'AuthContext che sono aggiornati e completi
+      const currentUserData: UserData = {
         id: user.id,
         email: user.email || 'email@example.com',
-        plan: 'free', // Default plan
-        status: 'active', // Default status
-        credits_remaining: 2, // Default credits
-        created_at: new Date().toISOString()
+        plan: user.plan || 'free',
+        status: 'active', // Default per compatibilità
+        credits_remaining: user.credits_remaining || 0,
+        created_at: user.created_at || new Date().toISOString()
       }
       
-      console.log('✅ Dati utente caricati:', fallbackUserData)
-      setUserData(fallbackUserData)
-      setPlanLogs([]) // Per ora lista vuota
+      console.log('✅ Dati utente caricati da AuthContext:', currentUserData)
+      setUserData(currentUserData)
+
+      // Carica i log del piano se l'utente ha un piano attivo
+      if (user.plan && user.plan !== 'free') {
+        await loadPlanLogs()
+      } else {
+        setPlanLogs([])
+      }
 
     } catch (error) {
       console.error('Errore caricamento dati:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadPlanLogs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('plan_status_logs')
+        .select('*')
+        .eq('user_id', user!.id)
+        .order('created_at', { ascending: false })
+        .limit(10)
+
+      if (error) {
+        console.error('Errore caricamento log piano:', error)
+        return
+      }
+
+      setPlanLogs(data || [])
+    } catch (error) {
+      console.error('Errore caricamento log piano:', error)
     }
   }
 
