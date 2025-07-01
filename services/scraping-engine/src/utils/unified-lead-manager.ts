@@ -4,7 +4,6 @@
  * Arricchisce lead esistenti con nuovi dati invece di creare copie
  */
 
-import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 
 interface LeadMatchCriteria {
