@@ -51,25 +51,35 @@ export function usePlanStatus(): PlanStatus {
 
   const loadPlanStatus = async () => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('plan, status, credits_remaining, deactivated_at, deactivation_reason, reactivated_at')
-        .eq('id', user?.id)
-        .single()
+      // ⚡ OTTIMIZZAZIONE: Usa i dati dell'AuthContext che sono già completi e aggiornati
+      // Evita query duplicate e problemi di sincronizzazione
+      
+      if (!user) {
+        setPlanStatus(prev => ({ ...prev, isLoading: false }))
+        return
+      }
 
-      if (error) throw error
-
-      const canAccessPremium = data.status === 'active' && data.plan !== 'free'
+      console.log('📊 Caricando stato piano da AuthContext per:', user.email)
+      
+      // Usa i dati già disponibili dall'AuthContext che sono affidabili
+      const canAccessPremium = (user.status === 'active' && user.plan && user.plan !== 'free') || false
 
       setPlanStatus({
-        plan: data.plan,
-        status: data.status,
-        credits_remaining: data.credits_remaining,
-        deactivated_at: data.deactivated_at,
-        deactivation_reason: data.deactivation_reason,
-        reactivated_at: data.reactivated_at,
+        plan: user.plan || 'free',
+        status: user.status || 'active',
+        credits_remaining: user.credits_remaining || 0,
+        deactivated_at: user.deactivated_at,
+        deactivation_reason: user.deactivation_reason,
+        reactivated_at: user.reactivated_at,
         canAccessPremium,
         isLoading: false
+      })
+
+      console.log('✅ Stato piano caricato da AuthContext:', {
+        plan: user.plan,
+        status: user.status,
+        credits: user.credits_remaining,
+        canAccess: canAccessPremium
       })
 
     } catch (error) {

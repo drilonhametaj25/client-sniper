@@ -33,27 +33,93 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  // 🔧 ENHANCED LOGGING: Log tutti gli eventi webhook per debug
+  console.log(`\n🎯 WEBHOOK RICEVUTO:`)
+  console.log(`Type: ${event.type}`)
+  console.log(`ID: ${event.id}`)
+  console.log(`Created: ${new Date(event.created * 1000).toISOString()}`)
+  
+  // Log dettagli specifici per eventi di pagamento
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object as Stripe.Checkout.Session
+    console.log(`Session ID: ${session.id}`)
+    console.log(`Customer Email: ${session.customer_email || session.customer_details?.email}`)
+    console.log(`Metadata:`, session.metadata)
+    console.log(`Payment Status: ${session.payment_status}`)
+  }
+
   try {
     switch (event.type) {
       case 'checkout.session.completed':
         await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session)
         break
       
+      case 'customer.subscription.created':
+        console.log('🎯 PROCESSING: customer.subscription.created')
+        await handleSubscriptionCreated(event.data.object as Stripe.Subscription)
+        break
+        
+      case 'customer.subscription.updated':
+        console.log('🎯 PROCESSING: customer.subscription.updated')
+        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription)
+        break
+      
       case 'invoice.payment_succeeded':
+        console.log('🎯 PROCESSING: invoice.payment_succeeded')
         await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice)
+        break
+        
+      case 'invoice.payment_failed':
+        console.log('🎯 PROCESSING: invoice.payment_failed')
+        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice)
         break
       
       case 'customer.subscription.deleted':
+        console.log('🎯 PROCESSING: customer.subscription.deleted')
         await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
         break
       
       default:
-        console.log(`Unhandled event type: ${event.type}`)
+        console.log(`⚠️ UNHANDLED EVENT: ${event.type}`)
     }
 
     return NextResponse.json({ received: true })
   } catch (error) {
-    console.error('Errore durante la gestione del webhook:', error)
+    // ⚡ ENHANCED ERROR LOGGING: Log l'errore in modo dettagliato
+    console.error('\n🚨 ERRORE WEBHOOK CRITICO:')
+    console.error('Event Type:', event?.type || 'UNKNOWN')
+    console.error('Event ID:', event?.id || 'UNKNOWN')
+    console.error('Error Message:', error instanceof Error ? error.message : String(error))
+    console.error('Error Stack:', error instanceof Error ? error.stack : 'No stack available')
+    
+    // Log i dettagli dell'evento per debug
+    if (event?.type === 'checkout.session.completed') {
+      const session = event.data.object as Stripe.Checkout.Session
+      console.error('Session Details:', {
+        id: session.id,
+        customer_email: session.customer_email || session.customer_details?.email,
+        metadata: session.metadata,
+        payment_status: session.payment_status
+      })
+    }
+    
+    // 🔧 FALLBACK: Prova a salvare l'errore nel database per debug
+    try {
+      await supabase
+        .from('plan_status_logs')
+        .insert({
+          user_id: 'webhook-error',
+          action: 'webhook_error',
+          previous_status: 'unknown',
+          new_status: 'error',
+          reason: `Webhook failed: ${error instanceof Error ? error.message : String(error)}`,
+          triggered_by: 'stripe_webhook_error',
+          stripe_event_id: event?.id || 'unknown'
+        })
+    } catch (dbError) {
+      console.error('Failed to log error to database:', dbError)
+    }
+    
     return NextResponse.json(
       { error: 'Errore durante la gestione del webhook' },
       { status: 500 }
@@ -62,13 +128,26 @@ export async function POST(request: NextRequest) {
 }
 
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+  console.log('\n💳 PROCESSING CHECKOUT SESSION:')
+  console.log(`Session ID: ${session.id}`)
+  console.log(`Customer: ${session.customer}`)
+  console.log(`Customer Email: ${session.customer_email || session.customer_details?.email}`)
+  console.log(`Subscription: ${session.subscription}`)
+  console.log(`Amount: ${session.amount_total ? session.amount_total / 100 : 'N/A'} ${session.currency}`)
+  
   let userId = session.client_reference_id
   const userEmail = session.metadata?.user_email
   const planId = session.metadata?.plan_id
   const autoConfirm = session.metadata?.auto_confirm === 'true'
 
+  console.log(`Metadata - User ID: ${userId}`)
+  console.log(`Metadata - User Email: ${userEmail}`)
+  console.log(`Metadata - Plan ID: ${planId}`)
+  console.log(`Metadata - Auto Confirm: ${autoConfirm}`)
+
   if ((!userId || userId.startsWith('temp_')) && !userEmail) {
-    console.error('Missing user_id/email or plan_id in session metadata')
+    console.error('❌ Missing user_id/email or plan_id in session metadata')
+    console.log('Available metadata:', session.metadata)
     return
   }
 
@@ -131,6 +210,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   console.log(`Assegnando ${credits} crediti per piano ${planId} (da database)`)
 
   // Aggiorna l'utente con il nuovo piano
+  console.log(`\n🔄 Aggiornando utente ${userId} con piano ${planId} e ${credits} crediti`)
+  
   const { error } = await supabase
     .from('users')
     .update({
@@ -142,9 +223,28 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     .eq('id', userId)
 
   if (error) {
-    console.error('Errore durante l\'aggiornamento del piano utente:', error)
+    console.error('❌ Errore durante l\'aggiornamento del piano utente:', error)
   } else {
-    console.log(`Piano ${planId} attivato per utente ${userId}`)
+    console.log(`✅ Piano ${planId} attivato per utente ${userId}`)
+    
+    // Crea log dell'operazione
+    const { error: logError } = await supabase
+      .from('plan_status_logs')
+      .insert({
+        user_id: userId,
+        action: 'activate',
+        previous_status: 'free',
+        new_status: 'active',
+        reason: `Stripe payment completed - Session: ${session.id}`,
+        triggered_by: 'stripe_webhook',
+        stripe_event_id: session.id
+      })
+    
+    if (logError) {
+      console.error('❌ Errore creazione log:', logError)
+    } else {
+      console.log('✅ Log operazione creato')
+    }
   }
 }
 
@@ -218,5 +318,205 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     console.error('Errore durante il downgrade del piano:', error)
   } else {
     console.log(`Piano downgraded a free per utente ${userId}`)
+  }
+}
+
+// 🎯 NUOVO: Gestione creazione subscription (EVENTO PRINCIPALE!)
+async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
+  console.log('\n🎯 SUBSCRIPTION CREATED:')
+  console.log(`Subscription ID: ${subscription.id}`)
+  console.log(`Customer ID: ${subscription.customer}`)
+  console.log(`Status: ${subscription.status}`)
+  console.log(`Price ID: ${subscription.items.data[0]?.price?.id}`)
+  console.log(`Metadata:`, subscription.metadata)
+
+  try {
+    // Determina il piano dal price_id
+    const priceId = subscription.items.data[0]?.price?.id
+    
+    let planName = 'free'
+    if (priceId === process.env.NEXT_PUBLIC_STRIPE_STARTER_PRICE_ID) {
+      planName = 'starter'
+    } else if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID) {
+      planName = 'pro'
+    }
+
+    console.log(`Piano determinato: ${planName}`)
+
+    // Trova l'utente dal customer ID
+    let userId = subscription.metadata?.user_id
+    
+    if (!userId) {
+      // Se non c'è user_id nei metadata, prova a trovare l'utente dal customer ID
+      const customer = await stripe.customers.retrieve(subscription.customer as string)
+      
+      if (customer && !customer.deleted && customer.email) {
+        console.log(`Cercando utente per email: ${customer.email}`)
+        
+        const { data: user, error } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', customer.email)
+          .single()
+        
+        if (error || !user) {
+          console.error(`❌ Utente non trovato per email: ${customer.email}`)
+          return
+        }
+        
+        userId = user.id
+        console.log(`✅ Utente trovato: ${userId}`)
+      } else {
+        console.error('❌ Impossibile determinare l\'utente')
+        return
+      }
+    }
+
+    // Ottieni crediti dal database
+    const { data: planData } = await supabase
+      .from('plans')
+      .select('max_credits')
+      .eq('name', planName)
+      .single()
+
+    const credits = planData?.max_credits || 0
+    console.log(`Assegnando ${credits} crediti per piano ${planName}`)
+
+    // Aggiorna l'utente
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        plan: planName,
+        credits_remaining: credits,
+        stripe_customer_id: subscription.customer as string,
+        stripe_subscription_id: subscription.id,
+        status: 'active'
+      })
+      .eq('id', userId)
+
+    if (updateError) {
+      console.error('❌ Errore aggiornamento utente:', updateError)
+    } else {
+      console.log(`✅ Piano ${planName} attivato per utente ${userId}`)
+      
+      // Crea log
+      await supabase
+        .from('plan_status_logs')
+        .insert({
+          user_id: userId,
+          action: 'subscription_created',
+          previous_status: 'free',
+          new_status: 'active',
+          reason: `Subscription created - ${subscription.id}`,
+          triggered_by: 'stripe_webhook',
+          stripe_event_id: subscription.id
+        })
+      
+      console.log('✅ Log creato')
+    }
+
+  } catch (error) {
+    console.error('❌ Errore handleSubscriptionCreated:', error)
+  }
+}
+
+// 🎯 NUOVO: Gestione aggiornamento subscription
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  console.log('\n🎯 SUBSCRIPTION UPDATED:')
+  console.log(`Subscription ID: ${subscription.id}`)
+  console.log(`Status: ${subscription.status}`)
+  console.log(`Price ID: ${subscription.items.data[0]?.price?.id}`)
+
+  try {
+    // Trova l'utente dalla subscription
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, plan')
+      .eq('stripe_subscription_id', subscription.id)
+      .single()
+
+    if (error || !user) {
+      console.error('❌ Utente non trovato per subscription:', subscription.id)
+      return
+    }
+
+    const userId = user.id
+    console.log(`✅ Utente trovato: ${userId}`)
+
+    // Se la subscription è cancellata o incompleta, aggiorna lo status
+    let newStatus = 'active'
+    if (subscription.status === 'canceled' || subscription.status === 'incomplete_expired') {
+      newStatus = 'cancelled'
+    } else if (subscription.status === 'past_due' || subscription.status === 'unpaid') {
+      newStatus = 'inactive'
+    }
+
+    // Aggiorna solo lo status se necessario
+    if (newStatus !== 'active') {
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          status: newStatus
+        })
+        .eq('id', userId)
+
+      if (updateError) {
+        console.error('❌ Errore aggiornamento status:', updateError)
+      } else {
+        console.log(`✅ Status aggiornato a ${newStatus} per utente ${userId}`)
+      }
+    }
+
+  } catch (error) {
+    console.error('❌ Errore handleSubscriptionUpdated:', error)
+  }
+}
+
+// 🎯 NUOVO: Gestione pagamento fallito
+async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+  console.log('\n❌ PAYMENT FAILED:')
+  console.log(`Invoice ID: ${invoice.id}`)
+  console.log(`Customer ID: ${invoice.customer}`)
+  console.log(`Subscription ID: ${invoice.subscription}`)
+  console.log(`Amount: ${invoice.amount_due / 100} ${invoice.currency}`)
+
+  try {
+    if (!invoice.subscription) {
+      console.log('❌ Nessuna subscription associata')
+      return
+    }
+
+    // Trova l'utente dalla subscription
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, email')
+      .eq('stripe_subscription_id', invoice.subscription as string)
+      .single()
+
+    if (error || !user) {
+      console.error('❌ Utente non trovato per subscription:', invoice.subscription)
+      return
+    }
+
+    const userId = user.id
+    console.log(`⚠️ Pagamento fallito per utente: ${userId} (${user.email})`)
+
+    // Log del pagamento fallito
+    await supabase
+      .from('plan_status_logs')
+      .insert({
+        user_id: userId,
+        action: 'payment_failed',
+        previous_status: 'active',
+        new_status: 'active', // Manteniamo attivo per ora, Stripe gestirà i retry
+        reason: `Payment failed for invoice ${invoice.id}`,
+        triggered_by: 'stripe_webhook',
+        stripe_event_id: invoice.id
+      })
+
+    console.log('✅ Log pagamento fallito creato')
+
+  } catch (error) {
+    console.error('❌ Errore handleInvoicePaymentFailed:', error)
   }
 }

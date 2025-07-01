@@ -15,6 +15,10 @@ export interface AuthUser extends User {
   total_credits_used_this_cycle?: number
   stripe_subscription_id?: string
   stripe_current_period_end?: string
+  status?: 'active' | 'inactive' | 'cancelled'
+  deactivated_at?: string
+  deactivation_reason?: string
+  reactivated_at?: string
 }
 
 export interface AuthState {
@@ -43,10 +47,10 @@ export async function getUserProfile(userId: string, sessionUser?: User): Promis
     
     const startTime = Date.now()
     
-    // ⚡ OTTIMIZZAZIONE: Query unica per i dati del profilo
+    // ⚡ OTTIMIZZAZIONE: Query unica per i dati del profilo (con tutti i campi necessari)
     const { data, error } = await supabase
       .from('users')
-      .select('id, email, role, plan, credits_remaining, billing_cycle_start, credits_reset_date, total_credits_used_this_cycle, stripe_subscription_id, stripe_current_period_end')
+      .select('id, email, role, plan, credits_remaining, billing_cycle_start, credits_reset_date, total_credits_used_this_cycle, stripe_subscription_id, stripe_current_period_end, status, deactivated_at, deactivation_reason, reactivated_at')
       .eq('id', userId)
       .single()
     
@@ -92,6 +96,10 @@ export async function getUserProfile(userId: string, sessionUser?: User): Promis
       total_credits_used_this_cycle: data.total_credits_used_this_cycle,
       stripe_subscription_id: data.stripe_subscription_id,
       stripe_current_period_end: data.stripe_current_period_end,
+      status: data.status as 'active' | 'inactive' | 'cancelled' || 'active',
+      deactivated_at: data.deactivated_at,
+      deactivation_reason: data.deactivation_reason,
+      reactivated_at: data.reactivated_at,
     }
 
     // ⚡ SALVA NELLA CACHE per accessi futuri ultra-veloci

@@ -21,7 +21,8 @@ import {
   Calendar,
   Pause,
   Play,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react'
 import Link from 'next/link'
 import InactivePlanBanner from '@/components/InactivePlanBanner'
@@ -79,10 +80,8 @@ export default function SettingsPage() {
       return
     }
     
-    // Forza un refresh del profilo per avere dati aggiornati
-    refreshProfile().then(() => {
-      loadUserData()
-    })
+    // Carica i dati senza forzare il refresh per evitare loop
+    loadUserData()
   }, [user])
 
   const loadUserData = async () => {
@@ -540,6 +539,46 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <div className="flex space-x-3">
+                  {/* Pulsante Refresh Dati */}
+                  <button
+                    onClick={async () => {
+                      console.log('🔄 Invalidazione cache completa e refresh profilo...')
+                      
+                      // 1. Invalida localStorage cache
+                      const keys = Object.keys(localStorage)
+                      keys.forEach(key => {
+                        if (key.startsWith('auth_profile_') || key.startsWith('profile_cache_')) {
+                          localStorage.removeItem(key)
+                        }
+                      })
+                      
+                      // 2. Invalida sessionStorage cache  
+                      const sessionKeys = Object.keys(sessionStorage)
+                      sessionKeys.forEach(key => {
+                        if (key.startsWith('auth_profile_') || key.startsWith('profile_cache_')) {
+                          sessionStorage.removeItem(key)
+                        }
+                      })
+                      
+                      // 3. Refresh del profilo AuthContext
+                      console.log('💾 Cache invalidata, forzando refresh profilo...')
+                      await refreshProfile()
+                      
+                      // 4. Ricarica dati locali
+                      console.log('📋 Ricaricando dati locali...')
+                      setTimeout(() => {
+                        loadUserData()
+                      }, 500) // Piccolo delay per permettere al context di aggiornarsi
+                      
+                      console.log('✅ Refresh completo completato!')
+                    }}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
+                    title="Aggiorna i dati del profilo"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2 inline" />
+                    Aggiorna
+                  </button>
+                  
                   {userData.status === 'active' && userData.plan !== 'free' && (
                     <button
                       onClick={() => setShowDeactivateModal(true)}
