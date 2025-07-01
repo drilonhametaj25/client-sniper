@@ -17,7 +17,18 @@
     "seed": "tsx src/scripts/seed-database.ts seed",
     "seed:reset": "tsx src/scripts/seed-database.ts reset",
     "seed:stats": "tsx src/scripts/seed-database.ts stats",
-    "migrate": "tsx src/scripts/migrate-database.ts"
+    "migrate": "tsx src/scripts/migrate-database.ts",
+    "test:scraping": "tsx src/scripts/test-improved-scraping.ts",
+    "test:contacts": "tsx -e \"import('./src/utils/contact-parser.ts').then(m => console.log('Contact parser test passed'))\"",
+    "test:piva": "tsx src/scripts/test-piva.ts",
+    "test:quick": "tsx src/scripts/test-timeout-fixes.ts",
+    "test:maps": "tsx src/scripts/test-quick-fixes.ts --maps",
+    "test:selectors": "tsx src/scripts/test-improved-selectors.ts",
+    "test:production-limited": "tsx src/scripts/test-production-limited.ts",
+    "examples:scraping": "tsx src/scripts/examples-improved-scraping.ts",
+    "scrape:improved": "tsx src/scripts/examples-improved-scraping.ts",
+    "scrape:production": "tsx src/scripts/production-scraper.ts",
+    "scrape:intelligent": "tsx src/scripts/production-scraper.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.38.0",

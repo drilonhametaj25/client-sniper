@@ -1,4 +1,4 @@
-// Design System tokens per ClientSniper
+// Design System tokens per TrovaMi
 // Ispirato al design di Apple e Linear.app
 // Fornisce un sistema di colori, spaziature e tipografia coerente
 

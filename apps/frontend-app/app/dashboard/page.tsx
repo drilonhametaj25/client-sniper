@@ -21,7 +21,6 @@ import {
   MapPin,
   Crown,
   Zap,
-  Download,
   Search,
   RefreshCw,
   Settings,
@@ -409,41 +408,7 @@ export default function ClientDashboard() {
     }
   }
 
-  const exportToCSV = async () => {
-    // Solo i lead sbloccati possono essere esportati
-    const exportableLeads = leads.filter(lead => unlockedLeads.has(lead.id))
-    
-    if (exportableLeads.length === 0) {
-      alert('Nessun lead sbloccato da esportare. Sblocca prima i dettagli dei lead che vuoi esportare.')
-      return
-    }
 
-    const headers = ['Nome Business', 'Sito Web', 'Telefono', 'Email', 'Città', 'Categoria', 'Score', 'Problemi', 'Ruoli Necessari']
-    const csvContent = [
-      headers.join(','),
-      ...exportableLeads.map(lead => [
-        lead.business_name,
-        lead.website_url,
-        lead.phone || '',
-        lead.email || '',
-        lead.city,
-        lead.category,
-        lead.score,
-        (lead.issues && Array.isArray(lead.issues)) ? lead.issues.join('; ') : '',
-        (lead.needed_roles && Array.isArray(lead.needed_roles)) ? lead.needed_roles.join('; ') : ''
-      ].map(field => `"${field}"`).join(','))
-    ].join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `trovami-leads-${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
-
-    // Aggiorna il profilo per mostrare i crediti aggiornati
-    refreshProfile()
-  }
 
   const getRoleColor = (role: string) => {
     const colors: Record<string, string> = {
@@ -627,7 +592,7 @@ export default function ClientDashboard() {
                 <div className="flex-1">
                   <h3 className="text-yellow-800 font-semibold">Crediti in esaurimento</h3>
                   <p className="text-yellow-700 text-sm">
-                    Ti rimangono solo {remainingCredits} crediti. Ogni azione (visualizza sito, export CSV) costa 1 credito.
+                    Ti rimangono solo {remainingCredits} crediti. Ogni azione (sblocca dettagli) costa 1 credito.
                   </p>
                 </div>
                 <button
@@ -674,18 +639,7 @@ export default function ClientDashboard() {
                   <span>Aggiorna</span>
                 </button>
 
-                <button
-                  onClick={exportToCSV}
-                  className="flex items-center space-x-2 px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={unlockedLeads.size === 0}
-                  title={unlockedLeads.size === 0 ? "Sblocca alcuni lead prima di esportare" : `Esporta ${unlockedLeads.size} lead sbloccati`}
-                >
-                  <Download className="h-4 w-4" />
-                  <span>Export CSV</span>
-                  <span className="text-xs bg-white/20 px-2 py-1 rounded-full">
-                    {unlockedLeads.size} sbloccati
-                  </span>
-                </button>
+
               </div>
             </div>
 
@@ -761,9 +715,20 @@ export default function ClientDashboard() {
                       {/* Info Principale */}
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            {lead.business_name}
-                          </h3>
+                          {isUnlocked ? (
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                              {lead.business_name}
+                            </h3>
+                          ) : (
+                            <div className="flex items-center space-x-3">
+                              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                🔒 {lead.category} in {lead.city}
+                              </h3>
+                              <div className="px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-bold rounded-full animate-pulse">
+                                LEAD QUALIFICATO
+                              </div>
+                            </div>
+                          )}
                           <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getScoreColor(lead.score)}`}>
                             {getScoreLabel(lead.score)} ({lead.score})
                           </div>
@@ -774,34 +739,81 @@ export default function ClientDashboard() {
                           )}
                         </div>
                         
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
-                          <div className="flex items-center space-x-1">
-                            <ExternalLink className="h-4 w-4" />
-                            <span className="hover:text-blue-600 transition-colors">
-                              {lead.website_url}
+                        {/* Informazioni strategiche per incentivare lo sblocco */}
+                        {!isUnlocked ? (
+                          <div className="space-y-3">
+                            {/* Problemi identificati */}
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                              <span className="text-sm font-medium text-red-600">
+                                {lead.score <= 20 ? 'Sito con gravi problemi tecnici' : 
+                                 lead.score <= 40 ? 'Problemi SEO e performance critici' :
+                                 lead.score <= 60 ? 'Opportunità di miglioramento evidenti' :
+                                 'Potenziale cliente identificato'}
+                              </span>
+                            </div>
+                            
+                            {/* Valore stimato */}
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <span className="text-sm text-gray-700 dark:text-gray-300">
+                                💰 Valore progetto stimato: €{lead.score <= 30 ? '2.000-5.000' : 
+                                                                lead.score <= 50 ? '1.500-3.000' :
+                                                                lead.score <= 70 ? '800-2.000' : '500-1.500'}
+                              </span>
+                            </div>
+                            
+                            {/* Urgenza */}
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                              <span className="text-sm text-gray-700 dark:text-gray-300">
+                                ⚡ Priorità: {lead.score <= 30 ? 'URGENTE' : 
+                                            lead.score <= 50 ? 'ALTA' :
+                                            lead.score <= 70 ? 'MEDIA' : 'BASSA'}
+                              </span>
+                            </div>
+                            
+                            {/* Servizi suggeriti */}
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                              <span className="text-sm text-gray-700 dark:text-gray-300">
+                                🎯 Servizi richiesti: {lead.category === 'ristoranti' ? 'SEO locale, Social Media' :
+                                                      lead.category === 'idraulici' ? 'Google Ads, Sito Web' :
+                                                      lead.category === 'avvocati' ? 'SEO, Content Marketing' :
+                                                      'Web Design, SEO, Marketing'}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
+                            <div className="flex items-center space-x-1">
+                              <ExternalLink className="h-4 w-4" />
+                              <span className="hover:text-blue-600 transition-colors">
+                                {lead.website_url}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center space-x-1">
+                              <MapPin className="h-4 w-4" />
+                              <span>{lead.city}</span>
+                            </div>
+                            
+                            <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full">
+                              {lead.category}
                             </span>
                           </div>
-                          
-                          <div className="flex items-center space-x-1">
-                            <MapPin className="h-4 w-4" />
-                            <span>{lead.city}</span>
-                          </div>
-                          
-                          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full">
-                            {lead.category}
-                          </span>
-                        </div>
+                        )}
 
                         {/* Contatti - Solo se sbloccato */}
                         {isUnlocked ? (
                           <div className="flex flex-wrap gap-4 mb-3">
-                            {lead.phone && (
+                            {lead.phone && typeof lead.phone === 'string' && lead.phone.trim() !== '' && (
                               <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-400">
                                 <Phone className="h-4 w-4" />
                                 <span>{lead.phone}</span>
                               </div>
                             )}
-                            {lead.email && (
+                            {lead.email && typeof lead.email === 'string' && lead.email.trim() !== '' && lead.email !== 'null' && (
                               <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-400">
                                 <Mail className="h-4 w-4" />
                                 <span>{lead.email}</span>
@@ -809,17 +821,97 @@ export default function ClientDashboard() {
                             )}
                           </div>
                         ) : (
-                          <div className="flex flex-wrap gap-4 mb-3">
-                            <div className="flex items-center space-x-1 text-sm text-gray-400">
-                              <Phone className="h-4 w-4" />
-                              <span className="blur-sm">•••••••••••</span>
-                              <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
-                                Sblocca per vedere
-                              </span>
-                            </div>
-                            <div className="flex items-center space-x-1 text-sm text-gray-400">
-                              <Mail className="h-4 w-4" />
-                              <span className="blur-sm">•••••••••••</span>
+                          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border border-yellow-200 dark:border-yellow-700/50 rounded-xl p-4 mt-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                {/* Contiamo i dati disponibili SOLO se il piano li supporta */}
+                                {(() => {
+                                  const userPlan = userProfile?.plan || 'free'
+                                  const isProOrAdmin = userPlan === 'pro' || userProfile?.role === 'admin'
+                                  
+                                  // Solo per piani Pro/Admin controlliamo i contatti (perché l'API li restituisce)
+                                  if (isProOrAdmin) {
+                                    // Verifica più rigorosa: controlla che i campi esistano e non siano vuoti
+                                    const hasPhone = lead.phone && typeof lead.phone === 'string' && lead.phone.trim() !== ''
+                                    const hasEmail = lead.email && typeof lead.email === 'string' && lead.email.trim() !== '' && lead.email !== 'null'
+                                    const hasAddress = lead.address && typeof lead.address === 'string' && lead.address.trim() !== ''
+                                    
+                                    const availableContacts = [
+                                      hasPhone && '📱 Numero di telefono diretto',
+                                      hasEmail && '✉️ Email aziendale verificata', 
+                                      hasAddress && '📍 Indirizzo completo ufficio'
+                                    ].filter(Boolean)
+                                    
+                                    const hasContactData = availableContacts.length > 0
+                                    
+                                    return hasContactData ? (
+                                      <>
+                                        <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+                                          📞 {availableContacts.length} Contatt{availableContacts.length === 1 ? 'o' : 'i'} Disponibil{availableContacts.length === 1 ? 'e' : 'i'}
+                                        </h4>
+                                        <div className="space-y-2">
+                                          {hasPhone && (
+                                            <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
+                                              <Phone className="h-4 w-4" />
+                                              <span>📱 Numero di telefono diretto</span>
+                                            </div>
+                                          )}
+                                          {hasEmail && (
+                                            <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
+                                              <Mail className="h-4 w-4" />
+                                              <span>✉️ Email aziendale verificata</span>
+                                            </div>
+                                          )}
+                                          {hasAddress && (
+                                            <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
+                                              <MapPin className="h-4 w-4" />
+                                              <span>📍 Indirizzo completo ufficio</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+                                          🏢 Dettagli Azienda Completi
+                                        </h4>
+                                        <div className="space-y-2">
+                                          <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
+                                            <span>📄 Nome e dettagli azienda completi</span>
+                                          </div>
+                                          <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
+                                            <span>🌐 Analisi tecnica dettagliata del sito</span>
+                                          </div>
+                                        </div>
+                                      </>
+                                    )
+                                  } else {
+                                    // Per piani Free/Starter: mostra benefici generici
+                                    return (
+                                      <>
+                                        <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+                                          🔓 Dettagli Completi Disponibili
+                                        </h4>
+                                        <div className="space-y-2">
+                                          <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
+                                            <span>🏢 Nome e informazioni azienda</span>
+                                          </div>
+                                          <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
+                                            <span>🔗 Accesso diretto al sito web</span>
+                                          </div>
+                                          {userPlan === 'free' && (
+                                            <div className="flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400">
+                                              <Crown className="h-4 w-4" />
+                                              <span>💎 Upgrade per contatti diretti</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </>
+                                    )
+                                  }
+                                })()}
+                              </div>
+                              <div className="text-2xl">🔓</div>
                             </div>
                           </div>
                         )}
@@ -874,66 +966,69 @@ export default function ClientDashboard() {
                         </div>
                         
                         {!isUnlocked ? (
-                          <button
-                            onClick={() => unlockLead(lead.id)}
-                            className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-4 py-2 rounded-xl transition-all duration-300 relative disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                            disabled={remainingCredits <= 0}
-                            title={remainingCredits <= 0 ? "Non hai crediti sufficienti" : "Costa 1 credito per sbloccare i dettagli"}
-                          >
-                            <div className="flex items-center space-x-2">
-                              <Zap className="h-4 w-4" />
-                              <span>Sblocca</span>
-                            </div>
-                            {remainingCredits > 0 && (
-                              <span className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                                1
-                              </span>
-                            )}
-                          </button>
-                        ) : (
-                          <div className="flex space-x-2">
+                          <div className="flex flex-col items-center space-y-2">
                             <button
-                              onClick={() => router.push(`/lead/${lead.id}`)}
-                              className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-xl transition-colors relative disabled:opacity-50 disabled:cursor-not-allowed"
+                              onClick={() => unlockLead(lead.id)}
+                              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-3 rounded-xl transition-all duration-300 relative disabled:opacity-50 disabled:cursor-not-allowed font-bold text-sm shadow-lg hover:shadow-xl transform hover:scale-105"
                               disabled={remainingCredits <= 0}
-                              title={remainingCredits <= 0 ? "Non hai crediti sufficienti" : "Costa 1 credito per vedere l'analisi completa"}
+                              title={remainingCredits <= 0 ? "Non hai crediti sufficienti" : "Costa 1 credito per sbloccare tutti i dettagli"}
                             >
-                              <Eye className="h-4 w-4" />
+                              <div className="flex items-center space-x-2">
+                                <Eye className="h-4 w-4" />
+                                <span>SBLOCCA LEAD</span>
+                              </div>
+                              <div className="text-xs opacity-90 mt-1">
+                                💳 1 credito
+                              </div>
                               {remainingCredits > 0 && (
-                                <span className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                                <span className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-bounce">
                                   1
                                 </span>
                               )}
                             </button>
                             
-                            <button
-                              onClick={async () => {
-                                const remainingCredits = getAvailableCredits()
-                                if (remainingCredits <= 0) {
-                                  alert('Non hai più crediti disponibili. Aggiorna il tuo piano per continuare.')
-                                  router.push('/upgrade')
-                                  return
-                                }
-
-                                const success = await consumeCredit('site_visit', lead.id)
-                                if (success) {
-                                  window.open(lead.website_url, '_blank')
-                                  refreshProfile()
+                            <div className="text-xs text-center text-gray-500 max-w-[140px]">
+                              {(() => {
+                                // Verifica rigorosa dei contatti disponibili
+                                const hasPhone = lead.phone && typeof lead.phone === 'string' && lead.phone.trim() !== ''
+                                const hasEmail = lead.email && typeof lead.email === 'string' && lead.email.trim() !== '' && lead.email !== 'null'
+                                const hasAddress = lead.address && typeof lead.address === 'string' && lead.address.trim() !== ''
+                                
+                                const hasContacts = hasPhone || hasEmail || hasAddress
+                                const contactCount = [hasPhone, hasEmail, hasAddress].filter(Boolean).length
+                                
+                                if (hasContacts && contactCount > 1) {
+                                  return `Ottieni ${contactCount} contatti e dettagli completi`
+                                } else if (hasContacts) {
+                                  return 'Ottieni contatti e nome azienda'
                                 } else {
-                                  alert('Errore nel consumo del credito. Riprova.')
+                                  return 'Ottieni nome azienda e dettagli'
                                 }
-                              }}
-                              className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-xl transition-colors relative disabled:opacity-50 disabled:cursor-not-allowed"
-                              disabled={remainingCredits <= 0}
-                              title={remainingCredits <= 0 ? "Non hai crediti sufficienti" : "Costa 1 credito per visitare il sito"}
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                              {remainingCredits > 0 && (
-                                <span className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                                  1
-                                </span>
-                              )}
-                            </button>
+                              })()}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center space-y-2">
+                            <div className="bg-green-100 text-green-800 px-4 py-2 rounded-xl text-sm font-bold flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                              <span>✅ SBLOCCATO</span>
+                            </div>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => window.open(lead.website_url, '_blank')}
+                                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg transition-colors text-xs"
+                              >
+                                <ExternalLink className="h-3 w-3 inline mr-1" />
+                                Visita
+                              </button>
+                              <button
+                                onClick={() => router.push(`/lead/${lead.id}`)}
+                                className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-lg transition-colors text-xs"
+                              >
+                                <Eye className="h-3 w-3 inline mr-1" />
+                                Analisi
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>

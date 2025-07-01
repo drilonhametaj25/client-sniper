@@ -48,7 +48,7 @@ ALTER TABLE users ADD COLUMN stripe_current_period_end TIMESTAMP;
 ### 🎯 Lead Sbloccati Persistenti
 - Lead sbloccati rimangono sbloccati per tutto il ciclo di fatturazione
 - Ricarica pagina non cancella lead sbloccati
-- Export CSV mostra solo lead sbloccati (senza costi aggiuntivi)
+- Visualizzazione persistente dei dettagli sbloccati
 
 ### 🔄 Ricarica Intelligente
 - Ricarica automatica quando Stripe rinnova l'abbonamento

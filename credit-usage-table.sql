@@ -4,7 +4,7 @@
 CREATE TABLE IF NOT EXISTS credit_usage_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  action TEXT NOT NULL, -- 'lead_unlock', 'site_visit', 'csv_export', etc.
+  action TEXT NOT NULL, -- 'lead_unlock', 'site_visit', etc.
   lead_id UUID REFERENCES leads(id) ON DELETE SET NULL, -- collegamento al lead specifico
   credits_consumed INTEGER NOT NULL DEFAULT 1,
   credits_remaining INTEGER NOT NULL DEFAULT 0,

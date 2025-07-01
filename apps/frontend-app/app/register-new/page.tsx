@@ -39,7 +39,6 @@ const plans: Plan[] = [
     features: [
       '50 lead al mese',
       'Analisi tecnica completa',
-      'Export CSV',
       'Supporto email',
       'Filtri avanzati'
     ],
@@ -53,7 +52,6 @@ const plans: Plan[] = [
     features: [
       '200 lead al mese',
       'Analisi tecnica completa',
-      'Export CSV illimitato',
       'Supporto prioritario',
       'Filtri avanzati',
       'API access',

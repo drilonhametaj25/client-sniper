@@ -42,7 +42,7 @@ export default function HomePage() {
               "Analisi tecnica siti web",
               "Identificazione clienti potenziali",
               "Dashboard gestione lead",
-              "Esportazione dati CSV"
+              "Sistema crediti flessibile"
             ]
           })
         }}
@@ -161,6 +161,13 @@ export default function HomePage() {
               >
                 Inizia con 2 Lead Gratuiti
                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <Link 
+                href="/tools/public-scan"
+                className="group inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-lg font-semibold rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              >
+                <Zap className="mr-2 w-5 h-5" />
+                Prova Gratis (2 al giorno)
               </Link>
               <button 
                 onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })}
@@ -381,10 +388,7 @@ export default function HomePage() {
                       <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
                       <span className="text-gray-700">Analisi tecnica dettagliata</span>
                     </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                      <span className="text-gray-700">Export CSV</span>
-                    </li>
+
                   </ul>
                   <Link 
                     href="/register" 

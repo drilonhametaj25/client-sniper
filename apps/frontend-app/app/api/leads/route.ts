@@ -66,11 +66,11 @@ export async function GET(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     
-    // ⚡ OTTIMIZZAZIONE: Usa il client anon per verificare il JWT
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token)
+    // ⚡ OTTIMIZZAZIONE: Verifica il JWT usando service role
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
     
     if (authError || !user) {
-      console.log('🚫 Token di autorizzazione mancante')
+      console.log('🚫 Token non valido o scaduto')
       console.error('Errore autenticazione:', authError)
       return NextResponse.json(
         { success: false, error: 'Token non valido o scaduto' },

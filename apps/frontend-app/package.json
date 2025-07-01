@@ -23,6 +23,7 @@
     "isows": "^1.0.7",
     "lucide-react": "^0.300.0",
     "next": "^14.0.0",
+    "playwright": "^1.40.0",
     "postcss": "^8.4.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",

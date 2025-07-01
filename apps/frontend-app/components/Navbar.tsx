@@ -85,14 +85,18 @@ export default function Navbar() {
       { name: 'Utenti', href: '/admin/users', icon: Users, description: 'Gestione Utenti' },
       { name: 'Settings', href: '/admin/settings', icon: Settings, description: 'Configurazioni Sistema' },
     ] : []),
+    { name: 'Analisi Manuale', href: '/tools/manual-scan', icon: Target, description: 'Analizza qualsiasi sito web' },
+    { name: 'Mio account', href: '/settings', icon: User, description: 'Gestisci account e abbonamento' },
     { 
       name: isAdminRoute ? 'Vista Client' : 'Vista Admin', 
       href: isAdminRoute ? '/dashboard' : '/admin/dashboard', 
-      icon: isAdminRoute ? Target : Shield,
+      icon: isAdminRoute ? User : Shield,
       description: isAdminRoute ? 'Passa alla vista client' : 'Passa alla vista admin'
     },
   ] : [
     { name: 'Dashboard', href: '/dashboard', icon: Home, description: 'I miei lead' },
+    { name: 'Analisi Manuale', href: '/tools/manual-scan', icon: Target, description: 'Analizza qualsiasi sito web' },
+    { name: 'Mio account', href: '/settings', icon: User, description: 'Gestisci account e abbonamento' },
     { name: 'Upgrade', href: '/upgrade', icon: Crown, description: 'Aggiorna piano' },
   ]
 

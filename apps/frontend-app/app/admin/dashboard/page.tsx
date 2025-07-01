@@ -189,7 +189,7 @@ export default function AdminDashboard() {
               <Target className="h-8 w-8 text-brand-600" />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-                <p className="text-sm text-gray-600">ClientSniper Administration Panel</p>
+                <p className="text-sm text-gray-600">TrovaMi Administration Panel</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">

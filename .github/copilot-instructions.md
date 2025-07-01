@@ -1,3 +1,4 @@
+````instructions
 # Istruzioni per Copilot
 
 Questa repository è strutturata in moduli:
@@ -29,7 +30,13 @@ users (
   id UUID PRIMARY KEY,
   email TEXT,
   plan TEXT DEFAULT 'free', -- free, starter, pro
+  status TEXT DEFAULT 'active', -- active, inactive, cancelled
   credits_remaining INT DEFAULT 2,
+  deactivated_at TIMESTAMP,
+  deactivation_reason TEXT,
+  reactivated_at TIMESTAMP,
+  stripe_customer_id TEXT,
+  stripe_subscription_id TEXT,
   created_at TIMESTAMP DEFAULT now()
 )
 
@@ -67,6 +74,19 @@ lead_analysis (
   overall_score INT
 )
 
+-- Plan Status Logs
+plan_status_logs (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES users(id),
+  action TEXT, -- activate, deactivate, auto_reactivate
+  previous_status TEXT,
+  new_status TEXT,
+  reason TEXT,
+  triggered_by TEXT, -- user, stripe_webhook, admin
+  stripe_event_id TEXT,
+  created_at TIMESTAMP DEFAULT now()
+)
+
 -- Settings
 settings (
   id SERIAL PRIMARY KEY,
@@ -74,6 +94,38 @@ settings (
   value TEXT
 )
 ```
+
+## Gestione Stato Piano (FEATURE)
+
+Il sistema supporta la disattivazione temporanea dei piani con riattivazione automatica:
+
+### Stati Piano
+- `active`: Piano attivo, tutte le funzionalità disponibili
+- `inactive`: Piano disattivato temporaneamente, funzionalità limitate
+- `cancelled`: Piano cancellato definitivamente
+
+### API Endpoints
+- `POST /api/plan/deactivate` - Disattiva temporaneamente il piano
+- `POST /api/plan/reactivate` - Riattiva manualmente il piano
+- `GET /api/plan/deactivate` - Verifica stato piano e log operazioni
+
+### Riattivazione Automatica
+Il webhook Stripe (`invoice.payment_succeeded`) riattiva automaticamente i piani `inactive` quando arriva un pagamento:
+1. Utente disattiva piano → status = 'inactive'
+2. Arriva pagamento Stripe → status = 'active' automaticamente
+3. Log dell'operazione in `plan_status_logs`
+
+### Hook e Componenti
+- `usePlanStatus()` - Hook per verificare stato piano
+- `usePlanLimitations()` - Hook per limitazioni basate su piano/stato
+- `InactivePlanBanner` - Componente per mostrare stato disattivato
+- `InactivePlanIndicator` - Indicatore mini per navbar
+
+### Limitazioni per Piano Disattivato
+- Accesso limitato a funzionalità premium
+- Banner di avviso visibile
+- Pulsanti disabilitati per azioni che richiedono piano attivo
+- Redirect a pagina settings/upgrade
 
 ## Punteggio Lead (0-100)
 - Sito assente o in costruzione: 0-20
@@ -146,3 +198,30 @@ Il progetto prevede uno scraping engine modulare che estrae lead da fonti divers
 - In ogni file generato, inserisci un commento in cima che spieghi lo scopo del file
 - Crea una funzione `getZonesToScrape(limit: number)` che restituisce le zone prioritarie pronte per lo scraping
 - Crea un modulo `ScrapingJobRunner` per eseguire scraping asincroni a partire dalla lista zone
+
+## Analisi Manuale (FEATURE)
+
+Il sistema supporta l'analisi manuale di siti web da parte degli utenti:
+
+### Funzionalità
+- Gli utenti possono inserire un URL e ottenere un'analisi tecnica completa
+- L'analisi consuma 1 credito dal piano dell'utente
+- Il sito analizzato viene salvato come lead con `origin: "manual"`
+- Altri utenti possono vedere il lead (stato locked fino a sblocco)
+
+### API Endpoints
+- `POST /api/tools/manual-scan` - Esegue analisi manuale di un URL
+
+### Componenti e Servizi
+- `/apps/frontend-app/app/tools/manual-scan` - Pagina UI per analisi manuale
+- `/apps/frontend-app/lib/services/credits.ts` - Gestione crediti utente
+- `/apps/frontend-app/lib/services/leads.ts` - Salvataggio lead manuali
+- `/apps/frontend-app/lib/analyzers/real-site-analyzer.ts` - Analyzer completo con Playwright
+
+### Flusso Analisi Manuale
+1. Utente inserisce URL → verifica crediti disponibili
+2. Sistema esegue analisi completa (SEO, performance, GDPR, tracking, etc.)
+3. Lead salvato nel database con `origin: "manual"`
+4. Crediti scalati e operazione loggata
+5. Risultati mostrati all'utente con punteggio e dettagli
+````

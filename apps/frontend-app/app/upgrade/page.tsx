@@ -120,10 +120,10 @@ export default function UpgradePage() {
                 </svg>
               </div>
               <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                Export & Filtri
+                Filtri Avanzati
               </h4>
               <p className="text-gray-600">
-                Esporta i dati in CSV e usa filtri avanzati per trovare esattamente quello che cerchi
+                Usa filtri avanzati e ricerca intelligente per trovare esattamente quello che cerchi
               </p>
             </div>
           </div>

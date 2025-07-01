@@ -21,10 +21,6 @@ Il sistema è stato riprogettato per essere più equo e trasparente. Ora gli ute
    - Apertura diretta del sito web del lead
    - Solo per lead già sbloccati
 
-3. **Export CSV** - GRATUITO
-   - Esporta solo i lead che hai già sbloccato
-   - Nessun costo aggiuntivo per l'export
-
 ## 🎨 Indicatori Visivi
 
 ### Lead Non Sbloccati:

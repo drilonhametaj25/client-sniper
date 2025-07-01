@@ -1,6 +1,6 @@
 /**
- * Webhook Stripe per gestire la ricarica crediti automatica
- * Usato per: Ricaricare crediti quando si rinnova l'abbonamento Stripe
+ * Webhook Stripe per gestire la ricarica crediti automatica e riattivazione piani
+ * Usato per: Ricaricare crediti quando si rinnova l'abbonamento Stripe e riattivare piani sospesi
  * Chiamato da: Stripe quando avvengono eventi di fatturazione
  */
 
@@ -71,13 +71,45 @@ async function handleSuccessfulPayment(invoice: Stripe.Invoice) {
   // Trova l'utente nel database tramite customer ID
   const { data: user, error: userError } = await supabase
     .from('users')
-    .select('id, plan')
+    .select('id, email, plan, status')
     .eq('stripe_customer_id', invoice.customer)
     .single()
   
   if (userError || !user) {
     console.error('Utente non trovato per customer:', invoice.customer)
     return
+  }
+
+  // Se l'utente ha un piano inattivo, riattivalo automaticamente
+  if (user.status === 'inactive') {
+    const { error: reactivateError } = await supabase
+      .from('users')
+      .update({
+        status: 'active',
+        reactivated_at: new Date().toISOString(),
+        deactivation_reason: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', user.id)
+
+    if (reactivateError) {
+      console.error('❌ Errore riattivazione automatica:', reactivateError)
+    } else {
+      console.log(`🔄 Piano riattivato automaticamente per utente: ${user.email}`)
+      
+      // Log della riattivazione automatica
+      await supabase
+        .from('plan_status_logs')
+        .insert({
+          user_id: user.id,
+          action: 'auto_reactivate',
+          previous_status: 'inactive',
+          new_status: 'active',
+          reason: 'Riattivazione automatica dopo pagamento Stripe',
+          triggered_by: 'stripe_webhook',
+          stripe_event_id: invoice.id
+        })
+    }
   }
   
   // Ricarica i crediti dell'utente

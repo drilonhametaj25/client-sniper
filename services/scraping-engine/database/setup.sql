@@ -273,8 +273,8 @@ CREATE POLICY "admin_manage_plans" ON public.plans
 INSERT INTO plans (name, price_monthly, max_credits, visible_fields, features) 
 VALUES 
   ('free', 0, 2, '["business_name", "website_url"]', '["2 lead al mese", "Analisi base"]'),
-  ('starter', 29, 50, '["business_name", "website_url", "phone", "city"]', '["50 lead al mese", "Analisi completa", "Export CSV"]'),
-  ('pro', 99, 200, '["business_name", "website_url", "phone", "email", "address", "city"]', '["200 lead al mese", "Analisi avanzata", "Export illimitato", "API access"]')
+  ('starter', 29, 50, '["business_name", "website_url", "phone", "city"]', '["50 lead al mese", "Analisi completa", "Supporto email"]'),
+  ('pro', 99, 200, '["business_name", "website_url", "phone", "email", "address", "city"]', '["200 lead al mese", "Analisi avanzata", "Supporto prioritario", "API access"]')
 ON CONFLICT (name) DO UPDATE SET
   price_monthly = EXCLUDED.price_monthly,
   max_credits = EXCLUDED.max_credits,

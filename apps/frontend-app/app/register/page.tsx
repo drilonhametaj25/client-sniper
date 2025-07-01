@@ -1,16 +1,33 @@
+/**
+ * Pagina di registrazione migliorata con design moderno
+ * Include header, footer, selezione piano integrata e UX ottimizzata
+ * SEO-friendly con struttura semantica e accessibilità migliorata
+ */
+
 'use client'
 
-// Pagina di registrazione con selezione piano integrata
-// Permette all'utente di scegliere il piano durante la registrazione
-// Gestisce sia piani gratuiti che a pagamento
-
-import { Metadata } from 'next'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/ToastProvider'
 import { validatePassword, validateEmail, getPasswordStrengthColor, getPasswordStrengthBg } from '@/lib/validation'
-import { Check, Star, Eye, EyeOff } from 'lucide-react'
+import { 
+  Check, 
+  Star, 
+  Eye, 
+  EyeOff, 
+  Target,
+  Search,
+  ArrowLeft,
+  Zap,
+  Shield,
+  Crown,
+  Users,
+  BarChart3,
+  Mail,
+  Lock
+} from 'lucide-react'
 
 interface Plan {
   id: string
@@ -37,12 +54,11 @@ const plans: Plan[] = [
   {
     id: 'starter',
     name: 'Starter',
-    price: 29,
-    credits: 50,
+    price: 19,
+    credits: 25,
     features: [
-      '50 lead al mese',
+      '25 lead al mese',
       'Analisi tecnica completa',
-      'Export CSV',
       'Supporto email',
       'Filtri avanzati'
     ],
@@ -51,12 +67,11 @@ const plans: Plan[] = [
   {
     id: 'pro',
     name: 'Pro',
-    price: 79,
-    credits: 200,
+    price: 49,
+    credits: 100,
     features: [
-      '200 lead al mese',
+      '100 lead al mese',
       'Analisi tecnica completa',
-      'Export CSV illimitato',
       'Supporto prioritario',
       'Filtri avanzati',
       'API access',
@@ -100,35 +115,32 @@ export default function RegisterPage() {
 
     // Validazione password
     if (!passwordValidation.isValid) {
-      showError('Password non valida', 'La password deve rispettare tutti i criteri di sicurezza')
+      showError('Password non valida', 'La password deve essere più complessa')
       return
     }
 
+    // Verifica conferma password
     if (password !== confirmPassword) {
-      showError('Password non corrispondenti', 'Le password inserite non corrispondono')
+      showError('Password non corrispondono', 'Controlla di aver inserito la stessa password')
       return
     }
 
     setLoading(true)
 
     try {
-      // Verifica che il piano sia configurato correttamente per piani a pagamento
       const selectedPlanData = plans.find(p => p.id === selectedPlan)
-      if (selectedPlan !== 'free' && !selectedPlanData?.stripePriceId) {
-        throw new Error(`Piano ${selectedPlan} non configurato correttamente. Manca il Price ID di Stripe.`)
-      }
 
-      // Registrazione utente
-      const { data, error } = await signUp(email, password)
+      // Crea l'account
+      const signUpResult = await signUp(email, password)
       
-      if (error) {
-        throw error
+      if (!signUpResult.success) {
+        throw new Error(signUpResult.error || 'Errore durante la registrazione')
       }
 
-      // Se piano gratuito, vai al login
+      // Se piano gratuito, vai alla dashboard
       if (selectedPlan === 'free') {
-        success('Registrazione completata!', 'Controlla la tua email per confermare l\'account, poi effettua il login.')
-        router.push('/login')
+        success('Account creato!', 'Controlla la tua email per confermare l\'account')
+        router.push('/dashboard')
         return
       }
 
@@ -149,8 +161,8 @@ export default function RegisterPage() {
             body: JSON.stringify({
               priceId: selectedPlanData.stripePriceId,
               planId: selectedPlan,
-              userEmail: email, // Passiamo l'email direttamente
-              autoConfirm: true // Flag per auto-conferma dopo pagamento
+              userEmail: email,
+              autoConfirm: true
             })
           })
 
@@ -161,7 +173,6 @@ export default function RegisterPage() {
           }
 
           if (url) {
-            // Reindirizza immediatamente al checkout Stripe
             window.location.href = url
             return
           } else {
@@ -185,254 +196,487 @@ export default function RegisterPage() {
 
   if (step === 1) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl w-full">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Benvenuto in TrovaMi
-            </h1>
-            <p className="text-xl text-gray-600">
-              Scegli il piano perfetto per te
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {plans.map((plan) => (
-              <div
-                key={plan.id}
-                className={`relative rounded-2xl p-8 cursor-pointer transition-all ${
-                  plan.popular
-                    ? 'border-2 border-blue-500 shadow-xl'
-                    : 'border border-gray-200 shadow-lg hover:shadow-xl'
-                } ${
-                  selectedPlan === plan.id
-                    ? 'ring-2 ring-blue-500 scale-105'
-                    : 'hover:scale-102'
-                }`}
-                onClick={() => handlePlanSelect(plan.id)}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <div className="bg-blue-500 text-white px-4 py-1 rounded-full text-sm font-medium flex items-center">
-                      <Star className="w-4 h-4 mr-1" />
-                      Più popolare
-                    </div>
+      <>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+          {/* Header */}
+          <header className="bg-white shadow-sm border-b" role="banner">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between h-16">
+                <Link href="/" className="flex items-center space-x-3" aria-label="Torna alla homepage di TrovaMi">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <Target className="w-5 h-5 text-white" />
                   </div>
-                )}
+                  <span className="text-xl font-bold text-gray-900">TrovaMi</span>
+                </Link>
+                
+                <nav className="flex items-center space-x-4" aria-label="Navigazione principale">
+                  <Link 
+                    href="/tools/public-scan"
+                    className="text-gray-600 hover:text-gray-900 transition-colors"
+                  >
+                    Analisi Gratuita
+                  </Link>
+                  <Link 
+                    href="/login"
+                    className="text-gray-600 hover:text-gray-900 transition-colors"
+                  >
+                    Accedi
+                  </Link>
+                </nav>
+              </div>
+            </div>
+          </header>
 
-                <div className="text-center mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900">{plan.name}</h3>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold text-gray-900">
-                      €{plan.price}
-                    </span>
-                    {plan.price > 0 && (
-                      <span className="text-gray-600">/mese</span>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-600 mt-2">
-                    {plan.credits} lead al mese
-                  </p>
+          <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12" role="main">
+            {/* Hero Section */}
+            <section className="text-center mb-12">
+              <h1 className="text-4xl font-bold text-gray-900 mb-4">
+                Scegli il Piano Perfetto per Te
+              </h1>
+              <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+                Inizia con il piano gratuito e scala in base alle tue esigenze. 
+                Tutti i piani includono l'accesso completo alla piattaforma.
+              </p>
+              
+              {/* Features highlights */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 max-w-3xl mx-auto">
+                <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
+                  <Search className="h-4 w-4 text-blue-600" />
+                  <span>Analisi Automatica</span>
                 </div>
-
-                <ul className="space-y-4 mb-8">
-                  {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-start">
-                      <Check className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                      <span className="text-gray-700">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <div className={`w-full py-3 px-6 rounded-lg font-medium text-center transition-colors ${
-                  plan.popular
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-gray-900 text-white hover:bg-gray-800'
-                }`}>
-                  Scegli {plan.name}
+                <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
+                  <BarChart3 className="h-4 w-4 text-green-600" />
+                  <span>Dashboard Avanzata</span>
+                </div>
+                <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
+                  <Shield className="h-4 w-4 text-purple-600" />
+                  <span>Dati Sicuri</span>
+                </div>
+                <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
+                  <Users className="h-4 w-4 text-orange-600" />
+                  <span>Supporto 24/7</span>
                 </div>
               </div>
-            ))}
-          </div>
+            </section>
 
-          <div className="text-center mt-8">
-            <p className="text-gray-600">
-              Hai già un account?{' '}
-              <button
-                onClick={() => router.push('/login')}
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
-                Accedi qui
-              </button>
-            </p>
-          </div>
+            {/* Plans Grid */}
+            <section className="mb-12" aria-labelledby="plans-heading">
+              <h2 id="plans-heading" className="sr-only">Piani disponibili</h2>
+              <div className="grid md:grid-cols-3 gap-8">
+                {plans.map((plan) => (
+                  <div
+                    key={plan.id}
+                    className={`relative rounded-2xl p-8 cursor-pointer transition-all ${
+                      plan.popular
+                        ? 'border-2 border-blue-500 shadow-xl'
+                        : 'border border-gray-200 shadow-lg hover:shadow-xl'
+                    } ${
+                      selectedPlan === plan.id
+                        ? 'ring-2 ring-blue-500 scale-105'
+                        : 'hover:border-blue-300'
+                    } bg-white`}
+                    onClick={() => handlePlanSelect(plan.id)}
+                  >
+                    {plan.popular && (
+                      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                        <span className="inline-flex items-center px-4 py-1 rounded-full text-xs font-medium bg-blue-500 text-white">
+                          <Star className="w-3 h-3 mr-1" />
+                          Più Popolare
+                        </span>
+                      </div>
+                    )}
+                    
+                    <div className="text-center">
+                      <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+                      <div className="mb-4">
+                        <span className="text-4xl font-bold text-gray-900">€{plan.price}</span>
+                        {plan.price > 0 && <span className="text-gray-500">/mese</span>}
+                      </div>
+                      
+                      <p className="text-gray-600 mb-6">
+                        {plan.credits} lead {plan.price === 0 ? 'gratuiti' : 'inclusi'}
+                      </p>
+                      
+                      <ul className="space-y-3 mb-8">
+                        {plan.features.map((feature, idx) => (
+                          <li key={idx} className="flex items-center text-sm text-gray-600">
+                            <Check className="h-4 w-4 text-green-500 mr-3 flex-shrink-0" />
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    
+                    <div className={`w-full py-3 px-4 rounded-lg font-medium text-center transition-colors ${
+                      plan.popular
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-gray-900 text-white hover:bg-gray-800'
+                    }`}>
+                      Scegli {plan.name}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* CTA Section */}
+            <section className="text-center">
+              <p className="text-gray-600 mb-4">
+                Hai già un account?{' '}
+                <Link
+                  href="/login"
+                  className="text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  Accedi qui
+                </Link>
+              </p>
+              <p className="text-sm text-gray-500">
+                Tutti i piani includono una garanzia di rimborso entro 30 giorni
+              </p>
+            </section>
+          </main>
+
+          {/* Footer */}
+          <footer className="bg-gray-900 text-white py-16">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="grid md:grid-cols-4 gap-8 mb-12">
+                <div className="col-span-2">
+                  <div className="flex items-center space-x-3 mb-6">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                      <Target className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-2xl font-bold">TrovaMi</span>
+                  </div>
+                  <p className="text-gray-400 text-lg leading-relaxed max-w-md">
+                    La piattaforma più avanzata per trovare lead qualificati attraverso l'analisi automatizzata di siti web aziendali.
+                  </p>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Prodotto</h3>
+                  <ul className="space-y-3">
+                    <li><Link href="/tools/public-scan" className="text-gray-400 hover:text-white transition-colors">Analisi Gratuita</Link></li>
+                    <li><Link href="/#pricing" className="text-gray-400 hover:text-white transition-colors">Prezzi</Link></li>
+                    <li><Link href="/login" className="text-gray-400 hover:text-white transition-colors">Login</Link></li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Risorse</h3>
+                  <ul className="space-y-3">
+                    <li><Link href="/come-trovare-clienti" className="text-gray-400 hover:text-white transition-colors">Come Trovare Clienti</Link></li>
+                    <li><Link href="/help" className="text-gray-400 hover:text-white transition-colors">Centro Assistenza</Link></li>
+                    <li><Link href="/contact" className="text-gray-400 hover:text-white transition-colors">Contatti</Link></li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center">
+                <p className="text-gray-400 mb-4 md:mb-0">
+                  &copy; 2025 TrovaMi. Tutti i diritti riservati.
+                </p>
+                <div className="flex items-center space-x-6 text-sm text-gray-400">
+                  <span>Made in Italy 🇮🇹</span>
+                  <span>•</span>
+                  <span>Powered by Drilon Hametaj</span>
+                </div>
+              </div>
+            </div>
+          </footer>
         </div>
-      </div>
+      </>
     )
   }
 
   // Step 2: Form dati utente
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Completa la registrazione
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Piano selezionato: <span className="font-medium capitalize">{selectedPlan}</span>
-          </p>
-          <button
-            onClick={() => setStep(1)}
-            className="mt-2 text-center w-full text-sm text-blue-600 hover:text-blue-700"
-          >
-            ← Cambia piano
-          </button>
-        </div>
-        
-        <form className="mt-8 space-y-6" onSubmit={handleSignUp}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="La tua email"
-              />
+    <>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b" role="banner">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              <Link href="/" className="flex items-center space-x-3" aria-label="Torna alla homepage di TrovaMi">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <Target className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xl font-bold text-gray-900">TrovaMi</span>
+              </Link>
+              
+              <nav className="flex items-center space-x-4" aria-label="Navigazione principale">
+                <Link 
+                  href="/tools/public-scan"
+                  className="text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  Analisi Gratuita
+                </Link>
+                <Link 
+                  href="/login"
+                  className="text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  Accedi
+                </Link>
+              </nav>
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12" role="main">
+          {/* Progress indicator */}
+          <div className="mb-8">
+            <div className="flex items-center justify-center space-x-4">
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                  <Check className="w-5 h-5 text-white" />
+                </div>
+                <span className="ml-2 text-sm font-medium text-blue-600">Piano</span>
+              </div>
+              <div className="w-12 h-0.5 bg-blue-600"></div>
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                  <span className="text-white font-semibold text-sm">2</span>
+                </div>
+                <span className="ml-2 text-sm font-medium text-blue-600">Dati</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Registration Form */}
+          <section className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Completa la Registrazione
+              </h1>
+              <p className="text-gray-600">
+                Piano selezionato: <span className="font-semibold text-blue-600 capitalize">{selectedPlan}</span>
+              </p>
+              <button
+                onClick={() => setStep(1)}
+                className="mt-2 inline-flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4 mr-1" />
+                Cambia piano
+              </button>
             </div>
             
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <div className="mt-1 relative">
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={`appearance-none relative block w-full px-3 py-2 pr-10 border ${
-                    password && !passwordValidation.isValid ? 'border-red-300' : 'border-gray-300'
-                  } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                  placeholder="Crea una password sicura"
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-400" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-gray-400" />
-                  )}
-                </button>
-              </div>
-              
-              {/* Indicatore forza password */}
-              {password && (
-                <div className="mt-2">
-                  <div className="flex items-center space-x-2">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full transition-all duration-300 ${getPasswordStrengthBg(passwordValidation.strength)}`}
-                        style={{ 
-                          width: passwordValidation.strength === 'weak' ? '33%' : 
-                                 passwordValidation.strength === 'medium' ? '66%' : '100%' 
-                        }}
-                      ></div>
+            <form className="space-y-6" onSubmit={handleSignUp}>
+              <div className="grid grid-cols-1 gap-6">
+                {/* Email Field */}
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                    Indirizzo Email
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Mail className="h-5 w-5 text-gray-400" />
                     </div>
-                    <span className={`text-xs font-medium ${getPasswordStrengthColor(passwordValidation.strength)}`}>
-                      {passwordValidation.strength === 'weak' ? 'Debole' :
-                       passwordValidation.strength === 'medium' ? 'Media' : 'Forte'}
-                    </span>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      placeholder="nome@esempio.com"
+                    />
+                  </div>
+                </div>
+                
+                {/* Password Field */}
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Lock className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      placeholder="Crea una password sicura"
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      )}
+                    </button>
                   </div>
                   
-                  {/* Lista errori */}
-                  {passwordValidation.errors.length > 0 && (
-                    <ul className="mt-1 text-xs text-red-600 space-y-1">
-                      {passwordValidation.errors.map((error, index) => (
-                        <li key={index}>• {error}</li>
-                      ))}
-                    </ul>
+                  {/* Password Strength Indicator */}
+                  {password && (
+                    <div className="mt-2">
+                      <div className={`h-2 w-full rounded-full ${getPasswordStrengthBg(passwordValidation.strength)}`}>
+                        <div 
+                          className={`h-2 rounded-full transition-all duration-200 ${getPasswordStrengthColor(passwordValidation.strength)}`}
+                          style={{ 
+                            width: `${
+                              passwordValidation.strength === 'weak' ? 33 :
+                              passwordValidation.strength === 'medium' ? 66 : 100
+                            }%` 
+                          }}
+                        ></div>
+                      </div>
+                      <p className={`text-xs mt-1 ${getPasswordStrengthColor(passwordValidation.strength)}`}>
+                        {passwordValidation.strength === 'weak' && 'Password debole'}
+                        {passwordValidation.strength === 'medium' && 'Password discreta'}
+                        {passwordValidation.strength === 'strong' && 'Password forte'}
+                      </p>
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Conferma Password
-              </label>
-              <div className="mt-1 relative">
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="appearance-none relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                  placeholder="Ripeti la password"
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-400" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-gray-400" />
+                
+                {/* Confirm Password Field */}
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                    Conferma Password
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Lock className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      placeholder="Ripeti la password"
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      )}
+                    </button>
+                  </div>
+                  
+                  {/* Password Match Indicator */}
+                  {confirmPassword && (
+                    <p className={`text-xs mt-1 ${password === confirmPassword ? 'text-green-600' : 'text-red-600'}`}>
+                      {password === confirmPassword ? 'Le password corrispondono' : 'Le password non corrispondono'}
+                    </p>
                   )}
-                </button>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loading || !passwordValidation.isValid || password !== confirmPassword}
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Creazione account...
+                  </>
+                ) : (
+                  <>
+                    <Crown className="h-5 w-5 mr-2" />
+                    Crea Account {selectedPlan === 'free' ? 'Gratuito' : `${plans.find(p => p.id === selectedPlan)?.name}`}
+                  </>
+                )}
+              </button>
+
+              {/* Terms and Privacy */}
+              <p className="text-xs text-center text-gray-600">
+                Creando un account, accetti i nostri{' '}
+                <Link href="/terms" className="text-blue-600 hover:text-blue-700">
+                  Termini di Servizio
+                </Link>{' '}
+                e{' '}
+                <Link href="/privacy" className="text-blue-600 hover:text-blue-700">
+                  Privacy Policy
+                </Link>
+              </p>
+            </form>
+          </section>
+
+          {/* Additional Info */}
+          <section className="text-center mt-8">
+            <p className="text-gray-600">
+              Hai già un account?{' '}
+              <Link
+                href="/login"
+                className="text-blue-600 hover:text-blue-700 font-medium"
+              >
+                Accedi qui
+              </Link>
+            </p>
+          </section>
+        </main>
+
+        {/* Footer */}
+        <footer className="bg-gray-900 text-white py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid md:grid-cols-4 gap-8 mb-12">
+              <div className="col-span-2">
+                <div className="flex items-center space-x-3 mb-6">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                    <Target className="w-6 h-6 text-white" />
+                  </div>
+                  <span className="text-2xl font-bold">TrovaMi</span>
+                </div>
+                <p className="text-gray-400 text-lg leading-relaxed max-w-md">
+                  La piattaforma più avanzata per trovare lead qualificati attraverso l'analisi automatizzata di siti web aziendali.
+                </p>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Prodotto</h3>
+                <ul className="space-y-3">
+                  <li><Link href="/tools/public-scan" className="text-gray-400 hover:text-white transition-colors">Analisi Gratuita</Link></li>
+                  <li><Link href="/#pricing" className="text-gray-400 hover:text-white transition-colors">Prezzi</Link></li>
+                  <li><Link href="/login" className="text-gray-400 hover:text-white transition-colors">Login</Link></li>
+                </ul>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Risorse</h3>
+                <ul className="space-y-3">
+                  <li><Link href="/come-trovare-clienti" className="text-gray-400 hover:text-white transition-colors">Come Trovare Clienti</Link></li>
+                  <li><Link href="/help" className="text-gray-400 hover:text-white transition-colors">Centro Assistenza</Link></li>
+                  <li><Link href="/contact" className="text-gray-400 hover:text-white transition-colors">Contatti</Link></li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center">
+              <p className="text-gray-400 mb-4 md:mb-0">
+                &copy; 2025 TrovaMi. Tutti i diritti riservati.
+              </p>
+              <div className="flex items-center space-x-6 text-sm text-gray-400">
+                <span>Made in Italy 🇮🇹</span>
+                <span>•</span>
+                <span>Powered by Drilon Hametaj</span>
               </div>
             </div>
           </div>
-
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Registrazione...
-                </div>
-              ) : (
-                selectedPlan === 'free' ? 'Registrati Gratis' : `Registrati (Piano ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)})`
-              )}
-            </button>
-          </div>
-
-          <div className="text-center">
-            <p className="text-xs text-gray-600">
-              Registrandoti accetti i nostri{' '}
-              <a href="#" className="text-blue-600 hover:text-blue-700">
-                Termini di Servizio
-              </a>{' '}
-              e la{' '}
-              <a href="#" className="text-blue-600 hover:text-blue-700">
-                Privacy Policy
-              </a>
-            </p>
-          </div>
-        </form>
+        </footer>
       </div>
-    </div>
+    </>
   )
 }
