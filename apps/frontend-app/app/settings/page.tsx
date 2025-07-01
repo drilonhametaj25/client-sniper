@@ -168,18 +168,47 @@ export default function SettingsPage() {
       const result = await response.json()
 
       if (result.success) {
-        // Aggiorna i dati locali
-        setUserData(prev => prev ? { 
-          ...prev, 
-          status: 'inactive',
-          deactivated_at: result.deactivated_at,
-          deactivation_reason: deactivationReason 
-        } : null)
+        // Gestisci diversi tipi di successo
+        if (result.cancellation_scheduled) {
+          // Cancellazione programmata - rimane attivo fino alla scadenza
+          alert(`✅ ${result.message}\n\nIl tuo piano rimane attivo fino alla fine del periodo già pagato.`)
+          
+          setUserData(prev => prev ? { 
+            ...prev, 
+            // Lo status rimane 'active' perché l'abbonamento è ancora valido
+            deactivation_reason: deactivationReason,
+            deactivation_scheduled_at: new Date().toISOString(),
+            subscription_end_date: result.access_until
+          } : null)
+        } else if (result.cleanup_performed) {
+          // Pulizia automatica - piano disattivato immediatamente
+          alert(`✅ ${result.message}`)
+          
+          setUserData(prev => prev ? { 
+            ...prev, 
+            status: 'inactive',
+            plan: 'free',
+            deactivated_at: new Date().toISOString(),
+            deactivation_reason: 'Piano disattivato automaticamente'
+          } : null)
+        } else {
+          // Disattivazione immediata normale
+          alert(`✅ ${result.message}`)
+          
+          setUserData(prev => prev ? { 
+            ...prev, 
+            status: result.status || 'inactive',
+            deactivated_at: result.deactivated_at || new Date().toISOString(),
+            deactivation_reason: deactivationReason 
+          } : null)
+        }
+        
         setShowDeactivateModal(false)
         setDeactivationReason('')
         
-        // Ricarica i dati per essere sicuri
-        loadUserData()
+        // Ricarica i dati per essere sicuri e mostrare i log aggiornati
+        await loadUserData()
+        await loadPlanLogs()
       } else {
         alert('Errore durante la disattivazione: ' + result.error)
       }
@@ -546,6 +575,37 @@ export default function SettingsPage() {
                       <strong>Motivo:</strong> {userData.deactivation_reason}
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Dettagli cancellazione programmata */}
+            {userData.status === 'active' && userData.deactivation_scheduled_at && userData.subscription_end_date && (
+              <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+                <div className="flex items-start">
+                  <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2 mt-0.5" />
+                  <div className="text-sm text-yellow-800 space-y-1">
+                    <div className="font-medium">
+                      Cancellazione programmata
+                    </div>
+                    <div>
+                      Il tuo abbonamento è stato cancellato ma rimane <strong>attivo fino al {new Date(userData.subscription_end_date).toLocaleDateString('it-IT')}</strong>.
+                    </div>
+                    <div className="text-xs text-yellow-700 mt-2">
+                      Potrai continuare ad utilizzare tutte le funzionalità premium fino alla scadenza del periodo già pagato.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Dettagli riattivazione */}
+            {userData.reactivated_at && (
+              <div className="mt-4 p-4 bg-green-50 rounded-xl">
+                <div className="text-sm text-green-800 space-y-1">
+                  <div>
+                    <strong>Riattivato il:</strong> {new Date(userData.reactivated_at).toLocaleDateString('it-IT')}
+                  </div>
                 </div>
               </div>
             )}
