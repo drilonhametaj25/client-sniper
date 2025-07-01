@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "name": "clientsniper-frontend",
+  "name": "trovami-pro",
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "installCommand": "npm install",
@@ -9,5 +9,8 @@
     "app/api/*/route.ts": {
       "maxDuration": 30
     }
+  },
+  "env": {
+    "NEXT_PUBLIC_APP_URL": "https://trovami.pro"
   }
 }

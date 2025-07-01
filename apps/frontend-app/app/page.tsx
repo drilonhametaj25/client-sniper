@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { ArrowRight, Target, BarChart3, Users, CheckCircle, Zap, Shield, Globe } from 'lucide-react'
 import NewsletterForm from '@/components/NewsletterForm'
+import StructuredFAQ from '@/components/StructuredFAQ'
 
 export default function HomePage() {
   const { user } = useAuth()
@@ -503,6 +504,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* FAQ Section */}
+      <StructuredFAQ className="bg-gray-50" />
 
       {/* Newsletter Section */}
       <section className="py-24 bg-gradient-to-b from-gray-50 to-white">

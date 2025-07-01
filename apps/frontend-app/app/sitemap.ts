@@ -1,3 +1,7 @@
+// Sitemap automatica per l'indicizzazione Google del portale TrovaMi
+// Utilizzata da: motori di ricerca per scoprire le pagine del sito
+// Gestita da: Next.js (generazione automatica)
+
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
