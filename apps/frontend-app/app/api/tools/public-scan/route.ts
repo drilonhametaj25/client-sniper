@@ -25,6 +25,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { RealSiteAnalyzer } from '@/lib/analyzers/real-site-analyzer'
+import { SimplifiedSiteAnalyzer } from '@/lib/analyzers/simplified-site-analyzer'
 
 // Limite giornaliero per IP non registrati
 const DAILY_IP_LIMIT = 2
@@ -53,6 +54,10 @@ function generateLimitedAnalysis(fullAnalysis: any) {
   // Calcola punteggi parziali basati sui dati disponibili
   const seoScore = calculateSEOScore(fullAnalysis.seo, fullAnalysis.issues)
   const performanceScore = calculatePerformanceScore(fullAnalysis.performance, fullAnalysis.issues)
+  
+  // Determina il tipo di analisi sorgente
+  const sourceAnalysisType = fullAnalysis.analysisType || 'full'
+  const isSimplified = sourceAnalysisType === 'simplified'
   
   return {
     url: fullAnalysis.url,
@@ -93,7 +98,11 @@ function generateLimitedAnalysis(fullAnalysis: any) {
     
     // Flag per indicare che è limitata
     isLimitedAnalysis: true,
-    upgradeMessage: "Registrati gratuitamente per vedere l'analisi completa con raccomandazioni dettagliate e tutti i dati tecnici!"
+    
+    // Messaggio personalizzato in base al tipo di analisi
+    upgradeMessage: isSimplified 
+      ? "Registrati gratuitamente per vedere l'analisi completa con tutti i dati tecnici avanzati!"
+      : "Registrati gratuitamente per vedere l'analisi completa con raccomandazioni dettagliate e tutti i dati tecnici!"
   }
 }
 
@@ -159,6 +168,92 @@ function belongsToMainDomain(url: string, targetDomain: string): boolean {
     return urlDomain === targetDomain
   } catch {
     return false
+  }
+}
+
+/**
+ * Esegue analisi del sito usando RealSiteAnalyzer con fallback a SimplifiedSiteAnalyzer
+ */
+async function analyzeSite(url: string) {
+  // Prima controlla se l'URL ha un protocollo
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = `https://${url}`;
+  }
+  
+  // Rileva se siamo in ambiente serverless
+  const isServerless = process.env.VERCEL === '1' || 
+                       !!process.env.AWS_LAMBDA_FUNCTION_NAME ||
+                       !!process.env.LAMBDA_TASK_ROOT;
+  
+  console.log(`🌐 Ambiente rilevato: ${isServerless ? 'Serverless (Vercel/Lambda)' : 'Standard (Development)'}`);
+  console.log(`🔍 Inizio analisi per URL: ${url}`);
+  
+  // In ambiente serverless, prova direttamente con SimplifiedSiteAnalyzer
+  if (isServerless) {
+    console.log('⚡ Usando direttamente SimplifiedSiteAnalyzer in ambiente serverless');
+    
+    try {
+      const simplifiedAnalyzer = new SimplifiedSiteAnalyzer();
+      const analysis = await simplifiedAnalyzer.analyzeSite(url);
+      console.log('✅ Analisi semplificata completata con successo');
+      
+      // Assicurati che l'analysis abbia il flag corretto
+      return {
+        ...analysis,
+        analysisType: 'simplified' as const
+      };
+      
+    } catch (error) {
+      const simplifiedError = error as Error;
+      console.error('❌ Errore con SimplifiedSiteAnalyzer:', simplifiedError);
+      throw new Error(`Impossibile analizzare il sito web: ${simplifiedError.message || 'Errore sconosciuto'}`);
+    }
+  }
+  
+  // In ambiente standard, prova prima con RealSiteAnalyzer
+  console.log('🔧 Tentativo con RealSiteAnalyzer (Playwright)...');
+  const analyzer = new RealSiteAnalyzer();
+  
+  try {
+    // Inizializza e analizza con Playwright
+    console.log('🚀 Inizializzazione RealSiteAnalyzer...');
+    await analyzer.initialize();
+    console.log('🔍 Esecuzione analisi RealSiteAnalyzer...');
+    
+    const analysis = await analyzer.analyzeSite(url);
+    console.log('✅ Analisi completa completata con successo');
+    
+    return analysis; // Già include analysisType: 'full'
+    
+  } catch (error) {
+    console.error('❌ Errore con RealSiteAnalyzer:', error);
+    console.log('🔄 Fallback a SimplifiedSiteAnalyzer...');
+    
+    // Fallback a SimplifiedSiteAnalyzer
+    try {
+      const simplifiedAnalyzer = new SimplifiedSiteAnalyzer();
+      const analysis = await simplifiedAnalyzer.analyzeSite(url);
+      console.log('✅ Analisi semplificata (fallback) completata');
+      
+      return {
+        ...analysis,
+        analysisType: 'simplified' as const
+      };
+      
+    } catch (error) {
+      const simplifiedError = error as Error;
+      console.error('❌ Errore anche con SimplifiedSiteAnalyzer:', simplifiedError);
+      throw new Error(`Impossibile analizzare il sito web: ${simplifiedError.message || 'Errore sconosciuto'}`);
+    }
+    
+  } finally {
+    // Pulizia risorse
+    try {
+      await analyzer.cleanup();
+      console.log('🧹 Cleanup completato');
+    } catch (cleanupError) {
+      console.warn('⚠️ Errore non critico durante cleanup:', cleanupError);
+    }
   }
 }
 
@@ -262,15 +357,16 @@ export async function POST(request: NextRequest) {
     
     console.log(`🆕 [Public Scan] Nessun lead esistente per dominio ${inputDomain}, procedo con analisi reale`)
 
-    // Esegui analisi completa
-    const analyzer = new RealSiteAnalyzer()
-    
     try {
-      await analyzer.initialize()
-      const fullAnalysis = await analyzer.analyzeSite(validUrl.toString())
+      // Usa la funzione analyzeSite che gestisce automaticamente il fallback
+      const fullAnalysis = await analyzeSite(validUrl.toString())
       
       // Genera versione limitata
-      const limitedAnalysis = generateLimitedAnalysis(fullAnalysis)
+      const limitedAnalysis = {
+        ...generateLimitedAnalysis(fullAnalysis),
+        // Includi il tipo di analisi eseguita
+        analysisType: fullAnalysis.analysisType || 'full'
+      }
       
       // Registra l'uso dell'API
       const { error: logError } = await supabase
@@ -294,8 +390,9 @@ export async function POST(request: NextRequest) {
           `Analisi completata! Puoi farne ancora ${DAILY_IP_LIMIT - (usageCount + 1)} oggi.`
       })
 
-    } finally {
-      await analyzer.cleanup()
+    } catch (analysisError) {
+      console.error('Errore durante l\'analisi del sito:', analysisError)
+      throw analysisError // Rilancia l'errore per essere catturato dal try/catch esterno
     }
 
   } catch (error) {
