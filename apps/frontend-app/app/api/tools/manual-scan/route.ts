@@ -63,22 +63,41 @@ function validateAndNormalizeUrl(url: string): { isValid: boolean; normalizedUrl
   }
 }
 
-// Funzione per normalizzare URL per confronto (copiata da public-scan)
-function normalizeUrlForComparison(url: string): string {
+/**
+ * Estrae il dominio principale da un URL (senza www, sottodomini, path)
+ */
+function extractMainDomain(url: string): string {
   try {
     const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`)
-    // Rimuove www. e trailing slash per confronto consistente
     let hostname = urlObj.hostname.toLowerCase()
+    
+    // Rimuove www.
     if (hostname.startsWith('www.')) {
       hostname = hostname.substring(4)
     }
-    let pathname = urlObj.pathname
-    if (pathname.endsWith('/') && pathname.length > 1) {
-      pathname = pathname.slice(0, -1)
+    
+    // Per domini con sottodomini (es. shop.example.com), estrae solo example.com
+    const parts = hostname.split('.')
+    if (parts.length >= 2) {
+      // Mantiene solo gli ultimi due segmenti (dominio.tld)
+      return parts.slice(-2).join('.')
     }
-    return `${urlObj.protocol}//${hostname}${pathname}${urlObj.search}${urlObj.hash}`
+    
+    return hostname
   } catch {
     return url.toLowerCase()
+  }
+}
+
+/**
+ * Controlla se un URL appartiene a un determinato dominio principale
+ */
+function belongsToMainDomain(url: string, targetDomain: string): boolean {
+  try {
+    const urlDomain = extractMainDomain(url)
+    return urlDomain === targetDomain
+  } catch {
+    return false
   }
 }
 
@@ -171,66 +190,52 @@ export async function POST(request: NextRequest): Promise<NextResponse<ManualSca
       )
     }
 
-    // 5. Controlla se il lead esiste già nel database (ottimizzazione trasparente)
-    const normalizedInputUrl = normalizeUrlForComparison(normalizedUrl!)
-    const urlObj = new URL(normalizedUrl!)
-    const inputDomain = urlObj.hostname.toLowerCase()
+    // 5. Controlla se esiste già un lead per il dominio principale
+    const inputDomain = extractMainDomain(normalizedUrl!)
     
-    // Estrae il dominio principale (rimuove sottodomini come www, m, shop, etc.)
-    const domainParts = inputDomain.split('.')
-    const mainDomain = domainParts.length >= 2 ? domainParts.slice(-2).join('.') : inputDomain
+    console.log(`🔍 Cerco lead esistente per dominio: ${inputDomain}`)
     
-    // Varianti del dominio da cercare (più complete)
-    const domainVariants = [
-      inputDomain,
-      inputDomain.startsWith('www.') ? inputDomain.substring(4) : `www.${inputDomain}`,
-      mainDomain,
-      `www.${mainDomain}`,
-      // Aggiunge varianti con sottodomini comuni
-      `m.${mainDomain}`,
-      `mobile.${mainDomain}`,
-      `shop.${mainDomain}`,
-      `store.${mainDomain}`
-    ].filter((domain, index, self) => self.indexOf(domain) === index) // rimuove duplicati
-    
-    // Prima cerca per URL normalizzato esatto
-    let { data: existingLead, error: leadError } = await supabase
+    // Cerca tutti i lead che appartengono al dominio principale
+    const { data: potentialLeads, error: leadError } = await supabase
       .from('leads')
       .select('id, business_name, score, analysis, created_at, website_url, origin')
-      .ilike('website_url', `%${normalizedInputUrl}%`)
-      .limit(1)
-      .maybeSingle()
-
-    // Se non trova per URL esatto, cerca per varianti del dominio
-    if (!existingLead && (!leadError || leadError.code === 'PGRST116')) {
-      const domainQueries = domainVariants.map(domain => `website_url.ilike.%${domain}%`).join(',')
-      
-      const result = await supabase
-        .from('leads')
-        .select('id, business_name, score, analysis, created_at, website_url, origin')
-        .or(domainQueries)
-        .limit(1)
-        .maybeSingle()
-      
-      existingLead = result.data
-      leadError = result.error
-    }
-
-    if (leadError && leadError.code !== 'PGRST116') {
+      .not('website_url', 'is', null)
+      .limit(20) // Limita per performance
+    
+    if (leadError) {
       console.error('Errore verifica lead esistente:', leadError)
       // Non blocchiamo per questo errore, continuiamo con l'analisi
     }
+    
+    // Filtra i lead che appartengono effettivamente al dominio richiesto
+    const existingLead = potentialLeads?.find(lead => 
+      lead.website_url && belongsToMainDomain(lead.website_url, inputDomain)
+    )
 
     // Se il lead esiste già, restituiamo l'analisi esistente (ottimizzazione trasparente)
     if (existingLead) {
+      console.log(`✅ Lead esistente trovato: ${existingLead.id} per dominio ${inputDomain}`)
+      
       // Aggiungiamo l'overallScore all'analisi se manca
       const analysisWithScore = {
         ...existingLead.analysis,
-        overallScore: existingLead.analysis.overallScore || existingLead.score
+        overallScore: existingLead.analysis.overallScore || existingLead.score,
+        // Indica che questo è un lead esistente
+        isExistingLead: true,
+        existingLeadId: existingLead.id
       }
       
       return NextResponse.json({
         success: true,
+        existingLead: true,
+        message: `Analisi recuperata da lead esistente. Il dominio ${inputDomain} è già stato analizzato.`,
+        leadInfo: {
+          businessName: existingLead.business_name,
+          websiteUrl: existingLead.website_url,
+          origin: existingLead.origin || 'scraping',
+          score: existingLead.score,
+          analyzedDate: existingLead.created_at
+        },
         data: {
           leadId: existingLead.id,
           analysis: analysisWithScore,
@@ -238,6 +243,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ManualSca
         }
       })
     }
+    
+    console.log(`🆕 Nessun lead esistente per dominio ${inputDomain}, procedo con analisi reale`)
 
     let analysis
     let leadId: string | undefined

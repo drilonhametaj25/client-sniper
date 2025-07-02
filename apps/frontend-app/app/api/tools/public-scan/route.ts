@@ -124,22 +124,41 @@ function calculatePerformanceScore(performance: any, issues: any): number {
   return Math.max(0, Math.min(100, score))
 }
 
-// Funzione per normalizzare URL per confronto
-function normalizeUrl(url: string): string {
+/**
+ * Estrae il dominio principale da un URL (senza www, sottodomini, path)
+ */
+function extractMainDomain(url: string): string {
   try {
     const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`)
-    // Rimuove www. e trailing slash per confronto consistente
     let hostname = urlObj.hostname.toLowerCase()
+    
+    // Rimuove www.
     if (hostname.startsWith('www.')) {
       hostname = hostname.substring(4)
     }
-    let pathname = urlObj.pathname
-    if (pathname.endsWith('/') && pathname.length > 1) {
-      pathname = pathname.slice(0, -1)
+    
+    // Per domini con sottodomini (es. shop.example.com), estrae solo example.com
+    const parts = hostname.split('.')
+    if (parts.length >= 2) {
+      // Mantiene solo gli ultimi due segmenti (dominio.tld)
+      return parts.slice(-2).join('.')
     }
-    return `${urlObj.protocol}//${hostname}${pathname}${urlObj.search}${urlObj.hash}`
+    
+    return hostname
   } catch {
     return url.toLowerCase()
+  }
+}
+
+/**
+ * Controlla se un URL appartiene a un determinato dominio principale
+ */
+function belongsToMainDomain(url: string, targetDomain: string): boolean {
+  try {
+    const urlDomain = extractMainDomain(url)
+    return urlDomain === targetDomain
+  } catch {
+    return false
   }
 }
 
@@ -194,31 +213,42 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verifica se il sito è già presente nei nostri lead
-    const normalizedInputUrl = normalizeUrl(validUrl.toString())
-    const inputDomain = validUrl.hostname.toLowerCase()
-    const inputDomainNoWww = inputDomain.startsWith('www.') ? inputDomain.substring(4) : inputDomain
-    const inputDomainWithWww = inputDomain.startsWith('www.') ? inputDomain : `www.${inputDomain}`
+    // Controlla se esiste già un lead per il dominio principale
+    const inputDomain = extractMainDomain(validUrl.toString())
     
-    // Cerca varianti dell'URL per essere più precisi
-    const { data: existingLead, error: leadError } = await supabase
+    console.log(`🔍 [Public Scan] Cerco lead esistente per dominio: ${inputDomain}`)
+    
+    // Cerca tutti i lead che potrebbero appartenere al dominio (con limite per performance)
+    const { data: potentialLeads, error: leadError } = await supabase
       .from('leads')
       .select('id, business_name, score, analysis, created_at, website_url')
-      .or(`website_url.ilike.%${inputDomainNoWww}%,website_url.ilike.%${inputDomainWithWww}%`)
-      .limit(1)
-      .maybeSingle()
-
+      .not('website_url', 'is', null)
+      .limit(20) // Limita per performance
+    
     if (leadError && leadError.code !== 'PGRST116') {
       console.error('Errore verifica lead esistente:', leadError)
       // Non blocchiamo per questo errore, continuiamo con l'analisi
     }
+    
+    // Filtra i lead che appartengono effettivamente al dominio richiesto
+    const existingLead = potentialLeads?.find(lead => 
+      lead.website_url && belongsToMainDomain(lead.website_url, inputDomain)
+    )
 
-    // Se il lead esiste già, restituiamo un messaggio informativo
+    // Se il lead esiste già, restituiamo l'analisi esistente limitata
     if (existingLead) {
+      console.log(`✅ [Public Scan] Lead esistente trovato: ${existingLead.id} per dominio ${inputDomain}`)
+      
+      // Aggiungiamo l'overallScore all'analisi se manca
+      const analysisWithScore = existingLead.analysis ? {
+        ...existingLead.analysis,
+        overallScore: existingLead.analysis.overallScore || existingLead.score
+      } : null
+      
       return NextResponse.json({
         success: true,
         existingLead: true,
-        analysis: existingLead.analysis ? generateLimitedAnalysis(existingLead.analysis) : null,
+        analysis: analysisWithScore ? generateLimitedAnalysis(analysisWithScore) : null,
         message: `Questo sito è già nella nostra database! È stato analizzato il ${new Date(existingLead.created_at).toLocaleDateString('it-IT')}.`,
         leadInfo: {
           businessName: existingLead.business_name,
@@ -229,6 +259,8 @@ export async function POST(request: NextRequest) {
         remainingAnalyses: DAILY_IP_LIMIT - usageCount // Non consumiamo un'analisi se il lead esiste già
       })
     }
+    
+    console.log(`🆕 [Public Scan] Nessun lead esistente per dominio ${inputDomain}, procedo con analisi reale`)
 
     // Esegui analisi completa
     const analyzer = new RealSiteAnalyzer()

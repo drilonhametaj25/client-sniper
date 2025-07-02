@@ -48,6 +48,8 @@ export class RealSiteAnalyzer {
     const startTime = Date.now()
 
     try {
+      console.log(`🔍 Inizio analisi di: ${url}`)
+      
       // Naviga al sito
       const response = await this.page.goto(url, { 
         waitUntil: 'domcontentloaded',
@@ -56,6 +58,19 @@ export class RealSiteAnalyzer {
 
       if (!response) {
         throw new Error('Impossibile caricare la pagina')
+      }
+
+      const finalUrl = this.page.url()
+      console.log(`📍 URL finale dopo caricamento: ${finalUrl}`)
+
+      // Verifica che il redirect sia nel dominio principale richiesto
+      const originalDomain = this.extractMainDomain(url)
+      const finalDomain = this.extractMainDomain(finalUrl)
+      
+      if (originalDomain !== finalDomain) {
+        console.warn(`⚠️ Redirect cross-domain: ${originalDomain} → ${finalDomain}`)
+        // Se il redirect è verso un dominio diverso, utilizziamo l'URL originale per l'analisi
+        // ma manteniamo il finalUrl per tracciamento
       }
 
       // Aspetta che la pagina sia caricata
@@ -89,12 +104,14 @@ export class RealSiteAnalyzer {
       const issues = this.identifyIssues(performanceResult, seoResult, trackingResult, gdprResult, legalResult, socialResult)
       const overallScore = this.calculateScore(performanceResult, seoResult, trackingResult, gdprResult, legalResult, socialResult, issues)
 
+      console.log(`✅ Analisi completata. Score: ${overallScore}/100`)
+
       return {
         url,
-        finalUrl: this.page.url(),
+        finalUrl,
         isAccessible: response.ok(),
         httpStatus: response.status(),
-        redirectChain: [url],
+        redirectChain: [url, finalUrl].filter((u, i, arr) => arr.indexOf(u) === i), // rimuove duplicati
         performance: performanceResult,
         seo: seoResult,
         tracking: trackingResult,
@@ -596,6 +613,32 @@ export class RealSiteAnalyzer {
       console.warn('Errore controllo mobile-friendly:', error)
       // Fallback: controlla solo meta viewport
       return await this.page.locator('meta[name="viewport"]').count() > 0
+    }
+  }
+
+  /**
+   * Estrae il dominio principale da un URL (senza www, sottodomini, path)
+   */
+  private extractMainDomain(url: string): string {
+    try {
+      const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`)
+      let hostname = urlObj.hostname.toLowerCase()
+      
+      // Rimuove www.
+      if (hostname.startsWith('www.')) {
+        hostname = hostname.substring(4)
+      }
+      
+      // Per domini con sottodomini (es. shop.example.com), estrae solo example.com
+      const parts = hostname.split('.')
+      if (parts.length >= 2) {
+        // Mantiene solo gli ultimi due segmenti (dominio.tld)
+        return parts.slice(-2).join('.')
+      }
+      
+      return hostname
+    } catch {
+      return url.toLowerCase()
     }
   }
 }
