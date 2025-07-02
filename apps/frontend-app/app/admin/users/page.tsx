@@ -36,6 +36,9 @@ interface User {
   email_confirmed_at: string | null
   created_at: string
   last_sign_in_at: string | null
+  status: 'active' | 'inactive' | 'cancelled'
+  stripe_customer_id?: string
+  stripe_subscription_id?: string
 }
 
 export default function AdminUsers() {
@@ -70,13 +73,79 @@ export default function AdminUsers() {
   const loadUsers = async () => {
     try {
       setLoadingData(true)
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false })
+      
+      // Query Supabase Auth per dati autenticazione - usando RPC
+      const { data: authUsers, error: authError } = await supabase.rpc(
+        'admin_get_all_users'
+      )
 
-      if (error) throw error
-      setUsers(data || [])
+      if (authError) {
+        console.error('Errore caricamento utenti da auth:', authError)
+      }
+
+      // Query profiles per dati profilo
+      const { data: profileUsers, error: profileError } = await supabase
+        .from('users')
+        .select('id, email, role, plan, credits_remaining, status, stripe_customer_id, stripe_subscription_id')
+
+      if (profileError) {
+        console.error('Errore caricamento utenti da profiles:', profileError)
+      }
+
+      if (!authUsers && !profileUsers) {
+        console.error('Nessun dato utente recuperato')
+        setLoadingData(false)
+        return
+      }
+
+      // Merge dei risultati
+      const mergedUsers: User[] = []
+      
+      // Inizia con tutti gli utenti auth
+      if (authUsers) {
+        authUsers.forEach((authUser: any) => {
+          // Trova il profilo corrispondente
+          const profile = profileUsers?.find(p => p.id === authUser.id)
+          
+          mergedUsers.push({
+            id: authUser.id,
+            email: authUser.email,
+            role: profile?.role || 'client',
+            plan: profile?.plan || 'free',
+            credits_remaining: profile?.credits_remaining || 0,
+            email_confirmed_at: authUser.email_confirmed_at,
+            created_at: authUser.created_at,
+            last_sign_in_at: authUser.last_sign_in_at,
+            status: profile?.status || 'active',
+            stripe_customer_id: profile?.stripe_customer_id,
+            stripe_subscription_id: profile?.stripe_subscription_id
+          })
+        })
+      }
+
+      // Aggiungi eventuali utenti che sono solo in profiles ma non in auth (rari)
+      if (profileUsers) {
+        profileUsers.forEach(profile => {
+          if (!mergedUsers.some(u => u.id === profile.id)) {
+            mergedUsers.push({
+              id: profile.id,
+              email: profile.email,
+              role: profile.role || 'client',
+              plan: profile.plan || 'free',
+              credits_remaining: profile.credits_remaining || 0,
+              email_confirmed_at: null,
+              created_at: new Date().toISOString(),
+              last_sign_in_at: null,
+              status: profile.status || 'active',
+              stripe_customer_id: profile.stripe_customer_id,
+              stripe_subscription_id: profile.stripe_subscription_id
+            })
+          }
+        })
+      }
+
+      console.log(`👥 Caricati ${mergedUsers.length} utenti totali`)
+      setUsers(mergedUsers)
     } catch (error) {
       console.error('Errore caricamento utenti:', error)
     } finally {
@@ -153,6 +222,15 @@ export default function AdminUsers() {
       pro: { label: 'Pro', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' }
     }
     return badges[plan as keyof typeof badges] || badges.free
+  }
+
+  const getStatusBadge = (status: string) => {
+    const badges = {
+      active: { label: 'Attivo', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' },
+      inactive: { label: 'Inattivo', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' },
+      cancelled: { label: 'Cancellato', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' }
+    }
+    return badges[status as keyof typeof badges] || badges.active
   }
 
   const getStats = () => {
@@ -307,6 +385,7 @@ export default function AdminUsers() {
           {filteredUsers.map((u) => {
             const roleBadge = getRoleBadge(u.role)
             const planBadge = getPlanBadge(u.plan)
+            const statusBadge = getStatusBadge(u.status)
             
             return (
               <div
@@ -339,6 +418,10 @@ export default function AdminUsers() {
                           Non confermato
                         </span>
                       )}
+
+                      <span className={`px-2 py-1 text-xs font-medium rounded-lg ${statusBadge.color}`}>
+                        {statusBadge.label}
+                      </span>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600 dark:text-gray-400">
@@ -430,13 +513,29 @@ export default function AdminUsers() {
                     className="w-full p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Stato
+                  </label>
+                  <select
+                    value={editingUser.status}
+                    onChange={(e) => setEditingUser({...editingUser, status: e.target.value as any})}
+                    className="w-full p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  >
+                    <option value="active">Attivo</option>
+                    <option value="inactive">Inattivo</option>
+                    <option value="cancelled">Cancellato</option>
+                  </select>
+                </div>
               </div>
               
               <div className="flex items-center space-x-3 mt-6">
                 <button
                   onClick={() => updateUser(editingUser.id, {
                     plan: editingUser.plan,
-                    credits_remaining: editingUser.credits_remaining
+                    credits_remaining: editingUser.credits_remaining,
+                    status: editingUser.status
                   })}
                   className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors"
                 >
