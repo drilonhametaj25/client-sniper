@@ -35,6 +35,11 @@ export const metadata: Metadata = {
     'analisi tecnica siti',
     'consulenza digitale'
   ],
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg'
+  },
   authors: [{ name: 'TrovaMi Team' }],
   creator: 'TrovaMi',
   publisher: 'TrovaMi',

@@ -52,6 +52,8 @@ export default function AdminUsers() {
   const [filterPlan, setFilterPlan] = useState<string>('')
   const [showFilters, setShowFilters] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [loadingError, setLoadingError] = useState<string | null>(null)
+  // Stato per tracciare gli errori di caricamento
 
   // Redirect se non admin
   useEffect(() => {
@@ -73,81 +75,92 @@ export default function AdminUsers() {
   const loadUsers = async () => {
     try {
       setLoadingData(true)
+      setLoadingError(null) // Reset eventuali errori precedenti
       
-      // Query Supabase Auth per dati autenticazione - usando RPC
-      const { data: authUsers, error: authError } = await supabase.rpc(
-        'admin_get_all_users'
-      )
-
-      if (authError) {
-        console.error('Errore caricamento utenti da auth:', authError)
-      }
-
-      // Query profiles per dati profilo
-      const { data: profileUsers, error: profileError } = await supabase
-        .from('users')
-        .select('id, email, role, plan, credits_remaining, status, stripe_customer_id, stripe_subscription_id')
-
-      if (profileError) {
-        console.error('Errore caricamento utenti da profiles:', profileError)
-      }
-
-      if (!authUsers && !profileUsers) {
-        console.error('Nessun dato utente recuperato')
+      console.log('🔍 Iniziando caricamento utenti...')
+      
+      // Utilizziamo direttamente la funzione RPC corretta
+      console.log('🔄 Carico gli utenti con admin_get_complete_users...')
+      const { data, error } = await supabase.rpc('admin_get_complete_users')
+      
+      if (error) {
+        console.error(`❌ Errore con admin_get_complete_users: ${error.message}`)
+        // Messaggio di errore user-friendly con suggerimenti
+        setLoadingError(`Errore nel caricamento degli utenti: ${error.message}. 
+          Verifica che la funzione RPC sia stata aggiornata correttamente sul database. 
+          Se l'errore persiste, contatta il supporto tecnico.`)
+        setLoadingData(false)
+        return
+      } 
+      
+      if (!data || data.length === 0) {
+        console.log('⚠️ Nessun utente trovato')
+        setLoadingError("Nessun utente trovato nel sistema. Potrebbe essere un problema di permessi o dati vuoti.")
         setLoadingData(false)
         return
       }
-
-      // Merge dei risultati
-      const mergedUsers: User[] = []
       
-      // Inizia con tutti gli utenti auth
-      if (authUsers) {
-        authUsers.forEach((authUser: any) => {
-          // Trova il profilo corrispondente
-          const profile = profileUsers?.find(p => p.id === authUser.id)
-          
-          mergedUsers.push({
-            id: authUser.id,
-            email: authUser.email,
-            role: profile?.role || 'client',
-            plan: profile?.plan || 'free',
-            credits_remaining: profile?.credits_remaining || 0,
-            email_confirmed_at: authUser.email_confirmed_at,
-            created_at: authUser.created_at,
-            last_sign_in_at: authUser.last_sign_in_at,
-            status: profile?.status || 'active',
-            stripe_customer_id: profile?.stripe_customer_id,
-            stripe_subscription_id: profile?.stripe_subscription_id
-          })
-        })
-      }
+      console.log(`✅ Successo: trovati ${data.length} utenti`)
+      
+      // Converti i dati nel formato User
+      const mergedUsers: User[] = data.map((user: any) => ({
+        id: user.id,
+        email: user.email,
+        role: user.role || 'client',
+        plan: user.plan || 'free',
+        credits_remaining: user.credits_remaining || 0,
+        email_confirmed_at: user.email_confirmed_at,
+        created_at: user.created_at,
+        last_sign_in_at: user.last_sign_in_at,
+        status: user.status || 'active',
+        stripe_customer_id: user.stripe_customer_id,
+        stripe_subscription_id: user.stripe_subscription_id
+      }))
 
-      // Aggiungi eventuali utenti che sono solo in profiles ma non in auth (rari)
-      if (profileUsers) {
-        profileUsers.forEach(profile => {
-          if (!mergedUsers.some(u => u.id === profile.id)) {
-            mergedUsers.push({
-              id: profile.id,
-              email: profile.email,
-              role: profile.role || 'client',
-              plan: profile.plan || 'free',
-              credits_remaining: profile.credits_remaining || 0,
-              email_confirmed_at: null,
-              created_at: new Date().toISOString(),
-              last_sign_in_at: null,
-              status: profile.status || 'active',
-              stripe_customer_id: profile.stripe_customer_id,
-              stripe_subscription_id: profile.stripe_subscription_id
-            })
-          }
-        })
+      console.log(`✅ Caricamento completato: ${mergedUsers.length} utenti totali`)
+      
+      // Statistiche utenti (per debug)
+      console.log('📊 Statistiche utenti:', {
+        total: mergedUsers.length,
+        admin: mergedUsers.filter((u: User) => u.role === 'admin').length,
+        client: mergedUsers.filter((u: User) => u.role === 'client').length,
+        freePlan: mergedUsers.filter((u: User) => u.plan === 'free').length,
+        starterPlan: mergedUsers.filter((u: User) => u.plan === 'starter').length,
+        proPlan: mergedUsers.filter((u: User) => u.plan === 'pro').length,
+        active: mergedUsers.filter((u: User) => u.status === 'active').length,
+        inactive: mergedUsers.filter((u: User) => u.status === 'inactive').length,
+        cancelled: mergedUsers.filter((u: User) => u.status === 'cancelled').length,
+      })
+      
+      // Debug: mostra primi 3 utenti
+      if (mergedUsers.length > 0) {
+        console.log('👤 Primi 3 utenti:', mergedUsers.slice(0, 3).map((u: User) => ({ 
+          id: u.id.substring(0, 8) + '...', 
+          email: u.email,
+          role: u.role,
+          plan: u.plan
+        })))
       }
-
-      console.log(`👥 Caricati ${mergedUsers.length} utenti totali`)
+      
+      setUsers(mergedUsers)
+      
       setUsers(mergedUsers)
     } catch (error) {
-      console.error('Errore caricamento utenti:', error)
+      console.error('❌ Errore caricamento utenti:', error)
+      let errorMessage = 'Si è verificato un errore imprevisto durante il caricamento degli utenti.'
+      
+      // Gestione specifica degli errori comuni
+      if (error instanceof Error) {
+        if (error.message.includes('permission denied') || error.message.includes('accesso negato')) {
+          errorMessage = 'Permessi insufficienti per accedere ai dati degli utenti. Verifica di avere il ruolo admin.'
+        } else if (error.message.includes('column') && error.message.includes('ambiguous')) {
+          errorMessage = 'Errore di ambiguità nella query SQL. La funzione RPC deve essere aggiornata.'
+        } else {
+          errorMessage = `Errore: ${error.message}`
+        }
+      }
+      
+      setLoadingError(errorMessage)
     } finally {
       setLoadingData(false)
     }
@@ -276,6 +289,22 @@ export default function AdminUsers() {
             Visualizza e gestisci tutti gli utenti del sistema
           </p>
         </div>
+        
+        {/* Error Message */}
+        {loadingError && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-8">
+            <div className="flex items-center">
+              <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
+              <p className="text-red-700 font-medium">
+                {loadingError}
+              </p>
+            </div>
+            <p className="mt-2 text-sm text-red-700">
+              Se vedi l'errore "column reference 'id' is ambiguous", è necessario eseguire lo script SQL per risolvere il problema.
+              Consulta il file <code>database/ISTRUZIONI_FIX_ADMIN_DEFINITIVO.md</code> per istruzioni dettagliate.
+            </p>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">

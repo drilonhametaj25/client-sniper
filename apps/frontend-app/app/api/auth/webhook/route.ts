@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
         if (!user.email_confirmed_at && user.confirmation_token) {
           console.log('📧 Inviando email di conferma personalizzata via Resend')
           
-          const confirmationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://client-sniper-frontend-app.vercel.app'}/auth/confirm?token=${user.confirmation_token}&type=signup`
+          const confirmationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.trovami.pro'}/auth/confirm?token=${user.confirmation_token}&type=signup`
           
           try {
             const emailSent = await emailService.sendConfirmationEmail(
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
     if (event.type === 'UPDATE' && user.email_confirmed_at && !event.old_record?.email_confirmed_at) {
       console.log('✅ Utente ha confermato email:', user.email)
       
-      const dashboardUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://client-sniper-frontend-app.vercel.app'}/dashboard`
+      const dashboardUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.trovami.pro'}/dashboard`
       
       // Invia email di benvenuto
       const welcomeSent = await emailService.sendWelcomeEmail(

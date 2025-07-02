@@ -150,7 +150,7 @@ export function invalidateProfileCache(userId?: string) {
 // Funzione per registrare un nuovo utente
 export async function signUp(email: string, password: string) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://client-sniper-frontend-app.vercel.app'
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.trovami.pro'
     
     console.log('🔄 Registrando utente:', email)
     console.log('🔗 Redirect URL:', `${baseUrl}/auth/callback`)
