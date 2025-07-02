@@ -15,9 +15,10 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 interface AnalysisResult {
-  leadId: string
+  leadId: string | undefined
   analysis: WebsiteAnalysis
   creditsRemaining: number
+  isSimplifiedAnalysis?: boolean
 }
 
 export default function ManualScanPage() {
@@ -314,6 +315,10 @@ export default function ManualScanPage() {
                     <div className="mt-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                       ♻️ Lead esistente - Nessun credito consumato
                     </div>
+                  ) : result.isSimplifiedAnalysis ? (
+                    <div className="mt-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                      ⚡ Analisi semplificata - 1 credito utilizzato
+                    </div>
                   ) : (
                     <div className="mt-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                       ✨ Nuovo lead creato - 1 credito utilizzato
@@ -333,6 +338,28 @@ export default function ManualScanPage() {
                 </span>
               </div>
             </div>
+
+            {/* Banner per analisi semplificata */}
+            {result.isSimplifiedAnalysis && (
+              <div className="mx-6 mt-4 mb-0 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-yellow-800">Analisi Semplificata</h3>
+                    <div className="mt-2 text-sm text-yellow-700">
+                      <p>
+                        Questa è un'analisi semplificata eseguita senza browser. Alcune metriche come performance, immagini rotte e layout responsivo potrebbero non essere precise. 
+                        L'analisi semplificata non viene salvata nel database.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Contenuto risultato */}
             <div className="p-6 space-y-6">

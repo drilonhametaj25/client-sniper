@@ -24,17 +24,59 @@ export class RealSiteAnalyzer {
    * Inizializza browser e pagina
    */
   async initialize(): Promise<void> {
-    this.browser = await chromium.launch({ 
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    })
-    
-    const context = await this.browser.newContext({
-      userAgent: 'Mozilla/5.0 (compatible; ClientSniper/1.0; +https://clientsniper.com)',
-      viewport: { width: 1920, height: 1080 }
-    })
-    
-    this.page = await context.newPage()
+    try {
+      console.log('🚀 Inizializzazione browser Playwright...')
+      
+      // Controllo se siamo in un ambiente serverless
+      const isServerless = process.env.VERCEL === '1' || 
+                           !!process.env.AWS_LAMBDA_FUNCTION_NAME || 
+                           !!process.env.LAMBDA_TASK_ROOT;
+                           
+      if (isServerless) {
+        console.warn('⚠️ Rilevato ambiente serverless. Playwright potrebbe non funzionare correttamente.');
+      }
+      
+      this.browser = await chromium.launch({ 
+        headless: true,
+        args: [
+          '--no-sandbox', 
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--disable-gpu'
+        ]
+      })
+      
+      console.log('✅ Browser lanciato con successo')
+      
+      const context = await this.browser.newContext({
+        userAgent: 'Mozilla/5.0 (compatible; ClientSniper/1.0; +https://clientsniper.com)',
+        viewport: { width: 1920, height: 1080 }
+      })
+      
+      console.log('✅ Context creato con successo')
+      
+      this.page = await context.newPage()
+      console.log('✅ Pagina creata con successo')
+      
+    } catch (error) {
+      console.error('❌ Errore durante inizializzazione Playwright:', error)
+      
+      // Controllo specifico per errore "Executable doesn't exist" tipico di ambienti serverless
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (
+          errorMessage.includes("Executable doesn't exist") ||
+          errorMessage.includes("spawn ENOENT") ||
+          errorMessage.includes("playwright install")
+      ) {
+        console.error('💥 Errore browser binaries mancanti. Questo è un problema noto in ambienti serverless.');
+        throw new Error('Browser binaries non disponibili in questo ambiente. Usa SimplifiedSiteAnalyzer in ambienti serverless.');
+      }
+      
+      throw error
+    }
   }
 
   /**
@@ -47,61 +89,17 @@ export class RealSiteAnalyzer {
 
     const startTime = Date.now()
 
-    // Timeout generale per l'intera analisi (60 secondi)
-    const analysisTimeout = new Promise<never>((_, reject) => {
-      setTimeout(() => {
-        reject(new Error('Timeout analisi - il sito potrebbe essere troppo lento o non accessibile'))
-      }, 60000)
-    })
-
-    try {
-      return await Promise.race([
-        this.performAnalysis(url, startTime),
-        analysisTimeout
-      ])
-    } catch (error) {
-      console.error('Errore durante analisi principale con SiteAnalyzer:', error)
-      console.log(`🔄 Tentativo fallback per: ${url}`)
-      
-      try {
-        // Fallback: analisi semplificata
-        return await this.fallbackAnalysis(url)
-      } catch (fallbackError) {
-        console.error('Errore anche durante fallback:', fallbackError)
-        
-        // Ultimo fallback: analisi minimale senza browser
-        return this.createMinimalAnalysis(url)
-      }
-    }
-  }
-
-  /**
-   * Esegue l'analisi completa del sito
-   */
-  private async performAnalysis(url: string, startTime: number): Promise<WebsiteAnalysis> {
-    if (!this.page) {
-      throw new Error('Pagina non disponibile per analisi')
-    }
-
     try {
       console.log(`🔍 Inizio analisi di: ${url}`)
       
-      // Naviga al sito con logging dettagliato
-      console.log(`📡 Navigazione verso: ${url}`)
+      // Naviga al sito
       const response = await this.page.goto(url, { 
         waitUntil: 'domcontentloaded',
         timeout: 30000
       })
-      console.log(`✅ Risposta ricevuta, status: ${response?.status()}`)
 
       if (!response) {
-        console.error('❌ Risposta null dalla navigazione')
-        throw new Error('Impossibile caricare la pagina - risposta null')
-      }
-
-      if (!response.ok()) {
-        console.error(`❌ HTTP Status non OK: ${response.status()}`)
-        throw new Error(`Errore HTTP: ${response.status()} - ${response.statusText()}`)
+        throw new Error('Impossibile caricare la pagina')
       }
 
       const finalUrl = this.page.url()
@@ -118,12 +116,9 @@ export class RealSiteAnalyzer {
       }
 
       // Aspetta che la pagina sia caricata
-      console.log('⏳ Attesa caricamento pagina...')
       await this.page.waitForTimeout(2000)
-      console.log('✅ Pagina caricata, inizio analisi componenti...')
 
-      // Esegui tutte le analisi con logging
-      console.log('🔄 Esecuzione analisi parallele...')
+      // Esegui tutte le analisi
       const [
         performance,
         seo,
@@ -140,16 +135,7 @@ export class RealSiteAnalyzer {
         this.analyzeSocialPresence()
       ])
 
-      // Log errori delle singole analisi
-      if (performance.status === 'rejected') console.error('❌ Performance analysis failed:', performance.reason)
-      if (seo.status === 'rejected') console.error('❌ SEO analysis failed:', seo.reason)
-      if (tracking.status === 'rejected') console.error('❌ Tracking analysis failed:', tracking.reason)
-      if (gdpr.status === 'rejected') console.error('❌ GDPR analysis failed:', gdpr.reason)
-      if (legal.status === 'rejected') console.error('❌ Legal analysis failed:', legal.reason)
-      if (social.status === 'rejected') console.error('❌ Social analysis failed:', social.reason)
-
       // Estrai i risultati
-      console.log('📊 Elaborazione risultati analisi...')
       const performanceResult = performance.status === 'fulfilled' ? performance.value : this.getDefaultPerformance()
       const seoResult = seo.status === 'fulfilled' ? seo.value : this.getDefaultSEO()
       const trackingResult = tracking.status === 'fulfilled' ? tracking.value : this.getDefaultTracking()
@@ -157,7 +143,6 @@ export class RealSiteAnalyzer {
       const legalResult = legal.status === 'fulfilled' ? legal.value : this.getDefaultLegal()
       const socialResult = social.status === 'fulfilled' ? social.value : this.getDefaultSocial()
 
-      console.log('🧮 Calcolo score e issues...')
       const issues = this.identifyIssues(performanceResult, seoResult, trackingResult, gdprResult, legalResult, socialResult)
       const overallScore = this.calculateScore(performanceResult, seoResult, trackingResult, gdprResult, legalResult, socialResult, issues)
 
@@ -178,22 +163,15 @@ export class RealSiteAnalyzer {
         issues,
         overallScore,
         analysisDate: new Date(),
-        analysisTime: Date.now() - startTime
+        analysisTime: Date.now() - startTime,
+        analysisType: 'full' as const // Specifica che è stata fatta un'analisi completa
       }
 
     } catch (error) {
-      console.error('Errore durante analisi principale con SiteAnalyzer:', error)
-      console.log(`🔄 Tentativo fallback per: ${url}`)
+      console.error('Errore durante analisi con SiteAnalyzer:', error)
       
-      try {
-        // Fallback: analisi semplificata
-        return await this.fallbackAnalysis(url)
-      } catch (fallbackError) {
-        console.error('Errore anche durante fallback:', fallbackError)
-        
-        // Ultimo fallback: analisi minimale senza browser
-        return this.createMinimalAnalysis(url)
-      }
+      // Fallback: analisi semplificata
+      return await this.fallbackAnalysis(url)
     }
   }
 
@@ -205,59 +183,30 @@ export class RealSiteAnalyzer {
 
     const startTime = Date.now()
     
-    try {
-      console.log('🚀 Inizio analisi performance...')
-      
-      // Analizza immagini in modo più efficiente
-      const images = await this.page.locator('img').all()
-      console.log(`🖼️ Trovate ${images.length} immagini`)
-      
-      let brokenImages = 0
-      
-      // Limita la verifica delle immagini per evitare timeout
-      const maxImagesToCheck = Math.min(images.length, 10) // Max 10 immagini
-      console.log(`🔍 Controllo prime ${maxImagesToCheck} immagini per broken links...`)
-      
-      for (let i = 0; i < maxImagesToCheck; i++) {
-        try {
-          const img = images[i]
-          const src = await img.getAttribute('src')
-          if (src && src.startsWith('http')) {
-            // Timeout ridotto per evitare blocchi
-            const response = await this.page.request.get(src, { timeout: 2000 })
-            if (!response.ok()) {
-              console.log(`❌ Immagine rotta: ${src}`)
-              brokenImages++
-            }
-          }
-        } catch (imgError) {
-          console.log(`⚠️ Errore verifica immagine ${i}:`, imgError)
-          brokenImages++
+    // Analizza immagini
+    const images = await this.page.locator('img').all()
+    let brokenImages = 0
+    
+    for (const img of images) {
+      try {
+        const src = await img.getAttribute('src')
+        if (src) {
+          const response = await this.page.request.get(src, { timeout: 5000 })
+          if (!response.ok()) brokenImages++
         }
+      } catch {
+        brokenImages++
       }
+    }
 
-      console.log('📱 Verifica responsività...')
-      // Verifica responsività con controlli multipli per maggiore accuratezza
-      const isResponsive = await this.checkMobileFriendly()
+    // Verifica responsività con controlli multipli per maggiore accuratezza
+    const isResponsive = await this.checkMobileFriendly()
 
-      const loadTime = Date.now() - startTime
-      console.log(`✅ Performance analizzata in ${loadTime}ms`)
-
-      return {
-        loadTime,
-        totalImages: images.length,
-        brokenImages,
-        isResponsive
-      }
-    } catch (error) {
-      console.error('❌ Errore analisi performance:', error)
-      // Fallback per performance
-      return {
-        loadTime: Date.now() - startTime,
-        totalImages: 0,
-        brokenImages: 0,
-        isResponsive: false
-      }
+    return {
+      loadTime: Date.now() - startTime,
+      totalImages: images.length,
+      brokenImages,
+      isResponsive
     }
   }
 
@@ -626,51 +575,32 @@ export class RealSiteAnalyzer {
   }
 
   /**
-   * Crea un'analisi minimale quando il browser non riesce ad accedere al sito
-   */
-  private createMinimalAnalysis(url: string): WebsiteAnalysis {
-    console.log(`🆘 Creazione analisi minimale per: ${url}`)
-    
-    return {
-      url,
-      finalUrl: url,
-      isAccessible: false,
-      httpStatus: 0,
-      redirectChain: [url],
-      performance: this.getDefaultPerformance(),
-      seo: this.getDefaultSEO(),
-      tracking: this.getDefaultTracking(),
-      gdpr: this.getDefaultGDPR(),
-      legal: this.getDefaultLegal(),
-      social: this.getDefaultSocial(),
-      issues: {
-        missingTitle: true,
-        shortTitle: true,
-        missingMetaDescription: true,
-        shortMetaDescription: true,
-        missingH1: true,
-        brokenImages: false,
-        slowLoading: true,
-        noTracking: true,
-        noCookieConsent: true,
-        missingPartitaIva: true,
-        noSocialPresence: true,
-        httpsIssues: true
-      },
-      overallScore: 10, // Score molto basso per siti non accessibili
-      analysisDate: new Date(),
-      analysisTime: 1000 // Tempo simbolico
-    }
-  }
-
-  /**
    * Chiude browser e libera risorse
    */
   async cleanup(): Promise<void> {
-    if (this.browser) {
-      await this.browser.close()
-      this.browser = null
-      this.page = null
+    try {
+      if (this.page) {
+        try {
+          await this.page.close().catch(e => console.warn('⚠️ Errore chiusura pagina:', e));
+        } catch (pageError) {
+          console.warn('⚠️ Errore chiusura pagina:', pageError);
+        }
+        this.page = null;
+      }
+      
+      if (this.browser) {
+        try {
+          await this.browser.close().catch(e => console.warn('⚠️ Errore chiusura browser:', e));
+        } catch (browserError) {
+          console.warn('⚠️ Errore chiusura browser:', browserError);
+        }
+        this.browser = null;
+      }
+      
+      console.log('🧹 Cleanup risorse Playwright completato');
+    } catch (error) {
+      console.error('❌ Errore durante cleanup:', error);
+      // Non rilanciamo l'errore per evitare che fallisca l'intera operazione
     }
   }
 

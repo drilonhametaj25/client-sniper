@@ -99,6 +99,7 @@ export interface WebsiteAnalysis {
   overallScore: number // 0-100
   analysisDate: Date
   analysisTime: number // millisecondi per completare l'analisi
+  analysisType?: 'full' | 'simplified' // tipo di analisi effettuata
 }
 
 export interface LeadData {

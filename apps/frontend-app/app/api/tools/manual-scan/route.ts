@@ -16,6 +16,7 @@ import { createClient } from '@supabase/supabase-js'
 import { decrementUserCredits } from '../../../../lib/services/credits'
 import { saveManualLead } from '../../../../lib/services/leads'
 import { RealSiteAnalyzer } from '../../../../lib/analyzers/real-site-analyzer'
+import { SimplifiedSiteAnalyzer } from '../../../../lib/analyzers/simplified-site-analyzer'
 import type { WebsiteAnalysis } from '../../../../lib/types/analysis'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -27,9 +28,19 @@ interface ManualScanRequest {
 interface ManualScanResponse {
   success: boolean
   data?: {
-    leadId: string
+    leadId: string | undefined
     analysis: WebsiteAnalysis
     creditsRemaining: number
+    isSimplifiedAnalysis?: boolean
+  }
+  existingLead?: boolean
+  message?: string
+  leadInfo?: {
+    businessName?: string
+    websiteUrl?: string
+    origin?: string
+    score?: number
+    analyzedDate?: string
   }
   error?: string
 }
@@ -102,21 +113,86 @@ function belongsToMainDomain(url: string, targetDomain: string): boolean {
 }
 
 /**
- * Esegue analisi del sito usando il RealSiteAnalyzer
+ * Esegue analisi del sito usando RealSiteAnalyzer con fallback a SimplifiedSiteAnalyzer
  */
 async function analyzeSite(url: string) {
-  const analyzer = new RealSiteAnalyzer()
+  // Prima controlla se l'URL ha un protocollo
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = `https://${url}`;
+  }
+  
+  // Rileva se siamo in ambiente serverless
+  const isServerless = process.env.VERCEL === '1' || 
+                       !!process.env.AWS_LAMBDA_FUNCTION_NAME ||
+                       !!process.env.LAMBDA_TASK_ROOT;
+  
+  console.log(`🌐 Ambiente rilevato: ${isServerless ? 'Serverless (Vercel/Lambda)' : 'Standard (Development)'}`);
+  console.log(`🔍 Inizio analisi per URL: ${url}`);
+  
+  // In ambiente serverless, prova direttamente con SimplifiedSiteAnalyzer
+  if (isServerless) {
+    console.log('⚡ Usando direttamente SimplifiedSiteAnalyzer in ambiente serverless');      try {
+      const simplifiedAnalyzer = new SimplifiedSiteAnalyzer();
+      const analysis = await simplifiedAnalyzer.analyzeSite(url);
+      console.log('✅ Analisi semplificata completata con successo');
+      
+      // Assicurati che l'analysis abbia il flag corretto
+      return {
+        ...analysis,
+        analysisType: 'simplified' as const
+      };
+      
+    } catch (error) {
+      console.error('❌ Errore con SimplifiedSiteAnalyzer:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
+      throw new Error(`Impossibile analizzare il sito web: ${errorMessage}`);
+    }
+  }
+  
+  // In ambiente standard, prova prima con RealSiteAnalyzer
+  console.log('🔧 Tentativo con RealSiteAnalyzer (Playwright)...');
+  const analyzer = new RealSiteAnalyzer();
   
   try {
-    await analyzer.initialize()
-    const analysis = await analyzer.analyzeSite(url)
-    return analysis
-
+    // Inizializza e analizza con Playwright
+    console.log('🚀 Inizializzazione RealSiteAnalyzer...');
+    await analyzer.initialize();
+    console.log('🔍 Esecuzione analisi RealSiteAnalyzer...');
+    
+    const analysis = await analyzer.analyzeSite(url);
+    console.log('✅ Analisi completa completata con successo');
+    
+    return analysis; // Già include analysisType: 'full'
+    
   } catch (error) {
-    console.error('Errore analisi sito:', error)
-    throw new Error('Impossibile analizzare il sito web')
+    console.error('❌ Errore con RealSiteAnalyzer:', error);
+    console.log('🔄 Fallback a SimplifiedSiteAnalyzer...');
+    
+    // Fallback a SimplifiedSiteAnalyzer
+    try {
+      const simplifiedAnalyzer = new SimplifiedSiteAnalyzer();
+      const analysis = await simplifiedAnalyzer.analyzeSite(url);
+      console.log('✅ Analisi semplificata (fallback) completata');
+      
+      return {
+        ...analysis,
+        analysisType: 'simplified' as const
+      };
+      
+    } catch (error) {
+      console.error('❌ Errore anche con SimplifiedSiteAnalyzer:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
+      throw new Error(`Impossibile analizzare il sito web: ${errorMessage}`);
+    }
+    
   } finally {
-    await analyzer.cleanup()
+    // Pulizia risorse
+    try {
+      await analyzer.cleanup();
+      console.log('🧹 Cleanup completato');
+    } catch (cleanupError) {
+      console.warn('⚠️ Errore non critico durante cleanup:', cleanupError);
+    }
   }
 }
 
@@ -253,26 +329,35 @@ export async function POST(request: NextRequest): Promise<NextResponse<ManualSca
       // 6. Esegui analisi del sito
       analysis = await analyzeSite(normalizedUrl!)
       
-      // 7. Salva lead nel database
-      const leadResult = await saveManualLead({
-        url: normalizedUrl!,
-        analysis,
-        createdByUserId: user.id
-      })
-
-      if (!leadResult.success) {
-        throw new Error(leadResult.error || 'Errore salvataggio lead')
+      // 7. Salva lead nel database SOLO se l'analisi è completa (non semplificata)
+      if (analysis.analysisType !== 'simplified') {
+        // Solo le analisi complete vengono salvate nel database
+        console.log('✅ Analisi completa, procedo con salvataggio nel database');
+        const leadResult = await saveManualLead({
+          url: normalizedUrl!,
+          analysis,
+          createdByUserId: user.id
+        });
+        
+        if (!leadResult.success) {
+          throw new Error(leadResult.error || 'Errore salvataggio lead')
+        }
+        
+        leadId = leadResult.leadId;
+      } else {
+        console.log('ℹ️ Analisi semplificata, non salvo nel database');
+        // Per analisi semplificate, generiamo solo un ID temporaneo per la risposta
+        leadId = `temp-${Date.now()}`;
       }
-
-      leadId = leadResult.leadId
 
       // 8. Risposta di successo
       return NextResponse.json({
         success: true,
         data: {
-          leadId: leadResult.leadId!,
+          leadId: leadId,
           analysis,
-          creditsRemaining: creditResult.creditsRemaining!
+          creditsRemaining: creditResult.creditsRemaining!,
+          isSimplifiedAnalysis: analysis.analysisType === 'simplified'
         }
       })
 
