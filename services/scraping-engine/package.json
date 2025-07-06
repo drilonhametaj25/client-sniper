@@ -28,7 +28,11 @@
     "examples:scraping": "tsx src/scripts/examples-improved-scraping.ts",
     "scrape:improved": "tsx src/scripts/examples-improved-scraping.ts",
     "scrape:production": "tsx src/scripts/production-scraper.ts",
-    "scrape:intelligent": "tsx src/scripts/production-scraper.ts"
+    "scrape:intelligent": "tsx src/scripts/production-scraper.ts",
+    "test:integration": "tsx src/test-integrated-scraper.ts",
+    "test:modules": "tsx src/test-quick.ts",
+    "test:enterprise": "tsx src/test-integrated-scraper.ts",
+    "test:redirect": "tsx src/test-redirect-handling.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.38.0",

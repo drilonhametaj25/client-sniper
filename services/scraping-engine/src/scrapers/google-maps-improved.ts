@@ -1,14 +1,28 @@
 /**
- * Scraper Google Maps migliorato per lead generation accurata
- * Gestisce redirect, parsing contatti avanzato e analisi tecnica completa
- * Integra il SiteAnalyzer per valutazione completa delle opportunità di business
- * Evita duplicati e false classificazioni tra telefoni, email e P.IVA
+ * Scraper Google Maps Enterprise con analisi tecnica avanzata
+ * Gestisce redirect, parsing contatti preciso, rilevamento tech stack, SEO e performance
+ * Integra EnhancedWebsiteAnalyzer per valutazione enterprise completa
+ * Distingue correttamente telefoni/P.IVA, verifica SSL, mobile friendly, GDPR
+ * Evita falsi negativi e genera opportunità di business accurate
+ * 
+ * Features avanzate:
+ * - WebsiteStatusChecker per verifica accessibilità
+ * - BusinessContactParser per parsing contatti italiani
+ * - TechStackDetector per rilevamento CMS/framework
+ * - PerformanceAnalyzer per Core Web Vitals
+ * - Analisi SEO, immagini, tracking, GDPR completa
+ * 
+ * Utilizzato dal Google Maps Scraper per lead generation enterprise
+ * Parte del modulo services/scraping-engine
  */
 
 import { chromium, Browser, Page } from 'playwright'
 import { BusinessLead, ScrapingResult, ContactInfo } from '../types/LeadAnalysis'
 import { SiteAnalyzer } from '../analyzers/site-analyzer'
 import { ContactParser } from '../utils/contact-parser'
+import { EnhancedWebsiteAnalyzer } from '../analyzers/enhanced-website-analyzer'
+import { BusinessContactParser } from '../utils/business-contact-parser'
+import { WebsiteStatusChecker } from '../utils/website-status-checker'
 
 export interface GoogleMapsScrapingOptions {
   query: string
@@ -595,16 +609,17 @@ export class GoogleMapsScraper {
     options: GoogleMapsScrapingOptions
   ): Promise<BusinessLead | null> {
     
-    // Estrai e normalizza i contatti
+    // Estrai e normalizza i contatti con il nuovo parser avanzato
     const allText = `${business.name} ${business.address} ${business.phone}`
-    const parsedContacts = ContactParser.parseContacts(allText)
+    const contactParser = new BusinessContactParser()
+    const parsedContacts = contactParser.parseContacts(allText)
     
     const contacts: ContactInfo = {
       phone: parsedContacts.phones[0] || business.phone,
       email: parsedContacts.emails[0],
       website: business.website,
       address: business.address,
-      partitaIva: parsedContacts.partiteIva[0]
+      partitaIva: parsedContacts.vatNumbers[0] // Usa vatNumbers invece di partiteIva
     }
 
     // Estrai città dall'indirizzo
@@ -617,8 +632,29 @@ export class GoogleMapsScraper {
     // Analizza il sito web se presente e richiesto
     if (business.website && options.enableSiteAnalysis !== false) {
       try {
-        console.log(`🌐 Analizzando sito: ${business.website}`)
-        websiteAnalysis = await this.analyzeSite(business.website)
+        console.log(`🌐 Analizzando sito con analyzer enterprise: ${business.website}`)
+        
+        // Pre-check con WebsiteStatusChecker per verificare accessibilità
+        const statusChecker = new WebsiteStatusChecker()
+        const statusCheck = await statusChecker.checkWebsiteStatus(business.website)
+        
+        if (statusCheck.isAccessible) {
+          websiteAnalysis = await this.analyzeEnhancedWebsite(business.website)
+        } else {
+          console.log(`⚠️ Sito non accessibile: ${statusCheck.errorMessage}`)
+          websiteAnalysis = {
+            url: business.website,
+            isAccessible: false,
+            status: statusCheck.status,
+            error: statusCheck.errorMessage,
+            overallScore: 10,
+            issues: { 
+              websiteNotAccessible: true,
+              httpStatus: statusCheck.httpCode !== 200
+            },
+            analysisTime: 0
+          }
+        }
         
         // Genera opportunità e ruoli suggeriti basati sull'analisi
         const analysisResult = this.generateOpportunities(websiteAnalysis)
@@ -627,6 +663,13 @@ export class GoogleMapsScraper {
         
       } catch (error) {
         console.log(`⚠️ Errore analisi sito ${business.website}:`, error)
+        websiteAnalysis = {
+          url: business.website,
+          isAccessible: false,
+          overallScore: 10,
+          issues: { analysisError: true },
+          analysisTime: 0
+        }
       }
     } else if (!business.website) {
       opportunities.push('Nessun sito web presente')
@@ -656,36 +699,55 @@ export class GoogleMapsScraper {
   /**
    * Analizza un sito web
    */
-  private async analyzeSite(url: string): Promise<any> {
-    if (!this.browser) throw new Error('Browser non inizializzato')
-
-    const page = await this.browser.newPage()
-    await page.setExtraHTTPHeaders({
-      'User-Agent': this.userAgents[Math.floor(Math.random() * this.userAgents.length)]
-    })
-    
+  /**
+   * Analizza il sito web con l'analyzer enterprise avanzato
+   */
+  private async analyzeEnhancedWebsite(url: string): Promise<any> {
     try {
-      const analyzer = new SiteAnalyzer(page)
-      const analysis = await analyzer.analyzeSite(url)
+      const analyzer = new EnhancedWebsiteAnalyzer()
+      const analysis = await analyzer.analyzeWebsite(url)
       return analysis
     } catch (error) {
-      console.log(`⚠️ Timeout analisi sito ${url}, continuo senza analisi`)
-      // Ritorna un'analisi di base invece di fallire
-      return {
-        url,
-        isAccessible: false,
-        httpStatus: 0,
-        overallScore: 10,
-        issues: { slowLoading: true, analysisTimeout: true },
-        analysisTime: 0
+      console.log(`⚠️ Timeout analisi sito ${url}, fallback ad analisi base`)
+      
+      // Fallback con l'analyzer originale
+      if (!this.browser) throw new Error('Browser non inizializzato')
+
+      const page = await this.browser.newPage()
+      await page.setExtraHTTPHeaders({
+        'User-Agent': this.userAgents[Math.floor(Math.random() * this.userAgents.length)]
+      })
+      
+      try {
+        const analyzer = new SiteAnalyzer(page)
+        const analysis = await analyzer.analyzeSite(url)
+        return analysis
+      } catch (fallbackError) {
+        console.log(`⚠️ Anche analisi base fallita per ${url}`)
+        // Ritorna un'analisi di base invece di fallire
+        return {
+          url,
+          isAccessible: false,
+          httpStatus: 0,
+          overallScore: 10,
+          issues: { slowLoading: true, analysisTimeout: true },
+          analysisTime: 0
+        }
+      } finally {
+        await page.close()
       }
-    } finally {
-      await page.close()
     }
   }
 
   /**
-   * Genera opportunità e ruoli suggeriti dall'analisi del sito
+   * Analizza il sito web (metodo legacy mantenuto per compatibilità)
+   */
+  private async analyzeSite(url: string): Promise<any> {
+    return this.analyzeEnhancedWebsite(url)
+  }
+
+  /**
+   * Genera opportunità e ruoli suggeriti dall'analisi del sito (versione migliorata)
    */
   private generateOpportunities(analysis: any): {
     opportunities: string[]
@@ -700,52 +762,138 @@ export class GoogleMapsScraper {
       return { opportunities, roles }
     }
 
-    // Problemi SEO
-    if (analysis.issues.missingTitle) {
-      opportunities.push('Manca il titolo della pagina')
-      roles.push('seo-specialist')
-    }
-    if (analysis.issues.missingMetaDescription) {
-      opportunities.push('Manca la meta description')
-      roles.push('seo-specialist')
-    }
-    if (analysis.issues.missingH1) {
-      opportunities.push('Struttura HTML non ottimizzata')
-      roles.push('seo-specialist', 'web-developer')
+    // Nuova struttura per analisi EnhancedWebsiteAnalyzer
+    if (analysis.seo) {
+      if (!analysis.seo.hasTitle) {
+        opportunities.push('Manca il titolo della pagina')
+        roles.push('seo-specialist')
+      }
+      if (!analysis.seo.hasMetaDescription) {
+        opportunities.push('Manca la meta description')
+        roles.push('seo-specialist')
+      }
+      if (!analysis.seo.hasH1) {
+        opportunities.push('Struttura HTML non ottimizzata (manca H1)')
+        roles.push('seo-specialist', 'web-developer')
+      }
+      if (!analysis.seo.hasStructuredData) {
+        opportunities.push('Mancano i dati strutturati per SEO')
+        roles.push('seo-specialist')
+      }
+      if (!analysis.seo.hasSitemap) {
+        opportunities.push('Manca la sitemap XML')
+        roles.push('seo-specialist', 'web-developer')
+      }
     }
 
     // Problemi di performance
-    if (analysis.issues.slowLoading) {
-      opportunities.push('Sito web lento da caricare')
-      roles.push('web-developer')
-    }
-    if (analysis.issues.brokenImages) {
-      opportunities.push('Immagini rotte o non funzionanti')
-      roles.push('web-developer', 'designer')
+    if (analysis.performance) {
+      if (analysis.performance.overallScore < 50) {
+        opportunities.push('Performance del sito web scadente')
+        roles.push('web-developer')
+      }
+      if (analysis.performance.loadTime > 3) {
+        opportunities.push('Tempi di caricamento lenti')
+        roles.push('web-developer')
+      }
     }
 
-    // Problemi di tracking
-    if (analysis.issues.noTracking) {
-      opportunities.push('Mancano strumenti di analisi (Google Analytics, Facebook Pixel)')
-      roles.push('marketing-specialist')
+    // Problemi immagini
+    if (analysis.images) {
+      if (analysis.images.withoutAlt > 0) {
+        opportunities.push('Immagini senza attributo alt per accessibilità')
+        roles.push('web-developer', 'designer')
+      }
+      if (analysis.images.broken > 0) {
+        opportunities.push('Immagini rotte o non funzionanti')
+        roles.push('web-developer', 'designer')
+      }
+    }
+
+    // Problemi di tracking e analytics
+    if (analysis.tracking) {
+      if (analysis.tracking.trackingScore < 30) {
+        opportunities.push('Strumenti di analisi mancanti o incompleti')
+        roles.push('marketing-specialist')
+      }
+      if (!analysis.tracking.googleAnalytics) {
+        opportunities.push('Manca Google Analytics')
+        roles.push('marketing-specialist')
+      }
+      if (!analysis.tracking.facebookPixel) {
+        opportunities.push('Manca Facebook Pixel')
+        roles.push('marketing-specialist')
+      }
     }
 
     // Problemi GDPR
-    if (analysis.issues.noCookieConsent) {
-      opportunities.push('Non conforme al GDPR (manca gestione cookie)')
-      roles.push('legal-consultant', 'web-developer')
+    if (analysis.gdpr) {
+      if (!analysis.gdpr.hasCookieConsent) {
+        opportunities.push('Non conforme al GDPR (manca gestione cookie)')
+        roles.push('legal-consultant', 'web-developer')
+      }
+      if (!analysis.gdpr.hasPrivacyPolicy) {
+        opportunities.push('Manca la privacy policy')
+        roles.push('legal-consultant')
+      }
     }
 
-    // Problemi legali
-    if (analysis.issues.missingPartitaIva) {
-      opportunities.push('Partita IVA non visibile sul sito')
-      roles.push('legal-consultant')
+    // Problemi mobile
+    if (analysis.mobile && !analysis.mobile.isMobileFriendly) {
+      opportunities.push('Sito non ottimizzato per dispositivi mobili')
+      roles.push('web-developer', 'designer')
     }
 
-    // Problemi social
-    if (analysis.issues.noSocialPresence) {
-      opportunities.push('Assenza sui social media')
-      roles.push('marketing-specialist', 'designer')
+    // Problemi tecnologici
+    if (analysis.techStack) {
+      if (analysis.techStack.outdatedTech.length > 0) {
+        opportunities.push('Tecnologie obsolete da aggiornare')
+        roles.push('web-developer')
+      }
+      if (!analysis.techStack.hasAnalytics) {
+        opportunities.push('Mancano strumenti di analisi web')
+        roles.push('marketing-specialist')
+      }
+    }
+
+    // Fallback per analisi legacy
+    if (analysis.issues) {
+      if (analysis.issues.missingTitle) {
+        opportunities.push('Manca il titolo della pagina')
+        roles.push('seo-specialist')
+      }
+      if (analysis.issues.missingMetaDescription) {
+        opportunities.push('Manca la meta description')
+        roles.push('seo-specialist')
+      }
+      if (analysis.issues.missingH1) {
+        opportunities.push('Struttura HTML non ottimizzata')
+        roles.push('seo-specialist', 'web-developer')
+      }
+      if (analysis.issues.slowLoading) {
+        opportunities.push('Sito web lento da caricare')
+        roles.push('web-developer')
+      }
+      if (analysis.issues.brokenImages) {
+        opportunities.push('Immagini rotte o non funzionanti')
+        roles.push('web-developer', 'designer')
+      }
+      if (analysis.issues.noTracking) {
+        opportunities.push('Mancano strumenti di analisi (Google Analytics, Facebook Pixel)')
+        roles.push('marketing-specialist')
+      }
+      if (analysis.issues.noCookieConsent) {
+        opportunities.push('Non conforme al GDPR (manca gestione cookie)')
+        roles.push('legal-consultant', 'web-developer')
+      }
+      if (analysis.issues.missingPartitaIva) {
+        opportunities.push('Partita IVA non visibile sul sito')
+        roles.push('legal-consultant')
+      }
+      if (analysis.issues.noSocialPresence) {
+        opportunities.push('Assenza sui social media')
+        roles.push('marketing-specialist', 'designer')
+      }
     }
 
     // Rimuovi duplicati
@@ -764,9 +912,37 @@ export class GoogleMapsScraper {
       return 10 // Ottima opportunità se non ha sito
     }
 
-    // Usa il punteggio dell'analisi del sito se disponibile
+    // Usa il punteggio dell'analisi enhanced se disponibile
     if (analysis?.overallScore !== undefined) {
       score = analysis.overallScore
+    } else if (analysis?.seo?.overallScore !== undefined) {
+      // Se abbiamo l'analisi enhanced, combina i punteggi
+      let combinedScore = 0
+      let components = 0
+      
+      if (analysis.seo?.overallScore !== undefined) {
+        combinedScore += analysis.seo.overallScore
+        components++
+      }
+      
+      if (analysis.performance?.overallScore !== undefined) {
+        combinedScore += analysis.performance.overallScore
+        components++
+      }
+      
+      if (analysis.tracking?.trackingScore !== undefined) {
+        combinedScore += analysis.tracking.trackingScore
+        components++
+      }
+      
+      if (analysis.gdpr?.complianceScore !== undefined) {
+        combinedScore += analysis.gdpr.complianceScore
+        components++
+      }
+      
+      if (components > 0) {
+        score = combinedScore / components
+      }
     }
 
     // Bonus per presenza di contatti
