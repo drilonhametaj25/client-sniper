@@ -48,11 +48,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const parsedCache = JSON.parse(cached)
         // Cache valida per 2 ORE (aumentata drasticamente per stabilità)
         if (Date.now() - parsedCache.timestamp < 2 * 60 * 60 * 1000) {
-          console.log('💾 Profilo caricato da cache persistente:', parsedCache.profile.plan)
           return parsedCache.profile
         } else {
           // NON RIMUOVERE cache scaduta, potrebbe essere utile come backup
-          console.log('⏰ Cache oltre 2 ore ma mantenuta come backup')
           // Segna come "backup" ma tienila
           parsedCache.isBackup = true
           return parsedCache.profile
@@ -74,17 +72,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           version: '2.0' // Versione cache per eventuali migrations
         }
         localStorage.setItem(`profile_cache_${userId}`, JSON.stringify(cacheData))
-        console.log('💾 Profilo salvato in cache:', {
-          id: profile.id,
-          email: profile.email,
-          plan: profile.plan || 'MISSING',
-          role: profile.role || 'MISSING'
-        })
       } else {
-        console.warn('⚠️ Profilo troppo incompleto per cache:', profile)
+        // Profilo troppo incompleto per cache
       }
     } catch (error) {
-      console.warn('⚠️ Errore salvataggio cache:', error)
+      // Errore salvataggio cache
     }
   }, [])
 

@@ -64,9 +64,6 @@ export async function POST(req: NextRequest) {
       user = sessionResult.data.session.user
     }
 
-    console.log('🔍 Autenticazione riuscita per utente:', user.id)
-    console.log('🔍 Email utente:', user.email)
-
     // Usa il service role per TUTTE le operazioni DB (come in /api/leads)
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -83,14 +80,8 @@ export async function POST(req: NextRequest) {
       .select('id, email, plan, status, stripe_subscription_id')
       .eq('id', user.id)
       .single()
-
-    console.log('🔍 Query utente con service role - Error:', userError)
-    console.log('🔍 Query utente con service role - Error code:', userError?.code)
-    console.log('🔍 Query utente con service role - Data:', userData)
-
     // Se l'utente non esiste, crealo con dati di default
     if (userError && userError.code === 'PGRST116') {
-      console.log('🔧 Utente non trovato, creazione automatica...')
       
       const { data: newUser, error: createError } = await supabaseAdmin
         .from('users')
@@ -113,7 +104,6 @@ export async function POST(req: NextRequest) {
       }
 
       userData = newUser
-      console.log('✅ Utente creato automaticamente:', userData)
     }
 
     // Se c'è un errore diverso o userData è null, interrompi
@@ -145,7 +135,6 @@ export async function POST(req: NextRequest) {
     // **STEP 1: Cancella l'abbonamento su Stripe con cancel_at_period_end**
     if (userData.stripe_subscription_id) {
       try {
-        console.log(`🔄 Cancellando abbonamento Stripe: ${userData.stripe_subscription_id}`)
         
         const subscription = await stripe.subscriptions.update(
           userData.stripe_subscription_id,
@@ -159,7 +148,6 @@ export async function POST(req: NextRequest) {
           }
         )
 
-        console.log(`✅ Abbonamento Stripe cancellato. Attivo fino al: ${new Date(subscription.current_period_end * 1000).toISOString()}`)
         
         // **STEP 2: Aggiorna il database - MA mantiene status 'active' fino alla scadenza**
         const { error: updateError } = await supabaseAdmin
@@ -196,7 +184,6 @@ export async function POST(req: NextRequest) {
           console.error('⚠️ Errore logging operazione:', logError)
         }
 
-        console.log(`✅ Piano disattivazione programmata per utente: ${userData.email}`)
 
         return NextResponse.json({
           success: true,
@@ -293,7 +280,6 @@ export async function GET(req: NextRequest) {
       user = sessionResult.data.session.user
     }
 
-    console.log('🔍 Autenticazione GET riuscita per utente:', user.id)
 
     // Usa il service role per TUTTE le operazioni DB (come in /api/leads)
     const supabaseAdmin = createClient(
@@ -310,7 +296,6 @@ export async function GET(req: NextRequest) {
 
     // Se l'utente non esiste, crealo con dati di default
     if (userError && userError.code === 'PGRST116') {
-      console.log('🔧 Utente non trovato, creazione automatica...')
       
       const { data: newUser, error: createError } = await supabaseAdmin
         .from('users')
@@ -333,7 +318,6 @@ export async function GET(req: NextRequest) {
       }
 
       userData = newUser
-      console.log('✅ Utente creato automaticamente per GET:', userData)
     }
 
     if (userError && userError.code !== 'PGRST116') {

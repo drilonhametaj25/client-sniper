@@ -47,8 +47,6 @@ export default function LoginPage() {
       }
 
       if (data.user) {
-        console.log('Login successful for user:', data.user.id)
-        
         // Attendi che l'AuthContext carichi il profilo
         // Il redirect sarà gestito automaticamente dal dashboard
         router.push('/dashboard')
@@ -56,7 +54,6 @@ export default function LoginPage() {
 
     } catch (err) {
       setError('Errore durante il login')
-      console.error('Login error:', err)
     } finally {
       setLoading(false)
     }

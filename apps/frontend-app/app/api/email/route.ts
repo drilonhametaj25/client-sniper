@@ -81,7 +81,6 @@ export async function POST(request: NextRequest) {
 
     if (success) {
       // Log dell'email inviata (opzionale)
-      console.log(`✅ Email ${type} inviata a ${to}`)
       
       return NextResponse.json({
         success: true,

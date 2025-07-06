@@ -443,11 +443,6 @@ export async function verifyAdminStatus(userEmail: string): Promise<boolean> {
 export async function debugUserSession() {
   try {
     const { data: session } = await supabase.auth.getSession()
-    console.log('🔍 Debug sessione corrente:')
-    console.log('- Sessione presente:', !!session.session)
-    console.log('- User ID:', session.session?.user?.id)
-    console.log('- Email:', session.session?.user?.email)
-    
     if (session.session?.user?.id) {
       const { data: dbUser, error } = await supabase
         .from('users')
@@ -455,10 +450,6 @@ export async function debugUserSession() {
         .eq('id', session.session.user.id)
         .single()
       
-      console.log('- DB User trovato:', !!dbUser)
-      console.log('- Role in DB:', dbUser?.role)
-      console.log('- Plan in DB:', dbUser?.plan)
-      console.log('- Errore DB:', error?.message)
     }
   } catch (error) {
     console.error('❌ Errore debug sessione:', error)

@@ -275,8 +275,6 @@ export default function AdminDashboard() {
               </div>
               <button
                 onClick={() => {
-                  console.log('🔍 DEBUG SESSIONE ADMIN:')
-                  console.log('User attuale:', user)
                   debugUserSession()
                 }}
                 className="bg-white/20 hover:bg-white/30 rounded-lg p-2 transition-colors"

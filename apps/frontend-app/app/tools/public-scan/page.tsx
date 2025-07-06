@@ -129,10 +129,6 @@ export default function PublicScanPage() {
       // Gestisce sia analisi nuove che lead esistenti
       setResponseData(data)
       if (data.analysis) {
-        console.log('Analisi pubblica ricevuta:', data.analysis)
-        console.log('Overall Score:', data.analysis.overallScore)
-        console.log('Lead Info Score:', data.leadInfo?.score)
-        console.log('Oggetto completo data:', data)
         setResult(data.analysis)
       }
       

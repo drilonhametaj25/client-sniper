@@ -6,11 +6,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Debug delle variabili di ambiente
-console.log('🔧 DEBUG ENV VARIABLES:')
-console.log('- NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'PRESENTE' : 'MANCANTE')
-console.log('- SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'PRESENTE' : 'MANCANTE')
-console.log('- Service role key (primissimi caratteri):', process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 20) || 'NON TROVATA')
 
 // Client per verificare il token (usa anon key)
 const supabaseClient = createClient(
@@ -25,19 +20,9 @@ const supabaseAdmin = createClient(
 )
 
 export async function GET(request: NextRequest) {
-  console.log('🔥 API LEADS CHIAMATA - URL:', request.url)
-  console.log('🔥 API LEADS CHIAMATA - METHOD:', request.method)
-  console.log('🔥 API LEADS CHIAMATA - HEADERS:', Object.fromEntries(request.headers.entries()))
-  
-  // Debug delle variabili di ambiente OGNI VOLTA
-  console.log('🔧 DEBUG ENV VARIABLES (runtime):')
-  console.log('- NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'PRESENTE' : 'MANCANTE')
-  console.log('- SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'PRESENTE' : 'MANCANTE')
-  console.log('- Service role key primi caratteri:', process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 30) || 'NON TROVATA')
   
   try {
     const { searchParams } = new URL(request.url)
-    console.log('HEYYY - SIAMO DENTRO IL TRY')
     // Parametri di paginazione migliorati
     const page = parseInt(searchParams.get('page') || '1')
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50) // Max 50 per performance
@@ -51,12 +36,10 @@ export async function GET(request: NextRequest) {
     const minScore = searchParams.get('minScore')
     const maxScore = searchParams.get('maxScore')
     
-    console.log('🔍 API Leads - Filtri ricevuti:', { page, limit, category, city, neededRoles, search, minScore, maxScore })
     
     // Verifica autenticazione
     const authHeader = request.headers.get('Authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('🚫 Token di autorizzazione mancante')
 
       return NextResponse.json(
         { success: false, error: 'Token di autorizzazione mancante' },
@@ -70,15 +53,12 @@ export async function GET(request: NextRequest) {
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
     
     if (authError || !user) {
-      console.log('🚫 Token non valido o scaduto')
-      console.error('Errore autenticazione:', authError)
       return NextResponse.json(
         { success: false, error: 'Token non valido o scaduto' },
         { status: 401 }
       )
     }
     
-    console.log('✅ Utente autenticato:', user.id)
 
     // Ottieni il profilo utente con fallback creation (usa service role per scrivere)
     let { data: userProfile, error: profileError } = await supabaseAdmin
@@ -89,7 +69,6 @@ export async function GET(request: NextRequest) {
 
     // Se l'utente non esiste, crealo con dati di default
     if (profileError && profileError.code === 'PGRST116') {
-      console.log('🔧 Utente non trovato, creazione automatica...')
       
       const { data: newUser, error: createError } = await supabaseAdmin
         .from('users')
@@ -177,7 +156,6 @@ export async function GET(request: NextRequest) {
     const { data: leads, error, count } = await query
     const queryTime = Date.now() - startTime
     
-    console.log(`⚡ Query executed in ${queryTime}ms, returned ${leads?.length || 0} leads`)
     
     if (error) {
       console.error('Errore nel recupero lead:', error)

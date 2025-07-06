@@ -77,14 +77,10 @@ export default function AdminUsers() {
       setLoadingData(true)
       setLoadingError(null) // Reset eventuali errori precedenti
       
-      console.log('🔍 Iniziando caricamento utenti...')
       
-      // Utilizziamo direttamente la funzione RPC corretta
-      console.log('🔄 Carico gli utenti con admin_get_complete_users...')
       const { data, error } = await supabase.rpc('admin_get_complete_users')
       
       if (error) {
-        console.error(`❌ Errore con admin_get_complete_users: ${error.message}`)
         // Messaggio di errore user-friendly con suggerimenti
         setLoadingError(`Errore nel caricamento degli utenti: ${error.message}. 
           Verifica che la funzione RPC sia stata aggiornata correttamente sul database. 
@@ -94,13 +90,11 @@ export default function AdminUsers() {
       } 
       
       if (!data || data.length === 0) {
-        console.log('⚠️ Nessun utente trovato')
         setLoadingError("Nessun utente trovato nel sistema. Potrebbe essere un problema di permessi o dati vuoti.")
         setLoadingData(false)
         return
       }
       
-      console.log(`✅ Successo: trovati ${data.length} utenti`)
       
       // Converti i dati nel formato User
       const mergedUsers: User[] = data.map((user: any) => ({
@@ -116,37 +110,11 @@ export default function AdminUsers() {
         stripe_customer_id: user.stripe_customer_id,
         stripe_subscription_id: user.stripe_subscription_id
       }))
-
-      console.log(`✅ Caricamento completato: ${mergedUsers.length} utenti totali`)
-      
-      // Statistiche utenti (per debug)
-      console.log('📊 Statistiche utenti:', {
-        total: mergedUsers.length,
-        admin: mergedUsers.filter((u: User) => u.role === 'admin').length,
-        client: mergedUsers.filter((u: User) => u.role === 'client').length,
-        freePlan: mergedUsers.filter((u: User) => u.plan === 'free').length,
-        starterPlan: mergedUsers.filter((u: User) => u.plan === 'starter').length,
-        proPlan: mergedUsers.filter((u: User) => u.plan === 'pro').length,
-        active: mergedUsers.filter((u: User) => u.status === 'active').length,
-        inactive: mergedUsers.filter((u: User) => u.status === 'inactive').length,
-        cancelled: mergedUsers.filter((u: User) => u.status === 'cancelled').length,
-      })
-      
-      // Debug: mostra primi 3 utenti
-      if (mergedUsers.length > 0) {
-        console.log('👤 Primi 3 utenti:', mergedUsers.slice(0, 3).map((u: User) => ({ 
-          id: u.id.substring(0, 8) + '...', 
-          email: u.email,
-          role: u.role,
-          plan: u.plan
-        })))
-      }
       
       setUsers(mergedUsers)
       
       setUsers(mergedUsers)
     } catch (error) {
-      console.error('❌ Errore caricamento utenti:', error)
       let errorMessage = 'Si è verificato un errore imprevisto durante il caricamento degli utenti.'
       
       // Gestione specifica degli errori comuni
@@ -203,7 +171,6 @@ export default function AdminUsers() {
       setEditingUser(null)
       alert('Utente aggiornato con successo!')
     } catch (error) {
-      console.error('Errore aggiornamento utente:', error)
       alert('Errore durante l\'aggiornamento dell\'utente')
     }
   }

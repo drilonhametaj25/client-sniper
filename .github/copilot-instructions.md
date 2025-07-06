@@ -93,6 +93,17 @@ settings (
   key TEXT UNIQUE,
   value TEXT
 )
+
+-- Feedback Reports
+feedback_reports (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES users(id),
+  category TEXT, -- bug, suggestion, contact, other
+  message TEXT,
+  status TEXT DEFAULT 'open', -- open, in_review, closed
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now()
+)
 ```
 
 ## Gestione Stato Piano (FEATURE)
@@ -224,4 +235,39 @@ Il sistema supporta l'analisi manuale di siti web da parte degli utenti:
 3. Lead salvato nel database con `origin: "manual"`
 4. Crediti scalati e operazione loggata
 5. Risultati mostrati all'utente con punteggio e dettagli
+
+## Sistema Feedback (FEATURE)
+
+Il sistema supporta la raccolta di feedback dagli utenti con pannello admin dedicato:
+
+### Funzionalità
+- Widget feedback fluttuante accessibile su tutte le pagine
+- Supporta utenti registrati e anonimi
+- Categorie: bug, suggerimenti, richieste contatto, altro
+- Pannello admin per gestione e risposta ai feedback
+
+### Componenti
+- `FeedbackWidget` - Widget fluttuante per invio feedback
+- `/apps/frontend-app/app/admin/feedback` - Pannello admin per gestione feedback
+- `/apps/frontend-app/app/api/feedback` - API endpoint per invio feedback
+
+### Database
+- Tabella `feedback_reports` con RLS abilitato
+- Funzioni RPC per invio (`submit_feedback_report`) e gestione admin (`admin_get_all_feedback`, `admin_update_feedback_status`)
+
+### Tipologie Feedback
+- `bug`: Segnalazioni errori
+- `suggestion`: Suggerimenti funzionalità 
+- `contact`: Richieste di contatto
+- `other`: Categoria generica
+
+### Stati Feedback
+- `open`: Nuovo feedback da processare
+- `in_review`: In fase di revisione
+- `closed`: Risolto/chiuso
+
+### Accesso Admin
+- Navigazione: `/admin/feedback`
+- Permessi: solo utenti con `role = 'admin'`
+- Funzionalità: visualizzazione, filtri, cambio stato, note interne
 ````

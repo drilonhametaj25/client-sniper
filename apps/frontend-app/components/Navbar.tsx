@@ -9,7 +9,7 @@ import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Target, User, Settings, LogOut, Menu, X, Crown, Shield, Users, Home } from 'lucide-react'
+import { Target, User, Settings, LogOut, Menu, X, Crown, Shield, Users, Home, MessageSquare } from 'lucide-react'
 import Button from './ui/Button'
 import Badge from './ui/Badge'
 
@@ -83,6 +83,7 @@ export default function Navbar() {
     },
     ...(isAdminRoute ? [
       { name: 'Utenti', href: '/admin/users', icon: Users, description: 'Gestione Utenti' },
+      { name: 'Feedback', href: '/admin/feedback', icon: MessageSquare, description: 'Segnalazioni Utenti' },
       { name: 'Settings', href: '/admin/settings', icon: Settings, description: 'Configurazioni Sistema' },
     ] : []),
     { name: 'Analisi Manuale', href: '/tools/manual-scan', icon: Target, description: 'Analizza qualsiasi sito web' },

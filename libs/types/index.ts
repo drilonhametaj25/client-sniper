@@ -167,3 +167,34 @@ export const SCORE_RANGES = {
   GOOD: { min: 61, max: 80, label: 'Buono', color: '#16a34a' },
   EXCELLENT: { min: 81, max: 100, label: 'Eccellente', color: '#059669' }
 } as const;
+
+// Feedback System Types
+export interface FeedbackReport {
+  id: string;
+  user_id?: string;
+  email?: string;
+  type: 'bug' | 'suggestion' | 'contact' | 'other';
+  message: string;
+  created_at: string;
+  status: 'open' | 'in_review' | 'closed';
+  response?: string;
+  admin_note?: string;
+  user_agent?: string;
+  ip_address?: string;
+  page_url?: string;
+}
+
+export interface FeedbackSubmissionData {
+  type: 'bug' | 'suggestion' | 'contact' | 'other';
+  message: string;
+  email?: string;
+  pageUrl?: string;
+  userAgent?: string;
+}
+
+export interface FeedbackStats {
+  total: number;
+  byType: Record<string, number>;
+  byStatus: Record<string, number>;
+  lastWeek: number;
+}

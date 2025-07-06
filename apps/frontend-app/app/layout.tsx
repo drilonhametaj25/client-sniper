@@ -9,6 +9,7 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { ToastProvider } from '@/components/ToastProvider'
 import Navbar from '@/components/Navbar'
 import CookieConsent from '@/components/CookieConsent'
+import FeedbackWidget from '@/components/FeedbackWidget'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -134,6 +135,7 @@ export default function RootLayout({
                 {children}
               </main>
               <CookieConsent />
+              <FeedbackWidget />
             </div>
           </AuthProvider>
         </ToastProvider>
