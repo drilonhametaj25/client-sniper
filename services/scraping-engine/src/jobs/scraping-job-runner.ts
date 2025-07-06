@@ -274,9 +274,9 @@ export class ScrapingJobRunner {
           source: 'google_maps'
         }))
         
-      case 'yelp':
-        const yelpScraper = new YelpScraper()
-        return await yelpScraper.scrape(target)
+      // case 'yelp':
+      //   const yelpScraper = new YelpScraper()
+      //   return await yelpScraper.scrape(target)
         
       default:
         throw new Error(`Scraper non supportato: ${zone.source}`)

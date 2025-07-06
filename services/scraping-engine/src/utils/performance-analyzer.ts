@@ -70,17 +70,52 @@ export class PerformanceAnalyzer {
     this.navigationStart = startTime
     
     try {
+      // Configura context per evitare blocchi anti-bot
+      await page.context().addInitScript(() => {
+        // Rimuove webdriver property per evitare detection
+        delete (window as any).webdriver
+      })
+      
+      // Headers realistici
+      await page.setExtraHTTPHeaders({
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'it-IT,it;q=0.9,en;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1'
+      })
+      
+      console.log(`⏱️ Tentativo navigazione a: ${url}`)
       const response = await page.goto(url, { 
-        waitUntil: 'networkidle',
-        timeout: 30000 
+        waitUntil: 'domcontentloaded', // Meno restrittivo di networkidle
+        timeout: 30000  // Timeout più generoso per siti lenti
       })
       
       if (!response) {
-        throw new Error('Impossibile caricare la pagina')
+        throw new Error('Risposta nulla dal server - possibile blocco anti-bot')
       }
       
-      // Attendi completamento rendering
-      await page.waitForTimeout(2000)
+      const statusCode = response.status()
+      console.log(`📡 Risposta HTTP: ${statusCode}`)
+      
+      if (statusCode >= 500) {
+        throw new Error(`HTTP ${statusCode}: Errore server - ${response.statusText()}`)
+      }
+      
+      if (statusCode >= 400) {
+        console.log(`⚠️ HTTP ${statusCode} per ${url} - continuo analisi limitata`)
+        // Non bloccare per 4xx, potrebbe essere un redirect o auth
+      }
+      
+      // Attendi completamento rendering con fallback
+      try {
+        await page.waitForTimeout(3000) // Più tempo per rendering
+        await page.waitForLoadState('networkidle', { timeout: 10000 })
+      } catch (loadError) {
+        console.log(`⚠️ Timeout attesa caricamento, continuo con analisi parziale`)
+      }
       
       // Raccoglie metriche timing
       const timingMetrics = await this.collectTimingMetrics(page)

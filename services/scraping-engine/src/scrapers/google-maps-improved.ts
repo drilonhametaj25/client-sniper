@@ -23,6 +23,7 @@ import { ContactParser } from '../utils/contact-parser'
 import { EnhancedWebsiteAnalyzer } from '../analyzers/enhanced-website-analyzer'
 import { BusinessContactParser } from '../utils/business-contact-parser'
 import { WebsiteStatusChecker } from '../utils/website-status-checker'
+import { RobustWebsiteAnalyzer } from '../utils/robust-website-analyzer'
 
 export interface GoogleMapsScrapingOptions {
   query: string
@@ -40,8 +41,18 @@ export class GoogleMapsScraper {
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15'
   ]
+  
+  private enhancedAnalyzer: EnhancedWebsiteAnalyzer
+  private contactParser: BusinessContactParser
+  private statusChecker: WebsiteStatusChecker
+  private robustAnalyzer: RobustWebsiteAnalyzer
 
-  constructor() {}
+  constructor() {
+    this.enhancedAnalyzer = new EnhancedWebsiteAnalyzer()
+    this.contactParser = new BusinessContactParser()
+    this.statusChecker = new WebsiteStatusChecker()
+    this.robustAnalyzer = new RobustWebsiteAnalyzer()
+  }
 
   /**
    * Scraping principale da Google Maps
@@ -668,8 +679,14 @@ export class GoogleMapsScraper {
           isAccessible: false,
           overallScore: 10,
           issues: { analysisError: true },
-          analysisTime: 0
+          analysisTime: 0,
+          error: error instanceof Error ? error.message : 'Errore sconosciuto'
         }
+        
+        // Genera opportunità anche per analisi fallite
+        const fallbackResult = this.generateOpportunities(websiteAnalysis)
+        opportunities = fallbackResult.opportunities
+        suggestedRoles = fallbackResult.roles
       }
     } else if (!business.website) {
       opportunities.push('Nessun sito web presente')
@@ -700,42 +717,217 @@ export class GoogleMapsScraper {
    * Analizza un sito web
    */
   /**
-   * Analizza il sito web con l'analyzer enterprise avanzato
+   * Analizza il sito web con approccio robusto e fallback intelligenti
    */
   private async analyzeEnhancedWebsite(url: string): Promise<any> {
+    console.log(`🔎 Analisi sito con approccio robusto: ${url}`)
+    
     try {
-      const analyzer = new EnhancedWebsiteAnalyzer()
-      const analysis = await analyzer.analyzeWebsite(url)
-      return analysis
-    } catch (error) {
-      console.log(`⚠️ Timeout analisi sito ${url}, fallback ad analisi base`)
+      // TENTATIVO 1: Analisi standard avanzata
+      console.log(`✨ Tentativo analisi standard per: ${url}`)
+      const standardAnalysis = await this.enhancedAnalyzer.analyzeWebsite(url)
       
-      // Fallback con l'analyzer originale
-      if (!this.browser) throw new Error('Browser non inizializzato')
-
-      const page = await this.browser.newPage()
-      await page.setExtraHTTPHeaders({
-        'User-Agent': this.userAgents[Math.floor(Math.random() * this.userAgents.length)]
-      })
-      
-      try {
-        const analyzer = new SiteAnalyzer(page)
-        const analysis = await analyzer.analyzeSite(url)
-        return analysis
-      } catch (fallbackError) {
-        console.log(`⚠️ Anche analisi base fallita per ${url}`)
-        // Ritorna un'analisi di base invece di fallire
-        return {
-          url,
-          isAccessible: false,
-          httpStatus: 0,
-          overallScore: 10,
-          issues: { slowLoading: true, analysisTimeout: true },
-          analysisTime: 0
-        }
-      } finally {
-        await page.close()
+      if (standardAnalysis && standardAnalysis.isAccessible) {
+        console.log(`✅ Analisi standard riuscita per: ${url}`)
+        return standardAnalysis
       }
+      
+      throw new Error('Analisi standard fallita')
+      
+    } catch (standardError) {
+      console.log(`⚠️ Analisi standard fallita per ${url}:`, standardError)
+      
+      // TENTATIVO 2: Analisi robusta con fallback
+      try {
+        console.log(`🛡️ Passaggio ad analisi robusta per: ${url}`)
+        
+        if (!this.browser) {
+          throw new Error('Browser non disponibile per analisi robusta')
+        }
+        
+        const robustResult = await this.robustAnalyzer.analyzeRobustly(url, this.browser)
+        
+        // Converte il risultato robusto nel formato atteso
+        const convertedAnalysis = this.convertRobustToStandardFormat(robustResult)
+        
+        console.log(`🎯 Analisi robusta completata per ${url} - Confidenza: ${robustResult.confidenceLevel}`)
+        return convertedAnalysis
+        
+      } catch (robustError) {
+        console.log(`💥 Anche analisi robusta fallita per ${url}:`, robustError)
+        
+        // FALLBACK FINALE: Analisi di emergenza
+        return this.createEmergencyAnalysis(url, robustError)
+      }
+    }
+  }
+
+  /**
+   * Converte risultato robusto nel formato standard atteso
+   */
+  private convertRobustToStandardFormat(robustResult: any): any {
+    // CONTROLLO SICUREZZA: Verifica che robustResult esista
+    if (!robustResult) {
+      console.log('⚠️ RobustResult non disponibile, creo struttura base')
+      return {
+        url: 'unknown',
+        finalUrl: 'unknown',
+        isAccessible: false,
+        httpStatus: 0,
+        error: 'Risultato analisi robusta non disponibile',
+        analysisTime: Date.now(),
+        confidence: 'very-low',
+        seo: { score: 10, hasTitle: false, hasMetaDescription: false, hasH1: false },
+        performance: { score: 10, metrics: {} },
+        privacy: { score: 10, issues: {} },
+        overallScore: 10,
+        issues: { analysisError: true, errorMessage: 'Risultato analisi robusta non disponibile' }
+      }
+    }
+
+    const baseAnalysis = {
+      url: robustResult.url || 'unknown',
+      finalUrl: robustResult.finalUrl || robustResult.url || 'unknown',
+      isAccessible: robustResult.isAccessible || false,
+      httpStatus: robustResult.httpStatus || 0,
+      error: robustResult.error,
+      analysisTime: Date.now(),
+      confidence: robustResult.confidenceLevel || 'low'
+    }
+
+    // Se abbiamo analisi avanzata, la usiamo
+    if (robustResult.advanced) {
+      return {
+        ...baseAnalysis,
+        seo: robustResult.advanced.seo || { score: 30, hasTitle: false, hasMetaDescription: false, hasH1: false },
+        performance: robustResult.advanced.performance || { score: 30, metrics: {} },
+        privacy: robustResult.advanced.privacy || { score: 30, issues: {} },
+        techStack: robustResult.advanced.techStack || { frameworks: [], cms: null, hosting: null },
+        mobile: robustResult.advanced.mobile || { isMobileFriendly: false, score: 30 },
+        tracking: robustResult.advanced.tracking || { hasGoogleAnalytics: false, hasFacebookPixel: false },
+        overallScore: this.calculateOverallScore(robustResult.advanced),
+        issues: this.extractIssuesFromRobust(robustResult)
+      }
+    }
+
+    // Se non abbiamo analisi avanzata, creiamo una struttura base
+    return {
+      ...baseAnalysis,
+      seo: { 
+        score: (robustResult.basicCheck && robustResult.basicCheck.ssl) ? 40 : 20, 
+        hasTitle: false, 
+        hasMetaDescription: false, 
+        hasH1: false,
+        issues: { missingTitle: true, missingMetaDescription: true }
+      },
+      performance: { 
+        score: robustResult.isAccessible ? 40 : 10, 
+        metrics: {},
+        issues: { slowLoading: !robustResult.isAccessible }
+      },
+      privacy: { 
+        score: (robustResult.basicCheck && robustResult.basicCheck.ssl) ? 50 : 20, 
+        issues: { noSSL: !(robustResult.basicCheck && robustResult.basicCheck.ssl) }
+      },
+      overallScore: robustResult.isAccessible ? 30 : 10,
+      issues: this.extractIssuesFromRobust(robustResult)
+    }
+  }
+
+  /**
+   * Calcola score generale dall'analisi avanzata
+   */
+  private calculateOverallScore(advanced: any): number {
+    if (!advanced) return 20
+    
+    const scores = []
+    if (advanced.seo?.score) scores.push(advanced.seo.score)
+    if (advanced.performance?.score) scores.push(advanced.performance.score)
+    if (advanced.privacy?.score) scores.push(advanced.privacy.score)
+    
+    if (scores.length === 0) return 30
+    
+    return Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
+  }
+
+  /**
+   * Estrae problemi dal risultato robusto
+   */
+  private extractIssuesFromRobust(robustResult: any): any {
+    const issues: any = {}
+    
+    // CONTROLLO SICUREZZA: Verifica che robustResult esista
+    if (!robustResult) {
+      console.log('⚠️ RobustResult non disponibile per estrazione issues')
+      return { analysisError: true, errorMessage: 'Risultato analisi robusta non disponibile' }
+    }
+    
+    if (!robustResult.isAccessible) {
+      issues.websiteNotAccessible = true
+    }
+    
+    if (robustResult.error) {
+      issues.analysisError = true
+      issues.errorMessage = robustResult.error
+    }
+    
+    // CONTROLLO SICUREZZA: Verifica che basicCheck esista
+    if (robustResult.basicCheck && !robustResult.basicCheck.ssl) {
+      issues.noSSL = true
+    }
+    
+    // CONTROLLO SICUREZZA: Verifica che estimatedIssues esista e sia un array
+    if (robustResult.estimatedIssues && Array.isArray(robustResult.estimatedIssues) && robustResult.estimatedIssues.length > 0) {
+      issues.estimatedProblems = robustResult.estimatedIssues
+    }
+    
+    // Aggiungi problemi dalle analisi avanzate se disponibili
+    if (robustResult.advanced && robustResult.advanced.seo) {
+      issues.missingTitle = !robustResult.advanced.seo.hasTitle
+      issues.missingMetaDescription = !robustResult.advanced.seo.hasMetaDescription
+      issues.missingH1 = !robustResult.advanced.seo.hasH1
+    }
+    
+    return issues
+  }
+
+  /**
+   * Crea analisi di emergenza quando tutto fallisce
+   */
+  private createEmergencyAnalysis(url: string, error: any): any {
+    console.log(`🆘 Creazione analisi di emergenza per: ${url}`)
+    
+    return {
+      url,
+      finalUrl: url,
+      isAccessible: false,
+      httpStatus: 0,
+      error: error instanceof Error ? error.message : 'Analisi completamente fallita',
+      overallScore: 5, // Score molto basso per indicare problemi gravi
+      confidence: 'low',
+      seo: { 
+        score: 10, 
+        hasTitle: false, 
+        hasMetaDescription: false, 
+        hasH1: false,
+        issues: { analysisImpossible: true }
+      },
+      performance: { 
+        score: 10, 
+        metrics: {},
+        issues: { analysisImpossible: true }
+      },
+      privacy: { 
+        score: 10, 
+        issues: { analysisImpossible: true }
+      },
+      issues: {
+        websiteNotAccessible: true,
+        analysisError: true,
+        emergencyAnalysis: true,
+        errorDetails: error instanceof Error ? error.message : 'Unknown error'
+      },
+      analysisTime: Date.now()
     }
   }
 
@@ -756,8 +948,24 @@ export class GoogleMapsScraper {
     const opportunities: string[] = []
     const roles: ('web-developer' | 'seo-specialist' | 'designer' | 'marketing-specialist' | 'legal-consultant')[] = []
 
-    if (!analysis.isAccessible) {
+    // CONTROLLO SICUREZZA: Verifica che l'analisi esista
+    if (!analysis) {
+      console.log('⚠️ Analisi non disponibile, uso fallback per opportunità')
+      opportunities.push('Necessaria analisi tecnica del sito web')
+      opportunities.push('Verifica funzionamento e accessibilità sito')
+      roles.push('web-developer', 'seo-specialist')
+      return { opportunities, roles }
+    }
+
+    // CONTROLLO SICUREZZA: Sito non accessibile o con errori
+    if (analysis.isAccessible === false || analysis.error || analysis.issues?.analysisError) {
       opportunities.push('Sito web non accessibile o non funzionante')
+      if (analysis.issues?.websiteNotAccessible) {
+        opportunities.push('Necessaria riparazione o creazione nuovo sito')
+      }
+      if (analysis.issues?.httpStatus) {
+        opportunities.push('Problemi di hosting o configurazione server')
+      }
       roles.push('web-developer')
       return { opportunities, roles }
     }

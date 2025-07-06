@@ -57,9 +57,9 @@ export class ScrapingOrchestrator {
           case 'google_maps':
             businesses = await this.googleMapsScraper.scrape(target)
             break
-          case 'yelp':
-            businesses = await this.yelpScraper.scrape(target)
-            break
+          // case 'yelp':
+          //   businesses = await this.yelpScraper.scrape(target)
+          //   break
           default:
             this.logger.warn(`⚠️  Fonte non supportata: ${target.source}`)
             continue
