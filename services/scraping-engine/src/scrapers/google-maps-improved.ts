@@ -650,7 +650,7 @@ export class GoogleMapsScraper {
         const statusCheck = await statusChecker.checkWebsiteStatus(business.website)
         
         if (statusCheck.isAccessible) {
-          websiteAnalysis = await this.analyzeEnhancedWebsite(business.website)
+          websiteAnalysis = await this.analyzeEnhancedWebsitePrivate(business.website)
         } else {
           console.log(`⚠️ Sito non accessibile: ${statusCheck.errorMessage}`)
           websiteAnalysis = {
@@ -668,7 +668,7 @@ export class GoogleMapsScraper {
         }
         
         // Genera opportunità e ruoli suggeriti basati sull'analisi
-        const analysisResult = this.generateOpportunities(websiteAnalysis)
+        const analysisResult = this.generateOpportunitiesInternal(websiteAnalysis)
         opportunities = analysisResult.opportunities
         suggestedRoles = analysisResult.roles
         
@@ -684,7 +684,7 @@ export class GoogleMapsScraper {
         }
         
         // Genera opportunità anche per analisi fallite
-        const fallbackResult = this.generateOpportunities(websiteAnalysis)
+        const fallbackResult = this.generateOpportunitiesInternal(websiteAnalysis)
         opportunities = fallbackResult.opportunities
         suggestedRoles = fallbackResult.roles
       }
@@ -718,8 +718,27 @@ export class GoogleMapsScraper {
    */
   /**
    * Analizza il sito web con approccio robusto e fallback intelligenti
+   * VERSIONE PUBBLICA per test
    */
-  private async analyzeEnhancedWebsite(url: string): Promise<any> {
+  async analyzeEnhancedWebsite(url: string): Promise<any> {
+    return this.analyzeEnhancedWebsitePrivate(url)
+  }
+
+  /**
+   * Genera opportunità e ruoli suggeriti dall'analisi del sito
+   * VERSIONE PUBBLICA per test
+   */
+  generateOpportunities(analysis: any): {
+    opportunities: string[]
+    roles: ('web-developer' | 'seo-specialist' | 'designer' | 'marketing-specialist' | 'legal-consultant')[]
+  } {
+    return this.generateOpportunitiesInternal(analysis)
+  }
+
+  /**
+   * Analizza il sito web con approccio robusto e fallback intelligenti
+   */
+  private async analyzeEnhancedWebsitePrivate(url: string): Promise<any> {
     console.log(`🔎 Analisi sito con approccio robusto: ${url}`)
     
     try {
@@ -935,13 +954,13 @@ export class GoogleMapsScraper {
    * Analizza il sito web (metodo legacy mantenuto per compatibilità)
    */
   private async analyzeSite(url: string): Promise<any> {
-    return this.analyzeEnhancedWebsite(url)
+    return this.analyzeEnhancedWebsitePrivate(url)
   }
 
   /**
-   * Genera opportunità e ruoli suggeriti dall'analisi del sito (versione migliorata)
+   * Genera opportunità e ruoli suggeriti dall'analisi del sito (versione interna)
    */
-  private generateOpportunities(analysis: any): {
+  private generateOpportunitiesInternal(analysis: any): {
     opportunities: string[]
     roles: ('web-developer' | 'seo-specialist' | 'designer' | 'marketing-specialist' | 'legal-consultant')[]
   } {
@@ -957,6 +976,19 @@ export class GoogleMapsScraper {
       return { opportunities, roles }
     }
 
+    // DEBUG: Log struttura analisi per debugging
+    console.log('🔍 Struttura analisi ricevuta:', {
+      isAccessible: analysis.isAccessible,
+      hasSSL: analysis.hasSSL,
+      hasSEO: !!analysis.seo,
+      hasPerformance: !!analysis.performance,
+      hasImages: !!analysis.images,
+      hasGDPR: !!analysis.gdpr,
+      hasTracking: !!analysis.tracking,
+      hasMobile: !!analysis.mobile,
+      hasIssues: !!analysis.issues
+    })
+
     // CONTROLLO SICUREZZA: Sito non accessibile o con errori
     if (analysis.isAccessible === false || analysis.error || analysis.issues?.analysisError) {
       opportunities.push('Sito web non accessibile o non funzionante')
@@ -970,143 +1002,225 @@ export class GoogleMapsScraper {
       return { opportunities, roles }
     }
 
-    // Nuova struttura per analisi EnhancedWebsiteAnalyzer
+    // Analisi SEO - LOGICA MIGLIORATA
     if (analysis.seo) {
-      if (!analysis.seo.hasTitle) {
-        opportunities.push('Manca il titolo della pagina')
+      console.log('🔍 Analisi SEO dettagliata:', {
+        hasTitle: analysis.seo.hasTitle,
+        titleLength: analysis.seo.titleLength,
+        hasMetaDescription: analysis.seo.hasMetaDescription,
+        metaDescriptionLength: analysis.seo.metaDescriptionLength,
+        hasH1: analysis.seo.hasH1,
+        h1Count: analysis.seo.h1Count
+      })
+
+      // Solo se il titolo è veramente mancante o vuoto
+      if (!analysis.seo.hasTitle || analysis.seo.titleLength === 0) {
+        opportunities.push('Missing page title')
         roles.push('seo-specialist')
       }
-      if (!analysis.seo.hasMetaDescription) {
-        opportunities.push('Manca la meta description')
+      
+      // Solo se la meta description è veramente mancante o vuota
+      if (!analysis.seo.hasMetaDescription || analysis.seo.metaDescriptionLength === 0) {
+        opportunities.push('Missing meta description')
         roles.push('seo-specialist')
       }
-      if (!analysis.seo.hasH1) {
-        opportunities.push('Struttura HTML non ottimizzata (manca H1)')
+      
+      // Solo se H1 è veramente mancante
+      if (!analysis.seo.hasH1 || analysis.seo.h1Count === 0) {
+        opportunities.push('Missing H1 tag')
         roles.push('seo-specialist', 'web-developer')
       }
+      
+      // Controlli aggiuntivi solo se mancanti
       if (!analysis.seo.hasStructuredData) {
         opportunities.push('Mancano i dati strutturati per SEO')
         roles.push('seo-specialist')
       }
-      if (!analysis.seo.hasSitemap) {
-        opportunities.push('Manca la sitemap XML')
-        roles.push('seo-specialist', 'web-developer')
+      
+      // Solo se titolo troppo corto o troppo lungo
+      if (analysis.seo.hasTitle && (analysis.seo.titleLength < 10 || analysis.seo.titleLength > 60)) {
+        opportunities.push('Titolo pagina da ottimizzare (lunghezza non ideale)')
+        roles.push('seo-specialist')
+      }
+      
+      // Solo se meta description troppo corta o troppo lunga
+      if (analysis.seo.hasMetaDescription && (analysis.seo.metaDescriptionLength < 120 || analysis.seo.metaDescriptionLength > 160)) {
+        opportunities.push('Meta description da ottimizzare (lunghezza non ideale)')
+        roles.push('seo-specialist')
       }
     }
 
-    // Problemi di performance
+    // Problemi di performance - LOGICA MIGLIORATA
     if (analysis.performance) {
-      if (analysis.performance.overallScore < 50) {
-        opportunities.push('Performance del sito web scadente')
+      console.log('🔍 Analisi Performance:', {
+        overallScore: analysis.performance.overallScore,
+        loadTime: analysis.performance.loadTime,
+        score: analysis.performance.score
+      })
+
+      // Solo se la performance è realmente scadente
+      if (analysis.performance.overallScore && analysis.performance.overallScore < 40) {
+        opportunities.push('Slow page load time')
         roles.push('web-developer')
       }
-      if (analysis.performance.loadTime > 3) {
-        opportunities.push('Tempi di caricamento lenti')
+      
+      // Solo se il tempo di caricamento è realmente lento (> 4 secondi)
+      if (analysis.performance.loadTime && analysis.performance.loadTime > 4000) {
+        opportunities.push('Page load time optimization needed')
         roles.push('web-developer')
       }
     }
 
-    // Problemi immagini
+    // Problemi immagini - LOGICA MIGLIORATA
     if (analysis.images) {
-      if (analysis.images.withoutAlt > 0) {
-        opportunities.push('Immagini senza attributo alt per accessibilità')
+      console.log('🔍 Analisi Immagini:', {
+        total: analysis.images.total,
+        withoutAlt: analysis.images.withoutAlt,
+        broken: analysis.images.broken
+      })
+
+      // Solo se ci sono realmente immagini rotte
+      if (analysis.images.broken && analysis.images.broken > 0) {
+        opportunities.push('Broken images detected')
         roles.push('web-developer', 'designer')
       }
-      if (analysis.images.broken > 0) {
-        opportunities.push('Immagini rotte o non funzionanti')
+      
+      // Solo se ci sono molte immagini senza alt (> 20% del totale)
+      if (analysis.images.withoutAlt && analysis.images.total && 
+          (analysis.images.withoutAlt / analysis.images.total) > 0.2) {
+        opportunities.push('Images missing alt text for accessibility')
         roles.push('web-developer', 'designer')
       }
     }
 
-    // Problemi di tracking e analytics
+    // Problemi di tracking e analytics - LOGICA MIGLIORATA
     if (analysis.tracking) {
-      if (analysis.tracking.trackingScore < 30) {
-        opportunities.push('Strumenti di analisi mancanti o incompleti')
+      console.log('🔍 Analisi Tracking:', {
+        hasGoogleAnalytics: analysis.tracking.hasGoogleAnalytics,
+        hasFacebookPixel: analysis.tracking.hasFacebookPixel,
+        trackingScore: analysis.tracking.trackingScore
+      })
+
+      // Solo se manca completamente Google Analytics
+      if (!analysis.tracking.hasGoogleAnalytics) {
+        opportunities.push('No analytics tracking detected')
         roles.push('marketing-specialist')
       }
-      if (!analysis.tracking.googleAnalytics) {
-        opportunities.push('Manca Google Analytics')
-        roles.push('marketing-specialist')
-      }
-      if (!analysis.tracking.facebookPixel) {
-        opportunities.push('Manca Facebook Pixel')
+      
+      // Facebook Pixel è opzionale, suggeriamo solo se mancano entrambi
+      if (!analysis.tracking.hasGoogleAnalytics && !analysis.tracking.hasFacebookPixel) {
+        opportunities.push('Missing conversion tracking tools')
         roles.push('marketing-specialist')
       }
     }
 
-    // Problemi GDPR
+    // Problemi GDPR - LOGICA MIGLIORATA
     if (analysis.gdpr) {
+      console.log('🔍 Analisi GDPR:', {
+        hasCookieConsent: analysis.gdpr.hasCookieConsent,
+        hasPrivacyPolicy: analysis.gdpr.hasPrivacyPolicy
+      })
+
+      // Solo se manca completamente il consenso cookie
       if (!analysis.gdpr.hasCookieConsent) {
-        opportunities.push('Non conforme al GDPR (manca gestione cookie)')
+        opportunities.push('Missing cookie consent banner')
         roles.push('legal-consultant', 'web-developer')
       }
+      
+      // Solo se manca completamente la privacy policy
       if (!analysis.gdpr.hasPrivacyPolicy) {
-        opportunities.push('Manca la privacy policy')
+        opportunities.push('Missing privacy policy')
         roles.push('legal-consultant')
       }
     }
 
-    // Problemi mobile
-    if (analysis.mobile && !analysis.mobile.isMobileFriendly) {
-      opportunities.push('Sito non ottimizzato per dispositivi mobili')
-      roles.push('web-developer', 'designer')
+    // Problemi mobile - LOGICA MIGLIORATA
+    if (analysis.mobile) {
+      console.log('🔍 Analisi Mobile:', {
+        isMobileFriendly: analysis.mobile.isMobileFriendly,
+        score: analysis.mobile.score
+      })
+
+      // Solo se il sito è veramente non mobile-friendly
+      if (analysis.mobile.isMobileFriendly === false) {
+        opportunities.push('Not mobile-friendly')
+        roles.push('web-developer', 'designer')
+      }
     }
 
-    // Problemi tecnologici
+    // Problemi tecnologici - LOGICA MIGLIORATA
     if (analysis.techStack) {
-      if (analysis.techStack.outdatedTech.length > 0) {
-        opportunities.push('Tecnologie obsolete da aggiornare')
+      console.log('🔍 Analisi Tech Stack:', {
+        hasOutdatedTech: analysis.techStack.outdatedTech?.length > 0,
+        hasAnalytics: analysis.techStack.hasAnalytics
+      })
+
+      // Solo se ci sono realmente tecnologie obsolete
+      if (analysis.techStack.outdatedTech && analysis.techStack.outdatedTech.length > 0) {
+        opportunities.push('Outdated technology detected')
         roles.push('web-developer')
       }
-      if (!analysis.techStack.hasAnalytics) {
-        opportunities.push('Mancano strumenti di analisi web')
-        roles.push('marketing-specialist')
-      }
     }
 
-    // Fallback per analisi legacy
-    if (analysis.issues) {
+    // Fallback per analisi legacy - SOLO se non abbiamo analisi enhanced
+    if (!analysis.seo && !analysis.performance && analysis.issues) {
+      console.log('🔍 Usando fallback legacy per issues:', analysis.issues)
+      
       if (analysis.issues.missingTitle) {
-        opportunities.push('Manca il titolo della pagina')
+        opportunities.push('Missing page title')
         roles.push('seo-specialist')
       }
       if (analysis.issues.missingMetaDescription) {
-        opportunities.push('Manca la meta description')
+        opportunities.push('Missing meta description')
         roles.push('seo-specialist')
       }
       if (analysis.issues.missingH1) {
-        opportunities.push('Struttura HTML non ottimizzata')
+        opportunities.push('Missing H1 tag')
         roles.push('seo-specialist', 'web-developer')
       }
       if (analysis.issues.slowLoading) {
-        opportunities.push('Sito web lento da caricare')
+        opportunities.push('Slow page load time')
         roles.push('web-developer')
       }
       if (analysis.issues.brokenImages) {
-        opportunities.push('Immagini rotte o non funzionanti')
+        opportunities.push('Broken images detected')
         roles.push('web-developer', 'designer')
       }
       if (analysis.issues.noTracking) {
-        opportunities.push('Mancano strumenti di analisi (Google Analytics, Facebook Pixel)')
+        opportunities.push('No analytics tracking detected')
         roles.push('marketing-specialist')
       }
       if (analysis.issues.noCookieConsent) {
-        opportunities.push('Non conforme al GDPR (manca gestione cookie)')
+        opportunities.push('Missing cookie consent banner')
         roles.push('legal-consultant', 'web-developer')
       }
       if (analysis.issues.missingPartitaIva) {
-        opportunities.push('Partita IVA non visibile sul sito')
+        opportunities.push('Missing VAT number')
         roles.push('legal-consultant')
-      }
-      if (analysis.issues.noSocialPresence) {
-        opportunities.push('Assenza sui social media')
-        roles.push('marketing-specialist', 'designer')
       }
     }
 
+    // SICUREZZA: Se non abbiamo trovato problemi reali, aggiungiamo solo opportunità generiche
+    if (opportunities.length === 0) {
+      console.log('✅ Sito web sembra ben strutturato, genero opportunità generiche')
+      
+      // Opportunità generiche per lead di qualità
+      opportunities.push('Website analysis and optimization consultation')
+      opportunities.push('Digital marketing strategy consultation')
+      roles.push('seo-specialist', 'marketing-specialist')
+    }
+
     // Rimuovi duplicati
+    const uniqueOpportunities = [...new Set(opportunities)]
     const uniqueRoles = [...new Set(roles)]
-    return { opportunities, roles: uniqueRoles }
+
+    console.log(`📊 Opportunità generate: ${uniqueOpportunities.length}, Ruoli: ${uniqueRoles.length}`)
+    console.log(`🎯 Opportunità: ${uniqueOpportunities.join(', ')}`)
+
+    return { 
+      opportunities: uniqueOpportunities, 
+      roles: uniqueRoles 
+    }
   }
 
   /**
