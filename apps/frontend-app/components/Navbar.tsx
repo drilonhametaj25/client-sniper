@@ -85,7 +85,9 @@ export default function Navbar() {
       { name: 'Utenti', href: '/admin/users', icon: Users, description: 'Gestione Utenti' },
       { name: 'Feedback', href: '/admin/feedback', icon: MessageSquare, description: 'Segnalazioni Utenti' },
       { name: 'Settings', href: '/admin/settings', icon: Settings, description: 'Configurazioni Sistema' },
-    ] : []),
+    ] : [
+      { name: 'Feedback Community', href: '/feedback', icon: MessageSquare, description: 'Feedback e suggerimenti della community' },
+    ]),
     { name: 'Analisi Manuale', href: '/tools/manual-scan', icon: Target, description: 'Analizza qualsiasi sito web' },
     { name: 'Mio account', href: '/settings', icon: User, description: 'Gestisci account e abbonamento' },
     { 
@@ -97,6 +99,7 @@ export default function Navbar() {
   ] : [
     { name: 'Dashboard', href: '/dashboard', icon: Home, description: 'I miei lead' },
     { name: 'Analisi Manuale', href: '/tools/manual-scan', icon: Target, description: 'Analizza qualsiasi sito web' },
+    { name: 'Feedback Community', href: '/feedback', icon: MessageSquare, description: 'Feedback e suggerimenti della community' },
     { name: 'Mio account', href: '/settings', icon: User, description: 'Gestisci account e abbonamento' },
     { name: 'Upgrade', href: '/upgrade', icon: Crown, description: 'Aggiorna piano' },
   ]

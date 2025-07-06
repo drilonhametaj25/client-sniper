@@ -2,14 +2,15 @@
 // Utilizzato dal FeedbackWidget per inviare segnalazioni, suggerimenti e contatti
 // Accessibile sia da utenti registrati che anonimi
 // Include validazione e rate limiting basilare
+// Supporta feedback pubblici con titolo per la vista collaborativa
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { FeedbackSubmissionData } from '@/../../libs/types'
+import { FeedbackSubmissionDataExtended } from '@/../../libs/types'
 
 export async function POST(request: NextRequest) {
   try {
-    const body: FeedbackSubmissionData = await request.json()
+    const body: FeedbackSubmissionDataExtended = await request.json()
     
     
     // Validazione input
@@ -45,6 +46,8 @@ export async function POST(request: NextRequest) {
       feedback_type: body.type,
       feedback_message: body.message.trim(),
       feedback_email: body.email?.trim() || null,
+      feedback_title: body.title?.trim() || null,
+      is_public_feedback: body.isPublic || false,
       user_agent_info: userAgent,
       current_page_url: body.pageUrl || null
     })

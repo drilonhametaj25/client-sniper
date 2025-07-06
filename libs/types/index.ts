@@ -175,6 +175,10 @@ export interface FeedbackReport {
   email?: string;
   type: 'bug' | 'suggestion' | 'contact' | 'other';
   message: string;
+  title?: string;
+  is_public?: boolean;
+  upvotes?: number;
+  downvotes?: number;
   created_at: string;
   status: 'open' | 'in_review' | 'closed';
   response?: string;
@@ -197,4 +201,43 @@ export interface FeedbackStats {
   byType: Record<string, number>;
   byStatus: Record<string, number>;
   lastWeek: number;
+}
+
+// Tipi per il sistema di feedback pubblico esteso
+export interface PublicFeedback {
+  id: string;
+  title: string;
+  type: 'bug' | 'suggestion' | 'contact' | 'other';
+  message: string;
+  created_at: string;
+  upvotes: number;
+  downvotes: number;
+  has_admin_response: boolean;
+  user_vote?: 'up' | 'down' | null;
+}
+
+export interface FeedbackDetails extends PublicFeedback {
+  admin_response?: string;
+}
+
+export interface FeedbackVote {
+  id: string;
+  feedback_id: string;
+  user_id: string;
+  vote_type: 'up' | 'down';
+  created_at: string;
+}
+
+export interface FeedbackAbuseReport {
+  id: string;
+  feedback_id: string;
+  reporter_user_id: string;
+  reason: string;
+  created_at: string;
+}
+
+// Estensione del tipo FeedbackSubmissionData esistente
+export interface FeedbackSubmissionDataExtended extends FeedbackSubmissionData {
+  title?: string;
+  isPublic?: boolean;
 }

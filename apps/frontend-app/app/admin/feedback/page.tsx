@@ -25,7 +25,12 @@ import {
   CheckCircle,
   Clock,
   XCircle,
-  Send
+  Send,
+  Globe,
+  ArrowUp,
+  ArrowDown,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react'
 import { FeedbackReport } from '@/../../libs/types'
 
@@ -190,6 +195,32 @@ export default function AdminFeedback() {
     }
   }
 
+  const togglePublicVisibility = async (feedbackId: string, isPublic: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('feedback_reports')
+        .update({ is_public: !isPublic })
+        .eq('id', feedbackId)
+      
+      if (error) {
+        alert('Errore nel cambiare visibilità')
+        return
+      }
+      
+      // Aggiorna lo stato locale
+      setFeedbacks(prev =>
+        prev.map(f => 
+          f.id === feedbackId 
+            ? { ...f, is_public: !isPublic }
+            : f
+        )
+      )
+      
+    } catch (error) {
+      alert('Errore nel cambiare visibilità')
+    }
+  }
+
   const openFeedbackDetail = (feedback: FeedbackReport) => {
     setSelectedFeedback(feedback)
     setAdminResponse(feedback.response || '')
@@ -349,6 +380,12 @@ export default function AdminFeedback() {
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Messaggio
                 </th>
+                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Pubblico
+                </th>
+                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Voti
+                </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Stato
                 </th>
@@ -360,7 +397,7 @@ export default function AdminFeedback() {
             <tbody className="divide-y divide-gray-200 bg-white">
               {loadingData ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center">
+                  <td colSpan={7} className="px-6 py-8 text-center">
                     <div className="flex justify-center">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
                     </div>
@@ -369,7 +406,7 @@ export default function AdminFeedback() {
                 </tr>
               ) : filteredFeedbacks.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center">
+                  <td colSpan={7} className="px-6 py-8 text-center">
                     {searchTerm || filterType || filterStatus ? (
                       <p className="text-gray-500">Nessun feedback corrisponde ai criteri di ricerca</p>
                     ) : (
@@ -418,6 +455,11 @@ export default function AdminFeedback() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-900 max-w-xs truncate">
+                          {feedback.title && (
+                            <div className="font-medium text-gray-900 mb-1">
+                              {feedback.title}
+                            </div>
+                          )}
                           {feedback.message}
                         </div>
                         {feedback.page_url && (
@@ -425,6 +467,40 @@ export default function AdminFeedback() {
                             <ExternalLink className="w-3 h-3 mr-1" />
                             <span className="truncate max-w-xs">{feedback.page_url}</span>
                           </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <button
+                          onClick={() => togglePublicVisibility(feedback.id, feedback.is_public || false)}
+                          className={`p-2 rounded-lg transition-colors ${
+                            feedback.is_public
+                              ? 'bg-green-100 text-green-600 hover:bg-green-200'
+                              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                          }`}
+                          title={feedback.is_public ? 'Rimuovi da vista pubblica' : 'Rendi pubblico'}
+                        >
+                          {feedback.is_public ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
+                        </button>
+                        {feedback.is_public && (
+                          <div className="flex items-center justify-center mt-1">
+                            <Globe className="w-3 h-3 text-green-500" />
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        {feedback.is_public ? (
+                          <div className="flex items-center justify-center space-x-2">
+                            <div className="flex items-center text-green-600">
+                              <ArrowUp className="w-4 h-4 mr-1" />
+                              <span className="text-sm font-medium">{feedback.upvotes || 0}</span>
+                            </div>
+                            <div className="flex items-center text-red-600">
+                              <ArrowDown className="w-4 h-4 mr-1" />
+                              <span className="text-sm font-medium">{feedback.downvotes || 0}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-sm">-</span>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

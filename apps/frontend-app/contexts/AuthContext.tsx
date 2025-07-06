@@ -21,6 +21,7 @@ const AuthContext = createContext<AuthState & {
   signUp: (email: string, password: string) => Promise<any>
   signOut: () => Promise<any>
   refreshProfile: () => Promise<void>
+  getAccessToken: () => string | null
 }>({
   user: null,
   session: null,
@@ -28,7 +29,8 @@ const AuthContext = createContext<AuthState & {
   signIn: async () => ({}),
   signUp: async () => ({}),
   signOut: async () => ({}),
-  refreshProfile: async () => {}
+  refreshProfile: async () => {},
+  getAccessToken: () => null
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -463,6 +465,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user, getCachedProfile, setUserProtected])
 
+  const getAccessToken = useCallback(() => {
+    return session?.access_token || null
+  }, [session])
+
   const value = {
     user,
     session,
@@ -470,7 +476,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signUp,
     signOut,
-    refreshProfile
+    refreshProfile,
+    getAccessToken
   }
 
   return (

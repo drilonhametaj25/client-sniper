@@ -270,4 +270,51 @@ Il sistema supporta la raccolta di feedback dagli utenti con pannello admin dedi
 - Navigazione: `/admin/feedback`
 - Permessi: solo utenti con `role = 'admin'`
 - Funzionalità: visualizzazione, filtri, cambio stato, note interne
+
+## Sistema Feedback Pubblico (FEATURE)
+
+Il sistema di feedback è stato esteso con una vista pubblica e collaborativa:
+
+### Funzionalità Pubbliche
+- Vista pubblica `/feedback` accessibile a tutti (stile Reddit/HackerNews)
+- Thread consultabili con filtri per tipo (bug, suggestion, contact, other)
+- Sistema di upvote/downvote per feedback pubblici (solo utenti registrati)
+- Ordinamento per data, voti, o discussione più attiva
+- Pagina dettaglio `/feedback/[id]` per ogni feedback pubblico
+- Segnalazione contenuti inappropriati (solo utenti registrati)
+
+### Separazione Dati
+- Dati sensibili (email, note admin) rimangono privati
+- Contenuti pubblici: titolo, messaggio, tipo, voti, risposta admin
+- Gli utenti possono scegliere se rendere pubblico il loro feedback
+
+### Database Esteso
+- Tabella `feedback_reports` con campi: `is_public`, `title`, `upvotes`, `downvotes`
+- Tabella `feedback_votes` per voti up/down degli utenti
+- Tabella `feedback_abuse_reports` per segnalazioni inappropriate
+- Trigger automatici per aggiornamento contatori voti
+
+### API Endpoints
+- `GET /api/feedback/public` - Lista feedback pubblici con filtri/ordinamento
+- `GET /api/feedback/[id]` - Dettagli singolo feedback pubblico
+- `POST /api/feedback/vote` - Vota feedback (richiede autenticazione)
+- `POST /api/feedback/report` - Segnala contenuto inappropriato
+
+### Componenti
+- `/apps/frontend-app/app/feedback/page.tsx` - Vista pubblica feedback
+- `/apps/frontend-app/app/feedback/[id]/page.tsx` - Dettaglio feedback
+- `FeedbackWidget` esteso con opzione "Rendi pubblico"
+- Pannello admin esteso con toggle pubblicazione e vista voti
+
+### Navigazione
+- Link "Feedback Community" nella navbar per utenti normali
+- Mantiene link "Feedback" per admin nel pannello amministrativo
+- Accessibile sia da utenti registrati che anonimi (visualizzazione)
+
+### Caratteristiche UX
+- Design minimale Apple/Linear consistente con il resto dell'app
+- Responsive design per mobile e desktop
+- Badge "Risposta admin" per feedback con risposta ufficiale
+- Controlli anti-spam e prevenzione voti/segnalazioni multiple
+- Separazione completa tra vista pubblica e gestione admin
 ````

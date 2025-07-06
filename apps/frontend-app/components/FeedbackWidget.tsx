@@ -1,13 +1,13 @@
 // FeedbackWidget: componente fluttuante per raccogliere feedback dagli utenti
 // Posizionato in basso a destra su tutte le pagine
 // Stile UI moderno ispirato a Apple.com e Linear.app
-// Supporta utenti registrati e anonimi
+// Supporta utenti registrati e anonimi, con opzione per feedback pubblici
 
 'use client'
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { MessageSquare, X, Send, Bug, Lightbulb, Mail, HelpCircle } from 'lucide-react'
+import { MessageSquare, X, Send, Bug, Lightbulb, Mail, HelpCircle, Globe } from 'lucide-react'
 import { FeedbackSubmissionData } from '@/../../libs/types'
 
 const FEEDBACK_TYPES = [
@@ -17,15 +17,22 @@ const FEEDBACK_TYPES = [
   { value: 'other', label: 'Altro', icon: HelpCircle, color: 'text-gray-500' }
 ] as const
 
+interface ExtendedFormData extends FeedbackSubmissionData {
+  title?: string;
+  isPublic?: boolean;
+}
+
 export default function FeedbackWidget() {
   const { user } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
-  const [formData, setFormData] = useState<FeedbackSubmissionData>({
+  const [formData, setFormData] = useState<ExtendedFormData>({
     type: 'bug',
     message: '',
-    email: user?.email || ''
+    email: user?.email || '',
+    title: '',
+    isPublic: false
   })
 
   // Aggiorna l'email quando l'utente cambia
@@ -62,7 +69,9 @@ export default function FeedbackWidget() {
         setFormData({
           type: 'bug',
           message: '',
-          email: user?.email || ''
+          email: user?.email || '',
+          title: '',
+          isPublic: false
         })
         
         // Chiudi il widget dopo 3 secondi
@@ -187,6 +196,26 @@ export default function FeedbackWidget() {
               </div>
             )}
 
+            {/* Titolo (obbligatorio per feedback pubblici) */}
+            {formData.isPublic && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Titolo *
+                </label>
+                <input
+                  type="text"
+                  value={formData.title || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Titolo breve e descrittivo del problema/suggerimento"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required={formData.isPublic}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Il titolo aiuterà altri utenti a trovare e votare il tuo feedback
+                </p>
+              </div>
+            )}
+
             {/* Messaggio */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -213,6 +242,27 @@ export default function FeedbackWidget() {
               <p className="text-xs text-gray-500 mt-1">
                 {formData.message.length}/2000 caratteri (minimo 10)
               </p>
+            </div>
+
+            {/* Checkbox per feedback pubblico */}
+            <div className="flex items-start space-x-3">
+              <input
+                type="checkbox"
+                id="isPublic"
+                checked={formData.isPublic}
+                onChange={(e) => setFormData(prev => ({ ...prev, isPublic: e.target.checked }))}
+                className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <div className="flex-1">
+                <label htmlFor="isPublic" className="text-sm font-medium text-gray-700 flex items-center">
+                  <Globe className="w-4 h-4 mr-1 text-blue-500" />
+                  Rendi pubblico questo feedback
+                </label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Il feedback sarà visibile a tutti gli utenti e potrà ricevere voti. 
+                  I tuoi dati personali rimarranno privati.
+                </p>
+              </div>
             </div>
 
             {/* Pulsanti */}
