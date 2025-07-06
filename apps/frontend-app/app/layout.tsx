@@ -6,6 +6,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { Metadata, Viewport } from 'next'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 import { ToastProvider } from '@/components/ToastProvider'
 import Navbar from '@/components/Navbar'
 import CookieConsent from '@/components/CookieConsent'
@@ -125,18 +126,23 @@ export default function RootLayout({
         {/* DNS prefetch per risorse esterne */}
         <link rel="dns-prefetch" href="https://api.klaviyo.com" />
         <link rel="dns-prefetch" href="https://js.stripe.com" />
+        
+        {/* Meta tag per tema mobile */}
+        <meta name="theme-color" content="#ffffff" />
       </head>
-      <body className={`${inter.className} h-full bg-gray-50`}>
+      <body className={`${inter.className} h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-300`}>
         <ToastProvider>
           <AuthProvider>
-            <div id="root" className="min-h-full">
-              <Navbar />
-              <main className="min-h-screen">
-                {children}
-              </main>
-              <CookieConsent />
-              <FeedbackWidget />
-            </div>
+            <ThemeProvider>
+              <div id="root" className="min-h-full">
+                <Navbar />
+                <main className="min-h-screen">
+                  {children}
+                </main>
+                <CookieConsent />
+                <FeedbackWidget />
+              </div>
+            </ThemeProvider>
           </AuthProvider>
         </ToastProvider>
       </body>

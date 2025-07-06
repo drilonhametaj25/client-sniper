@@ -259,10 +259,10 @@ export default function AdminUsers() {
         
         {/* Error Message */}
         {loadingError && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-8">
+          <div className="bg-red-50 dark:bg-red-900/50 border-l-4 border-red-500 p-4 mb-8">
             <div className="flex items-center">
               <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
-              <p className="text-red-700 font-medium">
+              <p className="text-red-700 dark:text-red-200 font-medium">
                 {loadingError}
               </p>
             </div>

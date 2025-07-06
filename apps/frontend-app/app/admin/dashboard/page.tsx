@@ -180,23 +180,23 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-3">
-              <Target className="h-8 w-8 text-brand-600" />
+              <Target className="h-8 w-8 text-brand-600 dark:text-brand-400" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-                <p className="text-sm text-gray-600">TrovaMi Administration Panel</p>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
+                <p className="text-sm text-gray-600 dark:text-gray-300">TrovaMi Administration Panel</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Ciao, {user.email}</span>
+              <span className="text-sm text-gray-600 dark:text-gray-300">Ciao, {user.email}</span>
               <button
                 onClick={() => router.push('/logout')}
-                className="text-sm text-red-600 hover:text-red-700"
+                className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
               >
                 Logout
               </button>
@@ -287,58 +287,58 @@ export default function AdminDashboard() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
-              <Database className="h-8 w-8 text-blue-600" />
+              <Database className="h-8 w-8 text-blue-600 dark:text-blue-400" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Leads</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalLeads}</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Total Leads</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalLeads}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
-              <BarChart3 className="h-8 w-8 text-green-600" />
+              <BarChart3 className="h-8 w-8 text-green-600 dark:text-green-400" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Avg Score</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.avgScore}</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Avg Score</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.avgScore}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
-              <TrendingUp className="h-8 w-8 text-purple-600" />
+              <TrendingUp className="h-8 w-8 text-purple-600 dark:text-purple-400" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Leads Oggi</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.leadsToday}</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Leads Oggi</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.leadsToday}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
-              <CheckCircle className="h-8 w-8 text-orange-600" />
+              <CheckCircle className="h-8 w-8 text-orange-600 dark:text-orange-400" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Sistema</p>
-                <p className="text-lg font-bold text-green-600">Attivo</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Sistema</p>
+                <p className="text-lg font-bold text-green-600 dark:text-green-400">Attivo</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Leads Table */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-medium text-gray-900">Lead Database</h2>
+              <h2 className="text-lg font-medium text-gray-900 dark:text-white">Lead Database</h2>
               <div className="flex items-center space-x-3">
                 {/* Filter */}
                 <select
                   value={filterRole}
                   onChange={(e) => setFilterRole(e.target.value)}
-                  className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+                  className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                 >
                   <option value="">All Roles</option>
                   <option value="designer">Designer</option>
@@ -353,7 +353,7 @@ export default function AdminDashboard() {
 
                 <button
                   onClick={loadDashboardData}
-                  className="flex items-center px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                  className="flex items-center px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Refresh
@@ -361,7 +361,7 @@ export default function AdminDashboard() {
 
                 <button
                   onClick={exportLeads}
-                  className="flex items-center px-3 py-2 text-sm bg-brand-600 text-white rounded-md hover:bg-brand-700"
+                  className="flex items-center px-3 py-2 text-sm bg-brand-600 text-white rounded-md hover:bg-brand-700 dark:bg-brand-700 dark:hover:bg-brand-600"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Export CSV
@@ -371,43 +371,43 @@ export default function AdminDashboard() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Business
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Location
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Score
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Needed Roles
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Issues
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {leads.map((lead) => (
-                  <tr key={lead.id} className="hover:bg-gray-50">
+                  <tr key={lead.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
                           {lead.business_name}
                         </div>
-                        <div className="text-sm text-gray-500">{lead.category}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{lead.category}</div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{lead.city}</div>
-                      <div className="text-sm text-gray-500">{lead.phone}</div>
+                      <div className="text-sm text-gray-900 dark:text-white">{lead.city}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">{lead.phone}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getScoreColor(lead.score)}`}>
@@ -425,19 +425,19 @@ export default function AdminDashboard() {
                           </span>
                         ))}
                         {lead.needed_roles?.length > 3 && (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
                             +{lead.needed_roles.length - 3}
                           </span>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">
+                      <div className="text-sm text-gray-900 dark:text-white">
                         {lead.issues?.length || 0} issues
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button className="text-brand-600 hover:text-brand-900 mr-3">
+                      <button className="text-brand-600 hover:text-brand-900 dark:text-brand-400 dark:hover:text-brand-300 mr-3">
                         <Eye className="h-4 w-4" />
                       </button>
                     </td>
@@ -449,9 +449,9 @@ export default function AdminDashboard() {
 
           {leads.length === 0 && (
             <div className="text-center py-12">
-              <AlertTriangle className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No leads found</h3>
-              <p className="mt-1 text-sm text-gray-500">
+              <AlertTriangle className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No leads found</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 {filterRole ? `No leads need "${filterRole}" services.` : 'No leads available.'}
               </p>
             </div>

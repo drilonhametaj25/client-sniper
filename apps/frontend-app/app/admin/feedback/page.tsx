@@ -35,16 +35,16 @@ import {
 import { FeedbackReport } from '@/../../libs/types'
 
 const FEEDBACK_TYPES = [
-  { value: 'bug', label: 'Bug', icon: Bug, color: 'text-red-500 bg-red-50' },
-  { value: 'suggestion', label: 'Suggerimento', icon: Lightbulb, color: 'text-yellow-500 bg-yellow-50' },
-  { value: 'contact', label: 'Contatto', icon: Mail, color: 'text-blue-500 bg-blue-50' },
-  { value: 'other', label: 'Altro', icon: HelpCircle, color: 'text-gray-500 bg-gray-50' }
+  { value: 'bug', label: 'Bug', icon: Bug, color: 'text-red-500 bg-red-50 dark:bg-red-900/20 dark:text-red-400' },
+  { value: 'suggestion', label: 'Suggerimento', icon: Lightbulb, color: 'text-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 dark:text-yellow-400' },
+  { value: 'contact', label: 'Contatto', icon: Mail, color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400' },
+  { value: 'other', label: 'Altro', icon: HelpCircle, color: 'text-gray-500 bg-gray-50 dark:bg-gray-800 dark:text-gray-400' }
 ] as const
 
 const STATUS_CONFIG = [
-  { value: 'open', label: 'Aperto', color: 'text-orange-600 bg-orange-50', icon: AlertTriangle },
-  { value: 'in_review', label: 'In Revisione', color: 'text-blue-600 bg-blue-50', icon: Clock },
-  { value: 'closed', label: 'Chiuso', color: 'text-green-600 bg-green-50', icon: CheckCircle }
+  { value: 'open', label: 'Aperto', color: 'text-orange-600 bg-orange-50 dark:bg-orange-900/20 dark:text-orange-400', icon: AlertTriangle },
+  { value: 'in_review', label: 'In Revisione', color: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400', icon: Clock },
+  { value: 'closed', label: 'Chiuso', color: 'text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400', icon: CheckCircle }
 ] as const
 
 export default function AdminFeedback() {
@@ -229,8 +229,8 @@ export default function AdminFeedback() {
 
   if (loading) {
     return (
-      <div className="p-8 flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="p-8 flex justify-center items-center min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 dark:border-blue-400"></div>
       </div>
     )
   }
@@ -240,13 +240,13 @@ export default function AdminFeedback() {
   }
 
   return (
-    <div className="p-4 md:p-8">
+    <div className="p-4 md:p-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold flex items-center">
+          <h1 className="text-2xl md:text-3xl font-bold flex items-center text-gray-900 dark:text-white">
             <MessageSquare className="mr-2" /> Gestione Feedback
           </h1>
-          <p className="text-gray-500">
+          <p className="text-gray-500 dark:text-gray-400">
             Segnalazioni, suggerimenti e richieste degli utenti
           </p>
         </div>
@@ -262,32 +262,32 @@ export default function AdminFeedback() {
           <p className="text-2xl font-bold">{feedbacks.length}</p>
         </div>
 
-        <div className="bg-white shadow rounded-lg p-4">
+        <div className="bg-white dark:bg-gray-800 shadow-sm dark:shadow-gray-900/20 rounded-lg p-4 border dark:border-gray-700">
           <div className="flex justify-between">
-            <h3 className="text-gray-500 font-medium">Aperti</h3>
-            <AlertTriangle className="text-orange-500" />
+            <h3 className="text-gray-500 dark:text-gray-400 font-medium">Aperti</h3>
+            <AlertTriangle className="text-orange-500 dark:text-orange-400" />
           </div>
-          <p className="text-2xl font-bold">
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">
             {feedbacks.filter(f => f.status === 'open').length}
           </p>
         </div>
 
-        <div className="bg-white shadow rounded-lg p-4">
+        <div className="bg-white dark:bg-gray-800 shadow-sm dark:shadow-gray-900/20 rounded-lg p-4 border dark:border-gray-700">
           <div className="flex justify-between">
-            <h3 className="text-gray-500 font-medium">In Revisione</h3>
-            <Clock className="text-blue-500" />
+            <h3 className="text-gray-500 dark:text-gray-400 font-medium">In Revisione</h3>
+            <Clock className="text-blue-500 dark:text-blue-400" />
           </div>
-          <p className="text-2xl font-bold">
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">
             {feedbacks.filter(f => f.status === 'in_review').length}
           </p>
         </div>
 
-        <div className="bg-white shadow rounded-lg p-4">
+        <div className="bg-white dark:bg-gray-800 shadow-sm dark:shadow-gray-900/20 rounded-lg p-4 border dark:border-gray-700">
           <div className="flex justify-between">
-            <h3 className="text-gray-500 font-medium">Chiusi</h3>
-            <CheckCircle className="text-green-500" />
+            <h3 className="text-gray-500 dark:text-gray-400 font-medium">Chiusi</h3>
+            <CheckCircle className="text-green-500 dark:text-green-400" />
           </div>
-          <p className="text-2xl font-bold">
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">
             {feedbacks.filter(f => f.status === 'closed').length}
           </p>
         </div>
@@ -297,19 +297,19 @@ export default function AdminFeedback() {
       <div className="mb-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
           <div className="relative w-full md:w-96 mb-4 md:mb-0">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
             <input
               type="text"
               placeholder="Cerca feedback..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             />
           </div>
           
           <div className="flex items-center space-x-2">
             <button 
-              className="flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              className="flex items-center px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors text-gray-700 dark:text-gray-300"
               onClick={() => setShowFilters(!showFilters)}
             >
               <Filter className="mr-2" size={16} />
@@ -319,7 +319,7 @@ export default function AdminFeedback() {
             
             {(filterType || filterStatus) && (
               <button 
-                className="flex items-center px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className="flex items-center px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                 onClick={resetFilters}
               >
                 Reset
@@ -329,13 +329,13 @@ export default function AdminFeedback() {
         </div>
         
         {showFilters && (
-          <div className="bg-gray-50 p-4 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 border dark:border-gray-700">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo</label>
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                className="w-full p-2 border rounded-lg"
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="">Tutti i tipi</option>
                 {FEEDBACK_TYPES.map(type => (
@@ -347,11 +347,11 @@ export default function AdminFeedback() {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Stato</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stato</label>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full p-2 border rounded-lg"
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="">Tutti gli stati</option>
                 {STATUS_CONFIG.map(status => (
@@ -366,35 +366,35 @@ export default function AdminFeedback() {
       </div>
       
       {/* Tabella feedback */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 shadow-sm dark:shadow-gray-900/20 rounded-lg overflow-hidden border dark:border-gray-700">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Data / Tipo
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Utente
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Messaggio
                 </th>
-                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Pubblico
                 </th>
-                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Voti
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Stato
                 </th>
-                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Azioni
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
               {loadingData ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-8 text-center">

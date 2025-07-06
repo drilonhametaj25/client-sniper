@@ -10,6 +10,7 @@ module.exports = {
     './components/**/*.{js,ts,jsx,tsx,mdx}',
     './app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  darkMode: 'class', // Abilita dark mode con classe CSS
   theme: {
     extend: {
       colors: {

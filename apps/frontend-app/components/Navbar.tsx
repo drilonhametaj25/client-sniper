@@ -1,6 +1,6 @@
 // UI restyling stile Apple + Linear
 // Navbar moderna fissa con glassmorphism e design minimale  
-// Layout pulito ispirato a apple.com con navigazione fluida
+// Layout       {/* Navbar fissa con glassmorphism */}
 // Supporta navigazione admin e client con ruoli dinamici
 
 'use client'
@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { Target, User, Settings, LogOut, Menu, X, Crown, Shield, Users, Home, MessageSquare } from 'lucide-react'
 import Button from './ui/Button'
 import Badge from './ui/Badge'
+import ThemeToggle from './theme/ThemeToggle'
 
 export default function Navbar() {
   const { user, signOut } = useAuth()
@@ -107,7 +108,7 @@ export default function Navbar() {
   return (
     <>
       {/* Navbar fissa con glassmorphism */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200/50">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             
@@ -117,11 +118,11 @@ export default function Navbar() {
                 <Target className="w-5 h-5 text-white" />
               </div>
               <div className="hidden sm:block">
-                <span className="text-xl font-bold text-gray-900">
+                <span className="text-xl font-bold text-gray-900 dark:text-white">
                   TrovaMi
                 </span>
                 {isAdmin && (
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
                     {isAdminRoute ? 'Admin Panel' : 'Client View'}
                   </div>
                 )}
@@ -140,8 +141,8 @@ export default function Navbar() {
                       href={item.href}
                       className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
                         isActive
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                          ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
+                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
                       }`}
                     >
                       <item.icon className="h-4 w-4" />
@@ -158,18 +159,21 @@ export default function Navbar() {
                   <Badge variant={getPlanBadgeVariant(user.plan)} size="sm">
                     {formatPlanName(user.plan)}
                   </Badge>
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-gray-600 dark:text-gray-300">
                     {user.credits_remaining} crediti
                   </span>
                 </div>
               </div>
+
+              {/* Theme Toggle */}
+              <ThemeToggle variant="compact" />
 
               {/* Logout Button */}
               <Button
                 onClick={handleSignOut}
                 variant="ghost"
                 size="sm"
-                className="text-gray-600 hover:text-red-600"
+                className="text-gray-600 hover:text-red-600 dark:text-gray-300 dark:hover:text-red-400"
               >
                 <LogOut className="w-4 h-4" />
               </Button>
@@ -181,7 +185,7 @@ export default function Navbar() {
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 variant="ghost"
                 size="sm"
-                className="text-gray-600"
+                className="text-gray-600 dark:text-gray-300"
               >
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </Button>
@@ -190,7 +194,7 @@ export default function Navbar() {
 
           {/* Mobile Navigation */}
           {mobileMenuOpen && (
-            <div className="md:hidden border-t border-gray-200/50 py-4">
+            <div className="md:hidden border-t border-gray-200/50 dark:border-gray-700/50 py-4">
               <div className="space-y-2">
                 {navigation.map((item) => {
                   const isActive = pathname === item.href
@@ -201,8 +205,8 @@ export default function Navbar() {
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
                         isActive
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                          ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
+                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
                       }`}
                     >
                       <item.icon className="h-4 w-4" />
@@ -228,13 +232,16 @@ export default function Navbar() {
                     <LogOut className="w-4 h-4" />
                   </Button>
                 </div>
-                <div className="flex items-center space-x-2 px-3 py-2">
-                  <Badge variant={getPlanBadgeVariant(user.plan)} size="sm">
-                    {formatPlanName(user.plan)}
-                  </Badge>
-                  <span className="text-sm text-gray-600">
-                    {user.credits_remaining} crediti
-                  </span>
+                <div className="flex items-center justify-between px-3 py-2">
+                  <div className="flex items-center space-x-2">
+                    <Badge variant={getPlanBadgeVariant(user.plan)} size="sm">
+                      {formatPlanName(user.plan)}
+                    </Badge>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
+                      {user.credits_remaining} crediti
+                    </span>
+                  </div>
+                  <ThemeToggle variant="compact" />
                 </div>
               </div>
             </div>
