@@ -1,21 +1,21 @@
-'use client'
+"use client";
 
 // Pagina di dettaglio del lead con analisi completa e grafici
 // Mostra tutte le informazioni disponibili, l'analisi tecnica e visualizzazioni interattive
 // Consuma 1 credito per l'accesso ai dettagli completi
 
-import { useState, useEffect } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
-import { useRouter, useParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
-import { WebsiteAnalysis } from '@/lib/types/analysis'
-import { 
-  ArrowLeft, 
-  ExternalLink, 
-  Phone, 
-  Mail, 
-  MapPin, 
-  Globe, 
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter, useParams } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import { WebsiteAnalysis } from "@/lib/types/analysis";
+import {
+  ArrowLeft,
+  ExternalLink,
+  Phone,
+  Mail,
+  MapPin,
+  Globe,
   AlertTriangle,
   CheckCircle,
   XCircle,
@@ -33,449 +33,568 @@ import {
   Twitter,
   Youtube,
   Search,
-  Smartphone
-} from 'lucide-react'
+  Smartphone,
+} from "lucide-react";
 
 interface Lead {
-  id: string
-  business_name: string
-  website_url: string
-  phone: string
-  email: string
-  address: string
-  city: string
-  category: string
-  score: number
-  needed_roles: string[]
-  issues: string[]
-  analysis: WebsiteAnalysis | any // Può essere sia il nuovo formato che il vecchio
-  created_at: string
-  last_seen_at: string
-  assigned_to: string
-  origin?: 'scraping' | 'manual'
+  id: string;
+  business_name: string;
+  website_url: string;
+  phone: string;
+  email: string;
+  address: string;
+  city: string;
+  category: string;
+  score: number;
+  needed_roles: string[];
+  issues: string[];
+  analysis: WebsiteAnalysis | any; // Può essere sia il nuovo formato che il vecchio
+  created_at: string;
+  last_seen_at: string;
+  assigned_to: string;
+  origin?: "scraping" | "manual";
 }
 
 export default function LeadDetailPage() {
-  const { user, refreshProfile } = useAuth()
-  const router = useRouter()
-  const params = useParams()
-  const leadId = params.id as string
-  
-  const [lead, setLead] = useState<Lead | null>(null)
-  const [analysis, setAnalysis] = useState<WebsiteAnalysis | any>(null)
-  const [loading, setLoading] = useState(true)
-  const [creditConsumed, setCreditConsumed] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { user, refreshProfile } = useAuth();
+  const router = useRouter();
+  const params = useParams();
+  const leadId = params.id as string;
+
+  const [lead, setLead] = useState<Lead | null>(null);
+  const [analysis, setAnalysis] = useState<WebsiteAnalysis | any>(null);
+  const [loading, setLoading] = useState(true);
+  const [creditConsumed, setCreditConsumed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user && leadId) {
-      loadLeadDetails()
+      loadLeadDetails();
     }
-  }, [user, leadId])
+  }, [user, leadId]);
 
   const loadLeadDetails = async () => {
     try {
-      setLoading(true)
-      
+      setLoading(true);
+
       // Prima verifica se l'utente ha già sbloccato questo lead
-      const { data: unlockedLeads, error: unlockedError } = await supabase
-        .rpc('get_user_unlocked_leads', { p_user_id: user?.id })
+      const { data: unlockedLeads, error: unlockedError } = await supabase.rpc(
+        "get_user_unlocked_leads",
+        { p_user_id: user?.id }
+      );
 
       if (unlockedError) {
-        console.error('Errore verifica lead sbloccati:', unlockedError)
+        console.error("Errore verifica lead sbloccati:", unlockedError);
       }
 
-      const isAlreadyUnlocked = unlockedLeads?.some((ul: any) => ul.lead_id === leadId)
-      
+      const isAlreadyUnlocked = unlockedLeads?.some(
+        (ul: any) => ul.lead_id === leadId
+      );
+
       // Se non è già sbloccato, verifica che l'utente abbia crediti sufficienti
       if (!isAlreadyUnlocked && (!user || (user.credits_remaining || 0) <= 0)) {
-        setError('Crediti insufficienti per visualizzare i dettagli del lead')
-        return
+        setError("Crediti insufficienti per visualizzare i dettagli del lead");
+        return;
       }
 
       // Carica il lead
       const { data: leadData, error: leadError } = await supabase
-        .from('leads')
-        .select('*')
-        .eq('id', leadId)
-        .single()
+        .from("leads")
+        .select("*")
+        .eq("id", leadId)
+        .single();
 
       if (leadError) {
-        setError('Lead non trovato')
-        return
+        setError("Lead non trovato");
+        return;
       }
 
       // Verifica se l'utente può vedere questo lead
-      if (user?.role !== 'admin' && leadData.assigned_to && leadData.assigned_to !== user?.id) {
-        setError('Non hai i permessi per visualizzare questo lead')
-        return
+      if (
+        user?.role !== "admin" &&
+        leadData.assigned_to &&
+        leadData.assigned_to !== user?.id
+      ) {
+        setError("Non hai i permessi per visualizzare questo lead");
+        return;
       }
 
-      setLead(leadData)
+      setLead(leadData);
 
       // Carica l'analisi se disponibile
       if (leadData.analysis) {
-        setAnalysis(leadData.analysis)
+        setAnalysis(leadData.analysis);
       }
 
       // Consuma 1 credito solo se non già sbloccato
       if (!isAlreadyUnlocked && !creditConsumed) {
-        await consumeCredit()
+        await consumeCredit();
       } else if (isAlreadyUnlocked) {
-        setCreditConsumed(true) // Marca come già consumato per evitare doppi consumi
+        setCreditConsumed(true); // Marca come già consumato per evitare doppi consumi
       }
-
     } catch (error) {
-      console.error('Errore caricamento lead:', error)
-      setError('Errore nel caricamento del lead')
+      console.error("Errore caricamento lead:", error);
+      setError("Errore nel caricamento del lead");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const consumeCredit = async () => {
     try {
-      if (!user) return
-      
-      const currentCredits = user.credits_remaining || 0
-      
+      if (!user) return;
+
+      const currentCredits = user.credits_remaining || 0;
+
       // Decrementa credito
       const { error } = await supabase
-        .from('users')
-        .update({ 
+        .from("users")
+        .update({
           credits_remaining: currentCredits - 1,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
-        .eq('id', user.id)
+        .eq("id", user.id);
 
-      if (error) throw error
+      if (error) throw error;
 
       // Registra il lead come sbloccato
-      const { error: unlockError } = await supabase
-        .rpc('unlock_lead_for_user', { 
-          p_user_id: user.id, 
-          p_lead_id: leadId 
-        })
+      const { error: unlockError } = await supabase.rpc(
+        "unlock_lead_for_user",
+        {
+          p_user_id: user.id,
+          p_lead_id: leadId,
+        }
+      );
 
       if (unlockError) {
-        console.error('Errore registrazione lead sbloccato:', unlockError)
+        console.error("Errore registrazione lead sbloccato:", unlockError);
       }
 
       // Log dell'utilizzo
-      await supabase
-        .from('credit_usage_log')
-        .insert({
-          user_id: user.id,
-          action: 'lead_detail_view',
-          credits_consumed: 1,
-          credits_remaining: currentCredits - 1,
-          metadata: { lead_id: leadId }
-        })
+      await supabase.from("credit_usage_log").insert({
+        user_id: user.id,
+        action: "lead_detail_view",
+        credits_consumed: 1,
+        credits_remaining: currentCredits - 1,
+        metadata: { lead_id: leadId },
+      });
 
-      setCreditConsumed(true)
-      await refreshProfile()
-
+      setCreditConsumed(true);
+      await refreshProfile();
     } catch (error) {
-      console.error('Errore consumo credito:', error)
+      console.error("Errore consumo credito:", error);
     }
-  }
+  };
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600'
-    if (score >= 60) return 'text-yellow-600'
-    if (score >= 40) return 'text-orange-600'
-    return 'text-red-600'
-  }
+    if (score >= 80) return "text-green-600";
+    if (score >= 60) return "text-yellow-600";
+    if (score >= 40) return "text-orange-600";
+    return "text-red-600";
+  };
 
   const getScoreBgColor = (score: number) => {
-    if (score >= 80) return 'bg-green-100 dark:bg-green-900/20'
-    if (score >= 60) return 'bg-yellow-100 dark:bg-yellow-900/20'
-    if (score >= 40) return 'bg-orange-100 dark:bg-orange-900/20'
-    return 'bg-red-100 dark:bg-red-900/20'
-  }
+    if (score >= 80) return "bg-green-100 dark:bg-green-900/20";
+    if (score >= 60) return "bg-yellow-100 dark:bg-yellow-900/20";
+    if (score >= 40) return "bg-orange-100 dark:bg-orange-900/20";
+    return "bg-red-100 dark:bg-red-900/20";
+  };
 
   // Funzioni helper per compatibilità con vecchio e nuovo formato
   const getSEOScore = () => {
-    if (!analysis) return 0
+    if (!analysis) return 0;
+
     // Nuovo formato
     if (analysis.seo) {
-      const seo = analysis.seo
-      let score = 100
-      if (!seo.hasTitle) score -= 20
-      if (!seo.hasMetaDescription) score -= 20
-      if (!seo.hasH1) score -= 15
-      if (seo.titleLength < 30) score -= 10
-      if (seo.metaDescriptionLength < 50) score -= 10
-      if (!seo.hasStructuredData) score -= 5
-      return Math.max(0, score)
+      const seo = analysis.seo;
+
+      // Se abbiamo score precalcolato, usalo
+      if (seo.score || seo.score === 0) {
+        return seo.score;
+      }
+
+      // Se non abbiamo dati SEO reali, return 0
+      if (
+        seo.hasTitle === undefined &&
+        seo.hasMetaDescription === undefined &&
+        seo.hasH1 === undefined
+      ) {
+        return 0;
+      }
+
+      let score = 100;
+
+      // Penalità solo se i dati sono definiti e mancanti
+      if (seo.hasTitle === false) score -= 20;
+      if (seo.hasMetaDescription === false) score -= 20;
+      if (seo.hasH1 === false) score -= 15;
+
+      // Penalità per lunghezza solo se abbiamo i dati
+      if (seo.titleLength || seo.titleLength === 0) {
+        if (seo.titleLength < 30 || seo.titleLength > 60) score -= 10;
+      }
+      if (seo.metaDescriptionLength || seo.metaDescriptionLength === 0) {
+        if (seo.metaDescriptionLength < 120 || seo.metaDescriptionLength > 160)
+          score -= 10;
+      }
+
+      if (seo.hasStructuredData === false) score -= 5;
+
+      return Math.max(0, score);
     }
+
     // Vecchio formato
-    return analysis.seo_score || 0
-  }
+    return analysis.seo_score || 0;
+  };
 
   const getPerformanceScore = () => {
-    if (!analysis) return 0
+    if (!analysis) return 0;
+
     // Nuovo formato
     if (analysis.performance) {
-      const perf = analysis.performance
-      let score = 100
-      if (perf.loadTime > 3000) score -= 30
-      else if (perf.loadTime > 2000) score -= 15
-      if (perf.brokenImages > 0) score -= 20
-      if (!perf.isResponsive) score -= 25
-      return Math.max(0, score)
+      const perf = analysis.performance;
+
+      // Se non abbiamo dati di performance reali, return 0
+      if (
+        !perf.loadTime &&
+        perf.loadTime !== 0 &&
+        !perf.brokenImages &&
+        perf.brokenImages !== 0 &&
+        perf.isResponsive === undefined
+      ) {
+        return 0;
+      }
+
+      let score = 100;
+
+      // Penalità per tempo di caricamento (solo se abbiamo il dato)
+      if (perf.loadTime || perf.loadTime === 0) {
+        if (perf.loadTime > 5000) score -= 40;
+        else if (perf.loadTime > 3000) score -= 30;
+        else if (perf.loadTime > 2000) score -= 15;
+        else if (perf.loadTime > 1000) score -= 5;
+      }
+
+      // Penalità per immagini rotte (solo se abbiamo il dato)
+      if (perf.brokenImages || perf.brokenImages === 0) {
+        if (perf.brokenImages > 5) score -= 30;
+        else if (perf.brokenImages > 0) score -= 20;
+      }
+
+      // Penalità per responsive (solo se abbiamo il dato)
+      if (perf.isResponsive === false) {
+        score -= 25;
+      }
+
+      // Se abbiamo score da performance analyzer, usalo
+      if (perf.score || perf.score === 0) {
+        return perf.score;
+      }
+
+      // Se abbiamo overallScore, usalo
+      if (perf.overallScore || perf.overallScore === 0) {
+        return perf.overallScore;
+      }
+
+      return Math.max(0, score);
     }
+
     // Vecchio formato
-    return analysis.page_speed_score || 0
-  }
+    return analysis.page_speed_score || 0;
+  };
 
   const getOverallScore = () => {
-    if (!analysis) return lead?.score || 0
-    return analysis.overallScore || analysis.overall_score || lead?.score || 0
-  }
+    if (!analysis) return lead?.score || 0;
+    return analysis.overallScore || analysis.overall_score || lead?.score || 0;
+  };
 
   const isNewFormat = () => {
-    return analysis && analysis.seo && typeof analysis.seo === 'object'
-  }
+    return analysis && analysis.seo && typeof analysis.seo === "object";
+  };
 
   // Funzioni helper per generare raccomandazioni intelligenti
   const generateRecommendations = () => {
-    const recommendations: { category: string; title: string; description: string; priority: 'high' | 'medium' | 'low' }[] = []
+    const recommendations: {
+      category: string;
+      title: string;
+      description: string;
+      priority: "high" | "medium" | "low";
+    }[] = [];
 
-    if (!analysis) return recommendations
+    if (!analysis) return recommendations;
 
     if (isNewFormat()) {
       // SEO Raccomandazioni
       if (!analysis.seo.hasTitle) {
         recommendations.push({
-          category: 'SEO',
-          title: 'Aggiungi un Tag Title',
-          description: 'Il sito non ha un tag title. Aggiungi un titolo descrittivo (50-60 caratteri) per migliorare la visibilità sui motori di ricerca.',
-          priority: 'high'
-        })
+          category: "SEO",
+          title: "Aggiungi un Tag Title",
+          description:
+            "Il sito non ha un tag title. Aggiungi un titolo descrittivo (50-60 caratteri) per migliorare la visibilità sui motori di ricerca.",
+          priority: "high",
+        });
       }
-      
+
       if (!analysis.seo.hasMetaDescription) {
         recommendations.push({
-          category: 'SEO',
-          title: 'Aggiungi Meta Description',
-          description: 'Manca la meta description. Scrivi una descrizione accattivante (150-160 caratteri) per migliorare il click-through rate.',
-          priority: 'high'
-        })
+          category: "SEO",
+          title: "Aggiungi Meta Description",
+          description:
+            "Manca la meta description. Scrivi una descrizione accattivante (150-160 caratteri) per migliorare il click-through rate.",
+          priority: "high",
+        });
       }
 
       if (!analysis.seo.hasH1) {
         recommendations.push({
-          category: 'SEO',
-          title: 'Aggiungi Tag H1',
-          description: 'Il sito non ha un tag H1. Aggiungi un titolo principale che descriva chiaramente il contenuto della pagina.',
-          priority: 'medium'
-        })
+          category: "SEO",
+          title: "Aggiungi Tag H1",
+          description:
+            "Il sito non ha un tag H1. Aggiungi un titolo principale che descriva chiaramente il contenuto della pagina.",
+          priority: "medium",
+        });
       }
 
       if (!analysis.seo.hasStructuredData) {
         recommendations.push({
-          category: 'SEO',
-          title: 'Implementa Dati Strutturati',
-          description: 'Aggiungi markup schema.org per aiutare i motori di ricerca a comprendere meglio il contenuto del sito.',
-          priority: 'medium'
-        })
+          category: "SEO",
+          title: "Implementa Dati Strutturati",
+          description:
+            "Aggiungi markup schema.org per aiutare i motori di ricerca a comprendere meglio il contenuto del sito.",
+          priority: "medium",
+        });
       }
 
       // Performance Raccomandazioni
       if (analysis.performance.loadTime > 3000) {
         recommendations.push({
-          category: 'Performance',
-          title: 'Ottimizza Velocità di Caricamento',
-          description: `Il sito impiega ${Math.round(analysis.performance.loadTime / 1000)}s per caricarsi. Ottimizza immagini, CSS e JavaScript per migliorare l\'esperienza utente.`,
-          priority: 'high'
-        })
+          category: "Performance",
+          title: "Ottimizza Velocità di Caricamento",
+          description: `Il sito impiega ${Math.round(
+            analysis.performance.loadTime / 1000
+          )}s per caricarsi. Ottimizza immagini, CSS e JavaScript per migliorare l\'esperienza utente.`,
+          priority: "high",
+        });
       }
 
       if (analysis.performance.brokenImages > 0) {
         recommendations.push({
-          category: 'Performance',
-          title: 'Correggi Immagini Rotte',
+          category: "Performance",
+          title: "Correggi Immagini Rotte",
           description: `Trovate ${analysis.performance.brokenImages} immagini non funzionanti. Sostituiscile o rimuovile per migliorare l\'esperienza utente.`,
-          priority: 'medium'
-        })
+          priority: "medium",
+        });
       }
 
       if (!analysis.performance.isResponsive) {
         recommendations.push({
-          category: 'Performance',
-          title: 'Rendi il Sito Responsive',
-          description: 'Il sito non è ottimizzato per dispositivi mobili. Implementa un design responsive per raggiungere più utenti.',
-          priority: 'high'
-        })
+          category: "Performance",
+          title: "Rendi il Sito Responsive",
+          description:
+            "Il sito non è ottimizzato per dispositivi mobili. Implementa un design responsive per raggiungere più utenti.",
+          priority: "high",
+        });
       }
 
       // Tracking Raccomandazioni
       if (!analysis.tracking.hasGoogleAnalytics) {
         recommendations.push({
-          category: 'Analytics',
-          title: 'Installa Google Analytics',
-          description: 'Aggiungi Google Analytics per monitorare il traffico del sito e comprendere meglio i visitatori.',
-          priority: 'medium'
-        })
+          category: "Analytics",
+          title: "Installa Google Analytics",
+          description:
+            "Aggiungi Google Analytics per monitorare il traffico del sito e comprendere meglio i visitatori.",
+          priority: "medium",
+        });
       }
 
       if (!analysis.tracking.hasFacebookPixel) {
         recommendations.push({
-          category: 'Marketing',
-          title: 'Installa Facebook Pixel',
-          description: 'Aggiungi il Facebook Pixel per tracciare conversioni e creare campagne pubblicitarie più efficaci su Facebook e Instagram.',
-          priority: 'medium'
-        })
+          category: "Marketing",
+          title: "Installa Facebook Pixel",
+          description:
+            "Aggiungi il Facebook Pixel per tracciare conversioni e creare campagne pubblicitarie più efficaci su Facebook e Instagram.",
+          priority: "medium",
+        });
       }
 
       if (!analysis.tracking.hasGoogleTagManager) {
         recommendations.push({
-          category: 'Analytics',
-          title: 'Implementa Google Tag Manager',
-          description: 'GTM semplifica la gestione di tutti i tag di tracking senza modificare il codice del sito.',
-          priority: 'low'
-        })
+          category: "Analytics",
+          title: "Implementa Google Tag Manager",
+          description:
+            "GTM semplifica la gestione di tutti i tag di tracking senza modificare il codice del sito.",
+          priority: "low",
+        });
       }
 
       // GDPR Raccomandazioni
       if (!analysis.gdpr.hasCookieBanner) {
         recommendations.push({
-          category: 'Legale',
-          title: 'Aggiungi Cookie Banner',
-          description: 'Per rispettare il GDPR, aggiungi un banner per chiedere il consenso ai cookie prima di tracciare gli utenti.',
-          priority: 'high'
-        })
+          category: "Legale",
+          title: "Aggiungi Cookie Banner",
+          description:
+            "Per rispettare il GDPR, aggiungi un banner per chiedere il consenso ai cookie prima di tracciare gli utenti.",
+          priority: "high",
+        });
       }
 
       if (!analysis.gdpr.hasPrivacyPolicy) {
         recommendations.push({
-          category: 'Legale',
-          title: 'Crea Privacy Policy',
-          description: 'Obbligatoria per legge, la privacy policy deve spiegare come vengono trattati i dati personali degli utenti.',
-          priority: 'high'
-        })
+          category: "Legale",
+          title: "Crea Privacy Policy",
+          description:
+            "Obbligatoria per legge, la privacy policy deve spiegare come vengono trattati i dati personali degli utenti.",
+          priority: "high",
+        });
       }
 
       if (!analysis.gdpr.hasTermsOfService) {
         recommendations.push({
-          category: 'Legale',
-          title: 'Aggiungi Termini di Servizio',
-          description: 'I termini di servizio proteggono legalmente la tua attività e definiscono le regole di utilizzo del sito.',
-          priority: 'medium'
-        })
+          category: "Legale",
+          title: "Aggiungi Termini di Servizio",
+          description:
+            "I termini di servizio proteggono legalmente la tua attività e definiscono le regole di utilizzo del sito.",
+          priority: "medium",
+        });
       }
 
       // Social Raccomandazioni
       if (!analysis.social.hasAnySocial) {
         recommendations.push({
-          category: 'Social Media',
-          title: 'Aggiungi Presenza Social',
-          description: 'Crea profili social (Facebook, Instagram, LinkedIn) e collegali al sito per aumentare la credibilità e raggiungere più clienti.',
-          priority: 'medium'
-        })
+          category: "Social Media",
+          title: "Aggiungi Presenza Social",
+          description:
+            "Crea profili social (Facebook, Instagram, LinkedIn) e collegali al sito per aumentare la credibilità e raggiungere più clienti.",
+          priority: "medium",
+        });
       }
 
       // Legal Raccomandazioni
       if (!analysis.legal.hasVisiblePartitaIva) {
         recommendations.push({
-          category: 'Legale',
-          title: 'Mostra Partita IVA',
-          description: 'Per legge, i siti aziendali devono mostrare chiaramente la Partita IVA e i dati della società.',
-          priority: 'high'
-        })
+          category: "Legale",
+          title: "Mostra Partita IVA",
+          description:
+            "Per legge, i siti aziendali devono mostrare chiaramente la Partita IVA e i dati della società.",
+          priority: "high",
+        });
       }
-
     } else {
       // Formato Legacy - Raccomandazioni basate sui campi disponibili
       if (analysis.missing_meta_tags && analysis.missing_meta_tags.length > 0) {
         recommendations.push({
-          category: 'SEO',
-          title: 'Aggiungi Meta Tag Mancanti',
-          description: `Mancano ${analysis.missing_meta_tags.length} meta tag importanti: ${analysis.missing_meta_tags.join(', ')}. Aggiungili per migliorare la SEO.`,
-          priority: 'high'
-        })
+          category: "SEO",
+          title: "Aggiungi Meta Tag Mancanti",
+          description: `Mancano ${
+            analysis.missing_meta_tags.length
+          } meta tag importanti: ${analysis.missing_meta_tags.join(
+            ", "
+          )}. Aggiungili per migliorare la SEO.`,
+          priority: "high",
+        });
       }
 
       if (!analysis.has_tracking_pixel) {
         recommendations.push({
-          category: 'Marketing',
-          title: 'Installa Pixel di Tracking',
-          description: 'Aggiungi pixel di tracking (Facebook, Google) per monitorare conversioni e migliorare le campagne pubblicitarie.',
-          priority: 'medium'
-        })
+          category: "Marketing",
+          title: "Installa Pixel di Tracking",
+          description:
+            "Aggiungi pixel di tracking (Facebook, Google) per monitorare conversioni e migliorare le campagne pubblicitarie.",
+          priority: "medium",
+        });
       }
 
       if (!analysis.gtm_installed) {
         recommendations.push({
-          category: 'Analytics',
-          title: 'Implementa Google Tag Manager',
-          description: 'GTM semplifica la gestione di tutti i tag di tracking senza modificare il codice del sito.',
-          priority: 'low'
-        })
+          category: "Analytics",
+          title: "Implementa Google Tag Manager",
+          description:
+            "GTM semplifica la gestione di tutti i tag di tracking senza modificare il codice del sito.",
+          priority: "low",
+        });
       }
 
       if (analysis.broken_images) {
         recommendations.push({
-          category: 'Performance',
-          title: 'Correggi Immagini Rotte',
-          description: 'Trovate immagini non funzionanti. Sostituiscile o rimuovile per migliorare l\'esperienza utente.',
-          priority: 'medium'
-        })
+          category: "Performance",
+          title: "Correggi Immagini Rotte",
+          description:
+            "Trovate immagini non funzionanti. Sostituiscile o rimuovile per migliorare l'esperienza utente.",
+          priority: "medium",
+        });
       }
 
       if (analysis.website_load_time && analysis.website_load_time > 3000) {
         recommendations.push({
-          category: 'Performance',
-          title: 'Ottimizza Velocità di Caricamento',
-          description: `Il sito impiega ${Math.round(analysis.website_load_time / 1000)}s per caricarsi. Ottimizza per migliorare l\'esperienza utente.`,
-          priority: 'high'
-        })
+          category: "Performance",
+          title: "Ottimizza Velocità di Caricamento",
+          description: `Il sito impiega ${Math.round(
+            analysis.website_load_time / 1000
+          )}s per caricarsi. Ottimizza per migliorare l\'esperienza utente.`,
+          priority: "high",
+        });
       }
     }
 
     // Ordina per priorità
-    const priorityOrder = { high: 3, medium: 2, low: 1 }
-    return recommendations.sort((a, b) => priorityOrder[b.priority] - priorityOrder[a.priority])
-  }
+    const priorityOrder = { high: 3, medium: 2, low: 1 };
+    return recommendations.sort(
+      (a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
+    );
+  };
 
-  const getPriorityColor = (priority: 'high' | 'medium' | 'low') => {
+  const getPriorityColor = (priority: "high" | "medium" | "low") => {
     switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
-      case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
-      case 'low': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
+      case "high":
+        return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300";
+      case "medium":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300";
+      case "low":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300";
     }
-  }
+  };
 
-  const getPriorityIcon = (priority: 'high' | 'medium' | 'low') => {
+  const getPriorityIcon = (priority: "high" | "medium" | "low") => {
     switch (priority) {
-      case 'high': return <AlertTriangle className="h-4 w-4" />
-      case 'medium': return <Clock className="h-4 w-4" />
-      case 'low': return <TrendingDown className="h-4 w-4" />
+      case "high":
+        return <AlertTriangle className="h-4 w-4" />;
+      case "medium":
+        return <Clock className="h-4 w-4" />;
+      case "low":
+        return <TrendingDown className="h-4 w-4" />;
     }
-  }
+  };
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'SEO': return <Search className="h-4 w-4 text-green-600" />
-      case 'Performance': return <Zap className="h-4 w-4 text-yellow-600" />
-      case 'Analytics': return <BarChart3 className="h-4 w-4 text-blue-600" />
-      case 'Marketing': return <Eye className="h-4 w-4 text-purple-600" />
-      case 'Legale': return <Shield className="h-4 w-4 text-red-600" />
-      case 'Social Media': return <Activity className="h-4 w-4 text-pink-600" />
-      default: return <AlertTriangle className="h-4 w-4 text-gray-600" />
+      case "SEO":
+        return <Search className="h-4 w-4 text-green-600" />;
+      case "Performance":
+        return <Zap className="h-4 w-4 text-yellow-600" />;
+      case "Analytics":
+        return <BarChart3 className="h-4 w-4 text-blue-600" />;
+      case "Marketing":
+        return <Eye className="h-4 w-4 text-purple-600" />;
+      case "Legale":
+        return <Shield className="h-4 w-4 text-red-600" />;
+      case "Social Media":
+        return <Activity className="h-4 w-4 text-pink-600" />;
+      default:
+        return <AlertTriangle className="h-4 w-4 text-gray-600" />;
     }
-  }
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Caricamento dettagli lead...</p>
+          <p className="text-gray-600 dark:text-gray-400">
+            Caricamento dettagli lead...
+          </p>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -483,7 +602,9 @@ export default function LeadDetailPage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Errore</h1>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            Errore
+          </h1>
           <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
           <button
             onClick={() => router.back()}
@@ -493,10 +614,10 @@ export default function LeadDetailPage() {
           </button>
         </div>
       </div>
-    )
+    );
   }
 
-  if (!lead) return null
+  if (!lead) return null;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
@@ -510,7 +631,7 @@ export default function LeadDetailPage() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Torna ai Lead
           </button>
-          
+
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
@@ -526,9 +647,15 @@ export default function LeadDetailPage() {
                 </span>
               </div>
             </div>
-            
-            <div className={`text-right p-4 rounded-xl ${getScoreBgColor(lead.score)}`}>
-              <div className={`text-2xl font-bold ${getScoreColor(lead.score)}`}>
+
+            <div
+              className={`text-right p-4 rounded-xl ${getScoreBgColor(
+                lead.score
+              )}`}
+            >
+              <div
+                className={`text-2xl font-bold ${getScoreColor(lead.score)}`}
+              >
                 {lead.score}/100
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -546,7 +673,7 @@ export default function LeadDetailPage() {
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 Informazioni di Contatto
               </h2>
-              
+
               <div className="space-y-3">
                 {lead.website_url && (
                   <div className="flex items-center">
@@ -561,7 +688,7 @@ export default function LeadDetailPage() {
                     </a>
                   </div>
                 )}
-                
+
                 {lead.phone && (
                   <div className="flex items-center">
                     <Phone className="h-4 w-4 text-gray-400 mr-3" />
@@ -573,7 +700,7 @@ export default function LeadDetailPage() {
                     </a>
                   </div>
                 )}
-                
+
                 {lead.email && (
                   <div className="flex items-center">
                     <Mail className="h-4 w-4 text-gray-400 mr-3" />
@@ -585,7 +712,7 @@ export default function LeadDetailPage() {
                     </a>
                   </div>
                 )}
-                
+
                 {lead.address && (
                   <div className="flex items-start">
                     <MapPin className="h-4 w-4 text-gray-400 mr-3 mt-0.5" />
@@ -603,7 +730,7 @@ export default function LeadDetailPage() {
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                   Opportunità di Business
                 </h2>
-                
+
                 <div className="flex flex-wrap gap-2">
                   {lead.needed_roles.map((role, index) => (
                     <span
@@ -624,10 +751,13 @@ export default function LeadDetailPage() {
                   <Activity className="h-5 w-5 mr-2 text-green-600" />
                   Raccomandazioni per il Cliente
                 </h2>
-                
+
                 <div className="space-y-4">
                   {generateRecommendations().map((rec, index) => (
-                    <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <div
+                      key={index}
+                      className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                    >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center space-x-2">
                           {getCategoryIcon(rec.category)}
@@ -635,9 +765,19 @@ export default function LeadDetailPage() {
                             {rec.title}
                           </span>
                         </div>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${getPriorityColor(rec.priority)}`}>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${getPriorityColor(
+                            rec.priority
+                          )}`}
+                        >
                           {getPriorityIcon(rec.priority)}
-                          <span className="ml-1 capitalize">{rec.priority === 'high' ? 'Alta' : rec.priority === 'medium' ? 'Media' : 'Bassa'}</span>
+                          <span className="ml-1 capitalize">
+                            {rec.priority === "high"
+                              ? "Alta"
+                              : rec.priority === "medium"
+                              ? "Media"
+                              : "Bassa"}
+                          </span>
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
@@ -650,7 +790,7 @@ export default function LeadDetailPage() {
                       </div>
                     </div>
                   ))}
-                  
+
                   {generateRecommendations().length === 0 && (
                     <div className="text-center py-8">
                       <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
@@ -669,7 +809,7 @@ export default function LeadDetailPage() {
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                   Problemi Identificati (Legacy)
                 </h2>
-                
+
                 <div className="space-y-2">
                   {lead.issues.map((issue, index) => (
                     <div key={index} className="flex items-start">
@@ -692,58 +832,74 @@ export default function LeadDetailPage() {
                 <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
                     Analisi Tecnica Completa
-                    {lead.origin === 'manual' && (
-                      <span className="ml-2 px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded-full">
-                        Analisi Manuale
-                      </span>
-                    )}
-                    {!isNewFormat() && (
-                      <span className="ml-2 px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-full">
-                        Analisi Legacy
-                      </span>
-                    )}
                   </h2>
-                  
-                  {!isNewFormat() && (
-                    <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg">
-                      <div className="flex items-center">
-                        <AlertTriangle className="h-4 w-4 text-yellow-600 mr-2" />
-                        <span className="text-sm text-yellow-800 dark:text-yellow-200">
-                          <strong>Analisi Legacy:</strong> Questo lead è stato analizzato con una versione precedente. 
-                          Alcuni dettagli potrebbero essere incompleti o imprecisi.
-                        </span>
-                      </div>
+
+                  <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg">
+                    <div className="flex items-center">
+                      <AlertTriangle className="h-4 w-4 text-yellow-600 mr-2" />
+                      <span className="text-sm text-yellow-800 dark:text-yellow-200">
+                        <strong>Attenzione:</strong> Il sistema è ancora in fase
+                        di perfezionamento. Alcuni dettagli potrebbero essere
+                        incompleti o imprecisi.
+                      </span>
                     </div>
-                  )}
-                  
+                  </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="text-center p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                      <div className={`text-2xl font-bold ${getScoreColor(getSEOScore())}`}>
+                      <div
+                        className={`text-2xl font-bold ${getScoreColor(
+                          getSEOScore()
+                        )}`}
+                      >
                         {getSEOScore()}
                       </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">SEO Score</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        SEO Score
+                      </div>
                     </div>
-                    
+
                     <div className="text-center p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                      <div className={`text-2xl font-bold ${getScoreColor(getPerformanceScore())}`}>
+                      <div
+                        className={`text-2xl font-bold ${getScoreColor(
+                          getPerformanceScore()
+                        )}`}
+                      >
                         {getPerformanceScore()}
                       </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">Velocità</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        Velocità
+                      </div>
                     </div>
-                    
+
                     <div className="text-center p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                      <div className={`text-2xl font-bold ${getScoreColor(getOverallScore())}`}>
+                      <div
+                        className={`text-2xl font-bold ${getScoreColor(
+                          getOverallScore()
+                        )}`}
+                      >
                         {getOverallScore()}
                       </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">Punteggio</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        Punteggio
+                      </div>
                     </div>
-                    
+
                     <div className="text-center p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
                       <div className="text-2xl font-bold text-blue-600">
-                        {analysis.performance?.loadTime ? Math.round(analysis.performance.loadTime / 1000 * 10) / 10 : 
-                         analysis.website_load_time ? Math.round(analysis.website_load_time / 1000 * 10) / 10 : 'N/A'}s
+                        {analysis.performance?.loadTime
+                          ? Math.round(
+                              (analysis.performance.loadTime / 1000) * 10
+                            ) / 10
+                          : analysis.website_load_time
+                          ? Math.round(
+                              (analysis.website_load_time / 1000) * 10
+                            ) / 10
+                          : "N/A"}
+                        s
                       </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">Caricamento</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        Caricamento
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -754,18 +910,24 @@ export default function LeadDetailPage() {
                     <PieChart className="h-5 w-5 mr-2 text-purple-600" />
                     Riepilogo Opportunità
                   </h3>
-                  
+
                   {(() => {
-                    const recommendations = generateRecommendations()
-                    const categoryCounts = recommendations.reduce((acc, rec) => {
-                      acc[rec.category] = (acc[rec.category] || 0) + 1
-                      return acc
-                    }, {} as Record<string, number>)
-                    
-                    const priorityCounts = recommendations.reduce((acc, rec) => {
-                      acc[rec.priority] = (acc[rec.priority] || 0) + 1
-                      return acc
-                    }, {} as Record<string, number>)
+                    const recommendations = generateRecommendations();
+                    const categoryCounts = recommendations.reduce(
+                      (acc, rec) => {
+                        acc[rec.category] = (acc[rec.category] || 0) + 1;
+                        return acc;
+                      },
+                      {} as Record<string, number>
+                    );
+
+                    const priorityCounts = recommendations.reduce(
+                      (acc, rec) => {
+                        acc[rec.priority] = (acc[rec.priority] || 0) + 1;
+                        return acc;
+                      },
+                      {} as Record<string, number>
+                    );
 
                     return (
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -773,37 +935,47 @@ export default function LeadDetailPage() {
                           <div className="text-2xl font-bold text-red-600">
                             {priorityCounts.high || 0}
                           </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">Priorità Alta</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
+                            Priorità Alta
+                          </div>
                         </div>
-                        
+
                         <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg">
                           <div className="text-2xl font-bold text-yellow-600">
                             {priorityCounts.medium || 0}
                           </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">Priorità Media</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
+                            Priorità Media
+                          </div>
                         </div>
-                        
+
                         <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg">
                           <div className="text-2xl font-bold text-green-600">
                             {Object.keys(categoryCounts).length}
                           </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">Aree Miglioramento</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
+                            Aree Miglioramento
+                          </div>
                         </div>
-                        
+
                         <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg">
                           <div className="text-2xl font-bold text-purple-600">
                             {recommendations.length}
                           </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">Tot. Raccomandazioni</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
+                            Tot. Raccomandazioni
+                          </div>
                         </div>
                       </div>
-                    )
+                    );
                   })()}
-                  
+
                   {generateRecommendations().length > 0 && (
                     <div className="mt-4 p-3 bg-white dark:bg-gray-800 rounded-lg">
                       <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-                        💡 <strong>Potenziale di vendita elevato!</strong> Questo cliente ha {generateRecommendations().length} opportunità di miglioramento che puoi offrire.
+                        💡 <strong>Potenziale di vendita elevato!</strong>{" "}
+                        Questo cliente ha {generateRecommendations().length}{" "}
+                        opportunità di miglioramento che puoi offrire.
                       </p>
                     </div>
                   )}
@@ -816,12 +988,14 @@ export default function LeadDetailPage() {
                       <Search className="h-5 w-5 mr-2 text-blue-500" />
                       Analisi SEO
                     </h3>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {isNewFormat() ? (
                         <>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Title Tag</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Title Tag
+                            </span>
                             {analysis.seo.hasTitle ? (
                               <CheckCircle className="h-5 w-5 text-green-500" />
                             ) : (
@@ -829,7 +1003,9 @@ export default function LeadDetailPage() {
                             )}
                           </div>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Meta Description</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Meta Description
+                            </span>
                             {analysis.seo.hasMetaDescription ? (
                               <CheckCircle className="h-5 w-5 text-green-500" />
                             ) : (
@@ -837,7 +1013,9 @@ export default function LeadDetailPage() {
                             )}
                           </div>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Tag H1</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Tag H1
+                            </span>
                             {analysis.seo.hasH1 ? (
                               <CheckCircle className="h-5 w-5 text-green-500" />
                             ) : (
@@ -845,7 +1023,9 @@ export default function LeadDetailPage() {
                             )}
                           </div>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Dati Strutturati</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Dati Strutturati
+                            </span>
                             {analysis.seo.hasStructuredData ? (
                               <CheckCircle className="h-5 w-5 text-green-500" />
                             ) : (
@@ -857,65 +1037,93 @@ export default function LeadDetailPage() {
                         // Formato vecchio - LOGICA MIGLIORATA PER LEGACY
                         <>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Sito Web Attivo</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Sito Web Attivo
+                            </span>
                             {(() => {
                               // LOGICA MIGLIORATA: Se il vecchio analyzer non ha rilevato ma il sito è HTTPS
                               if (analysis.has_website === true) {
-                                return <CheckCircle className="h-5 w-5 text-green-500" />
+                                return (
+                                  <CheckCircle className="h-5 w-5 text-green-500" />
+                                );
                               }
                               // Se il sito ha HTTPS o altre analisi positive, probabilmente è attivo
-                              if (lead.website_url?.startsWith('https://') || analysis.website_load_time > 0) {
+                              if (
+                                lead.website_url?.startsWith("https://") ||
+                                analysis.website_load_time > 0
+                              ) {
                                 return (
                                   <div className="flex items-center">
                                     <CheckCircle className="h-5 w-5 text-green-500" />
-                                    <span className="text-xs text-gray-500 ml-1">(rilevato URL)</span>
+                                    <span className="text-xs text-gray-500 ml-1">
+                                      (rilevato URL)
+                                    </span>
                                   </div>
-                                )
+                                );
                               }
-                              return <XCircle className="h-5 w-5 text-red-500" />
+                              return (
+                                <XCircle className="h-5 w-5 text-red-500" />
+                              );
                             })()}
                           </div>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Meta Tags</span>
-                            {!analysis.missing_meta_tags || analysis.missing_meta_tags.length === 0 ? (
-                              <CheckCircle className="h-5 w-5 text-green-500" />
-                            ) : (
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Meta Tags
+                            </span>
+                            {!analysis.missing_meta_tags ||
+                            analysis.missing_meta_tags.length === 0 ? (
                               <XCircle className="h-5 w-5 text-red-500" />
+                            ) : (
+                              <CheckCircle className="h-5 w-5 text-green-500" />
                             )}
                           </div>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Mobile Friendly</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Mobile Friendly
+                            </span>
                             {(() => {
                               // LOGICA MIGLIORATA: Se il vecchio analyzer non ha rilevato
                               if (analysis.mobile_friendly === true) {
-                                return <CheckCircle className="h-5 w-5 text-green-500" />
+                                return (
+                                  <CheckCircle className="h-5 w-5 text-green-500" />
+                                );
                               }
                               // Per lead legacy senza analisi mobile, mostra come "non verificato"
                               return (
                                 <div className="flex items-center">
                                   <XCircle className="h-5 w-5 text-gray-400" />
-                                  <span className="text-xs text-gray-500 ml-1">(non verificato)</span>
+                                  <span className="text-xs text-gray-500 ml-1">
+                                    (non verificato)
+                                  </span>
                                 </div>
-                              )
+                              );
                             })()}
                           </div>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Certificato SSL</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Certificato SSL
+                            </span>
                             {(() => {
                               // LOGICA MIGLIORATA: Se il vecchio analyzer non ha rilevato ma URL è HTTPS
                               if (analysis.ssl_certificate === true) {
-                                return <CheckCircle className="h-5 w-5 text-green-500" />
+                                return (
+                                  <CheckCircle className="h-5 w-5 text-green-500" />
+                                );
                               }
                               // Se URL è HTTPS, SSL è presente
-                              if (lead.website_url?.startsWith('https://')) {
+                              if (lead.website_url?.startsWith("https://")) {
                                 return (
                                   <div className="flex items-center">
                                     <CheckCircle className="h-5 w-5 text-green-500" />
-                                    <span className="text-xs text-gray-500 ml-1">(rilevato URL)</span>
+                                    <span className="text-xs text-gray-500 ml-1">
+                                      (rilevato URL)
+                                    </span>
                                   </div>
-                                )
+                                );
                               }
-                              return <XCircle className="h-5 w-5 text-red-500" />
+                              return (
+                                <XCircle className="h-5 w-5 text-red-500" />
+                              );
                             })()}
                           </div>
                         </>
@@ -931,13 +1139,15 @@ export default function LeadDetailPage() {
                       <Activity className="h-5 w-5 mr-2 text-purple-500" />
                       Tracking & Analytics
                     </h3>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {isNewFormat() ? (
                         <>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
                             <div className="flex items-center">
-                              <span className="text-sm text-gray-700 dark:text-gray-300">Google Analytics</span>
+                              <span className="text-sm text-gray-700 dark:text-gray-300">
+                                Google Analytics
+                              </span>
                             </div>
                             {analysis.tracking.hasGoogleAnalytics ? (
                               <CheckCircle className="h-5 w-5 text-green-500" />
@@ -948,7 +1158,9 @@ export default function LeadDetailPage() {
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
                             <div className="flex items-center">
                               <Facebook className="h-4 w-4 mr-2 text-blue-600" />
-                              <span className="text-sm text-gray-700 dark:text-gray-300">Facebook Pixel</span>
+                              <span className="text-sm text-gray-700 dark:text-gray-300">
+                                Facebook Pixel
+                              </span>
                             </div>
                             {analysis.tracking.hasFacebookPixel ? (
                               <CheckCircle className="h-5 w-5 text-green-500" />
@@ -957,7 +1169,9 @@ export default function LeadDetailPage() {
                             )}
                           </div>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Google Tag Manager</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Google Tag Manager
+                            </span>
                             {analysis.tracking.hasGoogleTagManager ? (
                               <CheckCircle className="h-5 w-5 text-green-500" />
                             ) : (
@@ -965,26 +1179,32 @@ export default function LeadDetailPage() {
                             )}
                           </div>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Hotjar</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Hotjar
+                            </span>
                             {analysis.tracking.hasHotjar ? (
                               <CheckCircle className="h-5 w-5 text-green-500" />
                             ) : (
                               <XCircle className="h-5 w-5 text-red-500" />
                             )}
                           </div>
-                          {analysis.tracking.customTracking && analysis.tracking.customTracking.length > 0 && (
-                            <div className="md:col-span-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Altri Tracking: {analysis.tracking.customTracking.join(', ')}
-                              </span>
-                            </div>
-                          )}
+                          {analysis.tracking.customTracking &&
+                            analysis.tracking.customTracking.length > 0 && (
+                              <div className="md:col-span-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                  Altri Tracking:{" "}
+                                  {analysis.tracking.customTracking.join(", ")}
+                                </span>
+                              </div>
+                            )}
                         </>
                       ) : (
                         // Formato vecchio
                         <>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Pixel Tracking</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Pixel Tracking
+                            </span>
                             {analysis.has_tracking_pixel ? (
                               <CheckCircle className="h-5 w-5 text-green-500" />
                             ) : (
@@ -992,7 +1212,9 @@ export default function LeadDetailPage() {
                             )}
                           </div>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Google Tag Manager</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Google Tag Manager
+                            </span>
                             {analysis.gtm_installed ? (
                               <CheckCircle className="h-5 w-5 text-green-500" />
                             ) : (
@@ -1012,10 +1234,12 @@ export default function LeadDetailPage() {
                       <Shield className="h-5 w-5 mr-2 text-green-600" />
                       Conformità GDPR
                     </h3>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                        <span className="text-sm text-gray-700 dark:text-gray-300">Cookie Banner</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          Cookie Banner
+                        </span>
                         {analysis.gdpr.hasCookieBanner ? (
                           <CheckCircle className="h-5 w-5 text-green-500" />
                         ) : (
@@ -1023,7 +1247,9 @@ export default function LeadDetailPage() {
                         )}
                       </div>
                       <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                        <span className="text-sm text-gray-700 dark:text-gray-300">Privacy Policy</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          Privacy Policy
+                        </span>
                         {analysis.gdpr.hasPrivacyPolicy ? (
                           <CheckCircle className="h-5 w-5 text-green-500" />
                         ) : (
@@ -1031,19 +1257,24 @@ export default function LeadDetailPage() {
                         )}
                       </div>
                       <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                        <span className="text-sm text-gray-700 dark:text-gray-300">Termini di Servizio</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          Termini di Servizio
+                        </span>
                         {analysis.gdpr.hasTermsOfService ? (
                           <CheckCircle className="h-5 w-5 text-green-500" />
                         ) : (
                           <XCircle className="h-5 w-5 text-red-500" />
                         )}
                       </div>
-                      {analysis.gdpr.riskyEmbeds && analysis.gdpr.riskyEmbeds.length > 0 && (
-                        <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                          <span className="text-sm text-gray-700 dark:text-gray-300">Embed Rischiosi</span>
-                          <AlertTriangle className="h-5 w-5 text-red-500" />
-                        </div>
-                      )}
+                      {analysis.gdpr.riskyEmbeds &&
+                        analysis.gdpr.riskyEmbeds.length > 0 && (
+                          <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Embed Rischiosi
+                            </span>
+                            <AlertTriangle className="h-5 w-5 text-red-500" />
+                          </div>
+                        )}
                     </div>
                   </div>
                 )}
@@ -1055,74 +1286,84 @@ export default function LeadDetailPage() {
                       <Eye className="h-5 w-5 mr-2 text-pink-500" />
                       Presenza Social
                     </h3>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {analysis.social.facebook && (
-                        <a 
-                          href={analysis.social.facebook} 
-                          target="_blank" 
+                        <a
+                          href={analysis.social.facebook}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors group"
                         >
                           <div className="flex items-center">
                             <Facebook className="h-5 w-5 text-blue-600 mr-2" />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Facebook</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Facebook
+                            </span>
                           </div>
                           <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-blue-600" />
                         </a>
                       )}
                       {analysis.social.instagram && (
-                        <a 
-                          href={analysis.social.instagram} 
-                          target="_blank" 
+                        <a
+                          href={analysis.social.instagram}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center justify-between p-3 bg-pink-50 dark:bg-pink-900/20 rounded-lg hover:bg-pink-100 dark:hover:bg-pink-900/30 transition-colors group"
                         >
                           <div className="flex items-center">
                             <Instagram className="h-5 w-5 text-pink-600 mr-2" />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Instagram</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Instagram
+                            </span>
                           </div>
                           <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-pink-600" />
                         </a>
                       )}
                       {analysis.social.linkedin && (
-                        <a 
-                          href={analysis.social.linkedin} 
-                          target="_blank" 
+                        <a
+                          href={analysis.social.linkedin}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors group"
                         >
                           <div className="flex items-center">
                             <Linkedin className="h-5 w-5 text-blue-700 mr-2" />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">LinkedIn</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              LinkedIn
+                            </span>
                           </div>
                           <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-blue-700" />
                         </a>
                       )}
                       {analysis.social.twitter && (
-                        <a 
-                          href={analysis.social.twitter} 
-                          target="_blank" 
+                        <a
+                          href={analysis.social.twitter}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors group"
                         >
                           <div className="flex items-center">
                             <Twitter className="h-5 w-5 text-blue-500 mr-2" />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Twitter</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Twitter
+                            </span>
                           </div>
                           <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-blue-500" />
                         </a>
                       )}
                       {analysis.social.youtube && (
-                        <a 
-                          href={analysis.social.youtube} 
-                          target="_blank" 
+                        <a
+                          href={analysis.social.youtube}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors group"
                         >
                           <div className="flex items-center">
                             <Youtube className="h-5 w-5 text-red-600 mr-2" />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">YouTube</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              YouTube
+                            </span>
                           </div>
                           <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-red-600" />
                         </a>
@@ -1137,50 +1378,57 @@ export default function LeadDetailPage() {
                 )}
 
                 {/* Tracking & Analytics - Legacy Format */}
-                {!isNewFormat() && (analysis.has_tracking_pixel !== undefined || analysis.gtm_installed !== undefined) && (
-                  <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                      <BarChart3 className="h-5 w-5 mr-2 text-purple-500" />
-                      Tracking & Analytics
-                    </h3>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {analysis.has_tracking_pixel !== undefined && (
-                        <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                          <div className="flex items-center">
-                            <div className="w-2 h-2 rounded-full bg-blue-500 mr-2"></div>
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Pixel Tracking</span>
-                          </div>
-                          {analysis.has_tracking_pixel === true ? (
-                            <CheckCircle className="h-5 w-5 text-green-500" />
-                          ) : (
-                            <XCircle className="h-5 w-5 text-red-500" />
-                          )}
-                        </div>
-                      )}
+                {!isNewFormat() &&
+                  (analysis.has_tracking_pixel !== undefined ||
+                    analysis.gtm_installed !== undefined) && (
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                        <BarChart3 className="h-5 w-5 mr-2 text-purple-500" />
+                        Tracking & Analytics
+                      </h3>
 
-                      {analysis.gtm_installed !== undefined && (
-                        <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                          <div className="flex items-center">
-                            <div className="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Google Tag Manager</span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {analysis.has_tracking_pixel !== undefined && (
+                          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 rounded-full bg-blue-500 mr-2"></div>
+                              <span className="text-sm text-gray-700 dark:text-gray-300">
+                                Pixel Tracking
+                              </span>
+                            </div>
+                            {analysis.has_tracking_pixel === true ? (
+                              <CheckCircle className="h-5 w-5 text-green-500" />
+                            ) : (
+                              <XCircle className="h-5 w-5 text-red-500" />
+                            )}
                           </div>
-                          {analysis.gtm_installed === true ? (
-                            <CheckCircle className="h-5 w-5 text-green-500" />
-                          ) : (
-                            <XCircle className="h-5 w-5 text-red-500" />
-                          )}
-                        </div>
-                      )}
+                        )}
 
-                      {analysis.has_tracking_pixel === false && analysis.gtm_installed === false && (
-                        <div className="col-span-full text-center p-4 text-gray-500 dark:text-gray-400">
-                          Nessun sistema di tracking rilevato
-                        </div>
-                      )}
+                        {analysis.gtm_installed !== undefined && (
+                          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
+                              <span className="text-sm text-gray-700 dark:text-gray-300">
+                                Google Tag Manager
+                              </span>
+                            </div>
+                            {analysis.gtm_installed === true ? (
+                              <CheckCircle className="h-5 w-5 text-green-500" />
+                            ) : (
+                              <XCircle className="h-5 w-5 text-red-500" />
+                            )}
+                          </div>
+                        )}
+
+                        {analysis.has_tracking_pixel === false &&
+                          analysis.gtm_installed === false && (
+                            <div className="col-span-full text-center p-4 text-gray-500 dark:text-gray-400">
+                              Nessun sistema di tracking rilevato
+                            </div>
+                          )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {/* Performance Details */}
                 {(isNewFormat() ? analysis.performance : analysis) && (
@@ -1189,18 +1437,25 @@ export default function LeadDetailPage() {
                       <Zap className="h-5 w-5 mr-2 text-yellow-500" />
                       Performance
                     </h3>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {isNewFormat() ? (
                         <>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Tempo di Caricamento</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Tempo di Caricamento
+                            </span>
                             <span className="text-sm font-medium dark:text-gray-300">
-                              {Math.round(analysis.performance.loadTime / 1000 * 10) / 10}s
+                              {Math.round(
+                                (analysis.performance.loadTime / 1000) * 10
+                              ) / 10}
+                              s
                             </span>
                           </div>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Responsive</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Responsive
+                            </span>
                             {analysis.performance.isResponsive ? (
                               <CheckCircle className="h-5 w-5 text-green-500" />
                             ) : (
@@ -1208,12 +1463,25 @@ export default function LeadDetailPage() {
                             )}
                           </div>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Immagini Totali</span>
-                            <span className="text-sm font-medium dark:text-gray-300">{analysis.performance.totalImages}</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Immagini Totali
+                            </span>
+                            <span className="text-sm font-medium dark:text-gray-300">
+                              {analysis.performance.totalImages}
+                            </span>
                           </div>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Immagini Rotte</span>
-                            <span className={`text-sm font-medium ${analysis.performance.brokenImages > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Immagini Rotte
+                            </span>
+                            <span
+                              className={`text-sm font-medium ${
+                                analysis.performance.brokenImages > 0 && analysis.performance.totalImages > 0
+                                  ? "text-red-500" 
+                                  : "text-green-500"
+                              }`}
+                            >
+                              
                               {analysis.performance.brokenImages}
                             </span>
                           </div>
@@ -1221,14 +1489,23 @@ export default function LeadDetailPage() {
                       ) : (
                         <>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Tempo di Caricamento</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Tempo di Caricamento
+                            </span>
                             <span className="text-sm font-medium dark:text-gray-300">
-                              {analysis.website_load_time ? Math.round(analysis.website_load_time / 1000 * 10) / 10 : 'N/A'}s
+                              {analysis.website_load_time
+                                ? Math.round(
+                                    (analysis.website_load_time / 1000) * 10
+                                  ) / 10
+                                : "N/A"}
+                              s
                             </span>
                           </div>
                           <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">Immagini Rotte</span>
-                            {analysis.broken_images ? (
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Immagini Rotte
+                            </span>
+                            {analysis.images.broken > 0 && analysis.images.total > 0 ? (
                               <XCircle className="h-5 w-5 text-red-500" />
                             ) : (
                               <CheckCircle className="h-5 w-5 text-green-500" />
@@ -1241,24 +1518,28 @@ export default function LeadDetailPage() {
                 )}
 
                 {/* Meta Tags Mancanti (solo formato vecchio) */}
-                {!isNewFormat() && analysis.missing_meta_tags && analysis.missing_meta_tags.length > 0 && (
-                  <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                      Meta Tags Mancanti
-                    </h3>
-                    
-                    <div className="space-y-2">
-                      {analysis.missing_meta_tags.map((tag: string, index: number) => (
-                        <div key={index} className="flex items-center">
-                          <AlertTriangle className="h-4 w-4 text-orange-500 mr-2" />
-                          <code className="bg-gray-100 dark:bg-gray-900 px-2 py-1 rounded text-sm">
-                            {tag}
-                          </code>
-                        </div>
-                      ))}
+                {!isNewFormat() &&
+                  analysis.missing_meta_tags &&
+                  analysis.missing_meta_tags.length > 0 && (
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        Meta Tags Mancanti
+                      </h3>
+
+                      <div className="space-y-2">
+                        {analysis.missing_meta_tags.map(
+                          (tag: string, index: number) => (
+                            <div key={index} className="flex items-center">
+                              <AlertTriangle className="h-4 w-4 text-orange-500 mr-2" />
+                              <code className="bg-gray-100 dark:bg-gray-900 px-2 py-1 rounded text-sm">
+                                {tag}
+                              </code>
+                            </div>
+                          )
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
               </>
             )}
 
@@ -1267,62 +1548,80 @@ export default function LeadDetailPage() {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 Visualizzazione Punteggi
               </h3>
-              
+
               <div className="space-y-4">
                 {/* Barra di progresso per ogni metrica */}
                 {analysis && (
                   <>
                     <div>
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-700 dark:text-gray-300">SEO</span>
+                        <span className="text-gray-700 dark:text-gray-300">
+                          SEO
+                        </span>
                         <span className={getScoreColor(getSEOScore())}>
                           {getSEOScore()}/100
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div 
+                        <div
                           className={`h-2 rounded-full ${
-                            getSEOScore() >= 80 ? 'bg-green-500' :
-                            getSEOScore() >= 60 ? 'bg-yellow-500' :
-                            getSEOScore() >= 40 ? 'bg-orange-500' : 'bg-red-500'
+                            getSEOScore() >= 80
+                              ? "bg-green-500"
+                              : getSEOScore() >= 60
+                              ? "bg-yellow-500"
+                              : getSEOScore() >= 40
+                              ? "bg-orange-500"
+                              : "bg-red-500"
                           }`}
                           style={{ width: `${getSEOScore()}%` }}
                         ></div>
                       </div>
                     </div>
-                    
+
                     <div>
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-700 dark:text-gray-300">Performance</span>
+                        <span className="text-gray-700 dark:text-gray-300">
+                          Performance
+                        </span>
                         <span className={getScoreColor(getPerformanceScore())}>
                           {getPerformanceScore()}/100
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div 
+                        <div
                           className={`h-2 rounded-full ${
-                            getPerformanceScore() >= 80 ? 'bg-green-500' :
-                            getPerformanceScore() >= 60 ? 'bg-yellow-500' :
-                            getPerformanceScore() >= 40 ? 'bg-orange-500' : 'bg-red-500'
+                            getPerformanceScore() >= 80
+                              ? "bg-green-500"
+                              : getPerformanceScore() >= 60
+                              ? "bg-yellow-500"
+                              : getPerformanceScore() >= 40
+                              ? "bg-orange-500"
+                              : "bg-red-500"
                           }`}
                           style={{ width: `${getPerformanceScore()}%` }}
                         ></div>
                       </div>
                     </div>
-                    
+
                     <div>
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-700 dark:text-gray-300">Punteggio Complessivo</span>
+                        <span className="text-gray-700 dark:text-gray-300">
+                          Punteggio Complessivo
+                        </span>
                         <span className={getScoreColor(getOverallScore())}>
                           {getOverallScore()}/100
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div 
+                        <div
                           className={`h-2 rounded-full ${
-                            getOverallScore() >= 80 ? 'bg-green-500' :
-                            getOverallScore() >= 60 ? 'bg-yellow-500' :
-                            getOverallScore() >= 40 ? 'bg-orange-500' : 'bg-red-500'
+                            getOverallScore() >= 80
+                              ? "bg-green-500"
+                              : getOverallScore() >= 60
+                              ? "bg-yellow-500"
+                              : getOverallScore() >= 40
+                              ? "bg-orange-500"
+                              : "bg-red-500"
                           }`}
                           style={{ width: `${getOverallScore()}%` }}
                         ></div>
@@ -1333,61 +1632,76 @@ export default function LeadDetailPage() {
               </div>
             </div>
 
-
             {/* Riepilogo Finale */}
             <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 💡 Riepilogo Raccomandazioni
               </h3>
-              
+
               <div className="space-y-3">
                 {analysis && (
                   <>
                     {/* SEO Issues */}
-                    {((isNewFormat() && (!analysis.seo?.hasTitle || !analysis.seo?.hasMetaDescription || !analysis.seo?.hasH1)) ||
-                      (!isNewFormat() && analysis.missing_meta_tags && analysis.missing_meta_tags.length > 0)) && (
+                    {((isNewFormat() &&
+                      (!analysis.seo?.hasTitle ||
+                        !analysis.seo?.hasMetaDescription ||
+                        !analysis.seo?.hasH1)) ||
+                      (!isNewFormat() &&
+                        analysis.missing_meta_tags &&
+                        analysis.missing_meta_tags.length > 0)) && (
                       <div className="flex items-start">
                         <Zap className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
                         <span className="text-sm text-gray-700 dark:text-gray-300">
-                          <strong>SEO:</strong> Ottimizzare i meta tag (title, description, H1) per migliorare la visibilità sui motori di ricerca
+                          <strong>SEO:</strong> Ottimizzare i meta tag (title,
+                          description, H1) per migliorare la visibilità sui
+                          motori di ricerca
                         </span>
                       </div>
                     )}
-                    
+
                     {/* Tracking Issues */}
-                    {((isNewFormat() && (!analysis.tracking?.hasGoogleAnalytics && !analysis.tracking?.hasFacebookPixel)) ||
-                      (!isNewFormat() && analysis.has_tracking_pixel === false)) && (
+                    {((isNewFormat() &&
+                      !analysis.tracking?.hasGoogleAnalytics &&
+                      !analysis.tracking?.hasFacebookPixel) ||
+                      (!isNewFormat() &&
+                        analysis.has_tracking_pixel === false)) && (
                       <div className="flex items-start">
                         <Zap className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
                         <span className="text-sm text-gray-700 dark:text-gray-300">
-                          <strong>Analytics:</strong> Installare Google Analytics e Facebook Pixel per monitorare le conversioni
+                          <strong>Analytics:</strong> Installare Google
+                          Analytics e Facebook Pixel per monitorare le
+                          conversioni
                         </span>
                       </div>
                     )}
-                    
+
                     {/* Performance Issues */}
                     {getPerformanceScore() < 70 && (
                       <div className="flex items-start">
                         <Zap className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
                         <span className="text-sm text-gray-700 dark:text-gray-300">
-                          <strong>Performance:</strong> Ottimizzare la velocità di caricamento per migliorare l'esperienza utente
+                          <strong>Performance:</strong> Ottimizzare la velocità
+                          di caricamento per migliorare l'esperienza utente
                         </span>
                       </div>
                     )}
-                    
+
                     {/* Mobile Issues */}
-                    {((isNewFormat() && analysis.performance?.isResponsive === false) ||
-                      (!isNewFormat() && analysis.mobile_friendly === false)) && (
+                    {((isNewFormat() &&
+                      analysis.performance?.isResponsive === false) ||
+                      (!isNewFormat() &&
+                        analysis.mobile_friendly === false)) && (
                       <div className="flex items-start">
                         <Smartphone className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
                         <span className="text-sm text-gray-700 dark:text-gray-300">
-                          <strong>Mobile:</strong> Rendere il sito responsive per migliorare l'esperienza su dispositivi mobili
+                          <strong>Mobile:</strong> Rendere il sito responsive
+                          per migliorare l'esperienza su dispositivi mobili
                         </span>
                       </div>
                     )}
                   </>
                 )}
-                
+
                 {!analysis && (
                   <div className="text-center py-8">
                     <Activity className="h-12 w-12 text-gray-400 mx-auto mb-3" />
@@ -1402,5 +1716,5 @@ export default function LeadDetailPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
