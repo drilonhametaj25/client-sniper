@@ -75,6 +75,7 @@ export default function ClientDashboard() {
   const [filterRole, setFilterRole] = useState<string>('')
   const [searchTerm, setSearchTerm] = useState<string>('')
   const [showFilters, setShowFilters] = useState(false)
+  const [showOnlyUnlocked, setShowOnlyUnlocked] = useState(false) // Nuovo filtro per lead sbloccati
 
   // Stato per tracciare quali lead sono stati "sbloccati"
   const [unlockedLeads, setUnlockedLeads] = useState<Set<string>>(new Set())
@@ -101,7 +102,7 @@ export default function ClientDashboard() {
       console.log('✅ Inizio processo di caricamento leads...')
       
       // ⚡ CACHE semplice per evitare richieste duplicate
-      const cacheKey = `leads-${page}-${filterCategory}-${filterCity}-${filterRole}-${searchTerm}`
+      const cacheKey = `leads-${page}-${filterCategory}-${filterCity}-${filterRole}-${searchTerm}-${showOnlyUnlocked}`
       if (useCache && localStorage.getItem(cacheKey)) {
         try {
           const cached = JSON.parse(localStorage.getItem(cacheKey)!)
@@ -251,12 +252,12 @@ export default function ClientDashboard() {
     if (!user?.id || !hasInitialized.current) return
     
     const timeoutId = setTimeout(() => {
-      console.log('🔄 Ricaricando leads per filtri cambiati:', { filterCategory, filterCity, filterRole, searchTerm })
+      console.log('🔄 Ricaricando leads per filtri cambiati:', { filterCategory, filterCity, filterRole, searchTerm, showOnlyUnlocked })
       loadLeadsFromAPI(1, false) // Reset alla pagina 1, no cache per filtri
     }, 300) // Debounce di 300ms
     
     return () => clearTimeout(timeoutId)
-  }, [filterCategory, filterCity, filterRole, searchTerm]) // Senza loadLeadsFromAPI
+  }, [filterCategory, filterCity, filterRole, searchTerm, showOnlyUnlocked]) // Aggiunto showOnlyUnlocked
 
   // Effetto per cambio pagina (usa cache se disponibile) - CON CONTROLLO INIZIALIZZAZIONE
   useEffect(() => {
@@ -565,6 +566,38 @@ export default function ClientDashboard() {
               </div>
             </div>
 
+            {/* Lead Sbloccati */}
+            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Lead Sbloccati</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{unlockedLeads.size}</p>
+                  <p className="text-xs text-gray-500">
+                    {unlockedLeads.size > 0 
+                      ? `${Math.round((unlockedLeads.size / Math.max(totalLeads, 1)) * 100)}% del totale`
+                      : 'Nessuno ancora'
+                    }
+                  </p>
+                </div>
+                <div className="relative">
+                  <Eye className="h-8 w-8 text-blue-500" />
+                  {unlockedLeads.size > 0 && (
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {unlockedLeads.size > 0 && (
+                <button
+                  onClick={() => setShowOnlyUnlocked(true)}
+                  className="mt-3 w-full bg-blue-500 hover:bg-blue-600 text-white text-sm py-2 rounded-lg transition-colors"
+                >
+                  Visualizza Solo Sbloccati
+                </button>
+              )}
+            </div>
+
             {/* Upgrade Button */}
             <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl p-6 text-white">
               <div className="flex items-center justify-between">
@@ -622,6 +655,33 @@ export default function ClientDashboard() {
 
               {/* Actions */}
               <div className="flex items-center space-x-3">
+                {/* Toggle per lead sbloccati */}
+                <div className="flex items-center space-x-2">
+                  <label className="inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showOnlyUnlocked}
+                      onChange={(e) => setShowOnlyUnlocked(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <div className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out ${
+                      showOnlyUnlocked ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}>
+                      <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${
+                        showOnlyUnlocked ? 'translate-x-5' : 'translate-x-0'
+                      }`}></div>
+                    </div>
+                  </label>
+                  <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">
+                    Solo sbloccati
+                  </span>
+                  {showOnlyUnlocked && (
+                    <div className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                      ✓ Attivo
+                    </div>
+                  )}
+                </div>
+
                 <button
                   onClick={() => setShowFilters(!showFilters)}
                   className="flex items-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
@@ -692,14 +752,44 @@ export default function ClientDashboard() {
 
           {/* Lista Lead */}
           <div className="space-y-4">
-            {leads.length === 0 ? (
-              <div className="text-center py-12">
-                <Target className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Nessun lead trovato</h3>
-                <p className="text-gray-600 dark:text-gray-400">Prova a modificare i filtri o aggiorna i dati</p>
-              </div>
-            ) : (
-              leads.map((lead, index) => {
+            {(() => {
+              // Applica filtro per lead sbloccati se attivo
+              let filteredLeads = showOnlyUnlocked 
+                ? leads.filter(lead => unlockedLeads.has(lead.id))
+                : leads
+
+              // Quando non usiamo il filtro "solo sbloccati", ordiniamo per mettere i sbloccati in cima
+              if (!showOnlyUnlocked && unlockedLeads.size > 0) {
+                filteredLeads = [...filteredLeads].sort((a, b) => {
+                  const aUnlocked = unlockedLeads.has(a.id)
+                  const bUnlocked = unlockedLeads.has(b.id)
+                  
+                  // Prima i sbloccati, poi i non sbloccati
+                  if (aUnlocked && !bUnlocked) return -1
+                  if (!aUnlocked && bUnlocked) return 1
+                  
+                  // Se entrambi sbloccati o entrambi non sbloccati, ordina per score (peggiore prima)
+                  return a.score - b.score
+                })
+              }
+
+              if (filteredLeads.length === 0) {
+                return (
+                  <div className="text-center py-12">
+                    <Target className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                      {showOnlyUnlocked ? 'Nessun lead sbloccato trovato' : 'Nessun lead trovato'}
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      {showOnlyUnlocked 
+                        ? 'Sblocca alcuni lead per vederli qui, oppure disattiva il filtro' 
+                        : 'Prova a modificare i filtri o aggiorna i dati'}
+                    </p>
+                  </div>
+                )
+              }
+
+              return filteredLeads.map((lead, index) => {
                 const isUnlocked = unlockedLeads.has(lead.id)
                 
                 return (
@@ -1036,7 +1126,7 @@ export default function ClientDashboard() {
                   </div>
                 )
               })
-            )}
+            })()}
           </div>
 
           {/* Controlli Paginazione */}

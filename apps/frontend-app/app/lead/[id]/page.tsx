@@ -1049,7 +1049,7 @@ export default function LeadDetailPage() {
                               }
                               // Se il sito ha HTTPS o altre analisi positive, probabilmente è attivo
                               if (
-                                lead.website_url?.startsWith("https://") ||
+                                lead.website_url?.startsWith("http://") ||
                                 analysis.website_load_time > 0
                               ) {
                                 return (
