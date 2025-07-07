@@ -113,6 +113,7 @@ export interface BusinessLead {
   
   // Analisi del sito web (se presente)
   websiteAnalysis?: WebsiteAnalysis
+  analysis?: WebsiteAnalysis
   
   // Punteggio e classificazione
   score: number // 0-100 (più basso = più problemi = migliore opportunità)

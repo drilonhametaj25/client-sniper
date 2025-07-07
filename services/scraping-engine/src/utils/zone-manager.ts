@@ -69,6 +69,7 @@ export class ZoneManager {
         .from('zones_to_scrape')
         .select('*')
         .eq('is_scraping_now', false)
+        .eq('source', 'google_maps') // Filtra per fonte specifica, ad esempio 'google_maps'
         .or(`last_scraped_at.is.null,last_scraped_at.lt.${minInterval.toISOString()}`)
         .order('score', { ascending: false })
         .limit(limit)

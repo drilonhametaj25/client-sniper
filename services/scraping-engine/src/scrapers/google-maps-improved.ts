@@ -703,7 +703,7 @@ export class GoogleMapsScraper {
       city,
       source: 'google_maps',
       contacts,
-      websiteAnalysis,
+      websiteAnalysis: websiteAnalysis || undefined,
       score,
       priority,
       opportunities,

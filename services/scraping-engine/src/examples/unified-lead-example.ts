@@ -90,12 +90,12 @@ async function demonstrateUnifiedLeadSystem() {
   // STEP 1: Primo scraping da Google Maps
   console.log('\n📍 STEP 1: Scraping da Google Maps')
   const lead1 = await leadGenerator.generateLeads([businessFromGoogleMaps])
-  console.log('Risultato:', lead1[0]?.id ? `Lead creato: ${lead1[0].id}` : 'Nessun lead generato')
+  console.log('Risultato:', lead1[0]?.businessName ? `Lead creato: ${lead1[0].businessName}` : 'Nessun lead generato')
 
   // STEP 2: Secondo scraping da Pagine Gialle (stesso business)
   console.log('\n📖 STEP 2: Scraping da Pagine Gialle (stesso business)')
   const lead2 = await leadGenerator.generateLeads([businessFromPagineGialle])
-  console.log('Risultato:', lead2[0]?.id ? `Lead ID: ${lead2[0].id}` : 'Nessun lead generato')
+  console.log('Risultato:', lead2[0]?.businessName ? `Lead nome: ${lead2[0].businessName}` : 'Nessun lead generato')
 
   // STEP 3: Verifica che non ci siano duplicati
   console.log('\n🔍 STEP 3: Verifica risultato')
@@ -137,7 +137,7 @@ async function demonstrateUnifiedLeadSystem() {
   }
 
   const lead3 = await leadGenerator.generateLeads([similarBusiness])
-  console.log('Risultato business simile:', lead3[0]?.id ? `Nuovo lead: ${lead3[0].id}` : 'Nessun lead generato')
+  console.log('Risultato business simile:', lead3[0]?.businessName ? `Nuovo lead: ${lead3[0].businessName}` : 'Nessun lead generato')
 }
 
 // Esempio di query di monitoraggio

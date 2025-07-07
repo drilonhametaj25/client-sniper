@@ -10,7 +10,7 @@ import { Logger } from '../utils/logger'
 import { BusinessData } from '../scrapers/google-maps'
 import { BusinessLead } from '../types/LeadAnalysis'
 import { LeadGenerator } from '../lead-generator'
-import { WebsiteAnalyzer, TechnicalAnalysis } from '../analyzers/website-analyzer'
+import { EnhancedWebsiteAnalyzer, EnhancedWebsiteAnalysis } from '../analyzers/enhanced-website-analyzer'
 
 export interface ScrapingJob {
   id: string
@@ -27,14 +27,14 @@ export class ScrapingJobRunner {
   private logger: Logger
   private zoneManager: ZoneManager
   private leadGenerator: LeadGenerator | null = null
-  private analyzer: WebsiteAnalyzer
+  private analyzer: EnhancedWebsiteAnalyzer
   private runningJobs: Map<string, ScrapingJob> = new Map()
   private maxConcurrentJobs: number = 3
 
   constructor() {
     this.logger = new Logger('ScrapingJobRunner')
     this.zoneManager = new ZoneManager()
-    this.analyzer = new WebsiteAnalyzer()
+    this.analyzer = new EnhancedWebsiteAnalyzer()
   }
 
   /**
@@ -174,7 +174,7 @@ export class ScrapingJobRunner {
       for (const business of businessData) {
         try {
           const analysis = business.website ? 
-            await this.analyzer.analyze(business.website) : 
+            await this.analyzer.analyzeWebsite(business.website) : 
             this.createFallbackAnalysis('', 20)
 
           analyzedBusinesses.push({
@@ -354,57 +354,134 @@ export class ScrapingJobRunner {
   /**
    * Crea un'analisi di fallback per business senza sito web o con errori
    */
-  private createFallbackAnalysis(url: string = '', score: number = 10): TechnicalAnalysis {
+  private createFallbackAnalysis(url: string = '', score: number = 10): EnhancedWebsiteAnalysis {
     return {
       url,
-      load_time: 0,
-      status_code: url ? 404 : 0,
-      has_ssl: false,
-      meta_tags: {},
-      h_tags: { h1: [], h2: [] },
-      images: { total: 0, without_alt: 0, broken: 0 },
-      tracking: {
-        google_analytics: false,
-        google_tag_manager: false,
-        facebook_pixel: false
-      },
+      finalUrl: url,
+      websiteStatus: url ? 'offline' : 'offline',
+      isAccessible: false,
+      httpStatusCode: url ? 404 : 0,
+      hasSSL: false,
+      sslValid: false,
       performance: {
-        page_size: 0,
-        requests_count: 0,
-        speed_score: 0
+        lcp: null,
+        fid: null,
+        cls: null,
+        ttfb: null,
+        fcp: null,
+        domContentLoaded: null,
+        loadComplete: null,
+        totalResources: 0,
+        totalSize: 0,
+        imageSize: 0,
+        jsSize: 0,
+        cssSize: 0,
+        requestCount: 0,
+        failedRequests: 0,
+        cachedRequests: 0,
+        speedScore: 0,
+        optimizationScore: 0,
+        mobileScore: 0,
+        performanceIssues: [],
+        recommendations: []
       },
-      mobile_friendly: false,
-      // NEW FEATURES: Extended fallback analysis
-      email_analysis: {
-        has_generic_email: true, // Assume generic for businesses without proper sites
-        found_emails: []
+      seo: {
+        hasTitle: false,
+        titleLength: 0,
+        hasMetaDescription: false,
+        metaDescriptionLength: 0,
+        hasH1: false,
+        h1Count: 0,
+        hasH2: false,
+        h2Count: 0,
+        hasRobotsTag: false,
+        hasCanonical: false,
+        hasStructuredData: false,
+        hasOpenGraph: false,
+        hasTwitterCard: false,
+        hasSitemap: false,
+        hasRobotsTxt: false
       },
-      footer_analysis: {
-        has_old_year: false,
-        current_year: new Date().getFullYear()
+      images: {
+        total: 0,
+        withoutAlt: 0,
+        broken: 0,
+        oversized: 0,
+        averageSize: 0,
+        formats: []
       },
-      gdpr_compliance: {
-        has_cookie_banner: false,
-        has_privacy_policy: false,
-        has_vat_number: false
+      tracking: {
+        googleAnalytics: false,
+        googleTagManager: false,
+        facebookPixel: false,
+        googleAdsConversion: false,
+        hotjar: false,
+        clarity: false,
+        customPixels: [],
+        trackingScore: 0
       },
-      branding_consistency: {
-        domain_social_mismatch: false,
-        social_links: []
+      gdpr: {
+        hasCookieBanner: false,
+        hasPrivacyPolicy: false,
+        hasTermsOfService: false,
+        hasContactInfo: false,
+        hasBusinessAddress: false,
+        hasVatNumber: false,
+        vatNumbers: [],
+        gdprScore: 0
       },
-      cms_analysis: {
-        is_wordpress: false,
-        uses_default_theme: false,
-        uses_page_builder: false
+      mobile: {
+        isMobileFriendly: false,
+        hasViewportMeta: false,
+        hasResponsiveCss: false,
+        hasHorizontalScroll: false,
+        touchTargetsOk: false,
+        textReadable: false,
+        mobileScore: 0
       },
-      content_quality: {
-        has_generic_content: true, // No site = no content
-        has_stock_images: false,
-        content_length: 0
+      techStack: {
+        cms: null,
+        framework: null,
+        ecommerce: null,
+        analytics: [],
+        hosting: null,
+        cdn: null,
+        languages: [],
+        libraries: [],
+        plugins: [],
+        confidence: 0
       },
-      needed_roles: ['developer', 'designer', 'copywriter'], // Default roles for sites with major issues
-      issues: url ? ['Website not accessible', 'No website found'] : ['No website found'],
-      overall_score: score
+      content: {
+        wordCount: 0,
+        hasContactForm: false,
+        hasPhoneNumbers: false,
+        phoneNumbers: [],
+        hasEmailAddresses: false,
+        emailAddresses: [],
+        hasSocialLinks: false,
+        socialLinks: [],
+        hasMapEmbedded: false,
+        hasBusinessHours: false,
+        contentQualityScore: 0
+      },
+      issues: {
+        critical: url ? ['Website not accessible'] : ['No website found'],
+        high: ['Missing SEO elements', 'No analytics tracking'],
+        medium: ['No mobile optimization', 'No GDPR compliance'],
+        low: []
+      },
+      opportunities: {
+        neededServices: ['web-developer', 'seo-specialist', 'designer'],
+        priorityLevel: 'critical' as const,
+        estimatedValue: 8,
+        quickWins: ['Create website', 'Setup basic SEO', 'Add contact information']
+      },
+      overallScore: score,
+      businessValue: score,
+      technicalHealth: score,
+      analysisDate: new Date(),
+      analysisTime: 0,
+      version: '1.0.0'
     }
   }
 

@@ -4,9 +4,8 @@
 // ⚠️ Aggiornare se si aggiungono nuove fonti o si modifica il workflow
 
 import { createClient } from '@supabase/supabase-js'
-import { GoogleMapsScraper } from './scrapers/google-maps'
+import { GoogleMapsScraper } from './scrapers/google-maps-improved'
 import { YelpScraper } from './scrapers/yelp'
-import { WebsiteAnalyzer } from './analyzers/website-analyzer'
 import { LeadGenerator } from './lead-generator'
 import { Logger } from './utils/logger'
 
@@ -14,7 +13,6 @@ export class ScrapingOrchestrator {
   private supabase
   private googleMapsScraper: GoogleMapsScraper
   private yelpScraper: YelpScraper
-  private websiteAnalyzer: WebsiteAnalyzer
   private leadGenerator: LeadGenerator
   private logger: Logger
 
@@ -30,7 +28,6 @@ export class ScrapingOrchestrator {
     // Inizializza componenti
     this.googleMapsScraper = new GoogleMapsScraper()
     this.yelpScraper = new YelpScraper()
-    this.websiteAnalyzer = new WebsiteAnalyzer()
     this.leadGenerator = new LeadGenerator(this.supabase)
   }
 
@@ -54,9 +51,11 @@ export class ScrapingOrchestrator {
         
         // Scraping in base alla fonte
         switch (target.source) {
-          case 'google_maps':
-            businesses = await this.googleMapsScraper.scrape(target)
-            break
+          case 'google_maps': {
+            const result = await this.googleMapsScraper.scrape(target)
+            businesses = result.leads;
+            break;
+          }
           // case 'yelp':
           //   businesses = await this.yelpScraper.scrape(target)
           //   break
@@ -68,30 +67,8 @@ export class ScrapingOrchestrator {
         this.logger.info(`📊 Trovate ${businesses.length} aziende per ${target.query}`)
         totalBusinesses += businesses.length
 
-        // 3. Analizza i siti web
-        const analyzedBusinesses = []
-        for (const business of businesses) {
-          if (business.website) {
-            try {
-              const analysis = await this.websiteAnalyzer.analyze(business.website)
-              analyzedBusinesses.push({
-                ...business,
-                analysis,
-                target_category: target.category
-              })
-              
-              // Delay per evitare rate limiting
-              await this.delay(2000)
-            } catch (error) {
-              this.logger.warn(`⚠️  Errore analisi ${business.website}:`, error)
-            }
-          }
-        }
-
-        this.logger.info(`🔍 Analizzati ${analyzedBusinesses.length} siti web`)
-
-        // 4. Genera lead da aziende analizzate
-        const leads = await this.leadGenerator.generateLeads(analyzedBusinesses)
+        // 3. Genera lead da aziende (il LeadGenerator gestirà l'analisi)
+        const leads = await this.leadGenerator.generateLeads(businesses)
         totalLeads += leads.length
 
         this.logger.info(`✨ Generati ${leads.length} lead da ${target.query}`)
