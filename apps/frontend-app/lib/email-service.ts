@@ -285,7 +285,6 @@ Hai domande? Rispondi a questa email.
         return false
       }
 
-      console.log('✅ Email inviata con successo a:', to)
       return true
     } catch (error) {
       console.error('Errore servizio email:', error)

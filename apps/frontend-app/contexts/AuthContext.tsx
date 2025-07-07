@@ -88,7 +88,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         // ⚡ EVITA CHIAMATE MULTIPLE PER LO STESSO UTENTE
         if (lastUserIdRef.current === session.user.id && isLoadingProfile.current) {
-          console.log('⏸️ Saltando caricamento profilo (già in corso)', session.user.id)
           return
         }
         
@@ -98,7 +97,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // ⚡ PROVA PRIMA LA CACHE PERSISTENTE
         const cachedProfile = getCachedProfile(session.user.id)
         if (cachedProfile && cachedProfile.plan && cachedProfile.role) {
-          console.log('🚀 Profilo completo caricato da cache:', cachedProfile.plan)
           setUserProtected(cachedProfile)
           setLoading(false)
           isLoadingProfile.current = false
@@ -108,7 +106,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             getUserProfileWithRetry(session.user.id, session.user, 2)
               .then(freshProfile => {
                 if (freshProfile && freshProfile.plan && freshProfile.role) {
-                  console.log('🔄 Profilo aggiornato in background:', freshProfile.plan)
                   setUserProtected(freshProfile)
                   setCachedProfile(session.user.id, freshProfile)
                 }
@@ -119,13 +116,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return
         }
         
-        console.log('🔄 Cache miss o incompleta, caricamento profilo da DB per utente:', session.user.id)
         
         // ⚡ Caricamento da DB con retry più robusti
         const profile = await getUserProfileWithRetry(session.user.id, session.user, 3) // Aumentato a 3 retry
         
         if (profile && profile.plan && profile.role) {
-          console.log('✅ Profilo completo caricato da DB:', profile.plan, profile.role)
           setUserProtected(profile)
           // ⚡ SALVA IN CACHE PERSISTENTE solo se profilo completo
           setCachedProfile(session.user.id, profile)
@@ -135,15 +130,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // STRATEGIA 1: Usa cache esistente anche se "scaduta"
           const emergencyCache = getCachedProfile(session.user.id)
           if (emergencyCache && emergencyCache.plan && emergencyCache.role) {
-            console.log('🆘 Usando cache di emergenza:', emergencyCache.plan)
             setUserProtected(emergencyCache)
           } else {
             // STRATEGIA 2: Riprova con query più semplice
-            console.log('🔄 Tentando query di emergenza...')
             try {
               const emergencyData = await getUserProfile(session.user.id, session.user)
               if (emergencyData && emergencyData.plan) {
-                console.log('✅ Query di emergenza riuscita:', emergencyData.plan)
                 setUserProtected(emergencyData)
                 setCachedProfile(session.user.id, emergencyData)
               } else {
@@ -166,7 +158,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } else {
-        console.log('❌ Nessuna sessione')
         lastUserIdRef.current = null
         setUser(null)
       }
@@ -177,7 +168,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         const cachedProfile = getCachedProfile(session.user.id)
         if (cachedProfile) {
-          console.log('🔄 Usando cache salvata come fallback dopo errore')
           setUserProtected(cachedProfile)
         } else {
           console.warn('⚠️ Creando profilo parziale temporaneo dopo errore (NO PLAN)')
@@ -194,7 +184,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       isLoadingProfile.current = false
       setLoading(false)
-      console.log('✅ Loading completato')
     }
   }, [getCachedProfile, setCachedProfile])
 
@@ -202,7 +191,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const getUserProfileWithRetry = async (userId: string, sessionUser: any, retries: number): Promise<AuthUser | null> => {
     for (let i = 0; i < retries; i++) {
       try {
-        console.log(`🔄 Tentativo ${i + 1}/${retries} caricamento profilo...`)
         
         // ⚡ TIMEOUT PROGRESSIVO: inizia con 5s, poi aumenta
         const timeoutMs = 5000 + (i * 2000) // 5s, 7s, 9s
@@ -214,7 +202,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const profile = await Promise.race([profilePromise, timeoutPromise])
         
         if (profile?.plan && profile?.role && profile?.id) {
-          console.log(`✅ Profilo completo trovato al tentativo ${i + 1}:`, profile.plan)
           return profile
         } else if (profile?.id && profile?.email) {
           // Profilo parziale ma valido - potrebbe essere nuovo utente
@@ -228,14 +215,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Se profilo completamente vuoto, retry con delay progressivo
         if (i < retries - 1) {
           const delay = 1000 * (i + 1) // Delay progressivo: 1s, 2s
-          console.log(`⏳ Profilo incompleto, retry in ${delay}ms...`)
           await new Promise(resolve => setTimeout(resolve, delay))
         }
       } catch (error) {
         console.error(`❌ Tentativo ${i + 1} fallito:`, error)
         if (i < retries - 1) {
           const delay = 2000 * (i + 1) // Delay progressivo in caso di errore
-          console.log(`⏳ Retry in ${delay}ms...`)
           await new Promise(resolve => setTimeout(resolve, delay))
         }
       }
@@ -253,7 +238,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // ⚡ INVALIDA CACHE PERSISTENTE per forzare reload fresco
         try {
           localStorage.removeItem(`profile_cache_${session.user.id}`)
-          console.log('🗑️ Cache persistente invalidata per refresh profilo')
         } catch (e) {
           console.warn('⚠️ Errore invalidazione cache:', e)
         }
@@ -281,7 +265,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     const initializeAuth = async () => {
       try {
-        console.log('🚀 Inizializzazione Auth Context ULTRA-VELOCE...')
         
         // ⚡ CONTROLLO IMMEDIATO CACHE: Prova prima a caricare dalla cache
         const sessionPromise = getCurrentSession()
@@ -297,7 +280,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // ⚡ CARICAMENTO ISTANTANEO: Prova subito la cache persistente
           const cachedProfile = getCachedProfile(currentSession.user.id)
           if (cachedProfile && cachedProfile.plan && cachedProfile.role) {
-            console.log('🚀 INIZIALIZZAZIONE ISTANTANEA con cache persistente!')
             setSession(currentSession)
             setUserProtected(cachedProfile)
             setLoading(false)
@@ -338,7 +320,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ⚡ ULTRA-OTTIMIZZATO: Ascolta i cambiamenti di autenticazione con timeout aggressivo
   useEffect(() => {
     const { data: { subscription } } = onAuthStateChange(async (event, newSession) => {
-      console.log('🔄 Auth state change ULTRA-VELOCE:', event)
       
       try {
         // ⚡ TIMEOUT ULTRA-AGGRESSIVO: 2s per evitare blocchi su auth state change
@@ -455,7 +436,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Tenta recupero immediato dalla cache
           const recoveryProfile = getCachedProfile(user.id)
           if (recoveryProfile && recoveryProfile.plan) {
-            console.log('🔄 RECUPERO: Piano recuperato dalla cache:', recoveryProfile.plan)
             setUserProtected(recoveryProfile)
           }
         }

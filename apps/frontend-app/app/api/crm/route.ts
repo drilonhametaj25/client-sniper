@@ -53,7 +53,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'PRO plan required' }, { status: 403 });
     }
 
-    console.log('User verified:', user.id, 'Plan:', userData.plan);
 
     // Prima controlla se ci sono lead sbloccati dall'utente nella tabella user_unlocked_leads
     const { data: unlockedLeads, error: unlockedError } = await supabaseAdmin
@@ -67,10 +66,6 @@ export async function GET(request: NextRequest) {
       `)
       .eq('user_id', user.id);
 
-    console.log('Unlocked leads found:', unlockedLeads?.length || 0);
-    if (unlockedLeads && unlockedLeads.length > 0) {
-      console.log('Sample unlocked lead:', unlockedLeads[0]);
-    }
 
     // Controlla se esistono entry CRM per questo utente
     const { data: existingEntries, error: entriesError } = await supabaseAdmin
@@ -78,10 +73,6 @@ export async function GET(request: NextRequest) {
       .select('id, lead_id, user_id')
       .eq('user_id', user.id);
 
-    console.log('Existing CRM entries found:', existingEntries?.length || 0);
-    if (existingEntries && existingEntries.length > 0) {
-      console.log('Sample CRM entry:', existingEntries[0]);
-    }
 
     // Prima prova con RPC, poi fallback su query dirette
     let crmEntries = [];
@@ -93,7 +84,6 @@ export async function GET(request: NextRequest) {
         .rpc('get_user_crm_entries');
 
       if (rpcError) {
-        console.log('RPC failed, using direct query:', rpcError.message);
         
         // Fallback: query diretta con JOIN esplicito
         let { data: directEntries, error: directError } = await supabaseAdmin
@@ -107,13 +97,11 @@ export async function GET(request: NextRequest) {
           .eq('user_id', user.id)
           .order('updated_at', { ascending: false });
 
-        console.log('Direct query result:', directEntries?.length || 0, 'entries');
         if (directError) {
           console.error('Direct query failed:', directError);
           return NextResponse.json({ error: 'Failed to fetch CRM entries' }, { status: 500 });
         }
 
-        console.log('Direct query result:', directEntries?.length || 0, 'entries');
         if (directError) {
           console.error('Direct query failed:', directError);
           return NextResponse.json({ error: 'Failed to fetch CRM entries' }, { status: 500 });
@@ -121,7 +109,6 @@ export async function GET(request: NextRequest) {
 
         // Se non ci sono entry CRM ma ci sono lead sbloccati, creiamole automaticamente
         if ((!directEntries || directEntries.length === 0) && unlockedLeads && unlockedLeads.length > 0) {
-          console.log('No CRM entries found but unlocked leads exist. Creating CRM entries...');
           
           const newEntries = unlockedLeads.map((unlockedLead: any) => ({
             user_id: user.id,
@@ -145,7 +132,6 @@ export async function GET(request: NextRequest) {
           if (createError) {
             console.error('Failed to create CRM entries:', createError);
           } else {
-            console.log('Created', createdEntries?.length || 0, 'new CRM entries');
             directEntries = createdEntries;
           }
         }
@@ -169,7 +155,6 @@ export async function GET(request: NextRequest) {
         .rpc('get_user_crm_stats', { user_id: user.id });
 
       if (statsError) {
-        console.log('Stats RPC failed, calculating manually:', statsError.message);
         
         // Fallback: calcola statistiche manualmente
         const now = new Date();
@@ -186,10 +171,8 @@ export async function GET(request: NextRequest) {
           ).length
         };
         
-        console.log('Manual stats calculation:', stats);
       } else {
         stats = rpcStats || null;
-        console.log('RPC stats result:', stats);
       }
 
     } catch (rpcError) {
@@ -272,7 +255,6 @@ export async function POST(request: NextRequest) {
         });
 
       if (upsertError) {
-        console.log('RPC upsert failed, using direct query:', upsertError.message);
         
         // Fallback: verifica se l'entry esiste già
         const { data: existingEntry, error: checkError } = await supabaseAdmin
