@@ -58,6 +58,10 @@ const plans: Plan[] = [
     features: [
       '100 lead al mese',
       'Analisi tecnica completa',
+      'CRM personale integrato',
+      'Gestione lead avanzata',
+      'Note e follow-up',
+      'Upload allegati',
       'Supporto prioritario',
       'Filtri avanzati',
       'API access',

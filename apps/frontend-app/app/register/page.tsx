@@ -73,6 +73,7 @@ const plans: Plan[] = [
     features: [
       '100 audit al mese',
       'Suite completa di analisi',
+      'CRM personale integrato',
       'Supporto prioritario',
       'Targeting geografico',
       'API access',

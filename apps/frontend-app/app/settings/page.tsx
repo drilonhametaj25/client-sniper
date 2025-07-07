@@ -554,6 +554,100 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
+            
+            {/* Caratteristiche del piano */}
+            {userData.plan === 'pro' && (
+              <div className="mt-4 p-4 bg-purple-50 rounded-xl">
+                <h3 className="text-sm font-medium text-purple-900 mb-2">Caratteristiche Piano Pro</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-purple-800">
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-purple-600 mr-2" />
+                    100 lead al mese
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-purple-600 mr-2" />
+                    CRM personale integrato
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-purple-600 mr-2" />
+                    Gestione lead avanzata
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-purple-600 mr-2" />
+                    Note e follow-up
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-purple-600 mr-2" />
+                    Upload allegati
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-purple-600 mr-2" />
+                    Supporto prioritario
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-purple-600 mr-2" />
+                    API access
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-purple-600 mr-2" />
+                    Lead scoring avanzato
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {userData.plan === 'starter' && (
+              <div className="mt-4 p-4 bg-blue-50 rounded-xl">
+                <h3 className="text-sm font-medium text-blue-900 mb-2">Caratteristiche Piano Starter</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-blue-800">
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-blue-600 mr-2" />
+                    25 lead al mese
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-blue-600 mr-2" />
+                    Analisi tecnica completa
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-blue-600 mr-2" />
+                    Supporto email
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-blue-600 mr-2" />
+                    Filtri avanzati
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {userData.plan === 'free' && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-xl">
+                <h3 className="text-sm font-medium text-gray-900 mb-2">Caratteristiche Piano Gratuito</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-700">
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-gray-600 mr-2" />
+                    2 lead al mese
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-gray-600 mr-2" />
+                    Informazioni base
+                  </div>
+                  <div className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-gray-600 mr-2" />
+                    Supporto community
+                  </div>
+                </div>
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <Link 
+                    href="/upgrade"
+                    className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700"
+                  >
+                    <Crown className="w-4 h-4 mr-1" />
+                    Passa al piano Pro e accedi al CRM
+                  </Link>
+                </div>
+              </div>
+            )}
 
             {/* Dettagli disattivazione */}
             {userData.status === 'inactive' && userData.deactivated_at && (

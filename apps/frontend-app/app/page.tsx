@@ -429,6 +429,10 @@ export default function HomePage() {
                     </li>
                     <li className="flex items-center">
                       <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                      <span className="text-gray-700">CRM personale integrato</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
                       <span className="text-gray-700">Report personalizzati</span>
                     </li>
                     <li className="flex items-center">

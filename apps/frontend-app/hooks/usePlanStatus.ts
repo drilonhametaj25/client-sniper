@@ -138,7 +138,7 @@ export function usePlanLimitations(): PlanLimitations {
         canUnlockLeads: planStatus.credits_remaining > 0,
         canViewContacts: true,
         canExportData: false,
-        maxLeadsPerMonth: 50,
+        maxLeadsPerMonth: 25,
         message: planStatus.credits_remaining === 0 ? 
           'Hai esaurito i crediti del piano Starter.' : undefined
       }
@@ -148,7 +148,7 @@ export function usePlanLimitations(): PlanLimitations {
         canUnlockLeads: planStatus.credits_remaining > 0,
         canViewContacts: true,
         canExportData: true,
-        maxLeadsPerMonth: 200,
+        maxLeadsPerMonth: 100,
         message: planStatus.credits_remaining === 0 ? 
           'Hai esaurito i crediti del piano Pro.' : undefined
       }

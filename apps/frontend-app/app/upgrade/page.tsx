@@ -100,6 +100,20 @@ export default function UpgradePage() {
             </div>
 
             <div className="text-center">
+              <div className="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+              </div>
+              <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                CRM Integrato
+              </h4>
+              <p className="text-gray-600">
+                Gestisci i tuoi lead con un CRM completo: note, follow-up, allegati, timeline e stati personalizzati
+              </p>
+            </div>
+
+            <div className="text-center">
               <div className="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -136,6 +150,15 @@ export default function UpgradePage() {
           </h3>
           
           <div className="max-w-3xl mx-auto space-y-6">
+            <div className="bg-white rounded-lg shadow p-6">
+              <h4 className="font-semibold text-gray-900 mb-2">
+                Come funziona il CRM integrato?
+              </h4>
+              <p className="text-gray-600">
+                Il piano Pro include un CRM completo per gestire i tuoi lead: puoi aggiungere note, impostare follow-up, caricare allegati, tracciare la timeline delle attività e organizzare i contatti per stato (da contattare, in negoziazione, chiuso, ecc.).
+              </p>
+            </div>
+
             <div className="bg-white rounded-lg shadow p-6">
               <h4 className="font-semibold text-gray-900 mb-2">
                 Posso cancellare in qualsiasi momento?

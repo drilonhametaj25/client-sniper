@@ -21,7 +21,7 @@ const faqs: FAQ[] = [
   },
   {
     question: "Quanto costa utilizzare TrovaMi per trovare clienti?",
-    answer: "Offriamo piani flessibili: 2 analisi gratuite al giorno per utenti non registrati, Piano Starter a €29/mese per 50 audit mensili, Piano Pro a €99/mese per 200 audit con funzionalità avanzate come API access e report personalizzati."
+    answer: "Offriamo piani flessibili: 2 analisi gratuite al giorno per utenti non registrati, Piano Starter a €19/mese per 25 lead mensili, Piano Pro a €49/mese per 100 lead con funzionalità avanzate come CRM integrato, gestione lead completa con note e follow-up, upload allegati, API access e lead scoring avanzato."
   },
   {
     question: "Come posso trovare clienti potenziali con TrovaMi?",
@@ -32,8 +32,12 @@ const faqs: FAQ[] = [
     answer: "Identifichiamo oltre 70 tipologie di problemi: meta tag SEO mancanti, performance di caricamento lente, mancanza di SSL, problemi di responsive design, assenza di tracking analytics, non conformità GDPR, errori di indicizzazione e molto altro."
   },
   {
+    question: "Come funziona il CRM integrato nel Piano Pro?",
+    answer: "Il Piano Pro include un CRM completo per gestire i tuoi lead: puoi aggiungere note personalizzate, impostare promemoria per follow-up, caricare documenti e allegati, tracciare la cronologia delle attività e organizzare i contatti per stato (da contattare, in negoziazione, chiuso positivo/negativo, ecc.). Tutto integrato direttamente nella piattaforma."
+  },
+  {
     question: "TrovaMi è adatto per freelancer e piccole agenzie?",
-    answer: "Assolutamente sì! Il nostro piano Starter a €29/mese è perfetto per freelancer e piccole agenzie. Include 50 audit mensili, accesso alla dashboard completa e tutti gli strumenti necessari per identificare e gestire lead qualificati."
+    answer: "Assolutamente sì! Il nostro piano Starter a €19/mese è perfetto per freelancer, mentre il Piano Pro a €49/mese con CRM integrato è ideale per agenzie che vogliono gestire professionalmente i loro lead e clienti potenziali."
   },
   {
     question: "Quanto tempo serve per vedere i primi risultati?",
