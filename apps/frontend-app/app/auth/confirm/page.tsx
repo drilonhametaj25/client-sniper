@@ -22,7 +22,6 @@ function ConfirmPageContent() {
       const token = searchParams.get('token')
       const type = searchParams.get('type')
 
-      console.log('🔄 Confirming email with:', { token: !!token, type })
 
       if (!token || type !== 'signup') {
         setStatus('error')
@@ -41,7 +40,6 @@ function ConfirmPageContent() {
           throw error
         }
 
-        console.log('✅ Email confermata con successo')
         setStatus('success')
         setMessage('Email confermata con successo!')
         

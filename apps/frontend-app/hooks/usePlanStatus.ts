@@ -59,7 +59,6 @@ export function usePlanStatus(): PlanStatus {
         return
       }
 
-      console.log('📊 Caricando stato piano da AuthContext per:', user.email)
       
       // Usa i dati già disponibili dall'AuthContext che sono affidabili
       const canAccessPremium = (user.status === 'active' && user.plan && user.plan !== 'free') || false
@@ -73,13 +72,6 @@ export function usePlanStatus(): PlanStatus {
         reactivated_at: user.reactivated_at,
         canAccessPremium,
         isLoading: false
-      })
-
-      console.log('✅ Stato piano caricato da AuthContext:', {
-        plan: user.plan,
-        status: user.status,
-        credits: user.credits_remaining,
-        canAccess: canAccessPremium
       })
 
     } catch (error) {

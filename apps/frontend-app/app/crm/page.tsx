@@ -109,22 +109,16 @@ export default function CrmPage() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('CRM API Response:', data);
         
         setEntries(data.entries || data);
         
         // Se ci sono statistiche nella risposta, usale, altrimenti calcola dal client
         if (data.stats) {
-          console.log('Using API stats:', data.stats);
           // Le statistiche dall'API sono un array, prendiamo il primo elemento
           const statsData = Array.isArray(data.stats) ? data.stats[0] : data.stats;
-          console.log('Processed stats:', statsData);
-          console.log('Stats keys:', Object.keys(statsData || {}));
           setStats(statsData);
         } else {
-          console.log('Calculating stats from entries:', data.entries || data);
           const stats = calculateStats(data.entries || data);
-          console.log('Calculated stats:', stats);
           setStats(stats);
         }
       } else {

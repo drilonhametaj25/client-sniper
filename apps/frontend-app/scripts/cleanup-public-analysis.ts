@@ -17,7 +17,6 @@ export async function cleanupOldPublicAnalysis(): Promise<number> {
     }
 
     const deletedCount = data || 0
-    console.log(`Pulizia completata: ${deletedCount} record rimossi`)
     
     return deletedCount
   } catch (error) {
@@ -30,7 +29,6 @@ export async function cleanupOldPublicAnalysis(): Promise<number> {
 if (require.main === module) {
   cleanupOldPublicAnalysis()
     .then(count => {
-      console.log(`Script completato: ${count} record rimossi`)
       process.exit(0)
     })
     .catch(error => {

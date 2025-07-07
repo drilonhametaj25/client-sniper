@@ -87,7 +87,6 @@ export default function SettingsPage() {
     if (!user?.id) return
     
     try {
-      console.log('📋 Caricando dati utente per:', user.email)
       
       // Usa i dati dell'AuthContext che sono aggiornati e completi
       const currentUserData: UserData = {
@@ -99,7 +98,6 @@ export default function SettingsPage() {
         created_at: user.created_at || new Date().toISOString()
       }
       
-      console.log('✅ Dati utente caricati da AuthContext:', currentUserData)
       setUserData(currentUserData)
 
       // Carica i log del piano se l'utente ha un piano attivo
@@ -140,21 +138,15 @@ export default function SettingsPage() {
     setDeactivating(true)
     
     try {
-      console.log('🔍 Debug: Inizio disattivazione piano')
       
       // Usa la stessa logica identica del PlanSelector che funziona
       const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
-      
-      console.log('🔍 Debug: sessionError =', sessionError)
-      console.log('🔍 Debug: currentSession =', currentSession)
-      console.log('🔍 Debug: access_token =', currentSession?.access_token ? 'PRESENTE' : 'MANCANTE')
       
       if (sessionError || !currentSession?.access_token) {
         console.error('❌ Debug: Sessione invalida - sessionError:', sessionError, 'token:', currentSession?.access_token)
         throw new Error('Sessione non valida o token mancante')
       }
 
-      console.log('🔍 Debug: Sessione valida, invio richiesta...')
 
       const response = await fetch('/api/plan/deactivate', {
         method: 'POST',
@@ -626,7 +618,6 @@ export default function SettingsPage() {
                   {/* Pulsante Refresh Dati */}
                   <button
                     onClick={async () => {
-                      console.log('🔄 Invalidazione cache completa e refresh profilo...')
                       
                       // 1. Invalida localStorage cache
                       const keys = Object.keys(localStorage)
@@ -645,16 +636,13 @@ export default function SettingsPage() {
                       })
                       
                       // 3. Refresh del profilo AuthContext
-                      console.log('💾 Cache invalidata, forzando refresh profilo...')
                       await refreshProfile()
                       
                       // 4. Ricarica dati locali
-                      console.log('📋 Ricaricando dati locali...')
                       setTimeout(() => {
                         loadUserData()
                       }, 500) // Piccolo delay per permettere al context di aggiornarsi
                       
-                      console.log('✅ Refresh completo completato!')
                     }}
                     className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
                     title="Aggiorna i dati del profilo"

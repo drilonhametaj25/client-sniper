@@ -87,11 +87,9 @@ export default function ClientDashboard() {
 
   // Funzione per caricare via API - NON MEMOIZZATA per evitare loop infiniti
   const loadLeadsFromAPI = async (page = 1, useCache = false) => {
-    console.log('🚀 loadLeadsFromAPI chiamata con:', { page, useCache })
     
     // Evita chiamate multiple contemporanee
     if (isLoadingLeads) {
-      console.log('⏸️ Chiamata API già in corso, saltata')
       return
     }
 
@@ -99,7 +97,6 @@ export default function ClientDashboard() {
       setIsLoadingLeads(true)
       setLoadingData(true)
       
-      console.log('✅ Inizio processo di caricamento leads...')
       
       // ⚡ CACHE semplice per evitare richieste duplicate
       const cacheKey = `leads-${page}-${filterCategory}-${filterCity}-${filterRole}-${searchTerm}-${showOnlyUnlocked}`
@@ -107,7 +104,6 @@ export default function ClientDashboard() {
         try {
           const cached = JSON.parse(localStorage.getItem(cacheKey)!)
           if (Date.now() - cached.timestamp < 30000) { // Cache per 30 secondi
-            console.log('📦 Usando cache per:', cacheKey)
             setLeads(cached.data.leads)
             setUserProfile(cached.data.user_profile)
             setTotalLeads(cached.data.pagination.total)
@@ -121,13 +117,11 @@ export default function ClientDashboard() {
         }
       }
       
-      console.log('🔐 Controllo sessione utente...')
       const session = await supabase.auth.getSession()
       if (!session.data.session) {
         console.error('❌ Nessuna sessione attiva')
         return
       }
-      console.log('✅ Sessione trovata, access_token presente:', !!session.data.session.access_token)
 
       const params = new URLSearchParams({
         page: page.toString(),
@@ -137,10 +131,6 @@ export default function ClientDashboard() {
         ...(filterRole && { neededRoles: filterRole }),
         ...(searchTerm && { search: searchTerm })
       })
-
-      console.log(`🚀 Chiamando API leads: ${params.toString()}`)
-      console.log('🔗 URL completo:', `/api/leads?${params}`)
-      console.log('🎫 Token parziale:', session.data.session.access_token.substring(0, 20) + '...')
       
       const startTime = Date.now()
       const response = await fetch(`/api/leads?${params}`, {
@@ -151,21 +141,13 @@ export default function ClientDashboard() {
         signal: AbortSignal.timeout(10000) // Timeout di 10 secondi
       })
       const requestTime = Date.now() - startTime
-      
-      console.log('📡 Risposta ricevuta:', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok,
-        headers: Object.fromEntries(response.headers.entries()),
-        time: requestTime + 'ms'
-      })
+    
 
       if (!response.ok) {
         const errorText = await response.text()
         console.error(`❌ Errore HTTP ${response.status}:`, errorText)
         
         if (response.status === 401) {
-          console.log('🔑 Token scaduto, necessario re-login')
           // Qui potresti reindirizzare al login
         }
         return
@@ -174,7 +156,6 @@ export default function ClientDashboard() {
       const result = await response.json()
       
       if (result.success) {
-        console.log(`✅ Lead caricati: ${result.data.leads.length} items in ${requestTime}ms`)
         
         setLeads(result.data.leads)
         setUserProfile(result.data.user_profile)
@@ -190,7 +171,6 @@ export default function ClientDashboard() {
           }))
         }
         
-        console.log(`⚡ Performance: ${requestTime}ms total, ${result.data.performance?.query_time_ms || 'N/A'}ms DB query`)
       } else {
         console.error('❌ Errore API:', result.error)
       }
@@ -215,7 +195,6 @@ export default function ClientDashboard() {
   useEffect(() => {
     // ⚡ CONTROLLO IMMEDIATO: Se non c'è sessione o loading è false e nessun user, redirect veloce
     if (!loading && !user) {
-      console.log('🔄 Redirect immediato a login - nessuna autenticazione')
       router.push('/login')
       return
     }
@@ -223,7 +202,6 @@ export default function ClientDashboard() {
     // ⚡ TIMEOUT AGGRESSIVO: Se il loading dura troppo, mostra comunque la UI
     const maxLoadingTime = setTimeout(() => {
       if (loading && !user) {
-        console.log('⏰ Loading troppo lungo, assumo fallback di autenticazione')
         // Non possiamo forzare setLoading dal contesto, ma possiamo assumere che l'auth sia fallita
         router.push('/login')
       }
@@ -240,7 +218,6 @@ export default function ClientDashboard() {
     if (lastUserRef.current === user.id) return
     lastUserRef.current = user.id
     
-    console.log('🚀 Caricando leads via API per utente:', user.id)
     hasInitialized.current = true
     loadSettings()
     loadLeadsFromAPI(1, true) // Metodo API con paginazione
@@ -252,7 +229,6 @@ export default function ClientDashboard() {
     if (!user?.id || !hasInitialized.current) return
     
     const timeoutId = setTimeout(() => {
-      console.log('🔄 Ricaricando leads per filtri cambiati:', { filterCategory, filterCity, filterRole, searchTerm, showOnlyUnlocked })
       loadLeadsFromAPI(1, false) // Reset alla pagina 1, no cache per filtri
     }, 300) // Debounce di 300ms
     
@@ -263,7 +239,6 @@ export default function ClientDashboard() {
   useEffect(() => {
     if (!user?.id || !hasInitialized.current || currentPage <= 1) return
     
-    console.log('📄 Caricando pagina:', currentPage)
     loadLeadsFromAPI(currentPage, true)
   }, [currentPage, user?.id]) // Senza loadLeadsFromAPI
 

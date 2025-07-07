@@ -12,7 +12,6 @@ const supabase = createClient(
 
 async function checkUserData() {
   try {
-    console.log('🔍 Controllando dati utente per: lonny-4ever@hotmail.it')
     
     const { data: userData, error } = await supabase
       .from('users')
@@ -25,16 +24,6 @@ async function checkUserData() {
       return
     }
 
-    console.log('📊 Dati utente trovati:')
-    console.log('  ID:', userData.id)
-    console.log('  Email:', userData.email)
-    console.log('  Piano:', userData.plan)
-    console.log('  Status:', userData.status)
-    console.log('  Stripe Subscription ID:', userData.stripe_subscription_id)
-    console.log('  Stripe Customer ID:', userData.stripe_customer_id)
-    console.log('  Created:', userData.created_at)
-    console.log('  Updated:', userData.updated_at)
-
     // Controlliamo anche i log delle operazioni
     const { data: logs, error: logsError } = await supabase
       .from('plan_status_logs')
@@ -42,19 +31,6 @@ async function checkUserData() {
       .eq('user_id', userData.id)
       .order('created_at', { ascending: false })
       .limit(10)
-
-    if (!logsError && logs) {
-      console.log('\n📋 Ultimi 10 log operazioni:')
-      logs.forEach((log, index) => {
-        console.log(`  ${index + 1}. ${log.created_at}: ${log.action} (${log.previous_status} → ${log.new_status})`)
-        console.log(`     Reason: ${log.reason}`)
-        console.log(`     Triggered by: ${log.triggered_by}`)
-        if (log.stripe_event_id) {
-          console.log(`     Stripe Event: ${log.stripe_event_id}`)
-        }
-        console.log('')
-      })
-    }
 
   } catch (error) {
     console.error('❌ Errore generale:', error)

@@ -96,7 +96,6 @@ export async function GET(
       .single();
 
     if (crmError) {
-      console.log('No CRM entry found, creating default:', crmError);
       // Se non esiste entry CRM, creala
       const { data: newEntry, error: createError } = await supabaseAdmin
         .from('crm_entries')

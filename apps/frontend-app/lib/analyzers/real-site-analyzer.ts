@@ -25,7 +25,6 @@ export class RealSiteAnalyzer {
    */
   async initialize(): Promise<void> {
     try {
-      console.log('🚀 Inizializzazione browser Playwright...')
       
       // Controllo se siamo in un ambiente serverless
       const isServerless = process.env.VERCEL === '1' || 
@@ -49,17 +48,14 @@ export class RealSiteAnalyzer {
         ]
       })
       
-      console.log('✅ Browser lanciato con successo')
       
       const context = await this.browser.newContext({
         userAgent: 'Mozilla/5.0 (compatible; ClientSniper/1.0; +https://clientsniper.com)',
         viewport: { width: 1920, height: 1080 }
       })
       
-      console.log('✅ Context creato con successo')
       
       this.page = await context.newPage()
-      console.log('✅ Pagina creata con successo')
       
     } catch (error) {
       console.error('❌ Errore durante inizializzazione Playwright:', error)
@@ -90,7 +86,6 @@ export class RealSiteAnalyzer {
     const startTime = Date.now()
 
     try {
-      console.log(`🔍 Inizio analisi di: ${url}`)
       
       // Naviga al sito
       const response = await this.page.goto(url, { 
@@ -103,7 +98,6 @@ export class RealSiteAnalyzer {
       }
 
       const finalUrl = this.page.url()
-      console.log(`📍 URL finale dopo caricamento: ${finalUrl}`)
 
       // Verifica che il redirect sia nel dominio principale richiesto
       const originalDomain = this.extractMainDomain(url)
@@ -146,7 +140,6 @@ export class RealSiteAnalyzer {
       const issues = this.identifyIssues(performanceResult, seoResult, trackingResult, gdprResult, legalResult, socialResult)
       const overallScore = this.calculateScore(performanceResult, seoResult, trackingResult, gdprResult, legalResult, socialResult, issues)
 
-      console.log(`✅ Analisi completata. Score: ${overallScore}/100`)
 
       return {
         url,
@@ -597,7 +590,6 @@ export class RealSiteAnalyzer {
         this.browser = null;
       }
       
-      console.log('🧹 Cleanup risorse Playwright completato');
     } catch (error) {
       console.error('❌ Errore durante cleanup:', error);
       // Non rilanciamo l'errore per evitare che fallisca l'intera operazione

@@ -24,14 +24,12 @@ export async function GET(
     // Crea client Supabase 
     const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-    console.log('Getting feedback details for:', feedbackId)
 
     // Chiama la funzione RPC per ottenere dettagli feedback
     const { data, error } = await supabase.rpc('get_feedback_details', {
       p_feedback_id: feedbackId
     })
 
-    console.log('RPC response:', { data, error })
 
     if (error) {
       console.error('RPC error:', error)

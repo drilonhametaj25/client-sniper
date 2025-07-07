@@ -105,10 +105,7 @@ export default function ManualScanPage() {
       setResponseData(data)
       setResult(data.data)
       setUserCredits(data.data.creditsRemaining)
-      
-      // Debug: logga l'analisi per verificare la struttura
-      console.log('Analisi ricevuta:', data.data.analysis)
-      console.log('Overall Score:', data.data.analysis.overallScore)
+
       
     } catch (error) {
       console.error('Errore analisi:', error)

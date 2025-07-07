@@ -20,7 +20,6 @@ export async function GET(request: NextRequest) {
     const cookieStore = cookies()
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
 
-    console.log('Getting public feedback:', { page, limit, type, sortBy })
 
     // Chiama la funzione RPC per ottenere feedback pubblici
     const { data, error } = await supabase.rpc('get_public_feedback', {
@@ -30,7 +29,6 @@ export async function GET(request: NextRequest) {
       sort_by: sortBy
     })
 
-    console.log('RPC response:', { data, error })
 
     if (error) {
       console.error('RPC error:', error)

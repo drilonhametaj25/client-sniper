@@ -36,12 +36,10 @@ const MAX_CACHE_ENTRIES = 100 // Limite cache per evitare memory leak
 // Funzione per ottenere il profilo utente completo (ULTRA-OTTIMIZZATA con cache)
 export async function getUserProfile(userId: string, sessionUser?: User): Promise<AuthUser | null> {
   try {
-    console.log('🔍 Cercando profilo per utente:', userId)
     
     // ⚡ CONTROLLO CACHE: Se abbiamo dati recenti, usali immediatamente
     const cached = profileCache[userId]
     if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
-      console.log(`⚡ Usando profilo dalla cache (ultra-veloce) - hit #${cached.hits + 1}`)
       cached.hits++
       return cached.profile
     }
@@ -56,7 +54,6 @@ export async function getUserProfile(userId: string, sessionUser?: User): Promis
       .single()
     
     const queryTime = Date.now() - startTime
-    console.log(`⚡ Query profilo utente completata in ${queryTime}ms`)
     
     if (error) {
       console.error('❌ Errore query users:', error.message)
@@ -120,15 +117,7 @@ export async function getUserProfile(userId: string, sessionUser?: User): Promis
       )
       const toRemove = sortedKeys.slice(0, 10) // Rimuovi 10 entry più vecchie
       toRemove.forEach(key => delete profileCache[key])
-      console.log('🧹 Cache pulita, rimossi', toRemove.length, 'profili vecchi')
     }
-
-    console.log('✅ Profilo completo assemblato e salvato in cache:', {
-      email: completeProfile.email,
-      role: completeProfile.role,
-      plan: completeProfile.plan,
-      credits: completeProfile.credits_remaining
-    })
 
     return completeProfile
 
@@ -142,10 +131,8 @@ export async function getUserProfile(userId: string, sessionUser?: User): Promis
 export function invalidateProfileCache(userId?: string) {
   if (userId) {
     delete profileCache[userId]
-    console.log('🗑️ Cache profilo invalidata per utente:', userId)
   } else {
     profileCache = {}
-    console.log('🗑️ Cache profilo completamente svuotata')
   }
 }
 
@@ -153,9 +140,6 @@ export function invalidateProfileCache(userId?: string) {
 export async function signUp(email: string, password: string) {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.trovami.pro'
-    
-    console.log('🔄 Registrando utente:', email)
-    console.log('🔗 Redirect URL:', `${baseUrl}/auth/callback`)
     
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -170,7 +154,6 @@ export async function signUp(email: string, password: string) {
       throw error
     }
 
-    console.log('✅ Registrazione completata:', data)
     return { data, error: null }
   } catch (error) {
     console.error('❌ Errore registrazione:', error)
@@ -188,7 +171,6 @@ import { emailService } from '@/lib/email-service'
 
 export async function signUpWithCustomEmail(email: string, password: string) {
   try {
-    console.log('🔄 Registrazione personalizzata per:', email)
 
     // Step 1: Registra con Supabase MA con email confirmation disabilitata
     const { data, error } = await supabase.auth.signUp({
@@ -207,7 +189,6 @@ export async function signUpWithCustomEmail(email: string, password: string) {
     }
 
     if (data.user) {
-      console.log('✅ Utente creato in Supabase:', data.user.id)
 
       // Step 2: Crea record nella tabella custom
       const { error: dbError } = await supabase
@@ -223,7 +204,6 @@ export async function signUpWithCustomEmail(email: string, password: string) {
       if (dbError) {
         console.error('❌ Errore creazione record custom:', dbError)
       } else {
-        console.log('✅ Record custom creato')
       }
 
       // Step 3: Invia la NOSTRA email personalizzata
@@ -232,13 +212,11 @@ export async function signUpWithCustomEmail(email: string, password: string) {
       const emailSent = await emailService.sendConfirmationEmail(email, confirmationUrl)
       
       if (emailSent) {
-        console.log('✅ Email personalizzata inviata')
         return { 
           success: true, 
           message: 'Registrazione completata! Controlla la tua email per confermare l\'account.' 
         }
       } else {
-        console.log('⚠️ Errore invio email personalizzata')
         return { 
           success: true, 
           message: 'Registrazione completata, ma errore invio email. Contatta il supporto.' 
@@ -419,7 +397,6 @@ export function formatResetDate(user: AuthUser): string {
 // Funzione per verificare manualmente se un utente è admin
 export async function verifyAdminStatus(userEmail: string): Promise<boolean> {
   try {
-    console.log('🔍 Verificando status admin per:', userEmail)
     
     const { data, error } = await supabase
       .from('users')
@@ -433,7 +410,6 @@ export async function verifyAdminStatus(userEmail: string): Promise<boolean> {
     }
     
     const isAdmin = data?.role === 'admin'
-    console.log('📋 Status admin verificato:', isAdmin)
     return isAdmin
   } catch (error) {
     console.error('❌ Errore critico verifica admin:', error)
