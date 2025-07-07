@@ -157,19 +157,11 @@ export class LeadGenerator {
     }
   }
 
+  /**
+   * Serializza l'analisi tecnica salvando tutta la struttura avanzata
+   * Così il campo analysis in leads conterrà tutti i dati prodotti dal nuovo analyzer
+   */
   private convertAnalysisToJson(analysis: TechnicalAnalysis): any {
-    return {
-      url: analysis.url,
-      status_code: analysis.status_code,
-      load_time: analysis.load_time,
-      has_ssl: analysis.has_ssl,
-      meta_tags: analysis.meta_tags,
-      h_tags: analysis.h_tags,
-      images: analysis.images,
-      tracking: analysis.tracking,
-      mobile_friendly: analysis.mobile_friendly,
-      performance: analysis.performance,
-      overall_score: analysis.overall_score
-    }
+    return analysis // Salva l'oggetto completo, senza ridurlo ai vecchi campi legacy
   }
 }
