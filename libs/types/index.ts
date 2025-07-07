@@ -3,6 +3,9 @@
 // Viene importato da frontend-app e scraping-engine
 // ⚠️ Aggiornare se si modifica la struttura del database
 
+// Export onboarding tour types
+export * from './onboarding'
+
 export interface User {
   id: string;
   email: string;

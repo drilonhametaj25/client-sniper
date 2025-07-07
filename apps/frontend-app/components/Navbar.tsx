@@ -9,16 +9,18 @@ import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Target, User, Settings, LogOut, Menu, X, Crown, Shield, Users, Home, MessageSquare, FolderOpen } from 'lucide-react'
+import { Target, User, Settings, LogOut, Menu, X, Crown, Shield, Users, Home, MessageSquare, FolderOpen, GraduationCap } from 'lucide-react'
 import Button from './ui/Button'
 import Badge from './ui/Badge'
 import ThemeToggle from './theme/ThemeToggle'
+import TourControlMenu from './onboarding/TourControlMenu'
 
 export default function Navbar() {
   const { user, signOut } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [showTourMenu, setShowTourMenu] = useState(false)
 
   const handleSignOut = async () => {
     await signOut()
@@ -169,6 +171,34 @@ export default function Navbar() {
                     {user.credits_remaining} crediti
                   </span>
                 </div>
+              </div>
+
+              {/* Tour Menu */}
+              <div className="relative">
+                <Button
+                  onClick={() => setShowTourMenu(!showTourMenu)}
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400"
+                  title="Tutorial guidati"
+                >
+                  <GraduationCap className="w-4 h-4" />
+                </Button>
+                
+                {showTourMenu && (
+                  <>
+                    {/* Backdrop */}
+                    <div 
+                      className="fixed inset-0 z-40"
+                      onClick={() => setShowTourMenu(false)}
+                    />
+                    
+                    {/* Menu */}
+                    <div className="absolute right-0 top-full mt-2 z-50">
+                      <TourControlMenu onClose={() => setShowTourMenu(false)} />
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Theme Toggle */}

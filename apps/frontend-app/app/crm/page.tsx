@@ -14,6 +14,7 @@ import Input from '@/components/ui/Input';
 import Badge from '@/components/ui/Badge';
 import { useToast } from '@/components/ToastProvider';
 import { useTheme } from '@/contexts/ThemeContext';
+import { TourTarget } from '@/components/onboarding/TourTarget';
 import { 
   Search, 
   Plus, 
@@ -285,19 +286,19 @@ export default function CrmPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">CRM Personale</h1>
+      <TourTarget tourId="crm-header" className="flex justify-between items-center mb-6">
+        <h1 id="crm-header" className="text-3xl font-bold text-gray-900 dark:text-gray-100">CRM Personale</h1>
         <div className="flex gap-2">
           <Button onClick={loadCrmData} variant="secondary">
             <RotateCcw className="w-4 h-4 mr-2" />
             Aggiorna
           </Button>
         </div>
-      </div>
+      </TourTarget>
 
       {/* Statistiche */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <TourTarget tourId="crm-stats" className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card>
             <div className="flex items-center justify-between">
               <div>
@@ -345,11 +346,11 @@ export default function CrmPage() {
               </div>
             </div>
           </Card>
-        </div>
+        </TourTarget>
       )}
 
       {/* Filtri e Ricerca */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+      <TourTarget tourId="crm-filters" className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
           <Input
@@ -373,10 +374,10 @@ export default function CrmPage() {
             ))}
           </select>
         </div>
-      </div>
+      </TourTarget>
 
       {/* Lista Lead CRM */}
-      <div className="space-y-4">
+      <TourTarget tourId="crm-entries" className="space-y-4">
         {filteredEntries.length === 0 ? (
           <Card>
             <div className="text-center py-8">
@@ -445,7 +446,7 @@ export default function CrmPage() {
             </Card>
           ))
         )}
-      </div>
+      </TourTarget>
 
       {/* Modal Modifica Entry - Semplificato */}
       {isEditModalOpen && selectedEntry && (

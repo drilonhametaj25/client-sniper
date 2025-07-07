@@ -29,6 +29,7 @@ import {
   Calendar,
   Eye
 } from 'lucide-react'
+import { TourTarget } from '@/components/onboarding/TourTarget'
 
 interface Lead {
   id: string
@@ -474,7 +475,7 @@ export default function ClientDashboard() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-12">
+          <div id="dashboard-stats" data-tour="dashboard-stats" className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-12">
             {/* Piano Attuale */}
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50">
               <div className="flex items-center justify-between">
@@ -622,24 +623,25 @@ export default function ClientDashboard() {
           )}
 
           {/* Filtri e Controlli */}
-          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 mb-8">
+          <TourTarget tourId="dashboard-filters" className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 mb-8">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
               {/* Search */}
-              <div className="relative flex-1 max-w-md">
+              <TourTarget tourId="dashboard-search" className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                 <input
+                  data-tour="dashboard-search"
                   type="text"
                   placeholder="Cerca aziende..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 />
-              </div>
+              </TourTarget>
 
               {/* Actions */}
               <div className="flex items-center space-x-3">
                 {/* Toggle per lead sbloccati */}
-                <div className="flex items-center space-x-2">
+                <TourTarget tourId="dashboard-filter-toggle" className="flex items-center space-x-2">
                   <label className="inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
@@ -663,7 +665,7 @@ export default function ClientDashboard() {
                       ✓ Attivo
                     </div>
                   )}
-                </div>
+                </TourTarget>
 
                 <button
                   onClick={() => setShowFilters(!showFilters)}
@@ -674,13 +676,15 @@ export default function ClientDashboard() {
                   <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
                 </button>
 
-                <button
-                  onClick={() => loadLeadsFromAPI(currentPage, false)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  <span>Aggiorna</span>
-                </button>
+                <TourTarget tourId="dashboard-refresh" className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors">
+                  <button
+                    onClick={() => loadLeadsFromAPI(currentPage, false)}
+                    className="flex items-center space-x-2"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    <span>Aggiorna</span>
+                  </button>
+                </TourTarget>
 
 
               </div>
@@ -731,10 +735,10 @@ export default function ClientDashboard() {
                 </div>
               </div>
             )}
-          </div>
+          </TourTarget>
 
           {/* Lista Lead */}
-          <div className="space-y-4">
+          <TourTarget tourId="dashboard-lead-list" className="space-y-4">
             {(() => {
               // Applica filtro per lead sbloccati se attivo
               let filteredLeads = showOnlyUnlocked 
@@ -783,6 +787,7 @@ export default function ClientDashboard() {
                         ? 'border-green-200 dark:border-green-700 shadow-lg shadow-green-100 dark:shadow-green-900/20'
                         : 'border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg'
                     }`}
+                    {...(index === 0 ? { id: 'dashboard-first-lead', 'data-tour': 'dashboard-first-lead' } : {})}
                   >
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
                       {/* Info Principale */}
@@ -1045,6 +1050,7 @@ export default function ClientDashboard() {
                               className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-3 rounded-xl transition-all duration-300 relative disabled:opacity-50 disabled:cursor-not-allowed font-bold text-sm shadow-lg hover:shadow-xl transform hover:scale-105"
                               disabled={remainingCredits <= 0}
                               title={remainingCredits <= 0 ? "Non hai crediti sufficienti" : "Costa 1 credito per sbloccare tutti i dettagli"}
+                              {...(index === 0 ? { id: 'dashboard-unlock-button', 'data-tour': 'dashboard-unlock-button' } : {})}
                             >
                               <div className="flex items-center space-x-2">
                                 <Eye className="h-4 w-4" />
@@ -1110,7 +1116,7 @@ export default function ClientDashboard() {
                 )
               })
             })()}
-          </div>
+          </TourTarget>
 
           {/* Controlli Paginazione */}
           {totalPages > 1 && (

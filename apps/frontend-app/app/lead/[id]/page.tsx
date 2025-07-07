@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { WebsiteAnalysis } from "@/lib/types/analysis";
+import { TourTarget } from "@/components/onboarding/TourTarget";
 import {
   ArrowLeft,
   ExternalLink,
@@ -613,7 +614,7 @@ export default function LeadDetailPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-6xl mx-auto px-4">
         {/* Header */}
-        <div className="mb-8">
+        <TourTarget tourId="lead-header" className="mb-8">
           <button
             onClick={() => router.back()}
             className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4 transition-colors"
@@ -638,11 +639,7 @@ export default function LeadDetailPage() {
               </div>
             </div>
 
-            <div
-              className={`text-right p-4 rounded-xl ${getScoreBgColor(
-                lead.score
-              )}`}
-            >
+            <TourTarget tourId="lead-detail-score" className={`text-right p-4 rounded-xl ${getScoreBgColor(lead.score)}`}>
               <div
                 className={`text-2xl font-bold ${getScoreColor(lead.score)}`}
               >
@@ -651,15 +648,15 @@ export default function LeadDetailPage() {
               <div className="text-sm text-gray-600 dark:text-gray-400">
                 Punteggio Tecnico
               </div>
-            </div>
+            </TourTarget>
           </div>
-        </div>
+        </TourTarget>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Colonna Sinistra - Info Principali */}
           <div className="lg:col-span-1 space-y-6">
             {/* Informazioni di Contatto */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
+            <TourTarget tourId="contact-info" className="bg-white dark:bg-gray-800 rounded-xl p-6">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 Informazioni di Contatto
               </h2>
@@ -712,7 +709,7 @@ export default function LeadDetailPage() {
                   </div>
                 )}
               </div>
-            </div>
+            </TourTarget>
 
             {/* Ruoli Necessari */}
             {lead.needed_roles && lead.needed_roles.length > 0 && (
@@ -819,7 +816,7 @@ export default function LeadDetailPage() {
             {analysis && (
               <>
                 {/* Overview Metriche */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
+                <TourTarget tourId="technical-analysis" className="bg-white dark:bg-gray-800 rounded-xl p-6">
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
                     Analisi Tecnica Completa
                   </h2>
@@ -892,7 +889,7 @@ export default function LeadDetailPage() {
                       </div>
                     </div>
                   </div>
-                </div>
+                </TourTarget>
 
                 {/* Riepilogo Raccomandazioni */}
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-6">
