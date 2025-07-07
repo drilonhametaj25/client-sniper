@@ -66,6 +66,12 @@ export async function GET(request: NextRequest) {
       `)
       .eq('user_id', user.id);
 
+    // AGGIUNGE: Controlla anche i lead con assigned_to (sistema legacy)
+    const { data: assignedLeads, error: assignedError } = await supabaseAdmin
+      .from('leads')
+      .select('id, business_name, website_url, city, category, score, analysis, updated_at')
+      .eq('assigned_to', user.id);
+
 
     // Controlla se esistono entry CRM per questo utente
     const { data: existingEntries, error: entriesError } = await supabaseAdmin

@@ -352,35 +352,43 @@ export default function ClientDashboard() {
       return
     }
 
-    const success = await consumeCredit('lead_unlock', leadId)
-    if (success) {
-      // Salva nel database che questo lead è stato sbloccato
-      try {
-        const { error } = await supabase.rpc('unlock_lead_for_user', {
-          p_user_id: user.id,
-          p_lead_id: leadId
-        })
-
-        if (error) {
-          console.error('Errore salvataggio lead sbloccato:', error)
-          alert('Errore nel salvare il lead sbloccato. Riprova.')
-          return
-        }
-
-        // Aggiorna lo stato locale
-        setUnlockedLeads(prev => {
-          const newSet = new Set(prev)
-          newSet.add(leadId)
-          return newSet
-        })
-        
-        refreshProfile() // Aggiorna i crediti mostrati
-      } catch (error) {
-        console.error('Errore generale:', error)
-        alert('Errore nel sbloccare il lead. Riprova.')
+    // Sblocca il lead usando l'API REST
+    try {
+      // Ottieni la sessione per il token
+      const session = await supabase.auth.getSession()
+      if (!session.data.session) {
+        alert('Errore di autenticazione. Ricarica la pagina.')
+        return
       }
-    } else {
-      alert('Errore nel consumo del credito. Riprova.')
+
+      const response = await fetch(`/api/leads/${leadId}/unlock`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.data.session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Include cookies per l'autenticazione
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        console.error('Errore API unlock:', data.error)
+        alert(data.error || 'Errore nel sbloccare il lead. Riprova.')
+        return
+      }
+
+      // Aggiorna lo stato locale
+      setUnlockedLeads(prev => {
+        const newSet = new Set(prev)
+        newSet.add(leadId)
+        return newSet
+      })
+      
+      refreshProfile() // Aggiorna i crediti mostrati
+    } catch (error) {
+      console.error('Errore generale:', error)
+      alert('Errore nel sbloccare il lead. Riprova.')
     }
   }
 

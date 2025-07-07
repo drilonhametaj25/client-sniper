@@ -144,40 +144,30 @@ export default function LeadDetailPage() {
     try {
       if (!user) return;
 
-      const currentCredits = user.credits_remaining || 0;
-
-      // Decrementa credito
-      const { error } = await supabase
-        .from("users")
-        .update({
-          credits_remaining: currentCredits - 1,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", user.id);
-
-      if (error) throw error;
-
-      // Registra il lead come sbloccato
-      const { error: unlockError } = await supabase.rpc(
-        "unlock_lead_for_user",
-        {
-          p_user_id: user.id,
-          p_lead_id: leadId,
-        }
-      );
-
-      if (unlockError) {
-        console.error("Errore registrazione lead sbloccato:", unlockError);
+      // Ottieni la sessione per il token
+      const session = await supabase.auth.getSession()
+      if (!session.data.session) {
+        alert('Errore di autenticazione. Ricarica la pagina.')
+        return
       }
 
-      // Log dell'utilizzo
-      await supabase.from("credit_usage_log").insert({
-        user_id: user.id,
-        action: "lead_detail_view",
-        credits_consumed: 1,
-        credits_remaining: currentCredits - 1,
-        metadata: { lead_id: leadId },
+      // Usa l'API REST per sbloccare il lead (gestisce automaticamente crediti e registrazione)
+      const response = await fetch(`/api/leads/${leadId}/unlock`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.data.session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Include cookies per l'autenticazione
       });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('Errore API unlock:', data.error);
+        alert(data.error || 'Errore nel sbloccare il lead. Riprova.');
+        return;
+      }
 
       setCreditConsumed(true);
       await refreshProfile();
