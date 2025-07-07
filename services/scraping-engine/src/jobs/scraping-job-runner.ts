@@ -173,21 +173,24 @@ export class ScrapingJobRunner {
       const analyzedBusinesses = []
       for (const business of businessData) {
         try {
-          const analysis = business.website ? 
+          const websiteAnalysis = business.website ? 
             await this.analyzer.analyzeWebsite(business.website) : 
-            this.createFallbackAnalysis('', 20)
+            null
 
           analyzedBusinesses.push({
             ...business,
-            analysis,
+            websiteAnalysis,  // Struttura moderna
+            analysis: websiteAnalysis ? this.convertToLegacyAnalysis(websiteAnalysis) : null,  // Compatibilità legacy
             target_category: zone.category
           })
         } catch (error) {
           this.logger.debug(`⚠️ Errore analisi ${business.name}:`, error)
           // Usa analisi base per business con errori
+          const fallbackAnalysis = this.createFallbackAnalysis(business.website || '', 10)
           analyzedBusinesses.push({
             ...business,
-            analysis: this.createFallbackAnalysis(business.website || '', 10),
+            websiteAnalysis: fallbackAnalysis,
+            analysis: this.convertToLegacyAnalysis(fallbackAnalysis),
             target_category: zone.category
           })
         }
@@ -195,8 +198,20 @@ export class ScrapingJobRunner {
 
       // Salva i lead nel database
       this.logger.debug(`💾 Salvando ${analyzedBusinesses.length} business come lead...`)
-      const savedLeads = await this.leadGenerator!.generateLeads(analyzedBusinesses)
-      this.logger.debug(`✅ Salvati ${savedLeads.length} lead nel database`)
+      console.log(`🔍 DEBUG: analyzedBusinesses[0] struttura:`, {
+        hasWebsiteAnalysis: !!analyzedBusinesses[0]?.websiteAnalysis,
+        hasLegacyAnalysis: !!analyzedBusinesses[0]?.analysis,
+        name: analyzedBusinesses[0]?.name,
+        website: analyzedBusinesses[0]?.website
+      })
+      
+      // IMPORTANTE: Il LeadGenerator.generateLeads() si aspetta BusinessData[], 
+      // ma noi abbiamo analyzedBusinesses con websiteAnalysis già popolata.
+      // Chiamiamo direttamente saveLeads() invece di generateLeads()
+      await this.leadGenerator!.saveLeads(analyzedBusinesses)
+      this.logger.debug(`✅ Salvati ${analyzedBusinesses.length} lead nel database`)
+      
+      const savedLeads = analyzedBusinesses // Per compatibilità con il resto del codice
       
       job.leadsFound = savedLeads.length
       job.status = 'completed'
@@ -483,6 +498,36 @@ export class ScrapingJobRunner {
       analysisTime: 0,
       version: '1.0.0'
     }
+  }
+
+  /**
+   * Converte la struttura moderna in legacy per compatibilità
+   */
+  private convertToLegacyAnalysis(websiteAnalysis: EnhancedWebsiteAnalysis): any {
+    return {
+      has_website: true,
+      website_load_time: websiteAnalysis.performance?.loadComplete || 0,
+      missing_meta_tags: this.extractMissingMetaTags(websiteAnalysis),
+      has_tracking_pixel: websiteAnalysis.tracking?.facebookPixel || websiteAnalysis.tracking?.googleAnalytics || false,
+      broken_images: websiteAnalysis.images?.broken > 0 || false,
+      gtm_installed: websiteAnalysis.tracking?.googleTagManager || false,
+      overall_score: websiteAnalysis.overallScore || 0
+    };
+  }
+
+  /**
+   * Estrae i meta tag mancanti dalla struttura moderna
+   */
+  private extractMissingMetaTags(analysis: EnhancedWebsiteAnalysis): string[] {
+    const missingTags: string[] = [];
+    
+    if (!analysis.seo?.hasTitle) missingTags.push('title');
+    if (!analysis.seo?.hasMetaDescription) missingTags.push('meta-description');
+    if (!analysis.seo?.hasH1) missingTags.push('h1');
+    if (!analysis.seo?.hasCanonical) missingTags.push('canonical');
+    if (!analysis.seo?.hasOpenGraph) missingTags.push('og-tags');
+    
+    return missingTags;
   }
 
   /**

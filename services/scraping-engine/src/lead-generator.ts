@@ -11,6 +11,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { BusinessData } from './scrapers/google-maps';
 import { BusinessLead } from './types/LeadAnalysis';
 import { EnhancedWebsiteAnalyzer, EnhancedWebsiteAnalysis } from './analyzers/enhanced-website-analyzer';
+import { createHash } from 'crypto';
 
 // Interfaccia per business con analisi moderna
 export interface AnalyzedBusiness extends BusinessData {
@@ -233,7 +234,27 @@ export class LeadGenerator {
   private serializeForDatabase(business: AnalyzedBusiness): any {
     const score = this.calculateScore(business);
     
+    // Genera unique_key per evitare duplicati
+    const uniqueKey = this.generateUniqueKey(business);
+    
+    // Genera content_hash per rilevare cambiamenti
+    const contentHash = this.generateContentHash(business);
+    
+    console.log(`Generato unique_key per ${business.name}: "${uniqueKey}"`);
+    console.log(`Generato content_hash per ${business.name}: "${contentHash}"`);
+    
+    if (!uniqueKey) {
+      console.error(`ERRORE: unique_key vuoto per business:`, {
+        name: business.name,
+        website: business.website,
+        source: business.source,
+        address: business.address
+      });
+    }
+    
     return {
+      unique_key: uniqueKey,
+      content_hash: contentHash,
       business_name: business.name || 'Nome non disponibile',
       website_url: business.website || null,
       phone: business.phone || null,
@@ -451,5 +472,53 @@ export class LeadGenerator {
     }
     
     return roles;
+  }
+
+  /**
+   * Genera un hash del contenuto per rilevare cambiamenti
+   */
+  private generateContentHash(business: AnalyzedBusiness): string {
+    const contentData = {
+      name: business.name || '',
+      website: business.website || '',
+      phone: business.phone || '',
+      address: business.address || '',
+      category: business.category || '',
+      // Include anche alcuni dati dell'analisi per rilevare cambiamenti
+      hasWebsite: business.websiteAnalysis ? true : false,
+      score: this.calculateScore(business),
+      // Include timestamp per garantire unicità
+      timestamp: Date.now()
+    };
+    
+    const dataString = JSON.stringify(contentData);
+    return createHash('sha256').update(dataString).digest('hex');
+  }
+
+  /**
+   * Genera una chiave univoca per il business per evitare duplicati
+   */
+  private generateUniqueKey(business: AnalyzedBusiness): string {
+    const source = business.source || 'google_maps';
+    const name = business.name || 'unknown';
+    const website = business.website || '';
+    const address = business.address || '';
+    
+    // Se ha un sito web, usa quello come identificatore principale
+    if (website) {
+      try {
+        const domain = new URL(website).hostname.replace('www.', '');
+        return `${source}_${domain}_${name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`;
+      } catch {
+        // Se l'URL non è valido, usa il sito web grezzo
+        return `${source}_${website.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}_${name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`;
+      }
+    }
+    
+    // Altrimenti usa nome + indirizzo + fonte
+    const cleanName = name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+    const cleanAddress = address.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase().substring(0, 50);
+    
+    return `${source}_${cleanName}_${cleanAddress}`;
   }
 }
