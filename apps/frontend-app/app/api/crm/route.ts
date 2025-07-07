@@ -1,0 +1,349 @@
+/**
+ * API endpoint per gestione CRM personale
+ * Permette agli utenti PRO di gestire le entry CRM dei loro lead sbloccati
+ * Utilizzato da: /crm page, dashboard CRM widgets
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+// Client per verificare il token (usa anon key)
+const supabaseClient = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+// Client per operazioni amministrative (usa service role)
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+export async function GET(request: NextRequest) {
+  try {
+    // Verifica autenticazione
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { success: false, error: 'Token di autorizzazione mancante' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Verifica il JWT usando service role
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Token non valido o scaduto' },
+        { status: 401 }
+      );
+    }
+
+    // Verifica che l'utente sia PRO
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('plan, role')
+      .eq('id', user.id)
+      .single();
+
+    if (userError || userData?.plan !== 'pro') {
+      return NextResponse.json({ error: 'PRO plan required' }, { status: 403 });
+    }
+
+    console.log('User verified:', user.id, 'Plan:', userData.plan);
+
+    // Prima controlla se ci sono lead sbloccati dall'utente nella tabella user_unlocked_leads
+    const { data: unlockedLeads, error: unlockedError } = await supabaseAdmin
+      .from('user_unlocked_leads')
+      .select(`
+        lead_id,
+        unlocked_at,
+        leads (
+          id, business_name, website_url, city, category, score, analysis
+        )
+      `)
+      .eq('user_id', user.id);
+
+    console.log('Unlocked leads found:', unlockedLeads?.length || 0);
+    if (unlockedLeads && unlockedLeads.length > 0) {
+      console.log('Sample unlocked lead:', unlockedLeads[0]);
+    }
+
+    // Controlla se esistono entry CRM per questo utente
+    const { data: existingEntries, error: entriesError } = await supabaseAdmin
+      .from('crm_entries')
+      .select('id, lead_id, user_id')
+      .eq('user_id', user.id);
+
+    console.log('Existing CRM entries found:', existingEntries?.length || 0);
+    if (existingEntries && existingEntries.length > 0) {
+      console.log('Sample CRM entry:', existingEntries[0]);
+    }
+
+    // Prima prova con RPC, poi fallback su query dirette
+    let crmEntries = [];
+    let stats = null;
+
+    try {
+      // Prova RPC per entry CRM
+      const { data: rpcEntries, error: rpcError } = await supabaseAdmin
+        .rpc('get_user_crm_entries');
+
+      if (rpcError) {
+        console.log('RPC failed, using direct query:', rpcError.message);
+        
+        // Fallback: query diretta con JOIN esplicito
+        let { data: directEntries, error: directError } = await supabaseAdmin
+          .from('crm_entries')
+          .select(`
+            id, lead_id, status, note, follow_up_date, attachments, created_at, updated_at,
+            leads!crm_entries_lead_id_fkey (
+              business_name, website_url, city, category, score, analysis
+            )
+          `)
+          .eq('user_id', user.id)
+          .order('updated_at', { ascending: false });
+
+        console.log('Direct query result:', directEntries?.length || 0, 'entries');
+        if (directError) {
+          console.error('Direct query failed:', directError);
+          return NextResponse.json({ error: 'Failed to fetch CRM entries' }, { status: 500 });
+        }
+
+        console.log('Direct query result:', directEntries?.length || 0, 'entries');
+        if (directError) {
+          console.error('Direct query failed:', directError);
+          return NextResponse.json({ error: 'Failed to fetch CRM entries' }, { status: 500 });
+        }
+
+        // Se non ci sono entry CRM ma ci sono lead sbloccati, creiamole automaticamente
+        if ((!directEntries || directEntries.length === 0) && unlockedLeads && unlockedLeads.length > 0) {
+          console.log('No CRM entries found but unlocked leads exist. Creating CRM entries...');
+          
+          const newEntries = unlockedLeads.map((unlockedLead: any) => ({
+            user_id: user.id,
+            lead_id: unlockedLead.lead_id,
+            status: 'to_contact',
+            note: null,
+            follow_up_date: null,
+            attachments: []
+          }));
+
+          const { data: createdEntries, error: createError } = await supabaseAdmin
+            .from('crm_entries')
+            .insert(newEntries)
+            .select(`
+              id, lead_id, status, note, follow_up_date, attachments, created_at, updated_at,
+              leads!crm_entries_lead_id_fkey (
+                business_name, website_url, city, category, score, analysis
+              )
+            `);
+
+          if (createError) {
+            console.error('Failed to create CRM entries:', createError);
+          } else {
+            console.log('Created', createdEntries?.length || 0, 'new CRM entries');
+            directEntries = createdEntries;
+          }
+        }
+
+        // Trasforma i dati nel formato atteso
+        crmEntries = directEntries?.map((entry: any) => ({
+          ...entry,
+          lead_business_name: entry.leads?.business_name,
+          lead_website_url: entry.leads?.website_url,
+          lead_city: entry.leads?.city,
+          lead_category: entry.leads?.category,
+          lead_score: entry.leads?.score,
+          lead_analysis: entry.leads?.analysis
+        })) || [];
+      } else {
+        crmEntries = rpcEntries || [];
+      }
+
+      // Prova RPC per statistiche
+      const { data: rpcStats, error: statsError } = await supabaseAdmin
+        .rpc('get_user_crm_stats', { user_id: user.id });
+
+      if (statsError) {
+        console.log('Stats RPC failed, calculating manually:', statsError.message);
+        
+        // Fallback: calcola statistiche manualmente
+        const now = new Date();
+        stats = {
+          total_entries: crmEntries.length,
+          to_contact: crmEntries.filter((e: any) => e.status === 'to_contact').length,
+          in_negotiation: crmEntries.filter((e: any) => e.status === 'in_negotiation').length,
+          closed_positive: crmEntries.filter((e: any) => e.status === 'closed_positive').length,
+          closed_negative: crmEntries.filter((e: any) => e.status === 'closed_negative').length,
+          on_hold: crmEntries.filter((e: any) => e.status === 'on_hold').length,
+          follow_up: crmEntries.filter((e: any) => e.status === 'follow_up').length,
+          overdue_follow_ups: crmEntries.filter((e: any) => 
+            e.follow_up_date && new Date(e.follow_up_date) < now
+          ).length
+        };
+        
+        console.log('Manual stats calculation:', stats);
+      } else {
+        stats = rpcStats || null;
+        console.log('RPC stats result:', stats);
+      }
+
+    } catch (rpcError) {
+      console.error('RPC error:', rpcError);
+      return NextResponse.json({ error: 'Database function error' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      entries: crmEntries || [],
+      stats: stats || {
+        total_entries: 0,
+        to_contact: 0,
+        in_negotiation: 0,
+        closed_positive: 0,
+        closed_negative: 0,
+        on_hold: 0,
+        follow_up: 0,
+        overdue_follow_ups: 0
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in CRM API:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    // Verifica autenticazione
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { success: false, error: 'Token di autorizzazione mancante' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Verifica il JWT usando service role
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Token non valido o scaduto' },
+        { status: 401 }
+      );
+    }
+
+    // Verifica che l'utente sia PRO
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('plan')
+      .eq('id', user.id)
+      .single();
+
+    if (userError || userData?.plan !== 'pro') {
+      return NextResponse.json({ error: 'PRO plan required' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { lead_id, status, note, follow_up_date, attachments } = body;
+
+    if (!lead_id) {
+      return NextResponse.json({ error: 'Lead ID is required' }, { status: 400 });
+    }
+
+    // Upsert entry CRM - prima prova RPC, poi fallback su query diretta
+    let entryId = null;
+    
+    try {
+      const { data: rpcResult, error: upsertError } = await supabaseAdmin
+        .rpc('upsert_crm_entry', {
+          p_lead_id: lead_id,
+          p_status: status,
+          p_note: note,
+          p_follow_up_date: follow_up_date,
+          p_attachments: attachments
+        });
+
+      if (upsertError) {
+        console.log('RPC upsert failed, using direct query:', upsertError.message);
+        
+        // Fallback: verifica se l'entry esiste già
+        const { data: existingEntry, error: checkError } = await supabaseAdmin
+          .from('crm_entries')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('lead_id', lead_id)
+          .single();
+
+        if (checkError && checkError.code !== 'PGRST116') {
+          console.error('Error checking existing entry:', checkError);
+          return NextResponse.json({ error: 'Failed to check existing entry' }, { status: 500 });
+        }
+
+        let directResult;
+        if (existingEntry) {
+          // Update existing entry
+          const { data: updateResult, error: updateError } = await supabaseAdmin
+            .from('crm_entries')
+            .update({
+              status: status || 'to_contact',
+              note: note,
+              follow_up_date: follow_up_date,
+              attachments: attachments || [],
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id)
+            .eq('lead_id', lead_id)
+            .select('id')
+            .single();
+
+          if (updateError) {
+            console.error('Direct update failed:', updateError);
+            return NextResponse.json({ error: 'Failed to update CRM entry' }, { status: 500 });
+          }
+          directResult = updateResult;
+        } else {
+          // Insert new entry
+          const { data: insertResult, error: insertError } = await supabaseAdmin
+            .from('crm_entries')
+            .insert({
+              user_id: user.id,
+              lead_id: lead_id,
+              status: status || 'to_contact',
+              note: note,
+              follow_up_date: follow_up_date,
+              attachments: attachments || []
+            })
+            .select('id')
+            .single();
+
+          if (insertError) {
+            console.error('Direct insert failed:', insertError);
+            return NextResponse.json({ error: 'Failed to create CRM entry' }, { status: 500 });
+          }
+          directResult = insertResult;
+        }
+
+        entryId = directResult?.id;
+      } else {
+        entryId = rpcResult;
+      }
+    } catch (error) {
+      console.error('Upsert error:', error);
+      return NextResponse.json({ error: 'Database operation failed' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, entry_id: entryId });
+
+  } catch (error) {
+    console.error('Error in CRM POST API:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
