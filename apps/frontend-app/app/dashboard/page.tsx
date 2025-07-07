@@ -78,6 +78,13 @@ export default function ClientDashboard() {
   const [showFilters, setShowFilters] = useState(false)
   const [showOnlyUnlocked, setShowOnlyUnlocked] = useState(false) // Nuovo filtro per lead sbloccati
 
+  // Filtri avanzati
+  const [filterNoWebsite, setFilterNoWebsite] = useState(false)
+  const [filterNoPixel, setFilterNoPixel] = useState(false)
+  const [filterNoAnalytics, setFilterNoAnalytics] = useState(false)
+  const [filterNoPrivacy, setFilterNoPrivacy] = useState(false)
+  const [filterLowScore, setFilterLowScore] = useState(false)
+
   // Stato per tracciare quali lead sono stati "sbloccati"
   const [unlockedLeads, setUnlockedLeads] = useState<Set<string>>(new Set())
 
@@ -130,7 +137,12 @@ export default function ClientDashboard() {
         ...(filterCategory && { category: filterCategory }),
         ...(filterCity && { city: filterCity }),
         ...(filterRole && { neededRoles: filterRole }),
-        ...(searchTerm && { search: searchTerm })
+        ...(searchTerm && { search: searchTerm }),
+        ...(filterNoWebsite && { noWebsite: '1' }),
+        ...(filterNoPixel && { noPixel: '1' }),
+        ...(filterNoAnalytics && { noAnalytics: '1' }),
+        ...(filterNoPrivacy && { noPrivacy: '1' }),
+        ...(filterLowScore && { lowScore: '1' })
       })
       
       const startTime = Date.now()
@@ -234,7 +246,7 @@ export default function ClientDashboard() {
     }, 300) // Debounce di 300ms
     
     return () => clearTimeout(timeoutId)
-  }, [filterCategory, filterCity, filterRole, searchTerm, showOnlyUnlocked]) // Aggiunto showOnlyUnlocked
+  }, [filterCategory, filterCity, filterRole, searchTerm, showOnlyUnlocked, filterNoWebsite, filterNoPixel, filterNoAnalytics, filterNoPrivacy, filterLowScore])
 
   // Effetto per cambio pagina (usa cache se disponibile) - CON CONTROLLO INIZIALIZZAZIONE
   useEffect(() => {
@@ -731,6 +743,29 @@ export default function ClientDashboard() {
                         <option key={role} value={role}>{role}</option>
                       ))}
                     </select>
+                  </div>
+                </div>
+                {/* Filtri avanzati */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                  <div className="flex items-center space-x-2">
+                    <input type="checkbox" id="filterNoWebsite" checked={filterNoWebsite} onChange={e => setFilterNoWebsite(e.target.checked)} />
+                    <label htmlFor="filterNoWebsite" className="text-sm text-gray-700 dark:text-gray-300">Senza sito web</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input type="checkbox" id="filterNoPixel" checked={filterNoPixel} onChange={e => setFilterNoPixel(e.target.checked)} />
+                    <label htmlFor="filterNoPixel" className="text-sm text-gray-700 dark:text-gray-300">Senza pixel tracking</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input type="checkbox" id="filterNoAnalytics" checked={filterNoAnalytics} onChange={e => setFilterNoAnalytics(e.target.checked)} />
+                    <label htmlFor="filterNoAnalytics" className="text-sm text-gray-700 dark:text-gray-300">Senza analytics</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input type="checkbox" id="filterNoPrivacy" checked={filterNoPrivacy} onChange={e => setFilterNoPrivacy(e.target.checked)} />
+                    <label htmlFor="filterNoPrivacy" className="text-sm text-gray-700 dark:text-gray-300">Senza privacy policy</label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input type="checkbox" id="filterLowScore" checked={filterLowScore} onChange={e => setFilterLowScore(e.target.checked)} />
+                    <label htmlFor="filterLowScore" className="text-sm text-gray-700 dark:text-gray-300">Score basso (&lt;= 40)</label>
                   </div>
                 </div>
               </div>

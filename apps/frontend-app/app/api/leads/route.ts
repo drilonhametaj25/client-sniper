@@ -35,6 +35,12 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search')
     const minScore = searchParams.get('minScore')
     const maxScore = searchParams.get('maxScore')
+    // Filtri avanzati
+    const noWebsite = searchParams.get('noWebsite') === '1'
+    const noPixel = searchParams.get('noPixel') === '1'
+    const noAnalytics = searchParams.get('noAnalytics') === '1'
+    const noPrivacy = searchParams.get('noPrivacy') === '1'
+    const lowScore = searchParams.get('lowScore') === '1'
     
     
     // Verifica autenticazione
@@ -125,26 +131,35 @@ export async function GET(request: NextRequest) {
     if (category) {
       query = query.eq('category', category)
     }
-    
     if (minScore) {
       query = query.gte('score', parseInt(minScore))
     }
-    
     if (maxScore) {
       query = query.lte('score', parseInt(maxScore))
     }
-    
     if (city) {
       query = query.ilike('city', `%${city}%`)
     }
-
-    // Nota: neededRoles rimosso perché la colonna needed_roles non esiste nel database frontend
-    
+    // ⚡ FILTRI AVANZATI
+    if (noWebsite) {
+      query = query.or('website_url.is.null,website_url.eq.,website_url.eq,null')
+    }
+    if (noPixel) {
+      query = query.or('analysis->has_tracking_pixel.eq.false,analysis->has_tracking_pixel.is.null')
+    }
+    if (noAnalytics) {
+      query = query.or('analysis->tracking->>hasGoogleAnalytics.eq.false,analysis->tracking->>hasGoogleAnalytics.is.null')
+    }
+    if (noPrivacy) {
+      query = query.or('analysis->gdpr->>hasPrivacyPolicy.eq.false,analysis->gdpr->>hasPrivacyPolicy.is.null')
+    }
+    if (lowScore) {
+      query = query.lte('score', 40)
+    }
     // ⚡ OTTIMIZZAZIONE: Ricerca testuale solo su campi indicizzati
     if (search) {
       query = query.or(`business_name.ilike.%${search}%,city.ilike.%${search}%`)
     }
-    
     // ⚡ OTTIMIZZAZIONE: Paginazione e ordinamento efficiente
     query = query
       .range(offset, offset + limit - 1)
