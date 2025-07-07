@@ -891,82 +891,184 @@ export default function LeadDetailPage() {
                   </div>
                 </TourTarget>
 
-                {/* Riepilogo Raccomandazioni */}
+                {/* Riepilogo Raccomandazioni Migliorato */}
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-6">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
                     <PieChart className="h-5 w-5 mr-2 text-purple-600" />
                     Riepilogo Opportunità
                   </h3>
-
                   {(() => {
                     const recommendations = generateRecommendations();
-                    const categoryCounts = recommendations.reduce(
-                      (acc, rec) => {
-                        acc[rec.category] = (acc[rec.category] || 0) + 1;
-                        return acc;
-                      },
-                      {} as Record<string, number>
-                    );
-
-                    const priorityCounts = recommendations.reduce(
-                      (acc, rec) => {
-                        acc[rec.priority] = (acc[rec.priority] || 0) + 1;
-                        return acc;
-                      },
-                      {} as Record<string, number>
-                    );
-
+                    const groupedByCategory = recommendations.reduce((acc, rec) => {
+                      if (!acc[rec.category]) acc[rec.category] = [];
+                      acc[rec.category].push(rec);
+                      return acc;
+                    }, {} as Record<string, typeof recommendations>);
+                    const groupedByPriority = recommendations.reduce((acc, rec) => {
+                      if (!acc[rec.priority]) acc[rec.priority] = [];
+                      acc[rec.priority].push(rec);
+                      return acc;
+                    }, {} as Record<string, typeof recommendations>);
                     return (
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg">
-                          <div className="text-2xl font-bold text-red-600">
-                            {priorityCounts.high || 0}
+                      <>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                          <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg cursor-pointer" title="Vedi dettagli Priorità Alta">
+                            <div className="text-2xl font-bold text-red-600">{groupedByPriority.high?.length || 0}</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">Priorità Alta</div>
+                            {groupedByPriority.high?.length > 0 && (
+                              <ul className="mt-2 space-y-1 text-left">
+                                {groupedByPriority.high.map((rec, idx) => (
+                                  <li key={idx} className="flex items-center text-xs text-red-700 dark:text-red-300">
+                                    {getCategoryIcon(rec.category)}
+                                    <span className="ml-1 font-medium">{rec.title}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
                           </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">
-                            Priorità Alta
+                          <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg cursor-pointer" title="Vedi dettagli Priorità Media">
+                            <div className="text-2xl font-bold text-yellow-600">{groupedByPriority.medium?.length || 0}</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">Priorità Media</div>
+                            {groupedByPriority.medium?.length > 0 && (
+                              <ul className="mt-2 space-y-1 text-left">
+                                {groupedByPriority.medium.map((rec, idx) => (
+                                  <li key={idx} className="flex items-center text-xs text-yellow-700 dark:text-yellow-300">
+                                    {getCategoryIcon(rec.category)}
+                                    <span className="ml-1 font-medium">{rec.title}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                          <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg">
+                            <div className="text-2xl font-bold text-green-600">{Object.keys(groupedByCategory).length}</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">Aree Miglioramento</div>
+                            {Object.keys(groupedByCategory).length > 0 && (
+                              <ul className="mt-2 space-y-1 text-left">
+                                {Object.entries(groupedByCategory).map(([cat, recs], idx) => (
+                                  <li key={idx} className="flex items-center text-xs text-green-700 dark:text-green-300">
+                                    {getCategoryIcon(cat)}
+                                    <span className="ml-1 font-medium">{cat} ({recs.length})</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                          <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg">
+                            <div className="text-2xl font-bold text-purple-600">{recommendations.length}</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">Tot. Raccomandazioni</div>
                           </div>
                         </div>
-
-                        <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg">
-                          <div className="text-2xl font-bold text-yellow-600">
-                            {priorityCounts.medium || 0}
+                        {recommendations.length > 0 && (
+                          <div className="mt-2 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                            <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-2">
+                              💡 <strong>Potenziale di vendita elevato!</strong> Questo cliente ha {recommendations.length} opportunità di miglioramento che puoi offrire.
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {recommendations.map((rec, idx) => (
+                                <div key={idx} className="flex items-start gap-2 bg-gray-50 dark:bg-gray-900/40 rounded p-2">
+                                  {getCategoryIcon(rec.category)}
+                                  <div>
+                                    <span className="font-medium text-sm text-gray-900 dark:text-white">{rec.title}</span>
+                                    <div className="text-xs text-gray-600 dark:text-gray-400">{rec.description}</div>
+                                    <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(rec.priority)}`}>{rec.priority === 'high' ? 'Alta' : rec.priority === 'medium' ? 'Media' : 'Bassa'}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">
-                            Priorità Media
-                          </div>
-                        </div>
-
-                        <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg">
-                          <div className="text-2xl font-bold text-green-600">
-                            {Object.keys(categoryCounts).length}
-                          </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">
-                            Aree Miglioramento
-                          </div>
-                        </div>
-
-                        <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg">
-                          <div className="text-2xl font-bold text-purple-600">
-                            {recommendations.length}
-                          </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">
-                            Tot. Raccomandazioni
-                          </div>
-                        </div>
-                      </div>
+                        )}
+                      </>
                     );
                   })()}
-
-                  {generateRecommendations().length > 0 && (
-                    <div className="mt-4 p-3 bg-white dark:bg-gray-800 rounded-lg">
-                      <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-                        💡 <strong>Potenziale di vendita elevato!</strong>{" "}
-                        Questo cliente ha {generateRecommendations().length}{" "}
-                        opportunità di miglioramento che puoi offrire.
-                      </p>
-                    </div>
-                  )}
                 </div>
+
+                {/* Social Analysis */}
+                {analysis.social && (
+                  <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <Activity className="h-5 w-5 mr-2 text-pink-500" />
+                      Social & Engagement
+                    </h3>
+                    <div className="flex flex-wrap gap-4">
+                      {analysis.social.profiles?.filter((p:any)=>p.found).map((profile:any) => (
+                        <div key={profile.platform} className="flex items-center bg-gray-50 dark:bg-gray-900/50 rounded-lg px-4 py-2 min-w-[180px]">
+                          {profile.platform === 'facebook' && <Facebook className="h-5 w-5 text-blue-600 mr-2" />}
+                          {profile.platform === 'instagram' && <Instagram className="h-5 w-5 text-pink-500 mr-2" />}
+                          {profile.platform === 'linkedin' && <Linkedin className="h-5 w-5 text-blue-700 mr-2" />}
+                          {profile.platform === 'twitter' && <Twitter className="h-5 w-5 text-sky-500 mr-2" />}
+                          {profile.platform === 'youtube' && <Youtube className="h-5 w-5 text-red-600 mr-2" />}
+                          <a href={profile.url} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline mr-2">{profile.platform}</a>
+                          {profile.followers !== undefined && (
+                            <span className="ml-2 text-xs text-gray-700 dark:text-gray-300">{profile.followers.toLocaleString()} follower</span>
+                          )}
+                          {profile.extra?.engagementRate !== undefined && (
+                            <span className="ml-2 text-xs text-green-600">Engagement: {profile.extra.engagementRate}%</span>
+                          )}
+                        </div>
+                      ))}
+                      {(!analysis.social.profiles || !analysis.social.profiles.some((p:any)=>p.found)) && (
+                        <span className="text-gray-500 text-sm">Nessun profilo social rilevato</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tech Stack */}
+                {analysis.techStack && (
+                  <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <PieChart className="h-5 w-5 mr-2 text-blue-500" />
+                      Stack Tecnologico
+                    </h3>
+                    <div className="flex flex-wrap gap-3 text-sm">
+                      {analysis.techStack.cms && <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-full">CMS: {analysis.techStack.cms}</span>}
+                      {analysis.techStack.ecommerce && <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-full">Ecommerce: {analysis.techStack.ecommerce}</span>}
+                      {analysis.techStack.framework && <span className="px-2 py-1 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-full">Framework: {analysis.techStack.framework}</span>}
+                      {analysis.techStack.libraries?.length > 0 && <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 rounded-full">Librerie: {analysis.techStack.libraries.join(', ')}</span>}
+                      {analysis.techStack.plugins?.length > 0 && <span className="px-2 py-1 bg-pink-100 dark:bg-pink-900/20 text-pink-700 dark:text-pink-300 rounded-full">Plugin: {analysis.techStack.plugins.join(', ')}</span>}
+                    </div>
+                  </div>
+                )}
+
+                {/* GDPR & Legal */}
+                {analysis.gdpr && (
+                  <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <Shield className="h-5 w-5 mr-2 text-red-500" />
+                      GDPR & Legal
+                    </h3>
+                    <div className="flex flex-wrap gap-3 text-sm">
+                      <span className={`px-2 py-1 rounded-full ${analysis.gdpr.hasCookieBanner ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300'}`}>Cookie Banner: {analysis.gdpr.hasCookieBanner ? 'Presente' : 'Assente'}</span>
+                      <span className={`px-2 py-1 rounded-full ${analysis.gdpr.hasPrivacyPolicy ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300'}`}>Privacy Policy: {analysis.gdpr.hasPrivacyPolicy ? 'Presente' : 'Assente'}</span>
+                      <span className={`px-2 py-1 rounded-full ${analysis.gdpr.hasTermsOfService ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300'}`}>Termini di Servizio: {analysis.gdpr.hasTermsOfService ? 'Presenti' : 'Assenti'}</span>
+                      <span className={`px-2 py-1 rounded-full ${analysis.gdpr.hasVatNumber ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300'}`}>P.IVA: {analysis.gdpr.hasVatNumber ? 'Presente' : 'Assente'}</span>
+                      {analysis.gdpr.vatNumbers?.length > 0 && <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-full">{analysis.gdpr.vatNumbers.join(', ')}</span>}
+                    </div>
+                  </div>
+                )}
+
+                {/* Opportunità/Servizi Consigliati */}
+                {analysis.opportunities && (
+                  <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <Zap className="h-5 w-5 mr-2 text-yellow-500" />
+                      Servizi Consigliati per il Lead
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {analysis.opportunities.neededServices?.map((service:string, idx:number) => (
+                        <span key={idx} className="px-3 py-1 bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 rounded-full text-sm">
+                          {service}
+                        </span>
+                      ))}
+                      {analysis.opportunities.quickWins?.map((qw:string, idx:number) => (
+                        <span key={idx} className="px-3 py-1 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-full text-sm">
+                          {qw}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* SEO Analysis */}
                 {(isNewFormat() ? analysis.seo : analysis) && (

@@ -504,16 +504,17 @@ export class TechStackDetector {
       plugins: [],
       confidence: 0
     }
-    
     let totalConfidence = 0
     let techCount = 0
-    
+    let foundWordPress = false
+    let foundMagento = false
+    let foundWooCommerce = false
     for (const [name, info] of detectedTech.entries()) {
       totalConfidence += info.confidence
       techCount++
-      
       switch (info.category) {
         case 'cms':
+          if (name === 'WordPress') foundWordPress = true
           if (!result.cms || info.confidence > 0.7) {
             result.cms = name
           }
@@ -524,6 +525,8 @@ export class TechStackDetector {
           }
           break
         case 'ecommerce':
+          if (name === 'Magento') foundMagento = true
+          if (name === 'WooCommerce') foundWooCommerce = true
           if (!result.ecommerce || info.confidence > 0.7) {
             result.ecommerce = name
           }
@@ -549,9 +552,18 @@ export class TechStackDetector {
           break
       }
     }
-    
+    // Logica esclusiva CMS/ecommerce
+    if (foundWordPress && foundWooCommerce) {
+      result.ecommerce = 'WooCommerce'
+    }
+    if (foundWordPress && result.ecommerce === 'Magento') {
+      result.ecommerce = null
+    }
+    if (foundWordPress && foundMagento) {
+      // Priorità a WordPress, escludi Magento
+      result.ecommerce = result.ecommerce === 'WooCommerce' ? 'WooCommerce' : null
+    }
     result.confidence = techCount > 0 ? totalConfidence / techCount : 0
-    
     return result
   }
 

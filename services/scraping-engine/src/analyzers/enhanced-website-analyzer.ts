@@ -9,10 +9,12 @@
  */
 
 import { chromium, Browser, Page } from 'playwright'
+import { SocialAnalyzer } from './social-analyzer'
 import { WebsiteStatusChecker, WebsiteStatus } from '../utils/website-status-checker'
 import { TechStackDetector, TechStackInfo } from '../utils/tech-stack-detector'
 import { PerformanceAnalyzer, PerformanceMetrics } from '../utils/performance-analyzer'
 import { BusinessContactParser } from '../utils/business-contact-parser'
+import type { SocialAnalysisResult } from './social-analyzer'
 
 export interface EnhancedWebsiteAnalysis {
   // Basic Info
@@ -136,6 +138,7 @@ export interface EnhancedWebsiteAnalysis {
     quickWins: string[] // Easy improvements
   }
   
+  social?: SocialAnalysisResult
   // Overall Scores
   overallScore: number // 0-100
   businessValue: number // 0-100
@@ -178,6 +181,19 @@ export class EnhancedWebsiteAnalyzer {
       
       // Step 2: Analisi con browser
       const browserAnalysis = await this.performBrowserAnalysis(statusResult.finalUrl)
+      // Step 2b: Analisi social
+      let social: any = null
+      try {
+        const browser = await chromium.launch({ headless: true })
+        const page = await browser.newPage()
+        await page.goto(statusResult.finalUrl, { waitUntil: 'networkidle', timeout: 30000 })
+        const socialAnalyzer = new SocialAnalyzer()
+        social = await socialAnalyzer.analyzeSocials(page)
+        await page.close()
+        await browser.close()
+      } catch (e) {
+        social = { profiles: [], summary: ['Errore analisi social'] }
+      }
       
       // Step 3: Calcola punteggi e opportunità
       const scores = this.calculateScores(browserAnalysis)
@@ -208,6 +224,7 @@ export class EnhancedWebsiteAnalyzer {
         issues: browserAnalysis.issues || { critical: [], high: [], medium: [], low: [] },
         ...scores,
         opportunities,
+        social,
         analysisDate: new Date(),
         analysisTime: Date.now() - startTime,
         version: '2.0.0'
