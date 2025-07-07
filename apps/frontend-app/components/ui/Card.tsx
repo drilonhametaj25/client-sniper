@@ -25,9 +25,9 @@ export default function Card({
   const baseClasses = 'rounded-2xl transition-all duration-200'
   
   const variantClasses = {
-    default: 'bg-white border border-gray-200/50 shadow-sm',
-    glass: 'bg-white/80 backdrop-blur-sm border border-white/20 shadow-sm',
-    elevated: 'bg-white border border-gray-200/50 shadow-lg'
+    default: 'bg-white dark:bg-gray-800 border border-gray-200/50 dark:border-gray-700/50 shadow-sm',
+    glass: 'bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-white/20 dark:border-gray-700/20 shadow-sm',
+    elevated: 'bg-white dark:bg-gray-800 border border-gray-200/50 dark:border-gray-700/50 shadow-lg'
   }
   
   const paddingClasses = {
@@ -37,7 +37,7 @@ export default function Card({
     xl: 'p-10'
   }
   
-  const hoverClasses = hover ? 'hover:shadow-md hover:border-gray-300/50 hover:-translate-y-0.5' : ''
+  const hoverClasses = hover ? 'hover:shadow-md hover:border-gray-300/50 dark:hover:border-gray-600/50 hover:-translate-y-0.5' : ''
   
   return (
     <div className={`

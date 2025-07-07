@@ -17,6 +17,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Badge from '@/components/ui/Badge';
 import { useToast } from '@/components/ToastProvider';
+import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { 
   ArrowLeft,
@@ -85,12 +86,12 @@ interface Comment {
 }
 
 const STATUS_CONFIG = {
-  to_contact: { label: 'Da Contattare', color: 'bg-blue-100 text-blue-800', icon: Phone },
-  in_negotiation: { label: 'In Negoziazione', color: 'bg-yellow-100 text-yellow-800', icon: TrendingUp },
-  closed_positive: { label: 'Chiuso Positivo', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-  closed_negative: { label: 'Chiuso Negativo', color: 'bg-red-100 text-red-800', icon: XCircle },
-  on_hold: { label: 'In Pausa', color: 'bg-gray-100 text-gray-800', icon: Pause },
-  follow_up: { label: 'Follow-up', color: 'bg-purple-100 text-purple-800', icon: RotateCcw }
+  to_contact: { label: 'Da Contattare', color: 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200', icon: Phone },
+  in_negotiation: { label: 'In Negoziazione', color: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200', icon: TrendingUp },
+  closed_positive: { label: 'Chiuso Positivo', color: 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200', icon: CheckCircle },
+  closed_negative: { label: 'Chiuso Negativo', color: 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200', icon: XCircle },
+  on_hold: { label: 'In Pausa', color: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200', icon: Pause },
+  follow_up: { label: 'Follow-up', color: 'bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200', icon: RotateCcw }
 };
 
 export default function CrmLeadDetailPage() {
@@ -98,6 +99,7 @@ export default function CrmLeadDetailPage() {
   const router = useRouter();
   const leadId = params.id as string;
   const { success, error: showError } = useToast();
+  const { actualTheme } = useTheme();
 
   // Stati componente
   const [lead, setLead] = useState<CrmLead | null>(null);
@@ -406,7 +408,7 @@ export default function CrmLeadDetailPage() {
   const getStatusBadge = (status: string) => {
     const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG];
     return (
-      <Badge variant="default" className={config?.color || 'bg-gray-100 text-gray-800'}>
+      <Badge variant="default" className={config?.color || 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}>
         {getStatusIcon(status)}
         <span className="ml-1">{config?.label || status}</span>
       </Badge>
@@ -431,17 +433,17 @@ export default function CrmLeadDetailPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-64 mb-6"></div>
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-64 mb-6"></div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
-              <div className="h-64 bg-gray-200 rounded"></div>
-              <div className="h-96 bg-gray-200 rounded"></div>
+              <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              <div className="h-96 bg-gray-200 dark:bg-gray-700 rounded"></div>
             </div>
             <div className="space-y-6">
-              <div className="h-32 bg-gray-200 rounded"></div>
-              <div className="h-48 bg-gray-200 rounded"></div>
+              <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              <div className="h-48 bg-gray-200 dark:bg-gray-700 rounded"></div>
             </div>
           </div>
         </div>
@@ -451,11 +453,11 @@ export default function CrmLeadDetailPage() {
 
   if (!lead) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 min-h-screen bg-gray-50 dark:bg-gray-900">
         <Card className="text-center py-8">
           <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Lead non trovato</h2>
-          <p className="text-gray-600 mb-4">Il lead richiesto non è disponibile o non hai i permessi per visualizzarlo.</p>
+          <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">Lead non trovato</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">Il lead richiesto non è disponibile o non hai i permessi per visualizzarlo.</p>
           <Button onClick={() => router.push('/crm')}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Torna al CRM
@@ -466,7 +468,7 @@ export default function CrmLeadDetailPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-4">
@@ -475,8 +477,8 @@ export default function CrmLeadDetailPage() {
             Torna al CRM
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">{lead.lead_business_name}</h1>
-            <p className="text-gray-600">{lead.lead_category} • {lead.lead_city}</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{lead.lead_business_name}</h1>
+            <p className="text-gray-600 dark:text-gray-400">{lead.lead_category} • {lead.lead_city}</p>
           </div>
         </div>
         <div className="flex items-center space-x-3">
@@ -513,15 +515,15 @@ export default function CrmLeadDetailPage() {
           
           {/* Informazioni lead */}
           <Card>
-            <h2 className="text-xl font-semibold mb-4">Informazioni Lead</h2>
+            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Informazioni Lead</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-center text-sm">
-                <Globe className="w-4 h-4 mr-2 text-gray-500" />
+                <Globe className="w-4 h-4 mr-2 text-gray-500 dark:text-gray-400" />
                 <a 
                   href={lead.lead_website_url} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
+                  className="text-blue-600 dark:text-blue-400 hover:underline"
                 >
                   {lead.lead_website_url}
                   <ExternalLink className="w-3 h-3 ml-1 inline" />
@@ -529,30 +531,30 @@ export default function CrmLeadDetailPage() {
               </div>
               {lead.lead_phone && (
                 <div className="flex items-center text-sm">
-                  <Phone className="w-4 h-4 mr-2 text-gray-500" />
-                  <a href={`tel:${lead.lead_phone}`} className="text-blue-600 hover:underline">
+                  <Phone className="w-4 h-4 mr-2 text-gray-500 dark:text-gray-400" />
+                  <a href={`tel:${lead.lead_phone}`} className="text-blue-600 dark:text-blue-400 hover:underline">
                     {lead.lead_phone}
                   </a>
                 </div>
               )}
               {lead.lead_email && (
                 <div className="flex items-center text-sm">
-                  <Mail className="w-4 h-4 mr-2 text-gray-500" />
-                  <a href={`mailto:${lead.lead_email}`} className="text-blue-600 hover:underline">
+                  <Mail className="w-4 h-4 mr-2 text-gray-500 dark:text-gray-400" />
+                  <a href={`mailto:${lead.lead_email}`} className="text-blue-600 dark:text-blue-400 hover:underline">
                     {lead.lead_email}
                   </a>
                 </div>
               )}
               <div className="flex items-center text-sm">
-                <MapPin className="w-4 h-4 mr-2 text-gray-500" />
-                {lead.lead_address || lead.lead_city}
+                <MapPin className="w-4 h-4 mr-2 text-gray-500 dark:text-gray-400" />
+                <span className="text-gray-700 dark:text-gray-300">{lead.lead_address || lead.lead_city}</span>
               </div>
               <div className="flex items-center text-sm">
-                <Building className="w-4 h-4 mr-2 text-gray-500" />
-                {lead.lead_category}
+                <Building className="w-4 h-4 mr-2 text-gray-500 dark:text-gray-400" />
+                <span className="text-gray-700 dark:text-gray-300">{lead.lead_category}</span>
               </div>
               <div className="flex items-center text-sm">
-                <TrendingUp className="w-4 h-4 mr-2 text-gray-500" />
+                <TrendingUp className="w-4 h-4 mr-2 text-gray-500 dark:text-gray-400" />
                 <span className={`font-semibold ${getScoreColor(lead.lead_score)}`}>
                   Punteggio: {lead.lead_score}/100
                 </span>
@@ -563,14 +565,14 @@ export default function CrmLeadDetailPage() {
           {/* Modifica stato e note */}
           {isEditing && (
             <Card>
-              <h2 className="text-xl font-semibold mb-4">Modifica Lead</h2>
+              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Modifica Lead</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Stato</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stato</label>
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({...formData, status: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {Object.entries(STATUS_CONFIG).map(([key, config]) => (
                       <option key={key} value={key}>
@@ -581,18 +583,18 @@ export default function CrmLeadDetailPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Note</label>
                   <textarea
                     placeholder="Inserisci le tue note..."
                     value={formData.note}
                     onChange={(e) => setFormData({...formData, note: e.target.value})}
                     rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Data Follow-up</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data Follow-up</label>
                   <input
                     type="date"
                     value={formData.follow_up_date ? formData.follow_up_date.toISOString().split('T')[0] : ''}
@@ -600,7 +602,7 @@ export default function CrmLeadDetailPage() {
                       const date = e.target.value ? new Date(e.target.value) : null;
                       setFormData({...formData, follow_up_date: date});
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -609,7 +611,7 @@ export default function CrmLeadDetailPage() {
 
           {/* Timeline e commenti */}
           <Card>
-            <h2 className="text-xl font-semibold mb-4">Timeline e Commenti</h2>
+            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Timeline e Commenti</h2>
             
             {/* Aggiungi commento */}
             <div className="mb-6">
@@ -619,7 +621,7 @@ export default function CrmLeadDetailPage() {
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   rows={3}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <Button onClick={handleAddComment} disabled={!newComment.trim()}>
                   <Plus className="w-4 h-4" />
@@ -630,16 +632,16 @@ export default function CrmLeadDetailPage() {
             {/* Lista commenti */}
             <div className="space-y-4">
               {comments.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">Nessun commento ancora</p>
+                <p className="text-gray-500 dark:text-gray-400 text-center py-8">Nessun commento ancora</p>
               ) : (
                 comments.map((comment) => (
-                  <div key={comment.id} className="flex space-x-3 p-3 bg-gray-50 rounded-lg">
+                  <div key={comment.id} className="flex space-x-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <div className="flex-shrink-0">
-                      <MessageSquare className="w-5 h-5 text-gray-400" />
+                      <MessageSquare className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm text-gray-900">{comment.content}</p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-sm text-gray-900 dark:text-gray-100">{comment.content}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         {formatDate(comment.created_at)}
                       </p>
                     </div>
@@ -660,7 +662,7 @@ export default function CrmLeadDetailPage() {
           
           {/* Azioni rapide */}
           <Card>
-            <h3 className="text-lg font-semibold mb-4">Azioni Rapide</h3>
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Azioni Rapide</h3>
             <div className="space-y-2">
               {lead.lead_phone && (
                 <Button variant="secondary" className="w-full justify-start" onClick={() => handleQuickAction('mark_contacted')}>
@@ -684,7 +686,7 @@ export default function CrmLeadDetailPage() {
           {/* Allegati */}
           <Card>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Allegati</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Allegati</h3>
               <label className="cursor-pointer">
                 <input
                   type="file"
@@ -702,10 +704,10 @@ export default function CrmLeadDetailPage() {
             {lead.attachments && lead.attachments.length > 0 ? (
               <div className="space-y-2">
                 {lead.attachments.map((attachment) => (
-                  <div key={attachment.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <div key={attachment.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded">
                     <div className="flex items-center space-x-2">
-                      <FileText className="w-4 h-4 text-gray-500" />
-                      <span className="text-sm font-medium">{attachment.name}</span>
+                      <FileText className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{attachment.name}</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <Button variant="secondary" size="sm">
@@ -719,37 +721,37 @@ export default function CrmLeadDetailPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-sm">Nessun allegato</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">Nessun allegato</p>
             )}
           </Card>
 
           {/* Analisi tecnica */}
           {lead.lead_analysis && (
             <Card>
-              <h3 className="text-lg font-semibold mb-4">Analisi Tecnica</h3>
+              <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Analisi Tecnica</h3>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span>Punteggio complessivo:</span>
+                  <span className="text-gray-600 dark:text-gray-400">Punteggio complessivo:</span>
                   <span className={`font-semibold ${getScoreColor(lead.lead_score)}`}>
                     {lead.lead_score}/100
                   </span>
                 </div>
                 {lead.lead_analysis.seo_issues && (
                   <div>
-                    <span className="font-medium">Problemi SEO:</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">Problemi SEO:</span>
                     <ul className="mt-1 space-y-1">
                       {lead.lead_analysis.seo_issues.map((issue: string, index: number) => (
-                        <li key={index} className="text-gray-600 text-xs">• {issue}</li>
+                        <li key={index} className="text-gray-600 dark:text-gray-400 text-xs">• {issue}</li>
                       ))}
                     </ul>
                   </div>
                 )}
                 {lead.lead_analysis.performance_issues && (
                   <div>
-                    <span className="font-medium">Problemi Performance:</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">Problemi Performance:</span>
                     <ul className="mt-1 space-y-1">
                       {lead.lead_analysis.performance_issues.map((issue: string, index: number) => (
-                        <li key={index} className="text-gray-600 text-xs">• {issue}</li>
+                        <li key={index} className="text-gray-600 dark:text-gray-400 text-xs">• {issue}</li>
                       ))}
                     </ul>
                   </div>
@@ -760,20 +762,20 @@ export default function CrmLeadDetailPage() {
 
           {/* Statistiche */}
           <Card>
-            <h3 className="text-lg font-semibold mb-4">Statistiche</h3>
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Statistiche</h3>
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
-                <span>Creato:</span>
-                <span>{formatDate(lead.created_at)}</span>
+                <span className="text-gray-600 dark:text-gray-400">Creato:</span>
+                <span className="text-gray-900 dark:text-gray-100">{formatDate(lead.created_at)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Ultimo aggiornamento:</span>
-                <span>{formatDate(lead.updated_at)}</span>
+                <span className="text-gray-600 dark:text-gray-400">Ultimo aggiornamento:</span>
+                <span className="text-gray-900 dark:text-gray-100">{formatDate(lead.updated_at)}</span>
               </div>
               {lead.follow_up_date && (
                 <div className="flex justify-between">
-                  <span>Follow-up:</span>
-                  <span className={new Date(lead.follow_up_date) < new Date() ? 'text-red-600 font-semibold' : ''}>
+                  <span className="text-gray-600 dark:text-gray-400">Follow-up:</span>
+                  <span className={new Date(lead.follow_up_date) < new Date() ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-gray-900 dark:text-gray-100'}>
                     {formatDate(lead.follow_up_date)}
                   </span>
                 </div>

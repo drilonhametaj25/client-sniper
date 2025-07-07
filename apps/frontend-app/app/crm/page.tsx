@@ -13,6 +13,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Badge from '@/components/ui/Badge';
 import { useToast } from '@/components/ToastProvider';
+import { useTheme } from '@/contexts/ThemeContext';
 import { 
   Search, 
   Plus, 
@@ -61,12 +62,12 @@ interface CrmStats {
 }
 
 const STATUS_CONFIG = {
-  to_contact: { label: 'Da Contattare', color: 'bg-blue-100 text-blue-800', icon: Phone },
-  in_negotiation: { label: 'In Negoziazione', color: 'bg-yellow-100 text-yellow-800', icon: TrendingUp },
-  closed_positive: { label: 'Chiuso Positivo', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-  closed_negative: { label: 'Chiuso Negativo', color: 'bg-red-100 text-red-800', icon: XCircle },
-  on_hold: { label: 'In Pausa', color: 'bg-gray-100 text-gray-800', icon: Pause },
-  follow_up: { label: 'Follow-up', color: 'bg-purple-100 text-purple-800', icon: RotateCcw }
+  to_contact: { label: 'Da Contattare', color: 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200', icon: Phone },
+  in_negotiation: { label: 'In Negoziazione', color: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200', icon: TrendingUp },
+  closed_positive: { label: 'Chiuso Positivo', color: 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200', icon: CheckCircle },
+  closed_negative: { label: 'Chiuso Negativo', color: 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200', icon: XCircle },
+  on_hold: { label: 'In Pausa', color: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200', icon: Pause },
+  follow_up: { label: 'Follow-up', color: 'bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200', icon: RotateCcw }
 };
 
 export default function CrmPage() {
@@ -83,6 +84,7 @@ export default function CrmPage() {
     follow_up_date: null as Date | null
   });
   const { success, error } = useToast();
+  const { actualTheme } = useTheme();
 
   // Carica dati CRM
   useEffect(() => {
@@ -245,7 +247,7 @@ export default function CrmPage() {
   const getStatusBadge = (status: string) => {
     const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG];
     return (
-      <Badge variant="default" className={config?.color || 'bg-gray-100 text-gray-800'}>
+      <Badge variant="default" className={config?.color || 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}>
         {getStatusIcon(status)}
         <span className="ml-1">{config?.label || status}</span>
       </Badge>
@@ -263,17 +265,17 @@ export default function CrmPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-64 mb-6"></div>
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-64 mb-6"></div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-24 bg-gray-200 rounded"></div>
+              <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
             ))}
           </div>
           <div className="space-y-4">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-32 bg-gray-200 rounded"></div>
+              <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
             ))}
           </div>
         </div>
@@ -282,9 +284,9 @@ export default function CrmPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">CRM Personale</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">CRM Personale</h1>
         <div className="flex gap-2">
           <Button onClick={loadCrmData} variant="secondary">
             <RotateCcw className="w-4 h-4 mr-2" />
@@ -299,23 +301,11 @@ export default function CrmPage() {
           <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Totale Lead</p>
-                <p className="text-2xl font-bold">{stats.total_entries}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Totale Lead</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.total_entries}</p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Da Contattare</p>
-                <p className="text-2xl font-bold">{stats.to_contact}</p>
-              </div>
-              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                <Phone className="w-6 h-6 text-yellow-600" />
+              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
           </Card>
@@ -323,11 +313,11 @@ export default function CrmPage() {
           <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">In Negoziazione</p>
-                <p className="text-2xl font-bold">{stats.in_negotiation}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Da Contattare</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.to_contact}</p>
               </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-purple-600" />
+              <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/50 rounded-full flex items-center justify-center">
+                <Phone className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
               </div>
             </div>
           </Card>
@@ -335,11 +325,23 @@ export default function CrmPage() {
           <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Follow-up Scaduti</p>
-                <p className="text-2xl font-bold text-red-600">{stats.overdue_follow_ups}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">In Negoziazione</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.in_negotiation}</p>
               </div>
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                <Clock className="w-6 h-6 text-red-600" />
+              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-full flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              </div>
+            </div>
+          </Card>
+
+          <Card>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Follow-up Scaduti</p>
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.overdue_follow_ups}</p>
+              </div>
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/50 rounded-full flex items-center justify-center">
+                <Clock className="w-6 h-6 text-red-600 dark:text-red-400" />
               </div>
             </div>
           </Card>
@@ -361,7 +363,7 @@ export default function CrmPage() {
           <select
             value={statusFilter}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Tutti gli stati</option>
             {Object.entries(STATUS_CONFIG).map(([key, config]) => (
@@ -378,7 +380,7 @@ export default function CrmPage() {
         {filteredEntries.length === 0 ? (
           <Card>
             <div className="text-center py-8">
-              <p className="text-gray-500">Nessun lead trovato nel tuo CRM</p>
+              <p className="text-gray-500 dark:text-gray-400">Nessun lead trovato nel tuo CRM</p>
             </div>
           </Card>
         ) : (
@@ -386,7 +388,7 @@ export default function CrmPage() {
             <Card key={entry.id} className="hover:shadow-md transition-shadow">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold mb-2">{entry.lead_business_name}</h3>
+                  <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">{entry.lead_business_name}</h3>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {getStatusBadge(entry.status)}
                     <Badge variant="info">
@@ -421,23 +423,23 @@ export default function CrmPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div className="flex items-center text-sm text-gray-600">
+                <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                   <Globe className="w-4 h-4 mr-2" />
                   {entry.lead_website_url}
                 </div>
-                <div className="flex items-center text-sm text-gray-600">
+                <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                   <span className="w-4 h-4 mr-2">📍</span>
                   {entry.lead_city}
                 </div>
-                <div className="flex items-center text-sm text-gray-600">
+                <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                   <span className="w-4 h-4 mr-2">🏢</span>
                   {entry.lead_category}
                 </div>
               </div>
 
               {entry.note && (
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <p className="text-sm text-gray-700">{entry.note}</p>
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                  <p className="text-sm text-gray-700 dark:text-gray-300">{entry.note}</p>
                 </div>
               )}
             </Card>
@@ -449,14 +451,14 @@ export default function CrmPage() {
       {isEditModalOpen && selectedEntry && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">Modifica Lead CRM</h2>
+            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Modifica Lead CRM</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Stato</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stato</label>
                 <select
                   value={formData.status}
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormData({...formData, status: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {Object.entries(STATUS_CONFIG).map(([key, config]) => (
                     <option key={key} value={key}>
@@ -467,18 +469,18 @@ export default function CrmPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Note</label>
                 <textarea
                   placeholder="Inserisci le tue note..."
                   value={formData.note}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({...formData, note: e.target.value})}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Data Follow-up</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data Follow-up</label>
                 <input
                   type="date"
                   value={formData.follow_up_date ? formData.follow_up_date.toISOString().split('T')[0] : ''}
@@ -486,7 +488,7 @@ export default function CrmPage() {
                     const date = e.target.value ? new Date(e.target.value) : null;
                     setFormData({...formData, follow_up_date: date});
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 

@@ -28,8 +28,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
   const baseClasses = 'block w-full transition-all duration-200 focus:outline-none'
   
   const variantClasses = {
-    default: 'border border-gray-300 bg-white focus:ring-2 focus:ring-gray-900/20 focus:border-gray-900',
-    filled: 'border border-transparent bg-gray-100 focus:bg-white focus:ring-2 focus:ring-gray-900/20 focus:border-gray-300'
+    default: 'border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-gray-900/20 dark:focus:ring-gray-400/20 focus:border-gray-900 dark:focus:border-gray-400',
+    filled: 'border border-transparent bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-gray-900/20 dark:focus:ring-gray-400/20 focus:border-gray-300 dark:focus:border-gray-600'
   }
   
   const inputClasses = `
@@ -37,14 +37,14 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
     ${variantClasses[variant]}
     ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}
     ${icon ? (iconPosition === 'left' ? 'pl-12' : 'pr-12') : 'px-4'}
-    py-3 rounded-2xl text-base placeholder:text-gray-400
+    py-3 rounded-2xl text-base placeholder:text-gray-400 dark:placeholder:text-gray-500
     ${className}
   `
   
   return (
     <div className="space-y-2">
       {label && (
-        <label className="block text-sm font-medium text-gray-900">
+        <label className="block text-sm font-medium text-gray-900 dark:text-gray-100">
           {label}
         </label>
       )}
