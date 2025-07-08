@@ -63,6 +63,74 @@ function generateContentHash(analysis: WebsiteAnalysis): string {
 }
 
 /**
+ * Calcola i ruoli professionali necessari basandosi sull'analisi del sito
+ */
+function calculateNeededRoles(analysis: any): string[] {
+  const roles: string[] = []
+  
+  // Developer - problemi tecnici, performance, SSL, responsive
+  if (analysis.performance?.loadTime > 3000 ||
+      analysis.issues?.brokenImages > 0 ||
+      !analysis.finalUrl?.startsWith('https://') ||
+      !analysis.performance?.isResponsive) {
+    roles.push('developer')
+  }
+  
+  // SEO - problemi di ottimizzazione motori di ricerca
+  if (!analysis.seo?.hasTitle ||
+      !analysis.seo?.hasMetaDescription ||
+      !analysis.seo?.hasH1 ||
+      !analysis.seo?.hasOpenGraph ||
+      analysis.seo?.titleLength < 30 ||
+      analysis.seo?.titleLength > 60) {
+    roles.push('seo')
+  }
+  
+  // Designer - problemi UX/UI, responsive, contenuti
+  if (!analysis.performance?.isResponsive ||
+      analysis.overallScore < 50) {
+    roles.push('designer')
+  }
+  
+  // Copywriter - contenuti di bassa qualità, meta tag mal scritti
+  if (analysis.seo?.titleLength < 30 ||
+      analysis.seo?.metaDescriptionLength < 120 ||
+      analysis.seo?.metaDescriptionLength > 160) {
+    roles.push('copywriter')
+  }
+  
+  // Social - mancanza tracking social, analytics
+  if (!analysis.tracking?.hasFacebookPixel ||
+      !analysis.tracking?.hasGoogleAnalytics ||
+      !analysis.social?.profiles?.length) {
+    roles.push('social')
+  }
+  
+  // ADV - mancanza pixel advertising, conversion tracking
+  if (!analysis.tracking?.hasGoogleAds ||
+      !analysis.tracking?.hasFacebookPixel ||
+      !analysis.tracking?.hasGoogleTagManager) {
+    roles.push('adv')
+  }
+  
+  // GDPR - problemi compliance privacy
+  if (!analysis.gdpr?.hasCookieBanner ||
+      !analysis.gdpr?.hasPrivacyPolicy ||
+      !analysis.legal?.hasTermsOfService) {
+    roles.push('gdpr')
+  }
+  
+  // Photographer - se ci sono problemi con immagini (semplificato per analisi manuale)
+  if (analysis.issues?.brokenImages > 0) {
+    roles.push('photographer')
+  }
+  
+  // Rimuovi duplicati e assicurati che ci sia almeno un ruolo
+  const uniqueRoles = Array.from(new Set(roles))
+  return uniqueRoles.length > 0 ? uniqueRoles : ['developer']
+}
+
+/**
  * Salva un lead da analisi manuale nel database
  * Usa il sistema unificato di deduplicazione cross-source
  */
@@ -123,7 +191,7 @@ export async function saveManualLead({
           ...(analysis.seo?.hasH1 ? [] : ['h1'])
         ]
       },
-      needed_roles: ['web-developer'], // Semplificato per ora
+      needed_roles: calculateNeededRoles(analysis), // Calcola ruoli basandosi sull'analisi
       issues: [] // Semplificato per ora
     }
 

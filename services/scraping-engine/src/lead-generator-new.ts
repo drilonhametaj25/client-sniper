@@ -250,6 +250,8 @@ export class LeadGenerator {
       // Campi moderni estratti
       issues: this.extractIssues(business),
       opportunities: this.extractOpportunities(business),
+      // Ruoli professionali necessari
+      needed_roles: this.getSuggestedRoles(business),
       // Dati social se disponibili
       social_presence: business.websiteAnalysis?.social || null,
       created_at: new Date().toISOString()
@@ -409,7 +411,7 @@ export class LeadGenerator {
       score,
       priority: score < 30 ? 'high' : score < 60 ? 'medium' : 'low',
       opportunities: this.extractOpportunities(business),
-      suggestedRoles: this.getSuggestedRoles(business),
+      suggestedRoles: this.getSuggestedRoles(business) as any, // Cast per compatibilità con il tipo legacy
       scrapedAt: new Date(),
       lastAnalyzed: new Date()
     };
@@ -418,38 +420,82 @@ export class LeadGenerator {
   /**
    * Suggerisce ruoli professionali basati sui problemi rilevati
    */
-  private getSuggestedRoles(business: AnalyzedBusiness): ('web-developer' | 'seo-specialist' | 'designer' | 'marketing-specialist' | 'legal-consultant')[] {
-    const roles: ('web-developer' | 'seo-specialist' | 'designer' | 'marketing-specialist' | 'legal-consultant')[] = [];
+  private getSuggestedRoles(business: AnalyzedBusiness): string[] {
+    const roles: string[] = [];
     
     if (business.websiteAnalysis) {
       const analysis = business.websiteAnalysis;
       
-      // Web Developer
-      if ((analysis.performance?.loadComplete && analysis.performance.loadComplete > 3000) || analysis.images?.broken > 0) {
-        roles.push('web-developer');
+      // Se l'enhanced analyzer ha già identificato ruoli necessari, usali
+      if (analysis.opportunities?.neededRoles?.length > 0) {
+        roles.push(...analysis.opportunities.neededRoles);
       }
       
-      // SEO Specialist
-      if (!analysis.seo?.hasTitle || !analysis.seo?.hasMetaDescription || !analysis.seo?.hasH1) {
-        roles.push('seo-specialist');
+      // Developer - problemi tecnici, performance, immagini rotte
+      if ((analysis.performance?.loadComplete && analysis.performance.loadComplete > 3000) || 
+          analysis.images?.broken > 0 ||
+          !analysis.hasSSL ||
+          !analysis.mobile?.isMobileFriendly) {
+        roles.push('developer');
       }
       
-      // Designer
-      if (!analysis.mobile?.isMobileFriendly || (analysis.content?.contentQualityScore && analysis.content.contentQualityScore < 50)) {
+      // SEO - problemi di ottimizzazione per motori di ricerca
+      if (!analysis.seo?.hasTitle || 
+          !analysis.seo?.hasMetaDescription || 
+          !analysis.seo?.hasH1 ||
+          !analysis.seo?.hasCanonical ||
+          !analysis.seo?.hasOpenGraph ||
+          !analysis.seo?.hasStructuredData) {
+        roles.push('seo');
+      }
+      
+      // Designer - problemi di UX/UI, responsive, contenuti
+      if (!analysis.mobile?.isMobileFriendly || 
+          (analysis.content?.contentQualityScore && analysis.content.contentQualityScore < 50) ||
+          (analysis.images?.withoutAlt > 0)) {
         roles.push('designer');
       }
       
-      // Marketing Specialist
-      if (!analysis.tracking?.googleAnalytics && !analysis.tracking?.facebookPixel) {
-        roles.push('marketing-specialist');
+      // Copywriter - contenuti di bassa qualità, meta tag mal scritti
+      if ((analysis.content?.contentQualityScore && analysis.content.contentQualityScore < 40) ||
+          (analysis.seo?.titleLength && (analysis.seo.titleLength < 30 || analysis.seo.titleLength > 60)) ||
+          (analysis.seo?.metaDescriptionLength && (analysis.seo.metaDescriptionLength < 120 || analysis.seo.metaDescriptionLength > 160))) {
+        roles.push('copywriter');
       }
       
-      // Legal Consultant
-      if (!analysis.gdpr?.hasCookieBanner || !analysis.gdpr?.hasPrivacyPolicy) {
-        roles.push('legal-consultant');
+      // Photographer - problemi con immagini (pesanti, senza alt, rotte)
+      if (analysis.images?.broken > 0 ||
+          analysis.images?.withoutAlt > 2 ||
+          analysis.images?.oversized > 0 ||
+          (analysis.images?.averageSize && analysis.images.averageSize > 500000)) {
+        roles.push('photographer');
+      }
+      
+      // Social - mancanza tracking social, pixel, analytics
+      if (!analysis.tracking?.facebookPixel ||
+          !analysis.tracking?.googleAnalytics ||
+          !analysis.social?.profiles?.length) {
+        roles.push('social');
+      }
+      
+      // ADV - mancanza pixel advertising, conversion tracking
+      if (!analysis.tracking?.googleAdsConversion ||
+          !analysis.tracking?.facebookPixel ||
+          !analysis.tracking?.googleTagManager ||
+          analysis.tracking?.trackingScore < 50) {
+        roles.push('adv');
+      }
+      
+      // GDPR - problemi compliance privacy
+      if (!analysis.gdpr?.hasCookieBanner || 
+          !analysis.gdpr?.hasPrivacyPolicy ||
+          !analysis.gdpr?.hasTermsOfService ||
+          analysis.gdpr?.gdprScore < 70) {
+        roles.push('gdpr');
       }
     }
     
-    return roles;
+    // Rimuovi duplicati e restituisci
+    return [...new Set(roles)];
   }
 }

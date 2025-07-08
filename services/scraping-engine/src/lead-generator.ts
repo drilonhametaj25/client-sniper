@@ -271,6 +271,7 @@ export class LeadGenerator {
       // Campi moderni estratti
       issues: this.extractIssues(business),
       opportunities: this.extractOpportunities(business),
+      needed_roles: this.getSuggestedRoles(business),
       // Dati social se disponibili
       social_presence: business.websiteAnalysis?.social || null,
       created_at: new Date().toISOString()

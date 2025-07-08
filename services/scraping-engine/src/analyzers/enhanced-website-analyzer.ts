@@ -133,6 +133,7 @@ export interface EnhancedWebsiteAnalysis {
   // Business Opportunities
   opportunities: {
     neededServices: string[] // SEO, web design, performance, etc.
+    neededRoles: string[] // designer, developer, seo, copywriter, photographer, adv, social, gdpr
     priorityLevel: 'critical' | 'high' | 'medium' | 'low'
     estimatedValue: number // 1-10 scale
     quickWins: string[] // Easy improvements
@@ -794,41 +795,55 @@ export class EnhancedWebsiteAnalyzer {
    */
   private identifyOpportunities(analysisData: any, scores: any): EnhancedWebsiteAnalysis['opportunities'] {
     const neededServices: string[] = []
+    const neededRoles: string[] = []
     let estimatedValue = 1
     const quickWins: string[] = []
     
-    // Identifica servizi necessari
+    // Identifica servizi necessari e ruoli correlati
     if (scores.overallScore < 40) {
       neededServices.push('Redesign completo')
+      neededRoles.push('designer', 'developer')
       estimatedValue = Math.max(estimatedValue, 8)
     }
     
     if (!analysisData.seo.hasTitle || !analysisData.seo.hasMetaDescription) {
       neededServices.push('Ottimizzazione SEO')
+      neededRoles.push('seo', 'copywriter')
       estimatedValue = Math.max(estimatedValue, 6)
       quickWins.push('Aggiungere title e meta description')
     }
     
     if (analysisData.performance.speedScore < 60) {
       neededServices.push('Ottimizzazione performance')
+      neededRoles.push('developer')
       estimatedValue = Math.max(estimatedValue, 5)
     }
     
     if (!analysisData.mobile.isMobileFriendly) {
       neededServices.push('Ottimizzazione mobile')
+      neededRoles.push('designer', 'developer')
       estimatedValue = Math.max(estimatedValue, 7)
     }
     
     if (analysisData.tracking.trackingScore < 50) {
       neededServices.push('Setup analytics e tracking')
+      neededRoles.push('adv', 'social')
       estimatedValue = Math.max(estimatedValue, 4)
       quickWins.push('Installare Google Analytics')
     }
     
     if (analysisData.gdpr.gdprScore < 70) {
       neededServices.push('Compliance GDPR')
+      neededRoles.push('gdpr')
       estimatedValue = Math.max(estimatedValue, 3)
       quickWins.push('Aggiungere cookie banner')
+    }
+    
+    if (analysisData.images?.withoutAlt > 2 || analysisData.images?.oversized > 0) {
+      neededServices.push('Ottimizzazione immagini')
+      neededRoles.push('photographer', 'developer')
+      estimatedValue = Math.max(estimatedValue, 3)
+      quickWins.push('Aggiungere alt text alle immagini')
     }
     
     // Determina priorità
@@ -839,6 +854,7 @@ export class EnhancedWebsiteAnalyzer {
     
     return {
       neededServices,
+      neededRoles: [...new Set(neededRoles)], // Rimuovi duplicati
       priorityLevel,
       estimatedValue,
       quickWins
@@ -964,6 +980,7 @@ export class EnhancedWebsiteAnalyzer {
       },
       opportunities: {
         neededServices: ['Riparazione sito web', 'Sviluppo nuovo sito'],
+        neededRoles: ['developer', 'designer'],
         priorityLevel: 'critical',
         estimatedValue: 10,
         quickWins: []
