@@ -574,6 +574,64 @@ export default function RegisterPage() {
                         {passwordValidation.strength === 'medium' && 'Password discreta'}
                         {passwordValidation.strength === 'strong' && 'Password forte'}
                       </p>
+                      {/* Password Requirements */}
+                      {!passwordValidation.isValid && (
+                        <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
+                          <p className="text-xs font-medium text-gray-700 mb-2">La password deve contenere:</p>
+                          <ul className="space-y-1">
+                            <li className={`text-xs flex items-center ${password.length >= 8 ? 'text-green-600' : 'text-gray-600'}`}>
+                              <div className={`w-3 h-3 rounded-full mr-2 flex items-center justify-center ${password.length >= 8 ? 'bg-green-100' : 'bg-gray-200'}`}>
+                                {password.length >= 8 ? (
+                                  <Check className="w-2 h-2 text-green-600" />
+                                ) : (
+                                  <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                                )}
+                              </div>
+                              Almeno 8 caratteri
+                            </li>
+                            <li className={`text-xs flex items-center ${/[A-Z]/.test(password) ? 'text-green-600' : 'text-gray-600'}`}>
+                              <div className={`w-3 h-3 rounded-full mr-2 flex items-center justify-center ${/[A-Z]/.test(password) ? 'bg-green-100' : 'bg-gray-200'}`}>
+                                {/[A-Z]/.test(password) ? (
+                                  <Check className="w-2 h-2 text-green-600" />
+                                ) : (
+                                  <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                                )}
+                              </div>
+                              Una lettera maiuscola (A-Z)
+                            </li>
+                            <li className={`text-xs flex items-center ${/[a-z]/.test(password) ? 'text-green-600' : 'text-gray-600'}`}>
+                              <div className={`w-3 h-3 rounded-full mr-2 flex items-center justify-center ${/[a-z]/.test(password) ? 'bg-green-100' : 'bg-gray-200'}`}>
+                                {/[a-z]/.test(password) ? (
+                                  <Check className="w-2 h-2 text-green-600" />
+                                ) : (
+                                  <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                                )}
+                              </div>
+                              Una lettera minuscola (a-z)
+                            </li>
+                            <li className={`text-xs flex items-center ${/\d/.test(password) ? 'text-green-600' : 'text-gray-600'}`}>
+                              <div className={`w-3 h-3 rounded-full mr-2 flex items-center justify-center ${/\d/.test(password) ? 'bg-green-100' : 'bg-gray-200'}`}>
+                                {/\d/.test(password) ? (
+                                  <Check className="w-2 h-2 text-green-600" />
+                                ) : (
+                                  <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                                )}
+                              </div>
+                              Un numero (0-9)
+                            </li>
+                            <li className={`text-xs flex items-center ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? 'text-green-600' : 'text-gray-600'}`}>
+                              <div className={`w-3 h-3 rounded-full mr-2 flex items-center justify-center ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? 'bg-green-100' : 'bg-gray-200'}`}>
+                                {/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? (
+                                  <Check className="w-2 h-2 text-green-600" />
+                                ) : (
+                                  <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                                )}
+                              </div>
+                              Un carattere speciale (!@#$%^&*)
+                            </li>
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
