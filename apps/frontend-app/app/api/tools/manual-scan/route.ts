@@ -17,6 +17,7 @@ import { decrementUserCredits } from '../../../../lib/services/credits'
 import { saveManualLead } from '../../../../lib/services/leads'
 import { RealSiteAnalyzer } from '../../../../lib/analyzers/real-site-analyzer'
 import { SimplifiedSiteAnalyzer } from '../../../../lib/analyzers/simplified-site-analyzer'
+import { URLValidator } from '../../../../lib/utils/url-validator'
 import type { WebsiteAnalysis } from '../../../../lib/types/analysis'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -242,14 +243,18 @@ export async function POST(request: NextRequest): Promise<NextResponse<ManualSca
       )
     }
 
-    // 3. Valida URL
-    const { isValid, normalizedUrl, error: urlError } = validateAndNormalizeUrl(body.url)
-    if (!isValid) {
+    // 3. Valida URL con nuovo validator robusto
+    const urlValidator = new URLValidator()
+    const urlValidation = urlValidator.validate(body.url)
+    
+    if (!urlValidation.valid) {
       return NextResponse.json(
-        { success: false, error: urlError },
+        { success: false, error: urlValidation.error },
         { status: 400 }
       )
     }
+
+    const normalizedUrl = urlValidation.normalizedUrl!
 
     // 4. Controlla e decrementa crediti prima dell'analisi
     const creditResult = await decrementUserCredits({

@@ -431,29 +431,49 @@ export class LeadGenerator {
       score,
       priority: score < 30 ? 'high' : score < 60 ? 'medium' : 'low',
       opportunities: this.extractOpportunities(business),
-      suggestedRoles: this.getSuggestedRoles(business),
+      suggestedRoles: this.getSuggestedRoles(business) as any, // Cast per retrocompatibilità
       scrapedAt: new Date(),
       lastAnalyzed: new Date()
     };
   }
 
   /**
-   * Suggerisce ruoli professionali basati sui problemi rilevati
+   * Mappa ruoli legacy/inglesi in italiano per retrocompatibilità
    */
-  private getSuggestedRoles(business: AnalyzedBusiness): ('web-developer' | 'seo-specialist' | 'designer' | 'marketing-specialist' | 'legal-consultant')[] {
-    const roles: ('web-developer' | 'seo-specialist' | 'designer' | 'marketing-specialist' | 'legal-consultant')[] = [];
+  private mapRoleToItalian(role: string): string {
+    switch (role) {
+      case 'web-developer':
+        return 'developer';
+      case 'seo-specialist':
+        return 'seo';
+      case 'designer':
+        return 'designer';
+      case 'marketing-specialist':
+        return 'social';
+      case 'legal-consultant':
+        return 'gdpr';
+      default:
+        return role;
+    }
+  }
+
+  /**
+   * Suggerisce ruoli professionali basati sui problemi rilevati - AGGIORNATO per ruoli italiani
+   */
+  private getSuggestedRoles(business: AnalyzedBusiness): string[] {
+    const roles: string[] = [];
     
     if (business.websiteAnalysis) {
       const analysis = business.websiteAnalysis;
       
-      // Web Developer
+      // Developer (ex Web Developer)
       if ((analysis.performance?.loadComplete && analysis.performance.loadComplete > 3000) || analysis.images?.broken > 0) {
-        roles.push('web-developer');
+        roles.push('developer');
       }
       
-      // SEO Specialist
+      // SEO (ex SEO Specialist)
       if (!analysis.seo?.hasTitle || !analysis.seo?.hasMetaDescription || !analysis.seo?.hasH1) {
-        roles.push('seo-specialist');
+        roles.push('seo');
       }
       
       // Designer
@@ -461,18 +481,19 @@ export class LeadGenerator {
         roles.push('designer');
       }
       
-      // Marketing Specialist
+      // Social (ex Marketing Specialist)
       if (!analysis.tracking?.googleAnalytics && !analysis.tracking?.facebookPixel) {
-        roles.push('marketing-specialist');
+        roles.push('social');
       }
       
-      // Legal Consultant
+      // GDPR (ex Legal Consultant)
       if (!analysis.gdpr?.hasCookieBanner || !analysis.gdpr?.hasPrivacyPolicy) {
-        roles.push('legal-consultant');
+        roles.push('gdpr');
       }
     }
     
-    return roles;
+    // Rimuovi duplicati
+    return Array.from(new Set(roles));
   }
 
   /**

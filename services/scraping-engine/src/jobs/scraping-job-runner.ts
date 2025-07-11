@@ -486,7 +486,8 @@ export class ScrapingJobRunner {
         low: []
       },
       opportunities: {
-        neededServices: ['web-developer', 'seo-specialist', 'designer'],
+        neededServices: ['developer', 'seo', 'designer'],
+        neededRoles: ['developer', 'seo', 'designer'],
         priorityLevel: 'critical' as const,
         estimatedValue: 8,
         quickWins: ['Create website', 'Setup basic SEO', 'Add contact information']

@@ -14,6 +14,7 @@ import { WebsiteStatusChecker, WebsiteStatus } from '../utils/website-status-che
 import { TechStackDetector, TechStackInfo } from '../utils/tech-stack-detector'
 import { PerformanceAnalyzer, PerformanceMetrics } from '../utils/performance-analyzer'
 import { BusinessContactParser } from '../utils/business-contact-parser'
+import { BrowserManager } from '../utils/browser-manager'
 import type { SocialAnalysisResult } from './social-analyzer'
 
 export interface EnhancedWebsiteAnalysis {
@@ -152,13 +153,14 @@ export interface EnhancedWebsiteAnalysis {
 }
 
 export class EnhancedWebsiteAnalyzer {
-  private browser: Browser | null = null
+  private browserManager: BrowserManager
   private statusChecker: WebsiteStatusChecker
   private techDetector: TechStackDetector
   private performanceAnalyzer: PerformanceAnalyzer
   private contactParser: BusinessContactParser
   
   constructor() {
+    this.browserManager = BrowserManager.getInstance()
     this.statusChecker = new WebsiteStatusChecker()
     this.techDetector = new TechStackDetector()
     this.performanceAnalyzer = new PerformanceAnalyzer()
@@ -243,8 +245,9 @@ export class EnhancedWebsiteAnalyzer {
    * Analisi dettagliata con browser
    */
   private async performBrowserAnalysis(url: string): Promise<Partial<EnhancedWebsiteAnalysis>> {
-    await this.initBrowser()
-    const page = await this.browser!.newPage()
+    const browserId = `analyzer-${Date.now()}`;
+    const { browser, context } = await this.browserManager.getBrowser(browserId);
+    const page = await context.newPage();
     
     try {
       // Configura pagina
@@ -316,6 +319,7 @@ export class EnhancedWebsiteAnalyzer {
       
     } finally {
       await page.close()
+      await this.browserManager.releaseBrowser(browserId)
     }
   }
 
@@ -925,30 +929,10 @@ export class EnhancedWebsiteAnalyzer {
   }
 
   /**
-   * Inizializza browser
-   */
-  private async initBrowser(): Promise<void> {
-    if (this.browser) return
-    
-    this.browser = await chromium.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-blink-features=AutomationControlled'
-      ]
-    })
-  }
-
-  /**
-   * Cleanup risorse
+   * Cleanup risorse - AGGIORNATO per BrowserManager
    */
   private async cleanup(): Promise<void> {
-    if (this.browser) {
-      await this.browser.close()
-      this.browser = null
-    }
+    // Il cleanup è gestito automaticamente dal BrowserManager
     await this.statusChecker.closeBrowser()
   }
 

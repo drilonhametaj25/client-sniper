@@ -638,7 +638,7 @@ export class GoogleMapsScraper {
 
     let websiteAnalysis
     let opportunities: string[] = []
-    let suggestedRoles: ('web-developer' | 'seo-specialist' | 'designer' | 'marketing-specialist' | 'legal-consultant')[] = []
+    let suggestedRoles: string[] = []
 
     // Analizza il sito web se presente e richiesto
     if (business.website && options.enableSiteAnalysis !== false) {
@@ -690,7 +690,7 @@ export class GoogleMapsScraper {
       }
     } else if (!business.website) {
       opportunities.push('Nessun sito web presente')
-      suggestedRoles.push('web-developer', 'designer')
+      suggestedRoles.push('developer', 'designer')
     }
 
     // Calcola il punteggio del lead
@@ -707,7 +707,7 @@ export class GoogleMapsScraper {
       score,
       priority,
       opportunities,
-      suggestedRoles,
+      suggestedRoles: suggestedRoles as any, // Cast per retrocompatibilità
       scrapedAt: new Date(),
       lastAnalyzed: websiteAnalysis ? new Date() : undefined
     }
@@ -726,11 +726,11 @@ export class GoogleMapsScraper {
 
   /**
    * Genera opportunità e ruoli suggeriti dall'analisi del sito
-   * VERSIONE PUBBLICA per test
+   * VERSIONE PUBBLICA per test - AGGIORNATO per ruoli italiani
    */
   generateOpportunities(analysis: any): {
     opportunities: string[]
-    roles: ('web-developer' | 'seo-specialist' | 'designer' | 'marketing-specialist' | 'legal-consultant')[]
+    roles: string[]
   } {
     return this.generateOpportunitiesInternal(analysis)
   }
@@ -958,21 +958,21 @@ export class GoogleMapsScraper {
   }
 
   /**
-   * Genera opportunità e ruoli suggeriti dall'analisi del sito (versione interna)
+   * Genera opportunità e ruoli suggeriti dall'analisi del sito (versione interna) - AGGIORNATO per ruoli italiani
    */
   private generateOpportunitiesInternal(analysis: any): {
     opportunities: string[]
-    roles: ('web-developer' | 'seo-specialist' | 'designer' | 'marketing-specialist' | 'legal-consultant')[]
+    roles: string[]
   } {
     const opportunities: string[] = []
-    const roles: ('web-developer' | 'seo-specialist' | 'designer' | 'marketing-specialist' | 'legal-consultant')[] = []
+    const roles: string[] = []
 
     // CONTROLLO SICUREZZA: Verifica che l'analisi esista
     if (!analysis) {
       console.log('⚠️ Analisi non disponibile, uso fallback per opportunità')
       opportunities.push('Necessaria analisi tecnica del sito web')
       opportunities.push('Verifica funzionamento e accessibilità sito')
-      roles.push('web-developer', 'seo-specialist')
+      roles.push('developer', 'seo')
       return { opportunities, roles }
     }
 
@@ -998,7 +998,7 @@ export class GoogleMapsScraper {
       if (analysis.issues?.httpStatus) {
         opportunities.push('Problemi di hosting o configurazione server')
       }
-      roles.push('web-developer')
+      roles.push('developer')
       return { opportunities, roles }
     }
 
@@ -1016,37 +1016,37 @@ export class GoogleMapsScraper {
       // Solo se il titolo è veramente mancante o vuoto
       if (!analysis.seo.hasTitle || analysis.seo.titleLength === 0) {
         opportunities.push('Missing page title')
-        roles.push('seo-specialist')
+        roles.push('seo')
       }
       
       // Solo se la meta description è veramente mancante o vuota
       if (!analysis.seo.hasMetaDescription || analysis.seo.metaDescriptionLength === 0) {
         opportunities.push('Missing meta description')
-        roles.push('seo-specialist')
+        roles.push('seo')
       }
       
       // Solo se H1 è veramente mancante
       if (!analysis.seo.hasH1 || analysis.seo.h1Count === 0) {
         opportunities.push('Missing H1 tag')
-        roles.push('seo-specialist', 'web-developer')
+        roles.push('seo', 'developer')
       }
       
       // Controlli aggiuntivi solo se mancanti
       if (!analysis.seo.hasStructuredData) {
         opportunities.push('Mancano i dati strutturati per SEO')
-        roles.push('seo-specialist')
+        roles.push('seo')
       }
       
       // Solo se titolo troppo corto o troppo lungo
       if (analysis.seo.hasTitle && (analysis.seo.titleLength < 10 || analysis.seo.titleLength > 60)) {
         opportunities.push('Titolo pagina da ottimizzare (lunghezza non ideale)')
-        roles.push('seo-specialist')
+        roles.push('seo')
       }
       
       // Solo se meta description troppo corta o troppo lunga
       if (analysis.seo.hasMetaDescription && (analysis.seo.metaDescriptionLength < 120 || analysis.seo.metaDescriptionLength > 160)) {
         opportunities.push('Meta description da ottimizzare (lunghezza non ideale)')
-        roles.push('seo-specialist')
+        roles.push('seo')
       }
     }
 
@@ -1061,13 +1061,13 @@ export class GoogleMapsScraper {
       // Solo se la performance è realmente scadente
       if (analysis.performance.overallScore && analysis.performance.overallScore < 40) {
         opportunities.push('Slow page load time')
-        roles.push('web-developer')
+        roles.push('developer')
       }
       
       // Solo se il tempo di caricamento è realmente lento (> 4 secondi)
       if (analysis.performance.loadTime && analysis.performance.loadTime > 4000) {
         opportunities.push('Page load time optimization needed')
-        roles.push('web-developer')
+        roles.push('developer')
       }
     }
 
@@ -1082,14 +1082,14 @@ export class GoogleMapsScraper {
       // Solo se ci sono realmente immagini rotte
       if (analysis.images.broken && analysis.images.broken > 0) {
         opportunities.push('Broken images detected')
-        roles.push('web-developer', 'designer')
+        roles.push('developer', 'designer')
       }
       
       // Solo se ci sono molte immagini senza alt (> 20% del totale)
       if (analysis.images.withoutAlt && analysis.images.total && 
           (analysis.images.withoutAlt / analysis.images.total) > 0.2) {
         opportunities.push('Images missing alt text for accessibility')
-        roles.push('web-developer', 'designer')
+        roles.push('developer', 'designer')
       }
     }
 
@@ -1104,13 +1104,13 @@ export class GoogleMapsScraper {
       // Solo se manca completamente Google Analytics
       if (!analysis.tracking.hasGoogleAnalytics) {
         opportunities.push('No analytics tracking detected')
-        roles.push('marketing-specialist')
+        roles.push('social')
       }
       
       // Facebook Pixel è opzionale, suggeriamo solo se mancano entrambi
       if (!analysis.tracking.hasGoogleAnalytics && !analysis.tracking.hasFacebookPixel) {
         opportunities.push('Missing conversion tracking tools')
-        roles.push('marketing-specialist')
+        roles.push('social')
       }
     }
 
@@ -1124,13 +1124,13 @@ export class GoogleMapsScraper {
       // Solo se manca completamente il consenso cookie
       if (!analysis.gdpr.hasCookieConsent) {
         opportunities.push('Missing cookie consent banner')
-        roles.push('legal-consultant', 'web-developer')
+        roles.push('gdpr', 'developer')
       }
       
       // Solo se manca completamente la privacy policy
       if (!analysis.gdpr.hasPrivacyPolicy) {
         opportunities.push('Missing privacy policy')
-        roles.push('legal-consultant')
+        roles.push('gdpr')
       }
     }
 
@@ -1144,7 +1144,7 @@ export class GoogleMapsScraper {
       // Solo se il sito è veramente non mobile-friendly
       if (analysis.mobile.isMobileFriendly === false) {
         opportunities.push('Not mobile-friendly')
-        roles.push('web-developer', 'designer')
+        roles.push('developer', 'designer')
       }
     }
 
@@ -1158,7 +1158,7 @@ export class GoogleMapsScraper {
       // Solo se ci sono realmente tecnologie obsolete
       if (analysis.techStack.outdatedTech && analysis.techStack.outdatedTech.length > 0) {
         opportunities.push('Outdated technology detected')
-        roles.push('web-developer')
+        roles.push('developer')
       }
     }
 
@@ -1168,35 +1168,35 @@ export class GoogleMapsScraper {
       
       if (analysis.issues.missingTitle) {
         opportunities.push('Missing page title')
-        roles.push('seo-specialist')
+        roles.push('seo')
       }
       if (analysis.issues.missingMetaDescription) {
         opportunities.push('Missing meta description')
-        roles.push('seo-specialist')
+        roles.push('seo')
       }
       if (analysis.issues.missingH1) {
         opportunities.push('Missing H1 tag')
-        roles.push('seo-specialist', 'web-developer')
+        roles.push('seo', 'developer')
       }
       if (analysis.issues.slowLoading) {
         opportunities.push('Slow page load time')
-        roles.push('web-developer')
+        roles.push('developer')
       }
       if (analysis.issues.brokenImages) {
         opportunities.push('Broken images detected')
-        roles.push('web-developer', 'designer')
+        roles.push('developer', 'designer')
       }
       if (analysis.issues.noTracking) {
         opportunities.push('No analytics tracking detected')
-        roles.push('marketing-specialist')
+        roles.push('social')
       }
       if (analysis.issues.noCookieConsent) {
         opportunities.push('Missing cookie consent banner')
-        roles.push('legal-consultant', 'web-developer')
+        roles.push('gdpr', 'developer')
       }
       if (analysis.issues.missingPartitaIva) {
         opportunities.push('Missing VAT number')
-        roles.push('legal-consultant')
+        roles.push('gdpr')
       }
     }
 

@@ -37,7 +37,7 @@ const businessFromGoogleMaps = {
     cms_analysis: { is_wordpress: true, uses_default_theme: false, uses_page_builder: false },
     content_quality: { has_generic_content: false, has_stock_images: true, content_length: 1200 },
     overall_score: 55,
-    needed_roles: ['web-developer', 'seo-specialist'],
+    needed_roles: ['developer', 'seo'],
     issues: ['missing-meta-description', 'broken-images', 'no-tracking', 'poor-mobile', 'slow-loading']
   }
 }
