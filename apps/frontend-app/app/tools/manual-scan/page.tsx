@@ -130,31 +130,31 @@ export default function ManualScanPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
         <div id="manual-scan-header" className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
             🔍 Analisi Manuale Siti Web
           </h1>
-          <p className="mt-2 text-gray-600">
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
             Analizza qualsiasi sito web per identificare opportunità di business.
             Ogni analisi costa <span className="font-semibold">1 credito</span>.
           </p>
           
           {userCredits !== null && (
-            <div className="mt-4 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+            <div className="mt-4 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
               💳 Crediti rimanenti: {userCredits}
             </div>
           )}
         </div>
 
         {/* Form */}
-        <TourTarget tourId="manual-scan-form" className="bg-white rounded-lg shadow-sm border p-6 mb-8">
+        <TourTarget tourId="manual-scan-form" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 p-6 mb-8">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 URL del sito da analizzare
               </label>
               <div className="flex gap-3">
@@ -165,7 +165,7 @@ export default function ManualScanPage() {
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     placeholder="https://esempio.com"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                     disabled={isLoading}
                     required
                   />
@@ -194,7 +194,7 @@ export default function ManualScanPage() {
 
             {/* Warning crediti */}
             {userCredits !== null && userCredits < 1 && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+              <div className="bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700 rounded-md p-4">
                 <div className="flex">
                   <div className="flex-shrink-0">
                     <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
@@ -202,12 +202,12 @@ export default function ManualScanPage() {
                     </svg>
                   </div>
                   <div className="ml-3">
-                    <h3 className="text-sm font-medium text-yellow-800">
+                    <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
                       Crediti insufficienti
                     </h3>
-                    <p className="mt-1 text-sm text-yellow-700">
+                    <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
                       Hai bisogno di almeno 1 credito per eseguire un'analisi. 
-                      <a href="/upgrade" className="font-medium underline hover:text-yellow-600 ml-1">
+                      <a href="/upgrade" className="font-medium underline hover:text-yellow-600 dark:hover:text-yellow-400 ml-1">
                         Effettua l'upgrade del piano
                       </a>
                     </p>
@@ -218,7 +218,7 @@ export default function ManualScanPage() {
 
             {/* Conferma costo */}
             {userCredits !== null && userCredits >= 1 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+              <div className="bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-md p-4">
                 <div className="flex">
                   <div className="flex-shrink-0">
                     <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
@@ -226,10 +226,10 @@ export default function ManualScanPage() {
                     </svg>
                   </div>
                   <div className="ml-3">
-                    <h3 className="text-sm font-medium text-blue-800">
+                    <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
                       💳 Costo analisi: 1 credito
                     </h3>
-                    <p className="mt-1 text-sm text-blue-700">
+                    <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
                       L'analisi includerà: SEO, Performance, Tracking, GDPR, Presenza Social e Score complessivo.
                       Il sito analizzato verrà salvato anche come lead per altri utenti.
                     </p>
@@ -242,7 +242,7 @@ export default function ManualScanPage() {
 
         {/* Errore */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-8">
+          <div className="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-md p-4 mb-8">
             <div className="flex">
               <div className="flex-shrink-0">
                 <svg className="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
@@ -250,10 +250,10 @@ export default function ManualScanPage() {
                 </svg>
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">
+                <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
                   Errore durante l'analisi
                 </h3>
-                <p className="mt-1 text-sm text-red-700">{error}</p>
+                <p className="mt-1 text-sm text-red-700 dark:text-red-300">{error}</p>
               </div>
             </div>
           </div>
@@ -261,7 +261,7 @@ export default function ManualScanPage() {
 
         {/* Messaggio Lead Esistente */}
         {responseData?.existingLead && (
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-8">
+          <div className="bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-md p-4 mb-8">
             <div className="flex">
               <div className="flex-shrink-0">
                 <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
@@ -269,13 +269,13 @@ export default function ManualScanPage() {
                 </svg>
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-blue-800">
+                <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
                   🔍 Lead già presente nel database
                 </h3>
-                <p className="mt-1 text-sm text-blue-700">{responseData.message}</p>
+                <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">{responseData.message}</p>
                 {responseData.leadInfo && (
-                  <div className="mt-3 p-3 bg-blue-100 rounded-md">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-blue-700">
+                  <div className="mt-3 p-3 bg-blue-100 dark:bg-blue-800 rounded-md">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-blue-700 dark:text-blue-300">
                       <div><strong>Nome Business:</strong> {responseData.leadInfo.businessName || 'Non disponibile'}</div>
                       <div><strong>Punteggio:</strong> <span className={getScoreColor(responseData.leadInfo.score)}>{responseData.leadInfo.score}/100</span></div>
                       <div><strong>Origine:</strong> {responseData.leadInfo.origin === 'manual' ? '🔍 Analisi Manuale' : '🤖 Scraping Automatico'}</div>
@@ -285,13 +285,13 @@ export default function ManualScanPage() {
                   </div>
                 )}
                 <div className="mt-3 flex items-center space-x-2">
-                  <div className="flex items-center text-sm text-green-600 font-medium">
+                  <div className="flex items-center text-sm text-green-600 dark:text-green-400 font-medium">
                     <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     ✅ Nessun credito consumato
                   </div>
-                  <div className="text-sm text-blue-600">
+                  <div className="text-sm text-blue-600 dark:text-blue-400">
                     • Analisi completa disponibile qui sotto
                   </div>
                 </div>
@@ -302,27 +302,27 @@ export default function ManualScanPage() {
 
         {/* Risultati */}
         {result && (
-          <TourTarget tourId="manual-scan-results" className="bg-white rounded-lg shadow-sm border overflow-hidden">
+          <TourTarget tourId="manual-scan-results" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 overflow-hidden">
             {/* Header risultato */}
-            <div className="px-6 py-4 bg-gray-50 border-b">
+            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                     📊 Risultati Analisi
                   </h2>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     {result.analysis.finalUrl}
                   </p>
                   {responseData?.existingLead ? (
-                    <div className="mt-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <div className="mt-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                       ♻️ Lead esistente - Nessun credito consumato
                     </div>
                   ) : result.isSimplifiedAnalysis ? (
-                    <div className="mt-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                    <div className="mt-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">
                       ⚡ Analisi semplificata - 1 credito utilizzato
                     </div>
                   ) : (
-                    <div className="mt-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <div className="mt-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
                       ✨ Nuovo lead creato - 1 credito utilizzato
                     </div>
                   )}
@@ -331,7 +331,7 @@ export default function ManualScanPage() {
                   <div className={`text-2xl font-bold ${getScoreColor(result.analysis.overallScore || 0)}`}>
                     {result.analysis.overallScore || 0}/100
                   </div>
-                  <div className="text-xs text-gray-500">Score Tecnico</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Score Tecnico</div>
                 </div>
               </div>
               <div className="mt-2">
@@ -343,7 +343,7 @@ export default function ManualScanPage() {
 
             {/* Banner per analisi semplificata */}
             {result.isSimplifiedAnalysis && (
-              <div className="mx-6 mt-4 mb-0 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="mx-6 mt-4 mb-0 p-4 bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700 rounded-lg">
                 <div className="flex items-start">
                   <div className="flex-shrink-0">
                     <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -351,8 +351,8 @@ export default function ManualScanPage() {
                     </svg>
                   </div>
                   <div className="ml-3">
-                    <h3 className="text-sm font-medium text-yellow-800">Analisi Semplificata</h3>
-                    <div className="mt-2 text-sm text-yellow-700">
+                    <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Analisi Semplificata</h3>
+                    <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
                       <p>
                         Questa è un'analisi semplificata eseguita senza browser. Alcune metriche come performance, immagini rotte e layout responsivo potrebbero non essere precise. 
                         L'analisi semplificata non viene salvata nel database.
@@ -368,34 +368,34 @@ export default function ManualScanPage() {
               
               {/* Status generale */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <div className={`text-lg font-semibold ${result.analysis.isAccessible ? 'text-green-600' : 'text-red-600'}`}>
                     {result.analysis.isAccessible ? '✅' : '❌'}
                   </div>
-                  <div className="text-sm text-gray-600 mt-1">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     {result.analysis.isAccessible ? 'Sito Accessibile' : 'Sito Non Accessibile'}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
                     HTTP {result.analysis.httpStatus}
                   </div>
                 </div>
 
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <div className={`text-lg font-semibold ${result.analysis.performance.loadTime < 3000 ? 'text-green-600' : 'text-red-600'}`}>
                     ⚡
                   </div>
-                  <div className="text-sm text-gray-600 mt-1">Performance</div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Performance</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
                     {(result.analysis.performance.loadTime / 1000).toFixed(1)}s caricamento
                   </div>
                 </div>
 
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <div className={`text-lg font-semibold ${result.analysis.performance.isResponsive ? 'text-green-600' : 'text-red-600'}`}>
                     📱
                   </div>
-                  <div className="text-sm text-gray-600 mt-1">Mobile</div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Mobile</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
                     {result.analysis.performance.isResponsive ? 'Responsive' : 'Non Responsive'}
                   </div>
                 </div>
@@ -406,28 +406,28 @@ export default function ManualScanPage() {
                 
                 {/* SEO */}
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">🎯 SEO Base</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">🎯 SEO Base</h3>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Titolo</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Titolo</span>
                       <span className={`text-sm ${result.analysis.seo.hasTitle ? 'text-green-600' : 'text-red-600'}`}>
                         {result.analysis.seo.hasTitle ? `✅ (${result.analysis.seo.titleLength} char)` : '❌ Mancante'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Meta Description</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Meta Description</span>
                       <span className={`text-sm ${result.analysis.seo.hasMetaDescription ? 'text-green-600' : 'text-red-600'}`}>
                         {result.analysis.seo.hasMetaDescription ? `✅ (${result.analysis.seo.metaDescriptionLength} char)` : '❌ Mancante'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Header H1</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Header H1</span>
                       <span className={`text-sm ${result.analysis.seo.hasH1 ? 'text-green-600' : 'text-red-600'}`}>
                         {result.analysis.seo.hasH1 ? `✅ (${result.analysis.seo.h1Count})` : '❌ Mancante'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Dati Strutturati</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Dati Strutturati</span>
                       <span className={`text-sm ${result.analysis.seo.hasStructuredData ? 'text-green-600' : 'text-orange-600'}`}>
                         {result.analysis.seo.hasStructuredData ? '✅ Presenti' : '⚠️ Assenti'}
                       </span>
@@ -437,42 +437,42 @@ export default function ManualScanPage() {
 
                 {/* Tracking */}
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">📈 Tracking & Analytics</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">📈 Tracking & Analytics</h3>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Google Analytics</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Google Analytics</span>
                       <span className={`text-sm ${result.analysis.tracking.hasGoogleAnalytics ? 'text-green-600' : 'text-red-600'}`}>
                         {result.analysis.tracking.hasGoogleAnalytics ? '✅ Installato' : '❌ Non rilevato'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Facebook Pixel</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Facebook Pixel</span>
                       <span className={`text-sm ${result.analysis.tracking.hasFacebookPixel ? 'text-green-600' : 'text-red-600'}`}>
                         {result.analysis.tracking.hasFacebookPixel ? '✅ Installato' : '❌ Non rilevato'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Google Tag Manager</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Google Tag Manager</span>
                       <span className={`text-sm ${result.analysis.tracking.hasGoogleTagManager ? 'text-green-600' : 'text-red-600'}`}>
                         {result.analysis.tracking.hasGoogleTagManager ? '✅ Installato' : '❌ Non rilevato'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Hotjar</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Hotjar</span>
                       <span className={`text-sm ${result.analysis.tracking.hasHotjar ? 'text-green-600' : 'text-orange-600'}`}>
                         {result.analysis.tracking.hasHotjar ? '✅ Installato' : '⚠️ Non rilevato'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Microsoft Clarity</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Microsoft Clarity</span>
                       <span className={`text-sm ${result.analysis.tracking.hasClarityMicrosoft ? 'text-green-600' : 'text-orange-600'}`}>
                         {result.analysis.tracking.hasClarityMicrosoft ? '✅ Installato' : '⚠️ Non rilevato'}
                       </span>
                     </div>
                     {result.analysis.tracking.customTracking.length > 0 && (
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Altri Tracking</span>
-                        <span className="text-sm text-blue-600">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Altri Tracking</span>
+                        <span className="text-sm text-blue-600 dark:text-blue-400">
                           ℹ️ {result.analysis.tracking.customTracking.join(', ')}
                         </span>
                       </div>
@@ -486,41 +486,41 @@ export default function ManualScanPage() {
                 
                 {/* GDPR & Privacy */}
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">🔒 GDPR & Privacy</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">🔒 GDPR & Privacy</h3>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Cookie Banner</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Cookie Banner</span>
                       <span className={`text-sm ${result.analysis.gdpr.hasCookieBanner ? 'text-green-600' : 'text-red-600'}`}>
                         {result.analysis.gdpr.hasCookieBanner ? '✅ Presente' : '❌ Assente'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Privacy Policy</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Privacy Policy</span>
                       <span className={`text-sm ${result.analysis.gdpr.hasPrivacyPolicy ? 'text-green-600' : 'text-red-600'}`}>
                         {result.analysis.gdpr.hasPrivacyPolicy ? '✅ Presente' : '❌ Assente'}
                       </span>
                     </div>
                     {result.analysis.gdpr.privacyPolicyUrl && (
-                      <div className="text-xs text-blue-600 truncate">
+                      <div className="text-xs text-blue-600 dark:text-blue-400 truncate">
                         🔗 {result.analysis.gdpr.privacyPolicyUrl}
                       </div>
                     )}
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Termini di Servizio</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Termini di Servizio</span>
                       <span className={`text-sm ${result.analysis.gdpr.hasTermsOfService ? 'text-green-600' : 'text-orange-600'}`}>
                         {result.analysis.gdpr.hasTermsOfService ? '✅ Presenti' : '⚠️ Assenti'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Metodo Consenso</span>
-                      <span className="text-sm text-gray-900">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Metodo Consenso</span>
+                      <span className="text-sm text-gray-900 dark:text-gray-300">
                         {result.analysis.gdpr.cookieConsentMethod === 'banner' ? '📄 Banner' : 
                          result.analysis.gdpr.cookieConsentMethod === 'popup' ? '🪟 Popup' : '❌ Nessuno'}
                       </span>
                     </div>
                     {result.analysis.gdpr.riskyEmbeds.length > 0 && (
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Embed Rischiosi</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Embed Rischiosi</span>
                         <span className="text-sm text-orange-600">
                           ⚠️ {result.analysis.gdpr.riskyEmbeds.join(', ')}
                         </span>
@@ -531,33 +531,33 @@ export default function ManualScanPage() {
 
                 {/* Legal Compliance */}
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">⚖️ Compliance Legale</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">⚖️ Compliance Legale</h3>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Partita IVA</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Partita IVA</span>
                       <span className={`text-sm ${result.analysis.legal.hasVisiblePartitaIva ? 'text-green-600' : 'text-red-600'}`}>
                         {result.analysis.legal.hasVisiblePartitaIva ? '✅ Visibile' : '❌ Non trovata'}
                       </span>
                     </div>
                     {result.analysis.legal.partitaIvaLocation && (
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
                         📍 Posizione: {result.analysis.legal.partitaIvaLocation}
                       </div>
                     )}
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Indirizzo Business</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Indirizzo Business</span>
                       <span className={`text-sm ${result.analysis.legal.hasBusinessAddress ? 'text-green-600' : 'text-orange-600'}`}>
                         {result.analysis.legal.hasBusinessAddress ? '✅ Presente' : '⚠️ Non trovato'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Info Contatto</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Info Contatto</span>
                       <span className={`text-sm ${result.analysis.legal.hasContactInfo ? 'text-green-600' : 'text-red-600'}`}>
                         {result.analysis.legal.hasContactInfo ? '✅ Presenti' : '❌ Mancanti'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Score Conformità</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Score Conformità</span>
                       <span className={`text-sm font-medium ${result.analysis.legal.complianceScore >= 70 ? 'text-green-600' : 
                                                                   result.analysis.legal.complianceScore >= 40 ? 'text-orange-600' : 'text-red-600'}`}>
                         {result.analysis.legal.complianceScore}/100
@@ -572,31 +572,31 @@ export default function ManualScanPage() {
                 
                 {/* Social Presence */}
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">📱 Presenza Social</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">📱 Presenza Social</h3>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Presenza Social</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Presenza Social</span>
                       <span className={`text-sm ${result.analysis.social.hasAnySocial ? 'text-green-600' : 'text-orange-600'}`}>
                         {result.analysis.social.hasAnySocial ? `✅ ${result.analysis.social.socialCount} piattaforme` : '⚠️ Nessuna'}
                       </span>
                     </div>
                     {result.analysis.social.facebook && (
-                      <div className="text-xs text-blue-600 truncate">
+                      <div className="text-xs text-blue-600 dark:text-blue-400 truncate">
                         📘 Facebook: {result.analysis.social.facebook}
                       </div>
                     )}
                     {result.analysis.social.instagram && (
-                      <div className="text-xs text-pink-600 truncate">
+                      <div className="text-xs text-pink-600 dark:text-pink-400 truncate">
                         📷 Instagram: {result.analysis.social.instagram}
                       </div>
                     )}
                     {result.analysis.social.linkedin && (
-                      <div className="text-xs text-blue-700 truncate">
+                      <div className="text-xs text-blue-700 dark:text-blue-400 truncate">
                         💼 LinkedIn: {result.analysis.social.linkedin}
                       </div>
                     )}
                     {result.analysis.social.youtube && (
-                      <div className="text-xs text-red-600 truncate">
+                      <div className="text-xs text-red-600 dark:text-red-400 truncate">
                         📺 YouTube: {result.analysis.social.youtube}
                       </div>
                     )}
@@ -606,7 +606,7 @@ export default function ManualScanPage() {
                       </div>
                     )}
                     {result.analysis.social.tiktok && (
-                      <div className="text-xs text-black truncate">
+                      <div className="text-xs text-black dark:text-gray-300 truncate">
                         🎵 TikTok: {result.analysis.social.tiktok}
                       </div>
                     )}
@@ -615,45 +615,45 @@ export default function ManualScanPage() {
 
                 {/* Performance Dettagliata */}
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">⚡ Performance Dettagliata</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">⚡ Performance Dettagliata</h3>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Tempo Caricamento</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Tempo Caricamento</span>
                       <span className={`text-sm font-medium ${result.analysis.performance.loadTime < 2000 ? 'text-green-600' : 
                                                                result.analysis.performance.loadTime < 3000 ? 'text-orange-600' : 'text-red-600'}`}>
                         {(result.analysis.performance.loadTime / 1000).toFixed(1)}s
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Immagini Totali</span>
-                      <span className="text-sm text-gray-900">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Immagini Totali</span>
+                      <span className="text-sm text-gray-900 dark:text-gray-300">
                         {result.analysis.performance.totalImages}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Immagini Rotte</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Immagini Rotte</span>
                       <span className={`text-sm ${result.analysis.performance.brokenImages === 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {result.analysis.performance.brokenImages === 0 ? '✅ Nessuna' : `❌ ${result.analysis.performance.brokenImages}`}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Design Responsive</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Design Responsive</span>
                       <span className={`text-sm ${result.analysis.performance.isResponsive ? 'text-green-600' : 'text-red-600'}`}>
                         {result.analysis.performance.isResponsive ? '✅ Sì' : '❌ No'}
                       </span>
                     </div>
                     {result.analysis.performance.averageImageSize && (
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Dimensione Media Img</span>
-                        <span className="text-sm text-gray-900">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Dimensione Media Img</span>
+                        <span className="text-sm text-gray-900 dark:text-gray-300">
                           {Math.round(result.analysis.performance.averageImageSize)}KB
                         </span>
                       </div>
                     )}
                     {result.analysis.performance.networkRequests && (
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Richieste di Rete</span>
-                        <span className="text-sm text-gray-900">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Richieste di Rete</span>
+                        <span className="text-sm text-gray-900 dark:text-gray-300">
                           {result.analysis.performance.networkRequests}
                         </span>
                       </div>
@@ -665,9 +665,9 @@ export default function ManualScanPage() {
               {/* Problemi identificati */}
               {Object.values(result.analysis.issues).some(issue => issue) && (
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">⚠️ Problemi Identificati</h3>
-                  <div className="bg-red-50 border border-red-200 rounded-md p-4">
-                    <ul className="space-y-1 text-sm text-red-700">
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">⚠️ Problemi Identificati</h3>
+                  <div className="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-md p-4">
+                    <ul className="space-y-1 text-sm text-red-700 dark:text-red-300">
                       {result.analysis.issues.missingTitle && <li>• Titolo mancante</li>}
                       {result.analysis.issues.shortTitle && <li>• Titolo troppo corto</li>}
                       {result.analysis.issues.missingMetaDescription && <li>• Meta description mancante</li>}
@@ -682,7 +682,7 @@ export default function ManualScanPage() {
               )}
 
               {/* Actions */}
-              <div className="flex gap-4 pt-4 border-t">
+              <div className="flex gap-4 pt-4 border-t dark:border-gray-700">
                 <button
                   onClick={() => router.push(`/lead/${result.leadId}`)}
                   className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium"
@@ -696,14 +696,14 @@ export default function ManualScanPage() {
                     setUrl('')
                     setError('')
                   }}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   🔍 Nuova Analisi
                 </button>
               </div>
 
               {/* Info finale */}
-              <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+              <div className="bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-md p-4">
                 <div className="flex">
                   <div className="flex-shrink-0">
                     <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
@@ -711,10 +711,10 @@ export default function ManualScanPage() {
                     </svg>
                   </div>
                   <div className="ml-3">
-                    <h3 className="text-sm font-medium text-blue-800">
+                    <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
                       ✨ Analisi completata!
                     </h3>
-                    <p className="mt-1 text-sm text-blue-700">
+                    <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
                       Il sito è stato analizzato e salvato nel database.
                       <br />
                       💳 Crediti rimanenti: {result.creditsRemaining}

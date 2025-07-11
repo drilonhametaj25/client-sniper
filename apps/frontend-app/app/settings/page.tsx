@@ -384,15 +384,15 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
               <Link 
                 href="/dashboard"
-                className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+                className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
               >
                 <ArrowLeft className="w-5 h-5 mr-2" />
                 Dashboard
@@ -400,7 +400,7 @@ export default function SettingsPage() {
             </div>
             <div className="flex items-center">
               <SettingsIcon className="w-5 h-5 text-gray-400 mr-2" />
-              <h1 className="text-lg font-semibold text-gray-900">Impostazioni Account</h1>
+              <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Impostazioni Account</h1>
             </div>
           </div>
         </div>
@@ -415,20 +415,20 @@ export default function SettingsPage() {
           )}
           
           {/* Informazioni Account */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex items-center mb-4">
               <User className="w-5 h-5 text-gray-400 mr-2" />
-              <h2 className="text-lg font-semibold text-gray-900">Informazioni Account</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Informazioni Account</h2>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <div className="text-gray-900">{userData.email}</div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                <div className="text-gray-900 dark:text-white">{userData.email}</div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Membro dal</label>
-                <div className="text-gray-900">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Membro dal</label>
+                <div className="text-gray-900 dark:text-white">
                   {new Date(userData.created_at).toLocaleDateString('it-IT')}
                 </div>
               </div>
@@ -436,23 +436,23 @@ export default function SettingsPage() {
           </div>
 
           {/* Sicurezza Account */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex items-center mb-4">
               <SettingsIcon className="w-5 h-5 text-gray-400 mr-2" />
-              <h2 className="text-lg font-semibold text-gray-900">Sicurezza Account</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Sicurezza Account</h2>
             </div>
             
             <div className="space-y-6">
               {/* Cambio Email */}
-              <div className="border-b border-gray-200 pb-6">
-                <h3 className="text-sm font-medium text-gray-900 mb-3">Cambia Email</h3>
+              <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Cambia Email</h3>
                 <div className="flex items-center space-x-3">
                   <input
                     type="email"
                     placeholder={userData.email}
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                   />
                   <button
                     onClick={handleChangeEmail}
@@ -462,35 +462,35 @@ export default function SettingsPage() {
                     {changingEmail ? 'Aggiornando...' : 'Aggiorna Email'}
                   </button>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                   Riceverai un'email di conferma al nuovo indirizzo
                 </p>
               </div>
 
               {/* Cambio Password */}
               <div>
-                <h3 className="text-sm font-medium text-gray-900 mb-3">Cambia Password</h3>
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Cambia Password</h3>
                 <div className="space-y-3">
                   <input
                     type="password"
                     placeholder="Password attuale"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                   />
                   <input
                     type="password"
                     placeholder="Nuova password (min. 6 caratteri)"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                   />
                   <input
                     type="password"
                     placeholder="Conferma nuova password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                   />
                   <button
                     onClick={handleChangePassword}
@@ -505,14 +505,20 @@ export default function SettingsPage() {
           </div>
 
           {/* Piano Attuale */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center">
                 <Crown className="w-5 h-5 text-gray-400 mr-2" />
-                <h2 className="text-lg font-semibold text-gray-900">Piano Attuale</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Piano Attuale</h2>
               </div>
               <div className="flex items-center space-x-2">
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${planColors[userData.plan as keyof typeof planColors]}`}>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  userData.plan === 'pro' 
+                    ? 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200'
+                    : userData.plan === 'starter'
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
+                }`}>
                   {planNames[userData.plan as keyof typeof planNames]}
                 </span>
                 <span className={`text-sm font-medium ${statusColors[userData.status as keyof typeof statusColors]}`}>
@@ -523,17 +529,17 @@ export default function SettingsPage() {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Piano</label>
-                <div className="text-gray-900 font-medium">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Piano</label>
+                <div className="text-gray-900 dark:text-white font-medium">
                   {planNames[userData.plan as keyof typeof planNames]}
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Crediti Rimanenti</label>
-                <div className="text-gray-900 font-medium">{userData.credits_remaining}</div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Crediti Rimanenti</label>
+                <div className="text-gray-900 dark:text-white font-medium">{userData.credits_remaining}</div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Stato</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stato</label>
                 <div className="flex items-center">
                   {userData.status === 'active' ? (
                     <>
@@ -557,39 +563,39 @@ export default function SettingsPage() {
             
             {/* Caratteristiche del piano */}
             {userData.plan === 'pro' && (
-              <div className="mt-4 p-4 bg-purple-50 rounded-xl">
-                <h3 className="text-sm font-medium text-purple-900 mb-2">Caratteristiche Piano Pro</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-purple-800">
+              <div className="mt-4 p-4 bg-purple-50 dark:bg-purple-900 rounded-xl">
+                <h3 className="text-sm font-medium text-purple-900 dark:text-purple-200 mb-2">Caratteristiche Piano Pro</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-purple-800 dark:text-purple-300">
                   <div className="flex items-center">
-                    <CheckCircle className="w-4 h-4 text-purple-600 mr-2" />
+                    <CheckCircle className="w-4 h-4 text-purple-600 dark:text-purple-400 mr-2" />
                     100 lead al mese
                   </div>
                   <div className="flex items-center">
-                    <CheckCircle className="w-4 h-4 text-purple-600 mr-2" />
+                    <CheckCircle className="w-4 h-4 text-purple-600 dark:text-purple-400 mr-2" />
                     CRM personale integrato
                   </div>
                   <div className="flex items-center">
-                    <CheckCircle className="w-4 h-4 text-purple-600 mr-2" />
+                    <CheckCircle className="w-4 h-4 text-purple-600 dark:text-purple-400 mr-2" />
                     Gestione lead avanzata
                   </div>
                   <div className="flex items-center">
-                    <CheckCircle className="w-4 h-4 text-purple-600 mr-2" />
+                    <CheckCircle className="w-4 h-4 text-purple-600 dark:text-purple-400 mr-2" />
                     Note e follow-up
                   </div>
                   <div className="flex items-center">
-                    <CheckCircle className="w-4 h-4 text-purple-600 mr-2" />
+                    <CheckCircle className="w-4 h-4 text-purple-600 dark:text-purple-400 mr-2" />
                     Upload allegati
                   </div>
                   <div className="flex items-center">
-                    <CheckCircle className="w-4 h-4 text-purple-600 mr-2" />
+                    <CheckCircle className="w-4 h-4 text-purple-600 dark:text-purple-400 mr-2" />
                     Supporto prioritario
                   </div>
                   <div className="flex items-center">
-                    <CheckCircle className="w-4 h-4 text-purple-600 mr-2" />
+                    <CheckCircle className="w-4 h-4 text-purple-600 dark:text-purple-400 mr-2" />
                     API access
                   </div>
                   <div className="flex items-center">
-                    <CheckCircle className="w-4 h-4 text-purple-600 mr-2" />
+                    <CheckCircle className="w-4 h-4 text-purple-600 dark:text-purple-400 mr-2" />
                     Lead scoring avanzato
                   </div>
                 </div>
@@ -597,23 +603,23 @@ export default function SettingsPage() {
             )}
             
             {userData.plan === 'starter' && (
-              <div className="mt-4 p-4 bg-blue-50 rounded-xl">
-                <h3 className="text-sm font-medium text-blue-900 mb-2">Caratteristiche Piano Starter</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-blue-800">
+              <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900 rounded-xl">
+                <h3 className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2">Caratteristiche Piano Starter</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-blue-800 dark:text-blue-300">
                   <div className="flex items-center">
-                    <CheckCircle className="w-4 h-4 text-blue-600 mr-2" />
+                    <CheckCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2" />
                     25 lead al mese
                   </div>
                   <div className="flex items-center">
-                    <CheckCircle className="w-4 h-4 text-blue-600 mr-2" />
+                    <CheckCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2" />
                     Analisi tecnica completa
                   </div>
                   <div className="flex items-center">
-                    <CheckCircle className="w-4 h-4 text-blue-600 mr-2" />
+                    <CheckCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2" />
                     Supporto email
                   </div>
                   <div className="flex items-center">
-                    <CheckCircle className="w-4 h-4 text-blue-600 mr-2" />
+                    <CheckCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2" />
                     Filtri avanzati
                   </div>
                 </div>
@@ -621,26 +627,26 @@ export default function SettingsPage() {
             )}
             
             {userData.plan === 'free' && (
-              <div className="mt-4 p-4 bg-gray-50 rounded-xl">
-                <h3 className="text-sm font-medium text-gray-900 mb-2">Caratteristiche Piano Gratuito</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-700">
+              <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-200 mb-2">Caratteristiche Piano Gratuito</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-700 dark:text-gray-300">
                   <div className="flex items-center">
-                    <CheckCircle className="w-4 h-4 text-gray-600 mr-2" />
+                    <CheckCircle className="w-4 h-4 text-gray-600 dark:text-gray-400 mr-2" />
                     2 lead al mese
                   </div>
                   <div className="flex items-center">
-                    <CheckCircle className="w-4 h-4 text-gray-600 mr-2" />
+                    <CheckCircle className="w-4 h-4 text-gray-600 dark:text-gray-400 mr-2" />
                     Informazioni base
                   </div>
                   <div className="flex items-center">
-                    <CheckCircle className="w-4 h-4 text-gray-600 mr-2" />
+                    <CheckCircle className="w-4 h-4 text-gray-600 dark:text-gray-400 mr-2" />
                     Supporto community
                   </div>
                 </div>
-                <div className="mt-3 pt-3 border-t border-gray-200">
+                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
                   <Link 
                     href="/upgrade"
-                    className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700"
+                    className="inline-flex items-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
                   >
                     <Crown className="w-4 h-4 mr-1" />
                     Passa al piano Pro e accedi al CRM
@@ -651,8 +657,8 @@ export default function SettingsPage() {
 
             {/* Dettagli disattivazione */}
             {userData.status === 'inactive' && userData.deactivated_at && (
-              <div className="mt-4 p-4 bg-orange-50 rounded-xl">
-                <div className="text-sm text-orange-800 space-y-1">
+              <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-900 rounded-xl">
+                <div className="text-sm text-orange-800 dark:text-orange-200 space-y-1">
                   <div>
                     <strong>Disattivato il:</strong> {new Date(userData.deactivated_at).toLocaleDateString('it-IT')}
                   </div>
@@ -667,17 +673,17 @@ export default function SettingsPage() {
 
             {/* Dettagli cancellazione programmata */}
             {userData.status === 'active' && userData.deactivation_scheduled_at && userData.subscription_end_date && (
-              <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+              <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700 rounded-xl">
                 <div className="flex items-start">
                   <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2 mt-0.5" />
-                  <div className="text-sm text-yellow-800 space-y-1">
+                  <div className="text-sm text-yellow-800 dark:text-yellow-200 space-y-1">
                     <div className="font-medium">
                       Cancellazione programmata
                     </div>
                     <div>
                       Il tuo abbonamento è stato cancellato ma rimane <strong>attivo fino al {new Date(userData.subscription_end_date).toLocaleDateString('it-IT')}</strong>.
                     </div>
-                    <div className="text-xs text-yellow-700 mt-2">
+                    <div className="text-xs text-yellow-700 dark:text-yellow-300 mt-2">
                       Potrai continuare ad utilizzare tutte le funzionalità premium fino alla scadenza del periodo già pagato.
                     </div>
                   </div>
@@ -687,8 +693,8 @@ export default function SettingsPage() {
 
             {/* Dettagli riattivazione */}
             {userData.reactivated_at && (
-              <div className="mt-4 p-4 bg-green-50 rounded-xl">
-                <div className="text-sm text-green-800 space-y-1">
+              <div className="mt-4 p-4 bg-green-50 dark:bg-green-900 rounded-xl">
+                <div className="text-sm text-green-800 dark:text-green-200 space-y-1">
                   <div>
                     <strong>Riattivato il:</strong> {new Date(userData.reactivated_at).toLocaleDateString('it-IT')}
                   </div>
@@ -697,11 +703,11 @@ export default function SettingsPage() {
             )}
 
             {/* Azioni Piano */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-medium text-gray-900 mb-1">Gestione Piano</h3>
-                  <p className="text-sm text-gray-600">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Gestione Piano</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
                     {userData.status === 'active' 
                       ? 'Gestisci il tuo abbonamento e le impostazioni di fatturazione'
                       : 'Riattiva il tuo piano per accedere a tutte le funzionalità'
@@ -738,7 +744,7 @@ export default function SettingsPage() {
                       }, 500) // Piccolo delay per permettere al context di aggiornarsi
                       
                     }}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     title="Aggiorna i dati del profilo"
                   >
                     <RefreshCw className="w-4 h-4 mr-2 inline" />
@@ -748,7 +754,7 @@ export default function SettingsPage() {
                   {userData.status === 'active' && userData.plan !== 'free' && (
                     <button
                       onClick={() => setShowDeactivateModal(true)}
-                      className="px-4 py-2 border border-orange-300 text-orange-700 rounded-xl hover:bg-orange-50 transition-colors"
+                      className="px-4 py-2 border border-orange-300 dark:border-orange-600 text-orange-700 dark:text-orange-300 rounded-xl hover:bg-orange-50 dark:hover:bg-orange-900 transition-colors"
                     >
                       <Pause className="w-4 h-4 mr-2 inline" />
                       Disattiva Piano
@@ -779,21 +785,21 @@ export default function SettingsPage() {
 
           {/* Storico Operazioni */}
           {planLogs.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Storico Operazioni</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Storico Operazioni</h2>
               
               <div className="space-y-3">
                 {planLogs.map((log, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-xl">
                     <div>
-                      <div className="font-medium text-gray-900">
+                      <div className="font-medium text-gray-900 dark:text-white">
                         {log.action === 'activate' && '✅ Piano attivato'}
                         {log.action === 'deactivate' && '⏸️ Piano disattivato'}
                         {log.action === 'auto_reactivate' && '🔄 Riattivazione automatica'}
                       </div>
-                      <div className="text-sm text-gray-600">{log.reason}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">{log.reason}</div>
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
                       {new Date(log.created_at).toLocaleDateString('it-IT')}
                     </div>
                   </div>
@@ -803,13 +809,13 @@ export default function SettingsPage() {
           )}
 
           {/* Azioni Account */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Azioni Account</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Azioni Account</h2>
             
             <div className="space-y-3">
               <button
                 onClick={() => signOut()}
-                className="w-full text-left px-4 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
+                className="w-full text-left px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
               >
                 Disconnetti
               </button>
@@ -820,7 +826,7 @@ export default function SettingsPage() {
                     alert('Funzionalità in arrivo')
                   }
                 }}
-                className="w-full text-left px-4 py-3 border border-red-300 text-red-700 rounded-xl hover:bg-red-50 transition-colors"
+                className="w-full text-left px-4 py-3 border border-red-300 dark:border-red-600 text-red-700 dark:text-red-300 rounded-xl hover:bg-red-50 dark:hover:bg-red-900 transition-colors"
               >
                 Elimina Account
               </button>
@@ -832,26 +838,26 @@ export default function SettingsPage() {
       {/* Modal Disattivazione */}
       {showDeactivateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full">
             <div className="flex items-center mb-4">
               <Pause className="w-6 h-6 text-orange-500 mr-3" />
-              <h3 className="text-lg font-semibold text-gray-900">Disattiva Piano</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Disattiva Piano</h3>
             </div>
             
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
               Disattivando il piano perderai l'accesso alle funzionalità premium. 
               Potrai riattivarlo in qualsiasi momento.
             </p>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Motivo della disattivazione (opzionale)
               </label>
               <textarea
                 value={deactivationReason}
                 onChange={(e) => setDeactivationReason(e.target.value)}
                 placeholder="Aiutaci a migliorare..."
-                className="w-full p-3 border border-gray-300 rounded-xl resize-none"
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 rows={3}
               />
             </div>
@@ -860,7 +866,7 @@ export default function SettingsPage() {
               <button
                 onClick={() => setShowDeactivateModal(false)}
                 disabled={deactivating}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Annulla
               </button>

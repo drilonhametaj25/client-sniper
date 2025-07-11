@@ -127,18 +127,18 @@ export default function FeedbackWidget() {
 
       {/* Modal feedback */}
       {isOpen && (
-        <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-96 max-w-[calc(100vw-2rem)]">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-96 max-w-[calc(100vw-2rem)]">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-100">
+          <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-700">
             <div className="flex items-center space-x-3">
               {selectedType && <selectedType.icon className={`w-5 h-5 ${selectedType.color}`} />}
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Invia feedback
               </h3>
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               aria-label="Chiudi"
             >
               <X className="w-5 h-5" />
@@ -149,13 +149,13 @@ export default function FeedbackWidget() {
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
             {/* Tipo di feedback */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Tipo di feedback
               </label>
               <select
                 value={formData.type}
                 onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as any }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 {FEEDBACK_TYPES.map(type => (
                   <option key={type.value} value={type.value}>
@@ -168,7 +168,7 @@ export default function FeedbackWidget() {
             {/* Email (se non loggato) */}
             {!user && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Email (opzionale)
                 </label>
                 <input
@@ -176,7 +176,7 @@ export default function FeedbackWidget() {
                   value={formData.email}
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                   placeholder="La tua email per ricevere una risposta"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 />
               </div>
             )}
@@ -184,14 +184,14 @@ export default function FeedbackWidget() {
             {/* Email (se loggato) */}
             {user && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Email
                 </label>
                 <input
                   type="email"
                   value={user.email}
                   disabled
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-500"
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-500 dark:text-gray-400"
                 />
               </div>
             )}
@@ -199,7 +199,7 @@ export default function FeedbackWidget() {
             {/* Titolo (obbligatorio per feedback pubblici) */}
             {formData.isPublic && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Titolo *
                 </label>
                 <input
@@ -207,10 +207,10 @@ export default function FeedbackWidget() {
                   value={formData.title || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                   placeholder="Titolo breve e descrittivo del problema/suggerimento"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                   required={formData.isPublic}
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   Il titolo aiuterà altri utenti a trovare e votare il tuo feedback
                 </p>
               </div>
@@ -218,7 +218,7 @@ export default function FeedbackWidget() {
 
             {/* Messaggio */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Messaggio
               </label>
               <textarea
@@ -237,9 +237,9 @@ export default function FeedbackWidget() {
                 required
                 minLength={10}
                 maxLength={2000}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 {formData.message.length}/2000 caratteri (minimo 10)
               </p>
             </div>
@@ -251,14 +251,14 @@ export default function FeedbackWidget() {
                 id="isPublic"
                 checked={formData.isPublic}
                 onChange={(e) => setFormData(prev => ({ ...prev, isPublic: e.target.checked }))}
-                className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
               />
               <div className="flex-1">
-                <label htmlFor="isPublic" className="text-sm font-medium text-gray-700 flex items-center">
+                <label htmlFor="isPublic" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
                   <Globe className="w-4 h-4 mr-1 text-blue-500" />
                   Rendi pubblico questo feedback
                 </label>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   Il feedback sarà visibile a tutti gli utenti e potrà ricevere voti. 
                   I tuoi dati personali rimarranno privati.
                 </p>
@@ -270,14 +270,14 @@ export default function FeedbackWidget() {
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
               >
                 Annulla
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting || formData.message.trim().length < 10}
-                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center space-x-2"
+                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center space-x-2"
               >
                 {isSubmitting ? (
                   <>

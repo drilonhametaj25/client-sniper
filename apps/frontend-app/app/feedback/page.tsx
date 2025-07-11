@@ -214,16 +214,16 @@ export default function PublicFeedbackPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="bg-white border-b">
+      <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                 Feedback Community
               </h1>
-              <p className="text-gray-600 mt-1">
+              <p className="text-gray-600 dark:text-gray-400 mt-1">
                 Condividi idee, segnala bug e aiuta a migliorare la piattaforma
               </p>
             </div>
@@ -241,18 +241,18 @@ export default function PublicFeedbackPage() {
 
       {/* Filtri e ordinamento */}
       <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 p-4 mb-6">
           <div className="flex flex-col md:flex-row gap-4">
             {/* Filtro tipo */}
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 <Filter className="inline w-4 h-4 mr-1" />
                 Tipo di feedback
               </label>
               <select
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 {FEEDBACK_TYPES.map(type => (
                   <option key={type.value} value={type.value}>
@@ -264,14 +264,14 @@ export default function PublicFeedbackPage() {
 
             {/* Ordinamento */}
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 <SortDesc className="inline w-4 h-4 mr-1" />
                 Ordina per
               </label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 {SORT_OPTIONS.map(option => (
                   <option key={option.value} value={option.value}>
@@ -288,12 +288,12 @@ export default function PublicFeedbackPage() {
           {loading && feedbacks.length === 0 ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-              <p className="text-gray-500 mt-2">Caricamento feedback...</p>
+              <p className="text-gray-500 dark:text-gray-400 mt-2">Caricamento feedback...</p>
             </div>
           ) : feedbacks.length === 0 ? (
             <div className="text-center py-8">
               <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">Nessun feedback trovato</p>
+              <p className="text-gray-500 dark:text-gray-400">Nessun feedback trovato</p>
               <p className="text-sm text-gray-400 mt-1">
                 Prova a cambiare i filtri o sii il primo a condividere un feedback!
               </p>
@@ -305,7 +305,7 @@ export default function PublicFeedbackPage() {
               const isDownvoted = feedback.user_vote === 'down'
 
               return (
-                <div key={feedback.id} className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow">
+                <div key={feedback.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 p-6 hover:shadow-md transition-shadow">
                   <div className="flex gap-4">
                     {/* Colonna voti */}
                     <div className="flex flex-col items-center space-y-1 min-w-[60px]">
@@ -314,17 +314,17 @@ export default function PublicFeedbackPage() {
                         disabled={!user || votingStates[feedback.id]}
                         className={`p-2 rounded-lg transition-colors ${
                           isUpvoted 
-                            ? 'bg-green-100 text-green-600' 
+                            ? 'bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400' 
                             : user 
-                              ? 'hover:bg-gray-100 text-gray-500' 
-                              : 'text-gray-300 cursor-not-allowed'
+                              ? 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400' 
+                              : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
                         }`}
                         title={user ? 'Vota positivo' : 'Accedi per votare'}
                       >
                         <ArrowUp className="w-5 h-5" />
                       </button>
                       
-                      <span className="text-sm font-medium text-gray-700">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         {feedback.upvotes - feedback.downvotes}
                       </span>
                       
@@ -333,10 +333,10 @@ export default function PublicFeedbackPage() {
                         disabled={!user || votingStates[feedback.id]}
                         className={`p-2 rounded-lg transition-colors ${
                           isDownvoted 
-                            ? 'bg-red-100 text-red-600' 
+                            ? 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400' 
                             : user 
-                              ? 'hover:bg-gray-100 text-gray-500' 
-                              : 'text-gray-300 cursor-not-allowed'
+                              ? 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400' 
+                              : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
                         }`}
                         title={user ? 'Vota negativo' : 'Accedi per votare'}
                       >
@@ -353,14 +353,14 @@ export default function PublicFeedbackPage() {
                             {FEEDBACK_TYPES.find(t => t.value === feedback.type)?.label}
                           </span>
                           {feedback.has_admin_response && (
-                            <span className="flex items-center text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                            <span className="flex items-center text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-400 px-2 py-1 rounded-full">
                               <CheckCircle className="w-3 h-3 mr-1" />
                               Risposto
                             </span>
                           )}
                         </div>
                         
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                           <span>{formatDate(feedback.created_at)}</span>
                           {user && (
                             <button
@@ -374,15 +374,15 @@ export default function PublicFeedbackPage() {
                         </div>
                       </div>
 
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                         {feedback.title}
                       </h3>
 
-                      <p className="text-gray-700 mb-4 leading-relaxed">
+                      <p className="text-gray-700 dark:text-gray-300 mb-4 leading-relaxed">
                         {feedback.message}
                       </p>
 
-                      <div className="flex items-center justify-between text-sm text-gray-500">
+                      <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
                         <div className="flex items-center gap-4">
                           <span>{feedback.upvotes} 👍</span>
                           <span>{feedback.downvotes} 👎</span>
@@ -390,7 +390,7 @@ export default function PublicFeedbackPage() {
                         
                         <a
                           href={`/feedback/${feedback.id}`}
-                          className="text-blue-600 hover:text-blue-700 transition-colors"
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
                         >
                           Visualizza dettagli →
                         </a>
@@ -408,7 +408,7 @@ export default function PublicFeedbackPage() {
           <div className="text-center py-6">
             <button
               onClick={loadMore}
-              className="bg-white hover:bg-gray-50 text-gray-700 px-6 py-3 rounded-lg border transition-colors"
+              className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-lg border dark:border-gray-600 transition-colors"
             >
               Carica altri feedback
             </button>

@@ -84,15 +84,15 @@ function ToastContainer() {
     
     switch (type) {
       case 'success':
-        return `${baseStyles} bg-green-50 border-green-200 text-green-800`
+        return `${baseStyles} bg-green-50 dark:bg-green-900/50 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200`
       case 'error':
-        return `${baseStyles} bg-red-50 border-red-200 text-red-800`
+        return `${baseStyles} bg-red-50 dark:bg-red-900/50 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200`
       case 'warning':
-        return `${baseStyles} bg-yellow-50 border-yellow-200 text-yellow-800`
+        return `${baseStyles} bg-yellow-50 dark:bg-yellow-900/50 border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200`
       case 'info':
-        return `${baseStyles} bg-blue-50 border-blue-200 text-blue-800`
+        return `${baseStyles} bg-blue-50 dark:bg-blue-900/50 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200`
       default:
-        return `${baseStyles} bg-gray-50 border-gray-200 text-gray-800`
+        return `${baseStyles} bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200`
     }
   }
 
@@ -101,13 +101,13 @@ function ToastContainer() {
     
     switch (type) {
       case 'success':
-        return <CheckCircle {...iconProps} className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-green-600" />
+        return <CheckCircle {...iconProps} className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-green-600 dark:text-green-400" />
       case 'error':
-        return <AlertCircle {...iconProps} className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-red-600" />
+        return <AlertCircle {...iconProps} className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-red-600 dark:text-red-400" />
       case 'warning':
-        return <AlertTriangle {...iconProps} className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-yellow-600" />
+        return <AlertTriangle {...iconProps} className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-yellow-600 dark:text-yellow-400" />
       case 'info':
-        return <Info {...iconProps} className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-blue-600" />
+        return <Info {...iconProps} className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
       default:
         return <Info {...iconProps} />
     }
@@ -131,7 +131,7 @@ function ToastContainer() {
           </div>
           <button
             onClick={() => removeToast(toast.id)}
-            className="ml-4 text-gray-400 hover:text-gray-600 transition-colors"
+            className="ml-4 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
