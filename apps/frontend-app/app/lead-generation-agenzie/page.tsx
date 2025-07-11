@@ -1,6 +1,8 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
 import { Target, BarChart3, Users, Zap, ArrowRight, CheckCircle } from 'lucide-react'
+import LeadCostComparison from '@/components/LeadCostComparison'
+import UpgradeUrgencyBanner from '@/components/UpgradeUrgencyBanner'
 
 export const metadata: Metadata = {
   title: 'Lead Generation per Agenzie Web: Strategie e Strumenti 2025 | TrovaMi',
@@ -49,15 +51,22 @@ export default function LeadGenerationAgenzie() {
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Link>
               <Link 
-                href="/come-trovare-clienti" 
+                href="/confronto-costi-lead" 
                 className="inline-flex items-center px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 text-lg font-semibold rounded-2xl border-2 border-gray-200 hover:border-gray-300 transition-all duration-300"
               >
-                Leggi la Guida Completa
+                Confronta i Costi
               </Link>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Upgrade Urgency Banner */}
+      <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-t border-b border-purple-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <UpgradeUrgencyBanner variant="compact" />
+        </div>
+      </div>
 
       {/* Problemi delle Agenzie */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white">
@@ -226,6 +235,21 @@ export default function LeadGenerationAgenzie() {
               <div className="mt-4 font-semibold">— Marco R., Founder WebStudio Milano</div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Lead Cost Comparison */}
+      <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Confronta i <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">Costi per Lead</span>
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Vedi quanto la tua agenzia può risparmiare con TrovaMi rispetto ai metodi tradizionali
+            </p>
+          </div>
+          <LeadCostComparison variant="full" />
         </div>
       </section>
 

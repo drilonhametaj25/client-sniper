@@ -6,6 +6,7 @@
 
 import { useAuth } from '@/contexts/AuthContext'
 import PlanSelector from '@/components/PlanSelector'
+import UpgradeUrgencyBanner, { LiveStats } from '@/components/UpgradeUrgencyBanner'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
@@ -60,6 +61,14 @@ export default function UpgradePage() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        {/* Banner di urgenza per utenti free */}
+        {user?.plan === 'free' && (
+          <div className="mb-8">
+            <UpgradeUrgencyBanner />
+          </div>
+        )}
+
         <div className="text-center mb-8">
           <h2 className="text-xl text-gray-600 mb-2">
             Piano attuale: <span className="font-semibold capitalize text-gray-900">
@@ -71,6 +80,11 @@ export default function UpgradePage() {
               {user?.credits_remaining || 0}
             </span>
           </p>
+        </div>
+
+        {/* Stats live per social proof */}
+        <div className="mb-8 max-w-md mx-auto">
+          <LiveStats />
         </div>
 
         <PlanSelector 

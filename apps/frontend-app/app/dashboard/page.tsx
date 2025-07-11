@@ -31,6 +31,7 @@ import {
   Eye
 } from 'lucide-react'
 import { TourTarget } from '@/components/onboarding/TourTarget'
+import UpgradeUrgencyBanner from '@/components/UpgradeUrgencyBanner'
 
 interface Lead {
   id: string
@@ -750,6 +751,13 @@ export default function ClientDashboard() {
               </div>
             </div>
           </div>
+
+          {/* Banner Urgenza per Upgrade (solo utenti free) */}
+          {user?.plan === 'free' && (
+            <div className="mb-8">
+              <UpgradeUrgencyBanner variant="compact" />
+            </div>
+          )}
 
           {/* Banner Informativo sui Crediti */}
           {remainingCredits <= 2 && remainingCredits > 0 && (

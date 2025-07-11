@@ -10,6 +10,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { ArrowRight, Target, BarChart3, Users, CheckCircle, Zap, Shield, Globe } from 'lucide-react'
 import NewsletterForm from '@/components/NewsletterForm'
 import StructuredFAQ from '@/components/StructuredFAQ'
+import LeadCostComparison from '@/components/LeadCostComparison'
+import UpgradeUrgencyBanner from '@/components/UpgradeUrgencyBanner'
 
 export default function HomePage() {
   const { user } = useAuth()
@@ -201,6 +203,15 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Upgrade Urgency Banner for visitors */}
+      {!user && (
+        <div className="bg-gradient-to-r from-orange-50 to-red-50 border-t border-b border-orange-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <UpgradeUrgencyBanner variant="full" />
+          </div>
+        </div>
+      )}
 
       {/* Features Section */}
       <section id="features" className="py-24 bg-gradient-to-b from-gray-50 to-white">
@@ -457,6 +468,21 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Lead Cost Comparison */}
+      <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Confronto <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-blue-600">Costi per Lead</span>
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Vedi quanto puoi risparmiare rispetto ai metodi tradizionali
+            </p>
+          </div>
+          <LeadCostComparison variant="full" />
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-24 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800"></div>
@@ -584,6 +610,7 @@ export default function HomePage() {
               <ul className="space-y-3">
                 <li><Link href="/come-trovare-clienti" className="text-gray-400 hover:text-white transition-colors">Come Trovare Clienti</Link></li>
                 <li><Link href="/lead-generation-agenzie" className="text-gray-400 hover:text-white transition-colors">Lead Generation Agenzie</Link></li>
+                <li><Link href="/confronto-costi-lead" className="text-gray-400 hover:text-white transition-colors">Confronto Costi per Lead</Link></li>
                 <li><Link href="/help" className="text-gray-400 hover:text-white transition-colors">Centro Assistenza</Link></li>
                 <li><Link href="/contact" className="text-gray-400 hover:text-white transition-colors">Contatti</Link></li>
               </ul>

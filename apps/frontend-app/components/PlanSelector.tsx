@@ -8,6 +8,7 @@ import { useState } from 'react'
 import { Check, Star } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
+import LeadCostComparison, { calculateLeadCost, getLeadCostMessage } from './LeadCostComparison'
 
 interface Plan {
   id: string
@@ -32,7 +33,7 @@ const plans: Plan[] = [
     price: 0,
     credits: 2,
     features: [
-      '2 lead al mese',
+      '2 lead totali (lifetime)',
       'Informazioni base',
       'Supporto community'
     ]
@@ -145,9 +146,15 @@ export default function PlanSelector({
         <h2 className="text-3xl font-bold text-gray-900 mb-4">
           Scegli il tuo piano
         </h2>
-        <p className="text-lg text-gray-600">
-          Trova clienti potenziali analizzando siti web con problemi tecnici
-        </p>
+        <div className="flex items-center justify-center mb-4">
+          <p className="text-lg text-gray-600 mr-3">
+            Trova clienti potenziali analizzando siti web con problemi tecnici
+          </p>
+          <LeadCostComparison variant="tooltip" />
+        </div>
+        <div className="max-w-2xl mx-auto">
+          <LeadCostComparison variant="compact" />
+        </div>
       </div>
 
       <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
@@ -184,8 +191,13 @@ export default function PlanSelector({
                 )}
               </div>
               <p className="text-sm text-gray-600 mt-2">
-                {plan.credits} lead al mese
+                {plan.id === 'free' ? '2 lead totali' : `${plan.credits} lead al mese`}
               </p>
+              {plan.price > 0 && (
+                <div className="mt-2 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-medium">
+                  {getLeadCostMessage(plan.price, plan.credits)}
+                </div>
+              )}
             </div>
 
             <ul className="space-y-4 mb-8">
@@ -223,6 +235,11 @@ export default function PlanSelector({
             </button>
           </div>
         ))}
+      </div>
+
+      {/* Sezione comparativa costi lead */}
+      <div className="mt-16 max-w-4xl mx-auto">
+        <LeadCostComparison />
       </div>
     </div>
   )

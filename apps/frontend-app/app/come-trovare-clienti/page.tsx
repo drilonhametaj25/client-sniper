@@ -1,6 +1,8 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
 import { Target, CheckCircle, Users, BarChart3, ArrowRight } from 'lucide-react'
+import LeadCostComparison from '@/components/LeadCostComparison'
+import UpgradeUrgencyBanner from '@/components/UpgradeUrgencyBanner'
 
 export const metadata: Metadata = {
   title: 'Come Trovare Clienti per la Tua Agenzia Web nel 2025 | TrovaMi',
@@ -49,6 +51,13 @@ export default function ComeTrovareClientiPage() {
           </div>
         </div>
       </section>
+
+      {/* Upgrade Urgency Banner */}
+      <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-t border-b border-blue-200">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <UpgradeUrgencyBanner variant="compact" />
+        </div>
+      </div>
 
       {/* Contenuto Articolo */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
@@ -136,6 +145,21 @@ export default function ComeTrovareClientiPage() {
             e ti fornisce tutti i dati necessari per il primo contatto.
           </p>
           
+        </div>
+      </section>
+
+      {/* Lead Cost Comparison */}
+      <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Confronto <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">Costi per Lead</span>
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Vedi la differenza economica tra i diversi metodi di acquisizione clienti
+            </p>
+          </div>
+          <LeadCostComparison variant="full" />
         </div>
       </section>
 
