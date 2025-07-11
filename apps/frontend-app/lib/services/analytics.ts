@@ -7,6 +7,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
+import { getCityCoordinates, getCityCoordinatesWithFallback } from '@/lib/data/italian-cities'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -137,30 +138,35 @@ export class AnalyticsService {
         .order('lead_count', { ascending: false })
 
       if (viewData && viewData.length > 0) {
-        return viewData.map((item: any) => ({
-          city: String(item.city || 'Unknown'),
-          region: String(item.region || 'Unknown'),
-          lat: Number(item.lat) || 0,
-          lng: Number(item.lng) || 0,
-          leadCount: Number(item.lead_count) || 0,
-          conversionCount: Number(item.conversion_count) || 0,
-          score: Number(item.avg_score) || 0,
-        }))
+        return viewData.map((item: any) => {
+          const cityName = String(item.city || 'Unknown')
+          const coords = getCityCoordinatesWithFallback(cityName, item.region)
+          
+          return {
+            city: cityName,
+            region: coords ? getCityCoordinates(cityName)?.region || 'Unknown' : 'Unknown',
+            lat: coords.lat,
+            lng: coords.lng,
+            leadCount: Number(item.lead_count) || 0,
+            conversionCount: Number(item.conversion_count) || 0,
+            score: Number(item.avg_score) || 0,
+          }
+        })
       }
 
-      // Fallback con query diretta su leads
+      // Fallback con query diretta su leads - TUTTI i lead, non solo quelli con città
       const { data: leadsData, error: leadsError } = await this.supabase
         .from('leads')
-        .select('city, analysis')
-        .not('city', 'is', null)
+        .select('city, analysis, score')
 
       if (leadsData) {
         // Aggrega i dati manualmente
         const cityMap = new Map<string, { count: number; totalScore: number }>()
         
         leadsData.forEach((lead: any) => {
-          const city = String(lead.city || 'Unknown')
-          const score = Number(lead.analysis?.score) || 0
+          // Se non c'è città, usa "Località non specificata" 
+          const city = String(lead.city || 'Località non specificata')
+          const score = Number(lead.analysis?.score) || Number(lead.score) || 0
           
           if (cityMap.has(city)) {
             const existing = cityMap.get(city)!
@@ -171,15 +177,30 @@ export class AnalyticsService {
           }
         })
 
-        return Array.from(cityMap.entries()).map(([city, data]) => ({
-          city,
-          region: 'Unknown',
-          lat: 0,
-          lng: 0,
-          leadCount: data.count,
-          conversionCount: 0,
-          score: data.totalScore / data.count,
-        }))
+        return Array.from(cityMap.entries()).map(([city, data]) => {
+          let coords: { lat: number; lng: number }
+          let region: string
+          
+          if (city === 'Località non specificata') {
+            // Usa coordinate del centro Italia per lead senza città
+            coords = { lat: 41.9, lng: 12.5 }
+            region = 'Italia'
+          } else {
+            coords = getCityCoordinatesWithFallback(city)
+            const cityInfo = getCityCoordinates(city)
+            region = cityInfo?.region || 'Unknown'
+          }
+          
+          return {
+            city,
+            region,
+            lat: coords.lat,
+            lng: coords.lng,
+            leadCount: data.count,
+            conversionCount: 0,
+            score: data.totalScore / data.count,
+          }
+        })
       }
 
       return []

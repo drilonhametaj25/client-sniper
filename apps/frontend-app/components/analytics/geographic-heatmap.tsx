@@ -11,13 +11,14 @@
 import { useEffect, useState } from 'react'
 import { analyticsService, GeographicData } from '@/lib/services/analytics'
 import LoadingSpinner from '@/components/ui/loading-spinner'
-import { MapPin, Users, Target } from 'lucide-react'
+import { MapPin, Users, Target, Map, List } from 'lucide-react'
+import { DynamicMap } from './dynamic-map'
 
-// Componente semplificato senza mappe per ora
 export function GeographicHeatmap() {
   const [data, setData] = useState<GeographicData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'map' | 'list'>('map')
 
   useEffect(() => {
     const fetchData = async () => {
@@ -66,7 +67,22 @@ export function GeographicHeatmap() {
     )
   }
 
-  // Raggruppa i dati per regione
+  // Dati per la mappa
+  const mapData = data.map(item => ({
+    city: item.city,
+    region: item.region,
+    lat: item.lat,
+    lng: item.lng,
+    leadCount: item.leadCount,
+    conversionCount: item.conversionCount,
+    score: item.score,
+  }))
+
+  // Centro della mappa sull'Italia
+  const mapCenter: [number, number] = [41.9028, 12.4964] // Roma
+  const mapZoom = 6
+
+  // Dati per la vista lista
   const sortedData = [...data].sort((a, b) => b.leadCount - a.leadCount)
   const topCities = sortedData.slice(0, 10)
 
@@ -84,68 +100,104 @@ export function GeographicHeatmap() {
   return (
     <div className="h-96 overflow-hidden">
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Distribuzione per Città</h3>
-        <div className="text-sm text-gray-500">
-          Top {topCities.length} città per numero di lead
+        <div>
+          <h3 className="text-lg font-semibold">Distribuzione Geografica Lead</h3>
+          <p className="text-sm text-gray-600">Mappa interattiva dei lead in Italia</p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setViewMode('map')}
+            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              viewMode === 'map'
+                ? 'bg-blue-100 text-blue-800'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <Map className="h-4 w-4 inline mr-1" />
+            Mappa
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              viewMode === 'list'
+                ? 'bg-blue-100 text-blue-800'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <List className="h-4 w-4 inline mr-1" />
+            Lista
+          </button>
         </div>
       </div>
-      
-      <div className="h-80 overflow-y-auto space-y-3">
-        {topCities.map((city, index) => (
-          <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center space-x-3">
-              <div className="flex-shrink-0">
-                <div 
-                  className={`w-3 h-3 rounded-full ${getIntensityColor(city.leadCount, maxLeads)}`}
-                />
+
+      {viewMode === 'map' ? (
+        <div className="h-80 rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+          <DynamicMap
+            data={mapData}
+            center={mapCenter}
+            zoom={mapZoom}
+          />
+        </div>
+      ) : (
+        <div className="h-80 overflow-y-auto space-y-3">
+          {topCities.map((city, index) => (
+            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+              <div className="flex items-center space-x-3">
+                <div className="flex-shrink-0">
+                  <div 
+                    className={`w-3 h-3 rounded-full ${getIntensityColor(city.leadCount, maxLeads)}`}
+                  />
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900">{city.city}</h4>
+                  <p className="text-sm text-gray-600">{city.region}</p>
+                </div>
               </div>
-              <div>
-                <h4 className="font-medium text-gray-900">{city.city}</h4>
-                <p className="text-sm text-gray-600">{city.region}</p>
+              
+              <div className="flex items-center space-x-4 text-sm">
+                <div className="flex items-center space-x-1">
+                  <Users className="h-4 w-4 text-blue-500" />
+                  <span className="font-medium">{city.leadCount}</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <Target className="h-4 w-4 text-green-500" />
+                  <span className="font-medium">{city.conversionCount}</span>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium">{city.score.toFixed(1)}</div>
+                  <div className="text-xs text-gray-500">Score</div>
+                </div>
               </div>
             </div>
-            
-            <div className="flex items-center space-x-4 text-sm">
-              <div className="flex items-center space-x-1">
-                <Users className="h-4 w-4 text-blue-500" />
-                <span className="font-medium">{city.leadCount}</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <Target className="h-4 w-4 text-green-500" />
-                <span className="font-medium">{city.conversionCount}</span>
-              </div>
-              <div className="text-right">
-                <div className="font-medium">{city.score.toFixed(1)}</div>
-                <div className="text-xs text-gray-500">Score</div>
-              </div>
+          ))}
+        </div>
+      )}
+      
+      {/* Statistiche rapide */}
+      <div className="mt-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4 text-sm">
+            <div className="flex items-center space-x-1">
+              <MapPin className="h-4 w-4 text-blue-500" />
+              <span className="font-medium">{data.length}</span>
+              <span className="text-gray-600">città</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <Users className="h-4 w-4 text-green-500" />
+              <span className="font-medium">{data.reduce((acc, city) => acc + city.leadCount, 0)}</span>
+              <span className="text-gray-600">lead totali</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <Target className="h-4 w-4 text-orange-500" />
+              <span className="font-medium">{data.reduce((acc, city) => acc + city.conversionCount, 0)}</span>
+              <span className="text-gray-600">conversioni</span>
             </div>
           </div>
-        ))}
-      </div>
-      
-      {/* Legenda */}
-      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-        <h4 className="text-sm font-semibold mb-2">Intensità Lead</h4>
-        <div className="flex space-x-4 text-xs">
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full bg-red-500 mr-1"></div>
-            <span>Molto alta</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full bg-orange-500 mr-1"></div>
-            <span>Alta</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full bg-yellow-500 mr-1"></div>
-            <span>Media</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full bg-green-500 mr-1"></div>
-            <span>Bassa</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full bg-blue-500 mr-1"></div>
-            <span>Molto bassa</span>
+          <div className="text-right">
+            <div className="text-sm font-medium text-gray-900">
+              {((data.reduce((acc, city) => acc + city.conversionCount, 0) / data.reduce((acc, city) => acc + city.leadCount, 0)) * 100).toFixed(1)}%
+            </div>
+            <div className="text-xs text-gray-500">Tasso conversione</div>
           </div>
         </div>
       </div>

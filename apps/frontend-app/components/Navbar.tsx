@@ -89,29 +89,29 @@ export default function Navbar() {
       { name: 'Feedback', href: '/admin/feedback', icon: MessageSquare, description: 'Segnalazioni Utenti' },
       { name: 'Settings', href: '/admin/settings', icon: Settings, description: 'Configurazioni Sistema' },
     ] : [
-      { name: 'Feedback Community', href: '/feedback', icon: MessageSquare, description: 'Feedback e suggerimenti della community' },
+      { name: 'Feedback', href: '/feedback', icon: MessageSquare, description: 'Feedback e suggerimenti della community' },
     ]),
-    { name: 'Analisi Manuale', href: '/tools/manual-scan', icon: Target, description: 'Analizza qualsiasi sito web' },
+    { name: 'Analisi', href: '/tools/manual-scan', icon: Target, description: 'Analizza qualsiasi sito web' },
     ...(user?.plan === 'pro' ? [
-      { name: 'CRM Personale', href: '/crm', icon: FolderOpen, description: 'Gestisci i tuoi lead sbloccati' },
+      { name: 'CRM', href: '/crm', icon: FolderOpen, description: 'Gestisci i tuoi lead sbloccati' },
       { name: 'Analytics', href: '/analytics', icon: BarChart, description: 'Dashboard analytics e ROI' },
     ] : []),
-    { name: 'Mio account', href: '/settings', icon: User, description: 'Gestisci account e abbonamento' },
+    { name: 'Account', href: '/settings', icon: User, description: 'Gestisci account e abbonamento' },
     { 
-      name: isAdminRoute ? 'Vista Client' : 'Vista Admin', 
+      name: isAdminRoute ? 'Client' : 'Admin', 
       href: isAdminRoute ? '/dashboard' : '/admin/dashboard', 
       icon: isAdminRoute ? User : Shield,
       description: isAdminRoute ? 'Passa alla vista client' : 'Passa alla vista admin'
     },
   ] : [
     { name: 'Dashboard', href: '/dashboard', icon: Home, description: 'I miei lead' },
-    { name: 'Analisi Manuale', href: '/tools/manual-scan', icon: Target, description: 'Analizza qualsiasi sito web' },
+    { name: 'Analisi', href: '/tools/manual-scan', icon: Target, description: 'Analizza qualsiasi sito web' },
     ...(user?.plan === 'pro' ? [
-      { name: 'CRM Personale', href: '/crm', icon: FolderOpen, description: 'Gestisci i tuoi lead sbloccati' },
+      { name: 'CRM', href: '/crm', icon: FolderOpen, description: 'Gestisci i tuoi lead sbloccati' },
       { name: 'Analytics', href: '/analytics', icon: BarChart, description: 'Dashboard analytics e ROI' },
     ] : []),
-    { name: 'Feedback Community', href: '/feedback', icon: MessageSquare, description: 'Feedback e suggerimenti della community' },
-    { name: 'Mio account', href: '/settings', icon: User, description: 'Gestisci account e abbonamento' },
+    { name: 'Feedback', href: '/feedback', icon: MessageSquare, description: 'Feedback e suggerimenti della community' },
+    { name: 'Account', href: '/settings', icon: User, description: 'Gestisci account e abbonamento' },
     { name: 'Upgrade', href: '/upgrade', icon: Crown, description: 'Aggiorna piano' },
   ]
 
