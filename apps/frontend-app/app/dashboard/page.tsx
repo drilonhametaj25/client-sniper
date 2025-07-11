@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { getDaysUntilReset, formatResetDate } from '@/lib/auth'
+import { createPortal } from 'react-dom'
 import { 
   Target, 
   CreditCard,
@@ -75,6 +76,7 @@ export default function ClientDashboard() {
   const [filterCity, setFilterCity] = useState<string>('')
   const [filterRole, setFilterRole] = useState<string>('')
   const [searchTerm, setSearchTerm] = useState<string>('')
+  const [searchInput, setSearchInput] = useState<string>('') // Input separato per digitazione
   const [showFilters, setShowFilters] = useState(false)
   const [showOnlyUnlocked, setShowOnlyUnlocked] = useState(false) // Nuovo filtro per lead sbloccati
 
@@ -87,6 +89,32 @@ export default function ClientDashboard() {
 
   // Stato per tracciare quali lead sono stati "sbloccati"
   const [unlockedLeads, setUnlockedLeads] = useState<Set<string>>(new Set())
+  
+  // Stato per le città disponibili
+  const [availableCities, setAvailableCities] = useState<string[]>([])
+  const [citySearchTerm, setCitySearchTerm] = useState<string>('')
+  const [showCityDropdown, setShowCityDropdown] = useState(false)
+  const cityInputRef = useRef<HTMLInputElement>(null)
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 })
+
+  // Calcola posizione del dropdown
+  const calculateDropdownPosition = () => {
+    if (cityInputRef.current) {
+      const rect = cityInputRef.current.getBoundingClientRect()
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+        width: rect.width
+      })
+    }
+  }
+
+  // Aggiorna posizione quando si apre il dropdown
+  useEffect(() => {
+    if (showCityDropdown) {
+      calculateDropdownPosition()
+    }
+  }, [showCityDropdown])
 
   // ⚡ REF per controllo anti-loop (definiti prima dei useEffect)
   const [isLoadingLeads, setIsLoadingLeads] = useState(false)
@@ -107,7 +135,7 @@ export default function ClientDashboard() {
       
       
       // ⚡ CACHE semplice per evitare richieste duplicate
-      const cacheKey = `leads-${page}-${filterCategory}-${filterCity}-${filterRole}-${searchTerm}-${showOnlyUnlocked}`
+      const cacheKey = `leads-${page}-${filterCategory}-${filterCity}-${filterRole}-${searchTerm}-${showOnlyUnlocked}-${filterNoWebsite}-${filterNoPixel}-${filterNoAnalytics}-${filterNoPrivacy}-${filterLowScore}`
       if (useCache && localStorage.getItem(cacheKey)) {
         try {
           const cached = JSON.parse(localStorage.getItem(cacheKey)!)
@@ -138,6 +166,7 @@ export default function ClientDashboard() {
         ...(filterCity && { city: filterCity }),
         ...(filterRole && { neededRoles: filterRole }),
         ...(searchTerm && { search: searchTerm }),
+        ...(showOnlyUnlocked && { showOnlyUnlocked: '1' }),
         ...(filterNoWebsite && { noWebsite: '1' }),
         ...(filterNoPixel && { noPixel: '1' }),
         ...(filterNoAnalytics && { noAnalytics: '1' }),
@@ -235,9 +264,10 @@ export default function ClientDashboard() {
     loadSettings()
     loadLeadsFromAPI(1, true) // Metodo API con paginazione
     loadUnlockedLeads() // Carica i lead sbloccati dal database
+    loadAvailableCities() // Carica le città disponibili
   }, [user?.id]) // Solo user.id come dipendenza
 
-  // Ricarica quando cambiano i filtri (con debounce) - CON CONTROLLO INIZIALIZZAZIONE
+  // Ricarica quando cambiano i filtri (con debounce più lungo per la ricerca) - CON CONTROLLO INIZIALIZZAZIONE
   useEffect(() => {
     if (!user?.id || !hasInitialized.current) return
     
@@ -247,6 +277,84 @@ export default function ClientDashboard() {
     
     return () => clearTimeout(timeoutId)
   }, [filterCategory, filterCity, filterRole, searchTerm, showOnlyUnlocked, filterNoWebsite, filterNoPixel, filterNoAnalytics, filterNoPrivacy, filterLowScore])
+
+  // Stato per indicatore di ricerca
+  const [isSearching, setIsSearching] = useState(false)
+
+  // Debounce intelligente per ricerca: minimo 3 caratteri o stringa vuota
+  useEffect(() => {
+    // Mostra indicatore di ricerca solo se stiamo per fare una ricerca valida
+    if (searchInput.length === 0 || searchInput.length >= 3) {
+      setIsSearching(true)
+    }
+    
+    const timeoutId = setTimeout(() => {
+      // Ricerca solo se stringa vuota (per resettare) o almeno 3 caratteri
+      if (searchInput.length === 0 || searchInput.length >= 3) {
+        setSearchTerm(searchInput)
+      }
+      setIsSearching(false)
+    }, 1500) // Debounce di 1.5 secondi per dare tempo all'utente di digitare
+    
+    return () => {
+      clearTimeout(timeoutId)
+      setIsSearching(false)
+    }
+  }, [searchInput])
+
+  // Funzione per eseguire ricerca immediata
+  const executeSearch = () => {
+    setSearchTerm(searchInput)
+  }
+
+  // Funzione per pulire ricerca
+  const clearSearch = () => {
+    setSearchInput('')
+    setSearchTerm('')
+  }
+
+  // Carica le città disponibili
+  const loadAvailableCities = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('city')
+        .not('city', 'is', null)
+        .not('city', 'eq', '')
+        .order('city')
+      
+      if (error) throw error
+      
+      // Rimuovi duplicati e ordina
+      const citySet = new Set(data.map(item => item.city))
+      const uniqueCities = Array.from(citySet)
+        .filter(city => city && city.trim().length > 0)
+        .sort()
+      
+      setAvailableCities(uniqueCities)
+    } catch (error) {
+      console.error('Errore caricamento città:', error)
+    }
+  }
+
+  // Filtra città in base al termine di ricerca
+  const filteredCities = availableCities.filter(city => 
+    city.toLowerCase().includes(citySearchTerm.toLowerCase())
+  ).slice(0, 10) // Limita a 10 risultati per performance
+
+  // Chiudi dropdown città quando si clicca fuori
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      if (!target.closest('.city-dropdown-container') && 
+          !target.closest('[data-dropdown-portal]')) {
+        setShowCityDropdown(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Effetto per cambio pagina (usa cache se disponibile) - CON CONTROLLO INIZIALIZZAZIONE
   useEffect(() => {
@@ -391,14 +499,15 @@ export default function ClientDashboard() {
         return
       }
 
-      // Aggiorna lo stato locale
+      // Aggiorna lo stato locale SENZA ricaricare la pagina
       setUnlockedLeads(prev => {
         const newSet = new Set(prev)
         newSet.add(leadId)
         return newSet
       })
       
-      refreshProfile() // Aggiorna i crediti mostrati
+      // Aggiorna solo il profilo utente senza ricaricare tutto
+      refreshProfile()
     } catch (error) {
       console.error('Errore generale:', error)
       alert('Errore nel sbloccare il lead. Riprova.')
@@ -635,19 +744,60 @@ export default function ClientDashboard() {
           )}
 
           {/* Filtri e Controlli */}
-          <TourTarget tourId="dashboard-filters" className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 mb-8">
+          <TourTarget tourId="dashboard-filters" className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 mb-8 overflow-visible relative">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
               {/* Search */}
               <TourTarget tourId="dashboard-search" className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <Search className={`absolute left-3 top-3 h-5 w-5 transition-colors ${
+                  isSearching ? 'text-blue-500 animate-pulse' : 'text-gray-400'
+                }`} />
                 <input
                   data-tour="dashboard-search"
                   type="text"
-                  placeholder="Cerca aziende..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                  placeholder={searchInput.length > 0 && searchInput.length < 3 ? "Digita almeno 3 caratteri..." : "Cerca aziende..."}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && executeSearch()}
+                  className={`w-full pl-10 pr-20 py-3 bg-gray-50 dark:bg-gray-900/50 border transition-colors text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    searchInput.length > 0 && searchInput.length < 3 
+                      ? 'border-yellow-300 dark:border-yellow-600' 
+                      : 'border-gray-200 dark:border-gray-700'
+                  }`}
                 />
+                {searchInput && (
+                  <div className="absolute right-2 top-2 flex items-center space-x-1">
+                    {searchInput.length > 0 && searchInput.length < 3 && (
+                      <span className="text-xs text-yellow-600 dark:text-yellow-400 mr-1">
+                        {3 - searchInput.length} car.
+                      </span>
+                    )}
+                    {isSearching && searchInput.length >= 3 && (
+                      <div className="flex items-center text-xs text-blue-600 dark:text-blue-400 mr-1">
+                        <div className="animate-spin h-3 w-3 border border-blue-600 border-t-transparent rounded-full mr-1"></div>
+                        Ricerca...
+                      </div>
+                    )}
+                    <button
+                      onClick={executeSearch}
+                      className="p-1 text-blue-600 hover:text-blue-700 transition-colors"
+                      title="Cerca ora"
+                    >
+                      <Search className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={clearSearch}
+                      className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                      title="Pulisci"
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+                {searchTerm && searchTerm !== searchInput && (
+                  <div className="absolute top-full left-0 mt-1 text-xs text-blue-600 dark:text-blue-400">
+                    Cercando: "{searchTerm}"
+                  </div>
+                )}
               </TourTarget>
 
               {/* Actions */}
@@ -704,8 +854,8 @@ export default function ClientDashboard() {
 
             {/* Filtri Espandibili */}
             {showFilters && (
-              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 overflow-visible">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Categoria</label>
                     <select
@@ -720,15 +870,70 @@ export default function ClientDashboard() {
                     </select>
                   </div>
 
-                  <div>
+                  <div className="relative z-50">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Città</label>
-                    <input
-                      type="text"
-                      placeholder="Filtra per città..."
-                      value={filterCity}
-                      onChange={(e) => setFilterCity(e.target.value)}
-                      className="w-full p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                    />
+                    <div className="relative city-dropdown-container">
+                      <input
+                        ref={cityInputRef}
+                        type="text"
+                        placeholder="Cerca città..."
+                        value={citySearchTerm}
+                        onChange={(e) => {
+                          setCitySearchTerm(e.target.value)
+                          setShowCityDropdown(true)
+                        }}
+                        onFocus={() => setShowCityDropdown(true)}
+                        className="w-full p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                      />
+                      {filterCity && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          <button
+                            onClick={() => {
+                              setFilterCity('')
+                              setCitySearchTerm('')
+                            }}
+                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      )}
+                      {/* Dropdown renderizzato con Portal */}
+                      {showCityDropdown && filteredCities.length > 0 && typeof window !== 'undefined' && createPortal(
+                        <div 
+                          data-dropdown-portal
+                          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-in fade-in-0 zoom-in-95 duration-100"
+                          style={{
+                            position: 'absolute',
+                            top: dropdownPosition.top,
+                            left: dropdownPosition.left,
+                            width: dropdownPosition.width,
+                            zIndex: 99999,
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)'
+                          }}
+                        >
+                          {filteredCities.map((city) => (
+                            <button
+                              key={city}
+                              onClick={() => {
+                                setFilterCity(city)
+                                setCitySearchTerm(city)
+                                setShowCityDropdown(false)
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white first:rounded-t-xl last:rounded-b-xl"
+                            >
+                              {city}
+                            </button>
+                          ))}
+                        </div>,
+                        document.body
+                      )}
+                    </div>
+                    {filterCity && (
+                      <div className="mt-1 text-sm text-blue-600 dark:text-blue-400">
+                        Filtrando per: {filterCity}
+                      </div>
+                    )}
                   </div>
 
                   <div>

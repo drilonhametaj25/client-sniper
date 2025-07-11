@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search')
     const minScore = searchParams.get('minScore')
     const maxScore = searchParams.get('maxScore')
+    const showOnlyUnlocked = searchParams.get('showOnlyUnlocked') === '1'
     // Filtri avanzati
     const noWebsite = searchParams.get('noWebsite') === '1'
     const noPixel = searchParams.get('noPixel') === '1'
@@ -124,6 +125,48 @@ export async function GET(request: NextRequest) {
     let query = supabaseAdmin
       .from('leads')
       .select(selectFields, { count: 'exact' })
+    
+    // Filtro per lead sbloccati dall'utente
+    if (showOnlyUnlocked) {
+      // Recupera i lead sbloccati dall'utente dalla tabella user_unlocked_leads
+      const { data: unlockedLeads, error: unlockedError } = await supabaseAdmin
+        .from('user_unlocked_leads')
+        .select('lead_id')
+        .eq('user_id', user.id)
+      
+      if (unlockedError) {
+        console.error('Errore recupero lead sbloccati:', unlockedError)
+        return NextResponse.json(
+          { success: false, error: 'Errore recupero lead sbloccati' },
+          { status: 500 }
+        )
+      }
+      
+      const unlockedLeadIds = unlockedLeads?.map(ul => ul.lead_id) || []
+      
+      if (unlockedLeadIds.length === 0) {
+        // Se non ha lead sbloccati, restituisci risultato vuoto
+        return NextResponse.json({
+          success: true,
+          data: {
+            leads: [],
+            user_profile: {
+              role: userProfile.role,
+              plan: userProfile.plan,
+              credits_remaining: userProfile.credits_remaining
+            },
+            pagination: {
+              page,
+              limit,
+              total: 0,
+              totalPages: 0
+            }
+          }
+        })
+      }
+      
+      query = query.in('id', unlockedLeadIds)
+    }
     
     // Nota: Tutti i lead sono pubblici, non c'è più il concetto di "assigned_to"
     
