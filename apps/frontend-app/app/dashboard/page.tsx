@@ -462,7 +462,33 @@ export default function ClientDashboard() {
     }
   }
 
-  // Funzione per sbloccare i dettagli di un lead
+  // Funzione per aggiornare solo i crediti senza toccare il profilo completo
+  const refreshCredits = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('credits_remaining')
+        .eq('id', user?.id)
+        .single()
+      
+      if (data && userProfile) {
+        setUserProfile(prev => prev ? {
+          ...prev,
+          credits_remaining: data.credits_remaining
+        } : null)
+      }
+    } catch (error) {
+      console.error('Errore aggiornamento crediti:', error)
+    }
+  }
+
+  // Aggiorna crediti ogni 30 secondi in background
+  useEffect(() => {
+    if (!user?.id) return
+    
+    const interval = setInterval(refreshCredits, 30000)
+    return () => clearInterval(interval)
+  }, [user?.id])
   const unlockLead = async (leadId: string) => {
     if (!user) return
     
@@ -506,8 +532,13 @@ export default function ClientDashboard() {
         return newSet
       })
       
-      // Aggiorna solo il profilo utente senza ricaricare tutto
-      refreshProfile()
+      // Aggiorna solo i crediti senza ricaricare tutto il profilo
+      if (userProfile) {
+        setUserProfile(prev => prev ? {
+          ...prev,
+          credits_remaining: Math.max(0, prev.credits_remaining - 1)
+        } : null)
+      }
     } catch (error) {
       console.error('Errore generale:', error)
       alert('Errore nel sbloccare il lead. Riprova.')

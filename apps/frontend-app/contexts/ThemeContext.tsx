@@ -5,7 +5,7 @@
 
 'use client'
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { useAuth } from './AuthContext'
 
 export type Theme = 'light' | 'dark' | 'system'
@@ -35,6 +35,8 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const { user } = useAuth()
   const [theme, setThemeState] = useState<Theme>('system')
   const [actualTheme, setActualTheme] = useState<'light' | 'dark'>('light')
+  const [isInitialized, setIsInitialized] = useState(false)
+  const userIdRef = useRef<string | null>(null)
 
   // Determina il tema effettivo basato su sistema e preferenze
   const getSystemTheme = (): 'light' | 'dark' => {
@@ -65,32 +67,54 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     }
   }
 
-  // Carica tema iniziale dal localStorage o dal profilo utente
+  // Carica tema iniziale dal localStorage al primo mount
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    const loadInitialTheme = async () => {
+    const loadInitialTheme = () => {
+      if (isInitialized) return // Già inizializzato
+
       let initialTheme: Theme = 'system'
 
-      // Se l'utente è loggato, usa il tema dal profilo
-      if (user?.preferred_theme) {
-        initialTheme = user.preferred_theme as Theme
-      } else {
-        // Altrimenti carica dal localStorage
-        const savedTheme = localStorage.getItem('theme') as Theme
-        if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
-          initialTheme = savedTheme
-        }
+      // Priorità: localStorage > sistema
+      const savedTheme = localStorage.getItem('theme') as Theme
+      if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
+        initialTheme = savedTheme
       }
 
       setThemeState(initialTheme)
       const resolvedTheme = calculateActualTheme(initialTheme)
       setActualTheme(resolvedTheme)
       applyTheme(resolvedTheme)
+      
+      setIsInitialized(true)
     }
 
     loadInitialTheme()
-  }, [user])
+  }, [isInitialized])
+
+  // Gestisce i cambiamenti di login/logout dell'utente SOLO quando l'ID cambia veramente
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const currentUserId = user?.id || null
+    
+    // Se l'utente è cambiato veramente (non solo refreshProfile)
+    if (userIdRef.current !== currentUserId) {
+      const previousUserId = userIdRef.current
+      userIdRef.current = currentUserId
+      
+      // Se c'è un nuovo utente e non abbiamo un tema salvato localmente,
+      // usa il tema preferito dal profilo utente
+      if (user && currentUserId && !previousUserId && !localStorage.getItem('theme') && user.preferred_theme) {
+        const userTheme = user.preferred_theme as Theme
+        setThemeState(userTheme)
+        const resolvedTheme = calculateActualTheme(userTheme)
+        setActualTheme(resolvedTheme)
+        applyTheme(resolvedTheme)
+      }
+    }
+  }, [user?.id])
 
   // Ascolta cambiamenti nelle preferenze di sistema
   useEffect(() => {
@@ -112,6 +136,10 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
   // Salva tema nel database se utente loggato, altrimenti localStorage
   const saveThemePreference = async (newTheme: Theme) => {
+    // Salva SEMPRE nel localStorage per priorità
+    localStorage.setItem('theme', newTheme)
+    
+    // Salva nel database se utente loggato (in background, senza bloccare l'UI)
     if (user) {
       try {
         const response = await fetch('/api/user/theme', {
@@ -123,14 +151,11 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         })
         
         if (!response.ok) {
-          console.warn('Errore nel salvare tema nel profilo utente')
+          console.warn('Errore nel salvare tema nel profilo utente (continua con localStorage)')
         }
       } catch (error) {
-        console.warn('Errore nel salvare tema nel profilo utente:', error)
+        console.warn('Errore nel salvare tema nel profilo utente (continua con localStorage):', error)
       }
-    } else {
-      // Salva nel localStorage per utenti non loggati
-      localStorage.setItem('theme', newTheme)
     }
   }
 
@@ -141,6 +166,9 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     setActualTheme(newActualTheme)
     applyTheme(newActualTheme)
     saveThemePreference(newTheme)
+    
+    // Salva immediatamente nel localStorage per priorità massima
+    localStorage.setItem('theme', newTheme)
   }
 
   // Funzione per alternare tra chiaro e scuro (esclude system)
