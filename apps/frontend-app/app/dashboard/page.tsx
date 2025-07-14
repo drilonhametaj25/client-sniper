@@ -88,6 +88,10 @@ export default function ClientDashboard() {
   const [filterNoPrivacy, setFilterNoPrivacy] = useState(false)
   const [filterLowScore, setFilterLowScore] = useState(false)
 
+  // Ordinamento
+  const [sortBy, setSortBy] = useState<'score' | 'created_at' | 'last_seen_at' | 'business_name'>('score')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+
   // Stato per tracciare quali lead sono stati "sbloccati"
   const [unlockedLeads, setUnlockedLeads] = useState<Set<string>>(new Set())
   
@@ -136,7 +140,7 @@ export default function ClientDashboard() {
       
       
       // ⚡ CACHE semplice per evitare richieste duplicate
-      const cacheKey = `leads-${page}-${filterCategory}-${filterCity}-${filterRole}-${searchTerm}-${showOnlyUnlocked}-${filterNoWebsite}-${filterNoPixel}-${filterNoAnalytics}-${filterNoPrivacy}-${filterLowScore}`
+      const cacheKey = `leads-${page}-${filterCategory}-${filterCity}-${filterRole}-${searchTerm}-${showOnlyUnlocked}-${filterNoWebsite}-${filterNoPixel}-${filterNoAnalytics}-${filterNoPrivacy}-${filterLowScore}-${sortBy}-${sortOrder}`
       if (useCache && localStorage.getItem(cacheKey)) {
         try {
           const cached = JSON.parse(localStorage.getItem(cacheKey)!)
@@ -172,7 +176,9 @@ export default function ClientDashboard() {
         ...(filterNoPixel && { noPixel: '1' }),
         ...(filterNoAnalytics && { noAnalytics: '1' }),
         ...(filterNoPrivacy && { noPrivacy: '1' }),
-        ...(filterLowScore && { lowScore: '1' })
+        ...(filterLowScore && { lowScore: '1' }),
+        sortBy: sortBy,
+        sortOrder: sortOrder
       })
       
       const startTime = Date.now()
@@ -277,7 +283,7 @@ export default function ClientDashboard() {
     }, 300) // Debounce di 300ms
     
     return () => clearTimeout(timeoutId)
-  }, [filterCategory, filterCity, filterRole, searchTerm, showOnlyUnlocked, filterNoWebsite, filterNoPixel, filterNoAnalytics, filterNoPrivacy, filterLowScore])
+  }, [filterCategory, filterCity, filterRole, searchTerm, showOnlyUnlocked, filterNoWebsite, filterNoPixel, filterNoAnalytics, filterNoPrivacy, filterLowScore, sortBy, sortOrder])
 
   // Stato per indicatore di ricerca
   const [isSearching, setIsSearching] = useState(false)
@@ -548,6 +554,316 @@ export default function ClientDashboard() {
 
 
 
+  // Funzioni per migliorare le informazioni delle card dei lead
+  const translateCategory = (category: string) => {
+    const translations: Record<string, string> = {
+      // Traduzioni base
+      'restaurants': 'Ristoranti',
+      'plumbers': 'Idraulici', 
+      'dentists': 'Dentisti',
+      'lawyers': 'Avvocati',
+      'photographers': 'Fotografi',
+      'hotels': 'Hotel',
+      'cafes': 'Bar e Caffè',
+      'beauty': 'Bellezza',
+      'fitness': 'Fitness',
+      'mechanics': 'Meccanici',
+      'electricians': 'Elettricisti',
+      'construction': 'Edilizia',
+      'real_estate': 'Immobiliare',
+      'medical': 'Medico',
+      'veterinary': 'Veterinario',
+      'accounting': 'Contabilità',
+      'insurance': 'Assicurazioni',
+      'travel': 'Viaggi',
+      'education': 'Istruzione',
+      'automotive': 'Automotive',
+      'retail': 'Retail',
+      'technology': 'Tecnologia',
+      'consulting': 'Consulenza',
+      'finance': 'Finanza',
+      'healthcare': 'Sanità',
+      'entertainment': 'Intrattenimento',
+      'sports': 'Sport',
+      'fashion': 'Moda',
+      'food': 'Alimentari',
+      'home_services': 'Servizi Casa',
+      'professional_services': 'Servizi Professionali',
+      // Traduzioni specifiche per categorie che potrebbero apparire nel database
+      'restaurant': 'Ristorante',
+      'tuscan restaurant': 'Ristorante Toscano',
+      'italian restaurant': 'Ristorante Italiano',
+      'pizza restaurant': 'Pizzeria',
+      'chinese restaurant': 'Ristorante Cinese',
+      'japanese restaurant': 'Ristorante Giapponese',
+      'sushi restaurant': 'Ristorante Sushi',
+      'seafood restaurant': 'Ristorante di Pesce',
+      'mediterranean restaurant': 'Ristorante Mediterraneo',
+      'bar': 'Bar',
+      'cafe': 'Caffè',
+      'bakery': 'Panificio',
+      'pizzeria': 'Pizzeria',
+      'hotel': 'Hotel',
+      'bed and breakfast': 'Bed & Breakfast',
+      'apartment': 'Appartamento',
+      'villa': 'Villa',
+      'resort': 'Resort',
+      'dentist': 'Dentista',
+      'doctor': 'Medico',
+      'medical center': 'Centro Medico',
+      'pharmacy': 'Farmacia',
+      'veterinarian': 'Veterinario',
+      'lawyer': 'Avvocato',
+      'law firm': 'Studio Legale',
+      'notary': 'Notaio',
+      'accountant': 'Commercialista',
+      'beauty salon': 'Salone di Bellezza',
+      'hair salon': 'Parrucchiere',
+      'barber shop': 'Barbiere',
+      'spa': 'Centro Benessere',
+      'gym': 'Palestra',
+      'fitness center': 'Centro Fitness',
+      'personal trainer': 'Personal Trainer',
+      'mechanic': 'Meccanico',
+      'auto repair': 'Autofficina',
+      'electrician': 'Elettricista',
+      'plumber': 'Idraulico',
+      'contractor': 'Impresa Edile',
+      'real estate agency': 'Agenzia Immobiliare',
+      'photographer': 'Fotografo',
+      'travel agency': 'Agenzia Viaggi',
+      'tour operator': 'Tour Operator',
+      'school': 'Scuola',
+      'university': 'Università',
+      'training center': 'Centro Formazione',
+      'clothing store': 'Negozio di Abbigliamento',
+      'shoe store': 'Negozio di Scarpe',
+      'electronics store': 'Negozio di Elettronica',
+      'furniture store': 'Negozio di Mobili',
+      'bookstore': 'Libreria',
+      'florist': 'Fiorista',
+      'pet store': 'Negozio Animali',
+      'jewelry store': 'Gioielleria',
+      'optician': 'Ottico',
+      'other': 'Altro'
+    }
+    
+    // Prova prima con la stringa esatta (case-insensitive)
+    const exactMatch = translations[category.toLowerCase()]
+    if (exactMatch) return exactMatch
+    
+    // Se non trova corrispondenza esatta, cerca parole chiave
+    const categoryLower = category.toLowerCase()
+    
+    if (categoryLower.includes('restaurant') || categoryLower.includes('ristorante')) {
+      if (categoryLower.includes('pizza')) return 'Pizzeria'
+      if (categoryLower.includes('chinese') || categoryLower.includes('cinese')) return 'Ristorante Cinese'
+      if (categoryLower.includes('japanese') || categoryLower.includes('giapponese')) return 'Ristorante Giapponese'
+      if (categoryLower.includes('sushi')) return 'Ristorante Sushi'
+      if (categoryLower.includes('seafood') || categoryLower.includes('pesce')) return 'Ristorante di Pesce'
+      if (categoryLower.includes('tuscan') || categoryLower.includes('toscano')) return 'Ristorante Toscano'
+      if (categoryLower.includes('italian') || categoryLower.includes('italiano')) return 'Ristorante Italiano'
+      if (categoryLower.includes('mediterranean') || categoryLower.includes('mediterraneo')) return 'Ristorante Mediterraneo'
+      return 'Ristorante'
+    }
+    
+    if (categoryLower.includes('hotel') || categoryLower.includes('albergo')) return 'Hotel'
+    if (categoryLower.includes('bar') && !categoryLower.includes('barber')) return 'Bar'
+    if (categoryLower.includes('cafe') || categoryLower.includes('caffè')) return 'Caffè'
+    if (categoryLower.includes('pizza')) return 'Pizzeria'
+    if (categoryLower.includes('bakery') || categoryLower.includes('panificio')) return 'Panificio'
+    if (categoryLower.includes('dentist') || categoryLower.includes('dentista')) return 'Dentista'
+    if (categoryLower.includes('doctor') || categoryLower.includes('medico')) return 'Medico'
+    if (categoryLower.includes('lawyer') || categoryLower.includes('avvocato')) return 'Avvocato'
+    if (categoryLower.includes('beauty') || categoryLower.includes('bellezza')) return 'Salone di Bellezza'
+    if (categoryLower.includes('hair') || categoryLower.includes('parrucchiere')) return 'Parrucchiere'
+    if (categoryLower.includes('barber') || categoryLower.includes('barbiere')) return 'Barbiere'
+    if (categoryLower.includes('gym') || categoryLower.includes('palestra')) return 'Palestra'
+    if (categoryLower.includes('mechanic') || categoryLower.includes('meccanico')) return 'Meccanico'
+    if (categoryLower.includes('electrician') || categoryLower.includes('elettricista')) return 'Elettricista'
+    if (categoryLower.includes('plumber') || categoryLower.includes('idraulico')) return 'Idraulico'
+    
+    // Se non trova nessuna corrispondenza, capitalizza la prima lettera
+    return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase()
+  }
+
+  const translateRole = (role: string) => {
+    const translations: Record<string, string> = {
+      'designer': 'Web Designer',
+      'developer': 'Sviluppatore',
+      'seo': 'SEO Specialist',
+      'copywriter': 'Copywriter',
+      'photographer': 'Fotografo',
+      'adv': 'Advertising',
+      'social': 'Social Media',
+      'gdpr': 'Privacy/GDPR'
+    }
+    return translations[role.toLowerCase()] || role
+  }
+
+  const calculateProjectValue = (score: number, category: string) => {
+    // Calcolo più articolato basato su score e categoria
+    let baseValue = 0
+    let maxValue = 0
+    
+    // Normalizza la categoria per il calcolo
+    const normalizedCategory = category.toLowerCase()
+    
+    // Valori base per categoria
+    const categoryMultipliers: Record<string, { base: number, max: number }> = {
+      'restaurants': { base: 1500, max: 4000 },
+      'restaurant': { base: 1500, max: 4000 },
+      'tuscan restaurant': { base: 1800, max: 4500 },
+      'italian restaurant': { base: 1700, max: 4200 },
+      'pizza restaurant': { base: 1400, max: 3500 },
+      'pizzeria': { base: 1400, max: 3500 },
+      'bar': { base: 1200, max: 3000 },
+      'cafe': { base: 1200, max: 3000 },
+      'hotel': { base: 4000, max: 12000 },
+      'hotels': { base: 4000, max: 12000 },
+      'lawyers': { base: 2500, max: 8000 },
+      'lawyer': { base: 2500, max: 8000 },
+      'law firm': { base: 3000, max: 10000 },
+      'medical': { base: 2000, max: 6000 },
+      'dentist': { base: 2200, max: 6500 },
+      'doctor': { base: 2000, max: 6000 },
+      'real_estate': { base: 3000, max: 10000 },
+      'real estate agency': { base: 3000, max: 10000 },
+      'construction': { base: 2000, max: 7000 },
+      'automotive': { base: 1800, max: 5000 },
+      'mechanic': { base: 1500, max: 4000 },
+      'retail': { base: 1200, max: 4000 },
+      'clothing store': { base: 1300, max: 4200 },
+      'technology': { base: 3500, max: 15000 },
+      'finance': { base: 4000, max: 12000 },
+      'healthcare': { base: 2500, max: 8000 },
+      'education': { base: 1500, max: 5000 },
+      'beauty': { base: 1400, max: 3800 },
+      'beauty salon': { base: 1400, max: 3800 },
+      'hair salon': { base: 1300, max: 3500 },
+      'fitness': { base: 1600, max: 4500 },
+      'gym': { base: 1600, max: 4500 },
+      'photography': { base: 1800, max: 5000 },
+      'photographer': { base: 1800, max: 5000 },
+      'default': { base: 1000, max: 3000 }
+    }
+    
+    // Cerca corrispondenza esatta prima
+    let categoryValues = categoryMultipliers[normalizedCategory]
+    
+    // Se non trova corrispondenza esatta, cerca per parole chiave
+    if (!categoryValues) {
+      if (normalizedCategory.includes('restaurant') || normalizedCategory.includes('ristorante')) {
+        categoryValues = categoryMultipliers['restaurant']
+      } else if (normalizedCategory.includes('hotel') || normalizedCategory.includes('albergo')) {
+        categoryValues = categoryMultipliers['hotel']
+      } else if (normalizedCategory.includes('lawyer') || normalizedCategory.includes('avvocato')) {
+        categoryValues = categoryMultipliers['lawyer']
+      } else if (normalizedCategory.includes('medical') || normalizedCategory.includes('medico') || normalizedCategory.includes('dentist')) {
+        categoryValues = categoryMultipliers['medical']
+      } else if (normalizedCategory.includes('beauty') || normalizedCategory.includes('bellezza') || normalizedCategory.includes('hair')) {
+        categoryValues = categoryMultipliers['beauty']
+      } else if (normalizedCategory.includes('fitness') || normalizedCategory.includes('gym') || normalizedCategory.includes('palestra')) {
+        categoryValues = categoryMultipliers['fitness']
+      } else if (normalizedCategory.includes('mechanic') || normalizedCategory.includes('auto')) {
+        categoryValues = categoryMultipliers['mechanic']
+      } else if (normalizedCategory.includes('real estate') || normalizedCategory.includes('immobiliare')) {
+        categoryValues = categoryMultipliers['real_estate']
+      } else if (normalizedCategory.includes('technology') || normalizedCategory.includes('tech')) {
+        categoryValues = categoryMultipliers['technology']
+      } else {
+        categoryValues = categoryMultipliers['default']
+      }
+    }
+    
+    // Più basso è il score, più alto è il valore del progetto
+    if (score <= 20) {
+      baseValue = Math.round(categoryValues.max * 0.8)
+      maxValue = categoryValues.max
+    } else if (score <= 40) {
+      baseValue = Math.round(categoryValues.max * 0.6)
+      maxValue = Math.round(categoryValues.max * 0.9)
+    } else if (score <= 60) {
+      baseValue = Math.round(categoryValues.max * 0.4)
+      maxValue = Math.round(categoryValues.max * 0.7)
+    } else {
+      baseValue = Math.round(categoryValues.base * 0.8)
+      maxValue = Math.round(categoryValues.max * 0.5)
+    }
+    
+    return { min: baseValue, max: maxValue }
+  }
+
+  const getUrgencyLevel = (score: number) => {
+    if (score <= 20) return { level: 'CRITICA', color: 'text-red-600', icon: '🚨' }
+    if (score <= 40) return { level: 'ALTA', color: 'text-orange-600', icon: '⚡' }
+    if (score <= 60) return { level: 'MEDIA', color: 'text-yellow-600', icon: '⚠️' }
+    return { level: 'BASSA', color: 'text-green-600', icon: '💡' }
+  }
+
+  const getServicesNeeded = (score: number, category: string) => {
+    const services = []
+    
+    if (score <= 30) {
+      services.push('Rifacimento sito web completo')
+      services.push('SEO tecnico urgente')
+      services.push('Ottimizzazione performance')
+    } else if (score <= 50) {
+      services.push('Restyling sito web')
+      services.push('Miglioramento SEO')
+      services.push('Integrazione analytics')
+    } else if (score <= 70) {
+      services.push('Ottimizzazioni SEO')
+      services.push('Miglioramento UX')
+      services.push('Content marketing')
+    } else {
+      services.push('Ottimizzazioni minori')
+      services.push('Manutenzione periodica')
+    }
+    
+    // Servizi specifici per categoria
+    if (category === 'restaurants') {
+      services.push('Marketing locale')
+      services.push('Social media management')
+    } else if (category === 'lawyers') {
+      services.push('Content legale')
+      services.push('Compliance GDPR')
+    } else if (category === 'medical') {
+      services.push('Booking online')
+      services.push('Telemedicina')
+    }
+    
+    return services.slice(0, 3) // Max 3 servizi
+  }
+
+  const getConversionTips = (score: number) => {
+    if (score <= 30) {
+      return [
+        'Sito con problemi critici - cliente molto ricettivo',
+        'Probabilità di conversione: 85%',
+        'Approccio: Urgenza e soluzioni immediate'
+      ]
+    } else if (score <= 50) {
+      return [
+        'Evidenti opportunità di miglioramento',
+        'Probabilità di conversione: 70%', 
+        'Approccio: Mostra ROI concreto'
+      ]
+    } else if (score <= 70) {
+      return [
+        'Potenziale di crescita identificato',
+        'Probabilità di conversione: 55%',
+        'Approccio: Focus su competitività'
+      ]
+    } else {
+      return [
+        'Opportunità di ottimizzazione minori',
+        'Probabilità di conversione: 35%',
+        'Approccio: Manutenzione e crescita'
+      ]
+    }
+  }
+
   const getRoleColor = (role: string) => {
     const colors: Record<string, string> = {
       designer: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
@@ -590,6 +906,22 @@ export default function ClientDashboard() {
   const categories = Array.from(new Set(leads.map(lead => lead.category)))
   const cities = Array.from(new Set(leads.map(lead => lead.city)))
   const roles = ['designer', 'developer', 'seo', 'copywriter', 'photographer', 'adv', 'social', 'gdpr']
+
+  // Opzioni di ordinamento
+  const sortOptions = [
+    { value: 'score', label: 'Punteggio (peggiore prima)', order: 'asc' },
+    { value: 'score', label: 'Punteggio (migliore prima)', order: 'desc' },
+    { value: 'created_at', label: 'Data inserimento (più recenti)', order: 'desc' },
+    { value: 'created_at', label: 'Data inserimento (meno recenti)', order: 'asc' },
+    { value: 'last_seen_at', label: 'Ultimo aggiornamento (più recenti)', order: 'desc' },
+    { value: 'business_name', label: 'Nome azienda (A-Z)', order: 'asc' },
+    { value: 'business_name', label: 'Nome azienda (Z-A)', order: 'desc' }
+  ]
+
+  const getCurrentSortLabel = () => {
+    const currentSort = sortOptions.find(opt => opt.value === sortBy && opt.order === sortOrder)
+    return currentSort?.label || 'Ordina per...'
+  }
 
   // ⚡ ULTRA-VELOCITÀ: Rendering semplice e diretto (ora che l'auth è veloce con cache)
   if (loading || loadingData) {
@@ -877,6 +1209,26 @@ export default function ClientDashboard() {
                   <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
                 </button>
 
+                {/* Dropdown Ordinamento */}
+                <div className="relative">
+                  <select
+                    value={`${sortBy}-${sortOrder}`}
+                    onChange={(e) => {
+                      const [newSortBy, newSortOrder] = e.target.value.split('-')
+                      setSortBy(newSortBy as 'score' | 'created_at' | 'last_seen_at' | 'business_name')
+                      setSortOrder(newSortOrder as 'asc' | 'desc')
+                    }}
+                    className="appearance-none bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-4 py-2 pr-10 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  >
+                    {sortOptions.map((option, index) => (
+                      <option key={index} value={`${option.value}-${option.order}`}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                </div>
+
                 <TourTarget tourId="dashboard-refresh" className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors">
                   <button
                     onClick={() => loadLeadsFromAPI(currentPage, false)}
@@ -904,7 +1256,7 @@ export default function ClientDashboard() {
                     >
                       <option value="">Tutte le categorie</option>
                       {categories.map(category => (
-                        <option key={category} value={category}>{category}</option>
+                        <option key={category} value={category}>{translateCategory(category)}</option>
                       ))}
                     </select>
                   </div>
@@ -984,7 +1336,7 @@ export default function ClientDashboard() {
                     >
                       <option value="">Tutti i ruoli</option>
                       {roles.map(role => (
-                        <option key={role} value={role}>{role}</option>
+                        <option key={role} value={role}>{translateRole(role)}</option>
                       ))}
                     </select>
                   </div>
@@ -1079,7 +1431,7 @@ export default function ClientDashboard() {
                           ) : (
                             <div className="flex items-center space-x-3">
                               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                🔒 {lead.category} in {lead.city}
+                                🔒 {translateCategory(lead.category)} in {lead.city}
                               </h3>
                               <div className="px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-bold rounded-full animate-pulse">
                                 LEAD QUALIFICATO
@@ -1103,42 +1455,63 @@ export default function ClientDashboard() {
                             <div className="flex items-center space-x-2">
                               <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                               <span className="text-sm font-medium text-red-600">
-                                {lead.score <= 20 ? 'Sito con gravi problemi tecnici' : 
-                                 lead.score <= 40 ? 'Problemi SEO e performance critici' :
+                                {lead.score <= 20 ? 'Sito con gravi problemi tecnici critici' : 
+                                 lead.score <= 40 ? 'Problemi SEO e performance critici identificati' :
                                  lead.score <= 60 ? 'Opportunità di miglioramento evidenti' :
-                                 'Potenziale cliente identificato'}
+                                 'Potenziale cliente con margini di crescita'}
                               </span>
                             </div>
                             
-                            {/* Valore stimato */}
+                            {/* Valore stimato articolato */}
                             <div className="flex items-center space-x-2">
                               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                               <span className="text-sm text-gray-700 dark:text-gray-300">
-                                💰 Valore progetto stimato: €{lead.score <= 30 ? '2.000-5.000' : 
-                                                                lead.score <= 50 ? '1.500-3.000' :
-                                                                lead.score <= 70 ? '800-2.000' : '500-1.500'}
+                                💰 Valore progetto stimato: €{(() => {
+                                  const { min, max } = calculateProjectValue(lead.score, lead.category)
+                                  return `${min.toLocaleString()}-${max.toLocaleString()}`
+                                })()}
                               </span>
                             </div>
                             
-                            {/* Urgenza */}
+                            {/* Urgenza con emoji dinamica */}
                             <div className="flex items-center space-x-2">
                               <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                               <span className="text-sm text-gray-700 dark:text-gray-300">
-                                ⚡ Priorità: {lead.score <= 30 ? 'URGENTE' : 
-                                            lead.score <= 50 ? 'ALTA' :
-                                            lead.score <= 70 ? 'MEDIA' : 'BASSA'}
+                                {(() => {
+                                  const urgency = getUrgencyLevel(lead.score)
+                                  return `${urgency.icon} Priorità: ${urgency.level}`
+                                })()}
                               </span>
                             </div>
                             
-                            {/* Servizi suggeriti */}
+                            {/* Servizi suggeriti più specifici */}
                             <div className="flex items-center space-x-2">
                               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                               <span className="text-sm text-gray-700 dark:text-gray-300">
-                                🎯 Servizi richiesti: {lead.category === 'ristoranti' ? 'SEO locale, Social Media' :
-                                                      lead.category === 'idraulici' ? 'Google Ads, Sito Web' :
-                                                      lead.category === 'avvocati' ? 'SEO, Content Marketing' :
-                                                      'Web Design, SEO, Marketing'}
+                                🎯 Servizi richiesti: {(() => {
+                                  const services = getServicesNeeded(lead.score, lead.category)
+                                  return services.slice(0, 2).join(', ')
+                                })()}
                               </span>
+                            </div>
+
+                            {/* Suggerimenti per la conversione */}
+                            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50 rounded-lg p-3 mt-2">
+                              <div className="flex items-start space-x-2">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5"></div>
+                                <div className="flex-1">
+                                  <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-1">
+                                    📈 Analisi commerciale
+                                  </h4>
+                                  <div className="space-y-1">
+                                    {getConversionTips(lead.score).map((tip, i) => (
+                                      <div key={i} className="text-xs text-blue-700 dark:text-blue-300">
+                                        • {tip}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         ) : (
@@ -1156,7 +1529,7 @@ export default function ClientDashboard() {
                             </div>
                             
                             <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full">
-                              {lead.category}
+                              {translateCategory(lead.category)}
                             </span>
                           </div>
                         )}
@@ -1283,7 +1656,7 @@ export default function ClientDashboard() {
                                     key={role}
                                     className={`px-2 py-1 text-xs font-medium rounded-lg ${getRoleColor(role)}`}
                                   >
-                                    {role}
+                                    {translateRole(role)}
                                   </span>
                                 ))}
                                 {lead.needed_roles.length > 3 && (
@@ -1307,7 +1680,7 @@ export default function ClientDashboard() {
                               ••••••••
                             </span>
                             <span className="text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-200">
-                              Dettagli nascosti - Sblocca per vedere
+                              Ruoli nascosti - Sblocca per vedere
                             </span>
                           </div>
                         )}

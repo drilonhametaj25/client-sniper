@@ -43,6 +43,10 @@ export async function GET(request: NextRequest) {
     const noPrivacy = searchParams.get('noPrivacy') === '1'
     const lowScore = searchParams.get('lowScore') === '1'
     
+    // Parametri di ordinamento
+    const sortBy = searchParams.get('sortBy') || 'score'
+    const sortOrder = searchParams.get('sortOrder') || 'asc'
+    
     
     // Verifica autenticazione
     const authHeader = request.headers.get('Authorization')
@@ -204,10 +208,40 @@ export async function GET(request: NextRequest) {
       query = query.or(`business_name.ilike.%${search}%,city.ilike.%${search}%`)
     }
     // ⚡ OTTIMIZZAZIONE: Paginazione e ordinamento efficiente
+    // Applica ordinamento dinamico
+    let orderColumn = 'score'
+    let orderAscending = true
+    
+    switch (sortBy) {
+      case 'score':
+        orderColumn = 'score'
+        orderAscending = sortOrder === 'asc'
+        break
+      case 'created_at':
+        orderColumn = 'created_at'
+        orderAscending = sortOrder === 'asc'
+        break
+      case 'last_seen_at':
+        orderColumn = 'last_seen_at'
+        orderAscending = sortOrder === 'asc'
+        break
+      case 'business_name':
+        orderColumn = 'business_name'
+        orderAscending = sortOrder === 'asc'
+        break
+      default:
+        orderColumn = 'score'
+        orderAscending = true
+    }
+    
     query = query
       .range(offset, offset + limit - 1)
-      .order('score', { ascending: true }) // Lead con punteggio più basso prima (più problemi)
-      .order('created_at', { ascending: false })
+      .order(orderColumn, { ascending: orderAscending })
+    
+    // Ordinamento secondario per consistenza
+    if (orderColumn !== 'created_at') {
+      query = query.order('created_at', { ascending: false })
+    }
     
     // ⚡ PERFORMANCE TIMING
     const startTime = Date.now()
