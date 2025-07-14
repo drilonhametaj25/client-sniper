@@ -29,6 +29,7 @@ import {
   Lock
 } from 'lucide-react'
 import NewsletterForm from '@/components/NewsletterForm'
+import ThemeToggle from '@/components/theme/ThemeToggle'
 
 interface Plan {
   id: string
@@ -199,28 +200,30 @@ export default function RegisterPage() {
   if (step === 1) {
     return (
       <>
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900">
           {/* Header */}
-          <header className="bg-white shadow-sm border-b" role="banner">
+          <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700" role="banner">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex items-center justify-between h-16">
                 <Link href="/" className="flex items-center space-x-3" aria-label="Torna alla homepage di TrovaMi">
                   <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                     <Target className="w-5 h-5 text-white" />
                   </div>
-                  <span className="text-xl font-bold text-gray-900">TrovaMi</span>
+                  <span className="text-xl font-bold text-gray-900 dark:text-white">TrovaMi</span>
                 </Link>
                 
                 <nav className="flex items-center space-x-4" aria-label="Navigazione principale">
                   <Link 
                     href="/tools/public-scan"
-                    className="text-gray-600 hover:text-gray-900 transition-colors"
+                    className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
                   >
+                    <Search className="w-4 h-4 inline mr-1" />
                     Analisi Gratuita
                   </Link>
+                  <ThemeToggle variant="compact" showLabel={false} />
                   <Link 
                     href="/login"
-                    className="text-gray-600 hover:text-gray-900 transition-colors"
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
                   >
                     Accedi
                   </Link>
@@ -232,30 +235,30 @@ export default function RegisterPage() {
           <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12" role="main">
             {/* Hero Section */}
             <section className="text-center mb-12">
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
                 Scegli il Piano Professionale per Te
               </h1>
-              <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+              <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
                 Inizia con audit gratuiti e scala verso l'intelligence automatizzata. 
                 Tutti i piani includono accesso alla piattaforma professionale di audit digitale.
               </p>
               
               {/* Features highlights */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 max-w-3xl mx-auto">
-                <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
-                  <Search className="h-4 w-4 text-blue-600" />
+                <div className="flex items-center justify-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
+                  <Search className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   <span>Audit Automatizzati</span>
                 </div>
-                <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
-                  <BarChart3 className="h-4 w-4 text-green-600" />
+                <div className="flex items-center justify-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
+                  <BarChart3 className="h-4 w-4 text-green-600 dark:text-green-400" />
                   <span>Dashboard Tecnica</span>
                 </div>
-                <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
-                  <Shield className="h-4 w-4 text-purple-600" />
+                <div className="flex items-center justify-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
+                  <Shield className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                   <span>Dati Sicuri</span>
                 </div>
-                <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
-                  <Users className="h-4 w-4 text-orange-600" />
+                <div className="flex items-center justify-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
+                  <Users className="h-4 w-4 text-orange-600 dark:text-orange-400" />
                   <span>Supporto 24/7</span>
                 </div>
               </div>
@@ -429,28 +432,30 @@ export default function RegisterPage() {
   // Step 2: Form dati utente
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900">
         {/* Header */}
-        <header className="bg-white shadow-sm border-b" role="banner">
+        <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700" role="banner">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
               <Link href="/" className="flex items-center space-x-3" aria-label="Torna alla homepage di TrovaMi">
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                   <Target className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold text-gray-900">TrovaMi</span>
+                <span className="text-xl font-bold text-gray-900 dark:text-white">TrovaMi</span>
               </Link>
               
               <nav className="flex items-center space-x-4" aria-label="Navigazione principale">
                 <Link 
                   href="/tools/public-scan"
-                  className="text-gray-600 hover:text-gray-900 transition-colors"
+                  className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
                 >
+                  <Search className="w-4 h-4 inline mr-1" />
                   Analisi Gratuita
                 </Link>
+                <ThemeToggle variant="compact" showLabel={false} />
                 <Link 
                   href="/login"
-                  className="text-gray-600 hover:text-gray-900 transition-colors"
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
                 >
                   Accedi
                 </Link>
@@ -480,17 +485,17 @@ export default function RegisterPage() {
           </div>
 
           {/* Registration Form */}
-          <section className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
+          <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                 Completa la Registrazione
               </h1>
-              <p className="text-gray-600">
-                Piano selezionato: <span className="font-semibold text-blue-600 capitalize">{selectedPlan}</span>
+              <p className="text-gray-600 dark:text-gray-300">
+                Piano selezionato: <span className="font-semibold text-blue-600 dark:text-blue-400 capitalize">{selectedPlan}</span>
               </p>
               <button
                 onClick={() => setStep(1)}
-                className="mt-2 inline-flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                className="mt-2 inline-flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
               >
                 <ArrowLeft className="w-4 h-4 mr-1" />
                 Cambia piano
@@ -501,12 +506,12 @@ export default function RegisterPage() {
               <div className="grid grid-cols-1 gap-6">
                 {/* Email Field */}
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Indirizzo Email
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Mail className="h-5 w-5 text-gray-400" />
+                      <Mail className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                     </div>
                     <input
                       id="email"
@@ -516,7 +521,7 @@ export default function RegisterPage() {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                       placeholder="nome@esempio.com"
                     />
                   </div>
@@ -524,12 +529,12 @@ export default function RegisterPage() {
                 
                 {/* Password Field */}
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Password
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Lock className="h-5 w-5 text-gray-400" />
+                      <Lock className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                     </div>
                     <input
                       id="password"
@@ -539,7 +544,7 @@ export default function RegisterPage() {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="block w-full pl-10 pr-10 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                       placeholder="Crea una password sicura"
                     />
                     <button
@@ -548,9 +553,9 @@ export default function RegisterPage() {
                       onClick={() => setShowPassword(!showPassword)}
                     >
                       {showPassword ? (
-                        <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                        <EyeOff className="h-5 w-5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300" />
                       ) : (
-                        <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                        <Eye className="h-5 w-5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300" />
                       )}
                     </button>
                   </div>
@@ -576,11 +581,11 @@ export default function RegisterPage() {
                       </p>
                       {/* Password Requirements */}
                       {!passwordValidation.isValid && (
-                        <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
-                          <p className="text-xs font-medium text-gray-700 mb-2">La password deve contenere:</p>
+                        <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                          <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">La password deve contenere:</p>
                           <ul className="space-y-1">
-                            <li className={`text-xs flex items-center ${password.length >= 8 ? 'text-green-600' : 'text-gray-600'}`}>
-                              <div className={`w-3 h-3 rounded-full mr-2 flex items-center justify-center ${password.length >= 8 ? 'bg-green-100' : 'bg-gray-200'}`}>
+                            <li className={`text-xs flex items-center ${password.length >= 8 ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                              <div className={`w-3 h-3 rounded-full mr-2 flex items-center justify-center ${password.length >= 8 ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-200 dark:bg-gray-700'}`}>
                                 {password.length >= 8 ? (
                                   <Check className="w-2 h-2 text-green-600" />
                                 ) : (
@@ -638,12 +643,12 @@ export default function RegisterPage() {
                 
                 {/* Confirm Password Field */}
                 <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Conferma Password
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Lock className="h-5 w-5 text-gray-400" />
+                      <Lock className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                     </div>
                     <input
                       id="confirmPassword"
@@ -653,7 +658,7 @@ export default function RegisterPage() {
                       required
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="block w-full pl-10 pr-10 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                       placeholder="Ripeti la password"
                     />
                     <button
@@ -662,16 +667,16 @@ export default function RegisterPage() {
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     >
                       {showConfirmPassword ? (
-                        <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                        <EyeOff className="h-5 w-5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300" />
                       ) : (
-                        <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                        <Eye className="h-5 w-5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300" />
                       )}
                     </button>
                   </div>
                   
                   {/* Password Match Indicator */}
                   {confirmPassword && (
-                    <p className={`text-xs mt-1 ${password === confirmPassword ? 'text-green-600' : 'text-red-600'}`}>
+                    <p className={`text-xs mt-1 ${password === confirmPassword ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                       {password === confirmPassword ? 'Le password corrispondono' : 'Le password non corrispondono'}
                     </p>
                   )}
@@ -698,13 +703,13 @@ export default function RegisterPage() {
               </button>
 
               {/* Terms and Privacy */}
-              <p className="text-xs text-center text-gray-600">
+              <p className="text-xs text-center text-gray-600 dark:text-gray-300">
                 Creando un account, accetti i nostri{' '}
-                <Link href="/terms" className="text-blue-600 hover:text-blue-700">
+                <Link href="/terms" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
                   Termini di Servizio
                 </Link>{' '}
                 e{' '}
-                <Link href="/privacy" className="text-blue-600 hover:text-blue-700">
+                <Link href="/privacy" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
                   Privacy Policy
                 </Link>
               </p>
@@ -713,11 +718,11 @@ export default function RegisterPage() {
 
           {/* Additional Info */}
           <section className="text-center mt-8">
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-300">
               Hai già un account?{' '}
               <Link
                 href="/login"
-                className="text-blue-600 hover:text-blue-700 font-medium"
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
               >
                 Accedi qui
               </Link>

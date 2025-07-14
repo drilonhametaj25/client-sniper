@@ -70,22 +70,26 @@ export default function UpgradePage() {
         )}
 
         <div className="text-center mb-8">
-          <h2 className="text-xl text-gray-600 mb-2">
-            Piano attuale: <span className="font-semibold capitalize text-gray-900">
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            Scala il tuo business con più lead
+          </h2>
+          <p className="text-xl text-gray-600 mb-6">
+            Piano attuale: <span className="font-semibold capitalize text-blue-600">
               {user?.plan || 'free'}
             </span>
-          </h2>
-          <p className="text-gray-600">
-            Crediti rimanenti: <span className="font-semibold">
-              {user?.credits_remaining || 0}
-            </span>
           </p>
+          <div className="bg-gray-50 rounded-lg p-4 inline-block">
+            <p className="text-gray-700">
+              Crediti rimanenti: <span className="font-semibold text-2xl text-blue-600">
+                {user?.credits_remaining || 0}
+              </span>
+            </p>
+            <p className="text-sm text-gray-600 mt-1">
+              Sblocca più crediti per trovare più clienti
+            </p>
+          </div>
         </div>
 
-        {/* Stats live per social proof */}
-        <div className="mb-8 max-w-md mx-auto">
-          <LiveStats />
-        </div>
 
         <PlanSelector 
           currentPlan={user?.plan || 'free'}
@@ -95,7 +99,7 @@ export default function UpgradePage() {
         {/* Benefits Section */}
         <div className="mt-16 bg-white rounded-lg shadow-lg p-8">
           <h3 className="text-2xl font-bold text-gray-900 text-center mb-8">
-            Perché scegliere TrovaMi Pro?
+            Perché passare a TrovaMi Pro?
           </h3>
           
           <div className="grid md:grid-cols-3 gap-8">
@@ -106,24 +110,11 @@ export default function UpgradePage() {
                 </svg>
               </div>
               <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                Analisi Automatica
+                Risparmia tempo prezioso
               </h4>
               <p className="text-gray-600">
-                Il nostro sistema analizza automaticamente migliaia di siti web per trovare quelli con problemi tecnici
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
-              </div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                CRM Integrato
-              </h4>
-              <p className="text-gray-600">
-                Gestisci i tuoi lead con un CRM completo: note, follow-up, allegati, timeline e stati personalizzati
+                Invece di ore di ricerca manuale, ottieni lead qualificati in pochi click. 
+                Più tempo per la vendita, meno tempo per la ricerca.
               </p>
             </div>
 
@@ -134,26 +125,48 @@ export default function UpgradePage() {
                 </svg>
               </div>
               <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                Lead Qualificati
+                Lead già qualificati
               </h4>
               <p className="text-gray-600">
-                Ogni lead include dettagli tecnici specifici e problemi identificati per facilitare il tuo approccio
+                Ogni lead ha problemi tecnici reali identificati dal nostro sistema. 
+                Sai già cosa proporre al primo contatto.
               </p>
             </div>
 
             <div className="text-center">
               <div className="bg-purple-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                 </svg>
               </div>
               <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                Filtri Avanzati
+                Organizzazione completa
               </h4>
               <p className="text-gray-600">
-                Usa filtri avanzati e ricerca intelligente per trovare esattamente quello che cerchi
+                CRM integrato per gestire tutti i lead: note, follow-up, allegati, 
+                timeline e stati personalizzati per non perdere nessuna opportunità.
               </p>
             </div>
+          </div>
+
+          {/* ROI Section */}
+          <div className="mt-12 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6">
+            <h4 className="text-xl font-semibold text-gray-900 text-center mb-4">
+              💰 Calcolo del valore
+            </h4>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-gray-900 mb-2">25-100</div>
+                <div className="text-sm text-gray-600">Lead qualificati/mese</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-blue-600 mb-2">1 cliente</div>
+                <div className="text-sm text-gray-600">Acquisito ripaga il piano</div>
+              </div>
+            </div>
+            <p className="text-center text-gray-600 mt-4">
+              Se converti anche solo 1 lead in cliente, hai già recuperato l'investimento
+            </p>
           </div>
         </div>
 
@@ -166,10 +179,44 @@ export default function UpgradePage() {
           <div className="max-w-3xl mx-auto space-y-6">
             <div className="bg-white rounded-lg shadow p-6">
               <h4 className="font-semibold text-gray-900 mb-2">
+                Quanto tempo risparmio rispetto alla ricerca manuale?
+              </h4>
+              <p className="text-gray-600">
+                Con TrovaMi Pro eviti ore di ricerca manuale. Quello che prima richiedeva giorni di lavoro, 
+                ora lo ottieni in pochi minuti. Più tempo per vendere, meno tempo per cercare.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-6">
+              <h4 className="font-semibold text-gray-900 mb-2">
                 Come funziona il CRM integrato?
               </h4>
               <p className="text-gray-600">
-                Il piano Pro include un CRM completo per gestire i tuoi lead: puoi aggiungere note, impostare follow-up, caricare allegati, tracciare la timeline delle attività e organizzare i contatti per stato (da contattare, in negoziazione, chiuso, ecc.).
+                Il piano Pro include un CRM completo per gestire i tuoi lead: puoi aggiungere note, 
+                impostare follow-up, caricare allegati, tracciare la timeline delle attività e 
+                organizzare i contatti per stato (da contattare, in negoziazione, chiuso, ecc.).
+              </p>
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-6">
+              <h4 className="font-semibold text-gray-900 mb-2">
+                Che tipo di problemi tecnici identificate?
+              </h4>
+              <p className="text-gray-600">
+                Il nostro sistema identifica: SEO scadente, performance lente, problemi di sicurezza, 
+                design obsoleto, mancanza di pixel di tracking, errori tecnici. Hai già l'argomento 
+                perfetto per il primo contatto.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-6">
+              <h4 className="font-semibold text-gray-900 mb-2">
+                Quanto costa davvero acquisire un cliente?
+              </h4>
+              <p className="text-gray-600">
+                Con TrovaMi Pro hai centinaia di lead qualificati ogni mese. Se converti anche solo 
+                1 lead in cliente, hai già recuperato l'investimento. Il costo per acquisizione 
+                diminuisce drasticamente.
               </p>
             </div>
 
@@ -178,25 +225,8 @@ export default function UpgradePage() {
                 Posso cancellare in qualsiasi momento?
               </h4>
               <p className="text-gray-600">
-                Sì, puoi cancellare la tua sottoscrizione in qualsiasi momento. Continuerai ad avere accesso fino alla fine del periodo di fatturazione.
-              </p>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-6">
-              <h4 className="font-semibold text-gray-900 mb-2">
-                I crediti si accumulano?
-              </h4>
-              <p className="text-gray-600">
-                No, i crediti si rinnovano ogni mese. Se non li usi, non si accumulano al mese successivo.
-              </p>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-6">
-              <h4 className="font-semibold text-gray-900 mb-2">
-                Che tipo di lead ottengo?
-              </h4>
-              <p className="text-gray-600">
-                Ottieni aziende con siti web che hanno problemi tecnici specifici: SEO scadente, performance lente, problemi di sicurezza, design obsoleto, ecc.
+                Sì, puoi cancellare la tua sottoscrizione in qualsiasi momento. 
+                Continuerai ad avere accesso fino alla fine del periodo di fatturazione.
               </p>
             </div>
           </div>

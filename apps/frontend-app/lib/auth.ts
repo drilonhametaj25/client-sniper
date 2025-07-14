@@ -151,13 +151,14 @@ export async function signUp(email: string, password: string) {
 
     if (error) {
       console.error('❌ Errore registrazione:', error)
-      throw error
+      return { success: false, error: error.message, data: null }
     }
 
-    return { data, error: null }
-  } catch (error) {
+    // Ritorna nel formato atteso dal componente
+    return { success: true, error: null, data }
+  } catch (error: any) {
     console.error('❌ Errore registrazione:', error)
-    return { data: null, error }
+    return { success: false, error: error.message || 'Errore durante la registrazione', data: null }
   }
 }
 

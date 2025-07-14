@@ -22,6 +22,7 @@ import {
   ExternalLink
 } from 'lucide-react'
 import NewsletterForm from '@/components/NewsletterForm'
+import ThemeToggle from '@/components/theme/ThemeToggle'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -61,26 +62,27 @@ export default function LoginPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900">
         {/* Header */}
-        <header className="bg-white shadow-sm border-b" role="banner">
+        <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700" role="banner">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
               <Link href="/" className="flex items-center space-x-3" aria-label="Torna alla homepage di TrovaMi">
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                   <Target className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold text-gray-900">TrovaMi</span>
+                <span className="text-xl font-bold text-gray-900 dark:text-white">TrovaMi</span>
               </Link>
               
               <nav className="flex items-center space-x-4" aria-label="Navigazione principale">
                 <Link 
                   href="/tools/public-scan"
-                  className="text-gray-600 hover:text-gray-900 transition-colors"
+                  className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
                 >
                   <Search className="w-4 h-4 inline mr-1" />
                   Analisi Gratuita
                 </Link>
+                <ThemeToggle variant="compact" showLabel={false} />
                 <Link 
                   href="/register"
                   className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
@@ -100,7 +102,7 @@ export default function LoginPage() {
             <div className="mb-6">
               <Link 
                 href="/" 
-                className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors group"
+                className="inline-flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors group"
               >
                 <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
                 Torna alla homepage
@@ -108,26 +110,26 @@ export default function LoginPage() {
             </div>
 
             {/* Login Card */}
-            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 p-8">
               
               {/* Header del form */}
               <div className="text-center mb-8">
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                   <LogIn className="w-8 h-8 text-white" />
                 </div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                   Bentornato!
                 </h1>
-                <p className="text-gray-600">
+                <p className="text-gray-600 dark:text-gray-300">
                   Accedi al tuo account per trovare lead qualificati
                 </p>
               </div>
 
               <form className="space-y-6" onSubmit={handleSubmit}>
                 {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg flex items-start space-x-3">
-                    <div className="w-5 h-5 rounded-full bg-red-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-red-800 text-xs font-bold">!</span>
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 px-4 py-3 rounded-lg flex items-start space-x-3">
+                    <div className="w-5 h-5 rounded-full bg-red-200 dark:bg-red-800 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-red-800 dark:text-red-300 text-xs font-bold">!</span>
                     </div>
                     <div>
                       <p className="font-medium">Errore di login</p>
@@ -138,7 +140,7 @@ export default function LoginPage() {
 
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label htmlFor="email" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                       <Mail className="w-4 h-4 inline mr-2" />
                       Indirizzo Email
                     </label>
@@ -150,13 +152,13 @@ export default function LoginPage() {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-50 hover:bg-white"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-50 dark:bg-gray-700 hover:bg-white dark:hover:bg-gray-600 text-gray-900 dark:text-white"
                       placeholder="la-tua-email@esempio.com"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label htmlFor="password" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                       <Lock className="w-4 h-4 inline mr-2" />
                       Password
                     </label>
@@ -169,12 +171,12 @@ export default function LoginPage() {
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-50 hover:bg-white"
+                        className="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-50 dark:bg-gray-700 hover:bg-white dark:hover:bg-gray-600 text-gray-900 dark:text-white"
                         placeholder="La tua password"
                       />
                       <button
                         type="button"
-                        className="absolute inset-y-0 right-0 pr-4 flex items-center"
+                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                         onClick={() => setShowPassword(!showPassword)}
                       >
                         {showPassword ? (
