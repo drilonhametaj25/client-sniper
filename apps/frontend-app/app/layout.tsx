@@ -95,29 +95,18 @@ export default function RootLayout({
   return (
     <html lang="it" className="h-full">
       <head>
-        {/* Google Analytics 4 */}
-        {process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID && (
-          <>
-            <script
-              async
-              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID}`}
-            />
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
-                  gtag('config', '${process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID}', {
-                    page_title: document.title,
-                    page_location: window.location.href,
-                    send_page_view: true
-                  });
-                `,
-              }}
-            />
-          </>
-        )}
+        {/* Google tag (gtag.js) */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-VE3PVKHR35"></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-VE3PVKHR35');
+            `,
+          }}
+        />
         
         {/* Preconnect per performance */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
