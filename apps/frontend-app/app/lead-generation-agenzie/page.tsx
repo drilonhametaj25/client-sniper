@@ -1,5 +1,6 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
+import Script from 'next/script'
 import { Target, BarChart3, Users, Zap, ArrowRight, CheckCircle } from 'lucide-react'
 import LeadCostComparison from '@/components/LeadCostComparison'
 import UpgradeUrgencyBanner from '@/components/UpgradeUrgencyBanner'
@@ -22,7 +23,46 @@ export const metadata: Metadata = {
 
 export default function LeadGenerationAgenzie() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/30">
+    <>
+      {/* Google Analytics per questa pagina specifica */}
+      <Script
+        src="https://www.googletagmanager.com/gtag/js?id=G-VE3PVKHR35"
+        strategy="afterInteractive"
+      />
+      <Script id="google-analytics" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-VE3PVKHR35', {
+            page_title: 'Lead Generation Agenzie',
+            page_location: window.location.href,
+            send_page_view: true
+          });
+        `}
+      </Script>
+
+      {/* Facebook Pixel per questa pagina specifica */}
+      <Script id="facebook-pixel" strategy="afterInteractive">
+        {`
+          !function(f,b,e,v,n,t,s)
+          {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+          n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+          if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+          n.queue=[];t=b.createElement(e);t.async=!0;
+          t.src=v;s=b.getElementsByTagName(e)[0];
+          s.parentNode.insertBefore(t,s)}(window, document,'script',
+          'https://connect.facebook.net/en_US/fbevents.js');
+          fbq('init', '1073364924333598');
+          fbq('track', 'PageView');
+          fbq('track', 'ViewContent', {
+            content_name: 'Lead Generation Agenzie',
+            content_category: 'Landing Page'
+          });
+        `}
+      </Script>
+
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/30">
       
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
@@ -273,5 +313,6 @@ export default function LeadGenerationAgenzie() {
         </div>
       </section>
     </div>
+    </>
   )
 }

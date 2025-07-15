@@ -9,6 +9,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Script from 'next/script'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/ToastProvider'
 import { validatePassword, validateEmail, getPasswordStrengthColor, getPasswordStrengthBg } from '@/lib/validation'
@@ -105,6 +106,24 @@ export default function RegisterPage() {
   const handlePlanSelect = (planId: string) => {
     setSelectedPlan(planId)
     setStep(2) // Vai ai dati utente
+    
+    // Track piano selezionato
+    if (typeof window !== 'undefined' && window.fbq) {
+      window.fbq('track', 'InitiateCheckout', {
+        content_name: `Piano ${planId}`,
+        content_category: 'Registration',
+        value: plans.find(p => p.id === planId)?.price || 0,
+        currency: 'EUR'
+      })
+    }
+    
+    if (typeof window !== 'undefined' && window.gtag) {
+      window.gtag('event', 'begin_checkout', {
+        event_category: 'Registration',
+        event_label: `Piano ${planId}`,
+        value: plans.find(p => p.id === planId)?.price || 0
+      })
+    }
   }
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -138,6 +157,24 @@ export default function RegisterPage() {
       
       if (!signUpResult.success) {
         throw new Error(signUpResult.error || 'Errore durante la registrazione')
+      }
+
+      // Track successful registration
+      if (typeof window !== 'undefined' && window.fbq) {
+        window.fbq('track', 'CompleteRegistration', {
+          content_name: `Piano ${selectedPlan}`,
+          content_category: 'Registration Complete',
+          value: selectedPlanData?.price || 0,
+          currency: 'EUR'
+        })
+      }
+
+      if (typeof window !== 'undefined' && window.gtag) {
+        window.gtag('event', 'sign_up', {
+          event_category: 'Registration',
+          event_label: `Piano ${selectedPlan}`,
+          value: selectedPlanData?.price || 0
+        })
       }
 
       // Se piano gratuito, vai alla dashboard
@@ -176,6 +213,24 @@ export default function RegisterPage() {
           }
 
           if (url) {
+            // Track payment initiation
+            if (typeof window !== 'undefined' && window.fbq) {
+              window.fbq('track', 'AddPaymentInfo', {
+                content_name: `Piano ${selectedPlan}`,
+                content_category: 'Payment Initiation',
+                value: selectedPlanData?.price || 0,
+                currency: 'EUR'
+              })
+            }
+
+            if (typeof window !== 'undefined' && window.gtag) {
+              window.gtag('event', 'add_payment_info', {
+                event_category: 'Payment',
+                event_label: `Piano ${selectedPlan}`,
+                value: selectedPlanData?.price || 0
+              })
+            }
+
             window.location.href = url
             return
           } else {
@@ -200,6 +255,44 @@ export default function RegisterPage() {
   if (step === 1) {
     return (
       <>
+        {/* Google Analytics per pagina registrazione */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-VE3PVKHR35"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics-register-page" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-VE3PVKHR35', {
+              page_title: 'Registrazione - Selezione Piano',
+              page_location: window.location.href,
+              send_page_view: true
+            });
+          `}
+        </Script>
+
+        {/* Facebook Pixel per pagina registrazione */}
+        <Script id="facebook-pixel-register-page" strategy="afterInteractive">
+          {`
+            !function(f,b,e,v,n,t,s)
+            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+            fbq('init', '1073364924333598');
+            fbq('track', 'PageView');
+            fbq('track', 'ViewContent', {
+              content_name: 'Registrazione - Selezione Piano',
+              content_category: 'Registration Step 1'
+            });
+          `}
+        </Script>
+
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900">
           {/* Header */}
           <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700" role="banner">
