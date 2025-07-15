@@ -12,7 +12,7 @@ import { Metadata } from 'next'
 export default function HelpCenter() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
-  const [openFAQ, setOpenFAQ] = useState<number | null>(null)
+  const [openFAQ, setOpenFAQ] = useState<number | string | null>(null)
 
   const categories = [
     { id: 'all', name: 'Tutte', icon: '📚' },
@@ -77,8 +77,37 @@ export default function HelpCenter() {
       - Priorità sui lead di qualità
       - API access
       - Supporto prioritario
+      - **Servizi digitali suggeriti per ogni lead**
       
       I crediti non si accumulano - ogni mese ricevi nuovi lead freschi.`
+    },
+    {
+      id: 'pro-services',
+      category: 'plans',
+      question: 'Cosa sono i "servizi digitali suggeriti" del piano PRO?',
+      answer: `**Esclusiva del piano PRO:**
+      
+      Per ogni lead analizzato, ricevi automaticamente:
+      
+      **📋 Lista servizi personalizzata**
+      - Servizi specifici basati sui problemi identificati
+      - Prezzi ottimizzati per il mercato locale
+      - Template email già pronti
+      - Preventivi pre-compilati
+      
+      **💰 Esempi di servizi suggeriti:**
+      - Audit SEO Tecnico: €800-€1.500
+      - Ottimizzazione Performance: €600-€1.200
+      - Compliance GDPR: €400-€800
+      - Redesign Responsivo: €2.000-€5.000
+      
+      **📈 Risultati:**
+      - +340% tasso di conversione
+      - Valore medio proposta: €1.800
+      - -85% tempo per preventivo
+      
+      **🎯 Come funziona:**
+      Il sistema analizza i problemi tecnici del lead e ti suggerisce automaticamente i servizi più appropriati da offrire con prezzi che massimizzano l'accettazione.`
     },
     {
       id: 4,
@@ -281,7 +310,7 @@ export default function HelpCenter() {
     return matchesCategory && matchesSearch
   })
 
-  const toggleFAQ = (id: number) => {
+  const toggleFAQ = (id: number | string) => {
     setOpenFAQ(openFAQ === id ? null : id)
   }
 

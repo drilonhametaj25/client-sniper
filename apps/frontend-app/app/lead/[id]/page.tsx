@@ -38,6 +38,7 @@ import {
   Star,
   Hash,
 } from "lucide-react";
+import LeadDigitalServices from "@/components/LeadDigitalServices";
 
 interface Lead {
   id: string;
@@ -2539,6 +2540,9 @@ export default function LeadDetailPage() {
                 )}
               </div>
             </div>
+
+            {/* Sezione Servizi Digitali per utenti PRO */}
+            <LeadDigitalServices lead={lead} />
 
             {/* Riepilogo Finale */}
             <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-6">

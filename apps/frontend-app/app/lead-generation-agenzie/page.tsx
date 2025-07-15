@@ -293,6 +293,121 @@ export default function LeadGenerationAgenzie() {
         </div>
       </section>
 
+      {/* Servizi Digitali PRO per Agenzie - NUOVA */}
+      <section className="py-20 bg-gradient-to-br from-indigo-50 to-purple-50">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center px-4 py-2 bg-indigo-100 border border-indigo-200 rounded-full text-indigo-700 text-sm font-medium mb-6">
+              <Zap className="w-4 h-4 mr-2" />
+              Solo Account PRO
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+              Servizi Digitali <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Personalizzati</span>
+            </h2>
+            <p className="text-xl text-gray-600 max-w-4xl mx-auto">
+              Ogni lead viene analizzato per <strong>suggerire automaticamente i servizi digitali più appropriati</strong> 
+              con prezzi ottimizzati per il mercato locale, aumentando il tasso di conversione delle tue proposte
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-12 items-center mb-16">
+            {/* Lista servizi */}
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-6">Servizi Suggeriti per Ogni Lead</h3>
+              <div className="space-y-4">
+                <div className="flex items-start">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mt-1 mr-4">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">Audit SEO Tecnico</h4>
+                    <p className="text-gray-600">€800-€1.500 per analisi completa</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mt-1 mr-4">
+                    <CheckCircle className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">Ottimizzazione Performance</h4>
+                    <p className="text-gray-600">€600-€1.200 per miglioramento velocità</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mt-1 mr-4">
+                    <CheckCircle className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">Compliance GDPR</h4>
+                    <p className="text-gray-600">€400-€800 per implementazione</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mt-1 mr-4">
+                    <CheckCircle className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">Redesign Responsivo</h4>
+                    <p className="text-gray-600">€2.000-€5.000 per rifacimento</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Statistiche di conversione */}
+            <div className="bg-white rounded-3xl p-8 shadow-xl">
+              <h3 className="text-2xl font-bold text-gray-900 mb-6">Risultati delle Agenzie PRO</h3>
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Tasso di conversione</span>
+                  <span className="text-2xl font-bold text-green-600">+340%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Valore medio proposta</span>
+                  <span className="text-2xl font-bold text-blue-600">€2.800</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Tempo per preventivo</span>
+                  <span className="text-2xl font-bold text-orange-600">-85%</span>
+                </div>
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-900 font-semibold">Fatturato medio mensile</span>
+                    <span className="text-3xl font-bold text-purple-600">€18k</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-3xl p-8 text-white text-center">
+            <h3 className="text-2xl font-bold mb-4">💡 Intelligenza Artificiale per Prezzi Ottimali</h3>
+            <p className="text-lg mb-6 text-indigo-100">
+              Il sistema analizza mercato locale, dimensione azienda e criticità specifiche per suggerire 
+              <strong> prezzi ottimizzati che massimizzano accettazione e profitto</strong>
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link 
+                href="/register" 
+                className="inline-flex items-center px-6 py-3 bg-white hover:bg-gray-100 text-indigo-600 font-semibold rounded-xl transition-all duration-300"
+              >
+                Prova Account PRO
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Link>
+              <Link 
+                href="/digital-services" 
+                className="inline-flex items-center px-6 py-3 bg-indigo-500 hover:bg-indigo-400 text-white font-semibold rounded-xl transition-all duration-300"
+              >
+                Catalogo Completo
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Finale */}
       <section className="py-20 bg-gradient-to-r from-purple-600 to-blue-600">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">

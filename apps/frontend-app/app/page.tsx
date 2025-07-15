@@ -322,6 +322,97 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Sezione Servizi Digitali PRO - NUOVA */}
+      <section className="py-24 bg-gradient-to-br from-purple-50 to-indigo-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center px-4 py-2 bg-purple-100 border border-purple-200 rounded-full text-purple-700 text-sm font-medium mb-6">
+              <Zap className="w-4 h-4 mr-2" />
+              Esclusivo Account PRO
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+              Servizi Digitali <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600">Suggeriti</span>
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Per ogni lead analizzato, <strong>gli utenti PRO ricevono suggerimenti specifici</strong> sui servizi digitali da offrire 
+              con prezzi consigliati per massimizzare le conversioni
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Esempio Servizio SEO */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 border border-purple-200/50 hover:shadow-xl transition-all duration-500">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-6">
+                <BarChart3 className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Audit SEO Completo</h3>
+              <p className="text-gray-600 mb-4">
+                Analisi tecnica completa con report dettagliato e piano di ottimizzazione
+              </p>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Prezzo suggerito:</span>
+                <span className="text-lg font-bold text-green-600">€800 - €1.500</span>
+              </div>
+            </div>
+
+            {/* Esempio Servizio Performance */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 border border-purple-200/50 hover:shadow-xl transition-all duration-500">
+              <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center mb-6">
+                <Zap className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Ottimizzazione Performance</h3>
+              <p className="text-gray-600 mb-4">
+                Miglioramento velocità di caricamento e Core Web Vitals
+              </p>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Prezzo suggerito:</span>
+                <span className="text-lg font-bold text-orange-600">€600 - €1.200</span>
+              </div>
+            </div>
+
+            {/* Esempio Servizio GDPR */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 border border-purple-200/50 hover:shadow-xl transition-all duration-500">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6">
+                <Shield className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Compliance GDPR</h3>
+              <p className="text-gray-600 mb-4">
+                Implementazione cookie policy, privacy e conformità normativa
+              </p>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Prezzo suggerito:</span>
+                <span className="text-lg font-bold text-blue-600">€400 - €800</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-12 text-center">
+            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-8 text-white">
+              <h3 className="text-2xl font-bold mb-4">🚀 Massimizza le Tue Conversioni</h3>
+              <p className="text-lg mb-6 text-purple-100">
+                Gli utenti PRO ricevono per ogni lead una <strong>lista personalizzata di servizi consigliati</strong> 
+                con prezzi ottimizzati per il mercato locale, aumentando il tasso di conversione del 340%
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link 
+                  href="/register" 
+                  className="inline-flex items-center px-6 py-3 bg-white hover:bg-gray-100 text-purple-600 font-semibold rounded-xl transition-all duration-300"
+                >
+                  Upgrading a PRO
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </Link>
+                <Link 
+                  href="/digital-services" 
+                  className="inline-flex items-center px-6 py-3 bg-purple-500 hover:bg-purple-400 text-white font-semibold rounded-xl transition-all duration-300"
+                >
+                  Esplora Catalogo
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Pricing Section */}
       <section id="pricing" className="py-24 bg-gradient-to-b from-white to-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
