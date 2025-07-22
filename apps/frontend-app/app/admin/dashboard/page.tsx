@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase'
 import { debugUserSession } from '@/lib/auth'
 import { LeadStatusBadge } from '@/components/LeadStatusBadge'
 import { LeadWithCRM, CRMStatusType } from '@/lib/types/crm'
+import LeadInsights from '@/components/LeadInsights'
 import { 
   Target, 
   Users, 
@@ -29,7 +30,8 @@ import {
   Play,
   Cog,
   ExternalLink,
-  MessageCircle
+  MessageCircle,
+  ChevronDown
 } from 'lucide-react'
 
 interface Lead extends LeadWithCRM {
@@ -54,6 +56,20 @@ export default function AdminDashboard() {
   const [filterRole, setFilterRole] = useState<string>('')
   const [selectedLeads, setSelectedLeads] = useState<string[]>([])
   const [updatingCRM, setUpdatingCRM] = useState<string | null>(null)
+  const [expandedLeads, setExpandedLeads] = useState<Set<string>>(new Set())
+
+  // Gestisce l'espansione/contrazione dei dettagli lead
+  const toggleLeadExpansion = (leadId: string) => {
+    setExpandedLeads(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(leadId)) {
+        newSet.delete(leadId)
+      } else {
+        newSet.add(leadId)
+      }
+      return newSet
+    })
+  }
 
   // Gestione aggiornamento rapido stato CRM
   const handleQuickStatusUpdate = async (leadId: string, newStatus: CRMStatusType) => {
@@ -425,6 +441,9 @@ export default function AdminDashboard() {
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <span className="sr-only">Expand</span>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Business
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -451,25 +470,38 @@ export default function AdminDashboard() {
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {leads.map((lead) => (
-                  <tr key={lead.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {lead.business_name}
-                        </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">{lead.category}</div>
-                        {/* Per utenti PRO, mostra il badge CRM sotto il nome */}
-                        {user?.plan === 'pro' && (
-                          <div className="mt-1">
-                            <LeadStatusBadge 
-                              status={lead.crm_status} 
-                              nextFollowUp={lead.next_follow_up}
-                              size="sm"
-                            />
+                  <>
+                    {/* Riga principale */}
+                    <tr key={lead.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <button
+                          onClick={() => toggleLeadExpansion(lead.id)}
+                          className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                          title="Mostra insights"
+                        >
+                          <ChevronDown className={`h-4 w-4 transform transition-transform ${
+                            expandedLeads.has(lead.id) ? 'rotate-180' : ''
+                          }`} />
+                        </button>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {lead.business_name}
                           </div>
-                        )}
-                      </div>
-                    </td>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">{lead.category}</div>
+                          {/* Per utenti PRO, mostra il badge CRM sotto il nome */}
+                          {user?.plan === 'pro' && (
+                            <div className="mt-1">
+                              <LeadStatusBadge 
+                                status={lead.crm_status} 
+                                nextFollowUp={lead.next_follow_up}
+                                size="sm"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900 dark:text-white">{lead.city}</div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">{lead.phone}</div>
@@ -553,6 +585,19 @@ export default function AdminDashboard() {
                       </div>
                     </td>
                   </tr>
+                  
+                  {/* Riga espandibile per gli insights */}
+                  {expandedLeads.has(lead.id) && (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50">
+                        <LeadInsights 
+                          lead={lead} 
+                          userPlan={(user?.plan as 'free' | 'starter' | 'pro') || 'free'}
+                        />
+                      </td>
+                    </tr>
+                  )}
+                </>
                 ))}
               </tbody>
             </table>

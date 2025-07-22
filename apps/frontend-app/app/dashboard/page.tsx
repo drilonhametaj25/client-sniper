@@ -14,6 +14,7 @@ import { getDaysUntilReset, formatResetDate } from '@/lib/auth'
 import { createPortal } from 'react-dom'
 import { LeadStatusBadge } from '@/components/LeadStatusBadge'
 import { LeadWithCRM, CRMStatusType } from '@/lib/types/crm'
+import LeadInsights from '@/components/LeadInsights'
 import { 
   Target, 
   CreditCard,
@@ -1783,6 +1784,14 @@ export default function ClientDashboard() {
                           </div>
                         )}
                       </div>
+
+                      {/* Insights e suggerimenti personalizzati */}
+                      {isUnlocked && (
+                        <LeadInsights 
+                          lead={lead} 
+                          userPlan={(userProfile?.plan as 'free' | 'starter' | 'pro') || 'free'}
+                        />
+                      )}
 
                       {/* Score e Actions */}
                       <div className="flex items-center space-x-3">

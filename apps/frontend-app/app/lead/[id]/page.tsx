@@ -39,6 +39,7 @@ import {
   Hash,
 } from "lucide-react";
 import LeadDigitalServices from "@/components/LeadDigitalServices";
+import ContactTemplates from "@/components/ContactTemplates";
 
 interface Lead {
   id: string;
@@ -2543,6 +2544,12 @@ export default function LeadDetailPage() {
 
             {/* Sezione Servizi Digitali per utenti PRO */}
             <LeadDigitalServices lead={lead} />
+
+            {/* Template per primo contatto */}
+            <ContactTemplates 
+              lead={lead} 
+              userPlan={(user?.plan as 'free' | 'starter' | 'pro') || 'free'}
+            />
 
             {/* Riepilogo Finale */}
             <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-6">
