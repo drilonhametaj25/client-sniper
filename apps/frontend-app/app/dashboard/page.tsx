@@ -34,6 +34,7 @@ import {
   Eye,
   MessageCircle
 } from 'lucide-react'
+import AdvancedFilters, { AdvancedFiltersState } from '@/components/AdvancedFilters'
 import { TourTarget } from '@/components/onboarding/TourTarget'
 import UpgradeUrgencyBanner from '@/components/UpgradeUrgencyBanner'
 
@@ -77,12 +78,24 @@ export default function ClientDashboard() {
   const [showFilters, setShowFilters] = useState(false)
   const [showOnlyUnlocked, setShowOnlyUnlocked] = useState(false) // Nuovo filtro per lead sbloccati
 
-  // Filtri avanzati
-  const [filterNoWebsite, setFilterNoWebsite] = useState(false)
-  const [filterNoPixel, setFilterNoPixel] = useState(false)
-  const [filterNoAnalytics, setFilterNoAnalytics] = useState(false)
-  const [filterNoPrivacy, setFilterNoPrivacy] = useState(false)
-  const [filterLowScore, setFilterLowScore] = useState(false)
+  // Filtri avanzati - sostituiti con sistema unificato
+  const [advancedFilters, setAdvancedFilters] = useState({
+    scoreRange: { min: 0, max: 100 },
+    hasEmail: false,
+    hasPhone: false,
+    technicalIssues: {
+      noGoogleAds: false,
+      noFacebookPixel: false,
+      slowLoading: false,
+      noSSL: false
+    },
+    crmFilters: {
+      onlyUncontacted: false,
+      followUpOverdue: false,
+      crmStatus: 'all'
+    }
+  })
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
 
   // Ordinamento
   const [sortBy, setSortBy] = useState<'score' | 'created_at' | 'last_seen_at' | 'business_name'>('score')
@@ -143,7 +156,8 @@ export default function ClientDashboard() {
       
       
       // ⚡ CACHE semplice per evitare richieste duplicate
-      const cacheKey = `leads-${page}-${filterCategory}-${filterCity}-${filterRole}-${searchTerm}-${showOnlyUnlocked}-${filterNoWebsite}-${filterNoPixel}-${filterNoAnalytics}-${filterNoPrivacy}-${filterLowScore}-${sortBy}-${sortOrder}`
+      const filtersHash = JSON.stringify(advancedFilters)
+      const cacheKey = `leads-${page}-${filterCategory}-${filterCity}-${filterRole}-${searchTerm}-${showOnlyUnlocked}-${filtersHash}-${sortBy}-${sortOrder}`
       if (useCache && localStorage.getItem(cacheKey)) {
         try {
           const cached = JSON.parse(localStorage.getItem(cacheKey)!)
@@ -175,11 +189,21 @@ export default function ClientDashboard() {
         ...(filterRole && { neededRoles: filterRole }),
         ...(searchTerm && { search: searchTerm }),
         ...(showOnlyUnlocked && { showOnlyUnlocked: '1' }),
-        ...(filterNoWebsite && { noWebsite: '1' }),
-        ...(filterNoPixel && { noPixel: '1' }),
-        ...(filterNoAnalytics && { noAnalytics: '1' }),
-        ...(filterNoPrivacy && { noPrivacy: '1' }),
-        ...(filterLowScore && { lowScore: '1' }),
+        // Filtri avanzati - range punteggio
+        ...(advancedFilters.scoreRange.min > 0 && { scoreMin: advancedFilters.scoreRange.min.toString() }),
+        ...(advancedFilters.scoreRange.max < 100 && { scoreMax: advancedFilters.scoreRange.max.toString() }),
+        // Filtri contatti
+        ...(advancedFilters.hasEmail && { hasEmail: '1' }),
+        ...(advancedFilters.hasPhone && { hasPhone: '1' }),
+        // Problemi tecnici
+        ...(advancedFilters.technicalIssues.noGoogleAds && { noGoogleAds: '1' }),
+        ...(advancedFilters.technicalIssues.noFacebookPixel && { noFacebookPixel: '1' }),
+        ...(advancedFilters.technicalIssues.slowLoading && { slowLoading: '1' }),
+        ...(advancedFilters.technicalIssues.noSSL && { noSSL: '1' }),
+        // Filtri CRM
+        ...(advancedFilters.crmFilters.onlyUncontacted && { onlyUncontacted: '1' }),
+        ...(advancedFilters.crmFilters.followUpOverdue && { followUpOverdue: '1' }),
+        ...(advancedFilters.crmFilters.crmStatus !== 'all' && { crmStatus: advancedFilters.crmFilters.crmStatus }),
         sortBy: sortBy,
         sortOrder: sortOrder
       })
@@ -242,6 +266,82 @@ export default function ClientDashboard() {
       setLoadingData(false)
     }
   }
+
+  // Funzione per applicare filtri avanzati lato client (fallback)
+  const applyAdvancedFilters = (leadsToFilter: Lead[]) => {
+    return leadsToFilter.filter(lead => {
+      // Range punteggio
+      if (lead.score < advancedFilters.scoreRange.min || lead.score > advancedFilters.scoreRange.max) {
+        return false
+      }
+      
+      // Filtri contatti
+      if (advancedFilters.hasEmail && (!lead.email || lead.email.trim() === '')) {
+        return false
+      }
+      if (advancedFilters.hasPhone && (!lead.phone || lead.phone.trim() === '')) {
+        return false
+      }
+      
+      // Problemi tecnici - controlli sull'analysis
+      if (advancedFilters.technicalIssues.noGoogleAds) {
+        const hasGoogleAds = lead.analysis?.tracking?.hasGoogleAds === true
+        if (hasGoogleAds) return false
+      }
+      
+      if (advancedFilters.technicalIssues.noFacebookPixel) {
+        const hasFacebookPixel = lead.analysis?.tracking?.hasFacebookPixel === true
+        if (hasFacebookPixel) return false
+      }
+      
+      if (advancedFilters.technicalIssues.slowLoading) {
+        const loadTime = lead.analysis?.performance?.loadTime
+        if (!loadTime || loadTime < 3.0) return false
+      }
+      
+      if (advancedFilters.technicalIssues.noSSL) {
+        const hasSSL = lead.analysis?.security?.hasSSL === true
+        if (hasSSL) return false
+      }
+      
+      // Filtri CRM (solo per utenti PRO)
+      if (userProfile?.plan === 'pro') {
+        if (advancedFilters.crmFilters.onlyUncontacted) {
+          const crmStatus = (lead as LeadWithCRM).crm_status
+          if (crmStatus && crmStatus !== 'new') return false
+        }
+        
+        if (advancedFilters.crmFilters.followUpOverdue) {
+          const nextFollowUp = (lead as LeadWithCRM).next_follow_up
+          if (!nextFollowUp) return false
+          
+          const today = new Date().toISOString().split('T')[0]
+          if (nextFollowUp >= today) return false
+        }
+        
+        if (advancedFilters.crmFilters.crmStatus !== 'all') {
+          const crmStatus = (lead as LeadWithCRM).crm_status
+          if (crmStatus !== advancedFilters.crmFilters.crmStatus) return false
+        }
+      }
+      
+      return true
+    })
+  }
+
+  // Carica filtri salvati dal localStorage all'avvio
+  useEffect(() => {
+    try {
+      const savedFilters = localStorage.getItem('advancedFilters')
+      if (savedFilters) {
+        const parsedFilters = JSON.parse(savedFilters)
+        setAdvancedFilters(parsedFilters)
+      }
+    } catch (error) {
+      console.warn('Errore caricando filtri salvati:', error)
+      localStorage.removeItem('advancedFilters')
+    }
+  }, [])
 
   // ⚡ ULTRA-OTTIMIZZATO: Redirect ottimizzato per performance
   useEffect(() => {
@@ -308,7 +408,7 @@ export default function ClientDashboard() {
     }, 300) // Debounce di 300ms
     
     return () => clearTimeout(timeoutId)
-  }, [filterCategory, filterCity, filterRole, searchTerm, showOnlyUnlocked, filterNoWebsite, filterNoPixel, filterNoAnalytics, filterNoPrivacy, filterLowScore, sortBy, sortOrder])
+  }, [filterCategory, filterCity, filterRole, searchTerm, showOnlyUnlocked, advancedFilters, sortBy, sortOrder])
 
   // Stato per indicatore di ricerca
   const [isSearching, setIsSearching] = useState(false)
@@ -1433,31 +1533,17 @@ export default function ClientDashboard() {
                     </select>
                   </div>
                 </div>
-                {/* Filtri avanzati */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                  <div className="flex items-center space-x-2">
-                    <input type="checkbox" id="filterNoWebsite" checked={filterNoWebsite} onChange={e => setFilterNoWebsite(e.target.checked)} />
-                    <label htmlFor="filterNoWebsite" className="text-sm text-gray-700 dark:text-gray-300">Senza sito web</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input type="checkbox" id="filterNoPixel" checked={filterNoPixel} onChange={e => setFilterNoPixel(e.target.checked)} />
-                    <label htmlFor="filterNoPixel" className="text-sm text-gray-700 dark:text-gray-300">Senza pixel tracking</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input type="checkbox" id="filterNoAnalytics" checked={filterNoAnalytics} onChange={e => setFilterNoAnalytics(e.target.checked)} />
-                    <label htmlFor="filterNoAnalytics" className="text-sm text-gray-700 dark:text-gray-300">Senza analytics</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input type="checkbox" id="filterNoPrivacy" checked={filterNoPrivacy} onChange={e => setFilterNoPrivacy(e.target.checked)} />
-                    <label htmlFor="filterNoPrivacy" className="text-sm text-gray-700 dark:text-gray-300">Senza privacy policy</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input type="checkbox" id="filterLowScore" checked={filterLowScore} onChange={e => setFilterLowScore(e.target.checked)} />
-                    <label htmlFor="filterLowScore" className="text-sm text-gray-700 dark:text-gray-300">Score basso (&lt;= 40)</label>
-                  </div>
-                </div>
               </div>
             )}
+
+            {/* Nuovo Sistema Filtri Avanzati */}
+            <AdvancedFilters
+              isOpen={showAdvancedFilters}
+              onToggle={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              filters={advancedFilters}
+              onFiltersChange={(filters: AdvancedFiltersState) => setAdvancedFilters(filters)}
+              leadCount={leads.length}
+            />
           </TourTarget>
 
           {/* Lista Lead */}
@@ -1467,6 +1553,10 @@ export default function ClientDashboard() {
               let filteredLeads = showOnlyUnlocked 
                 ? leads.filter(lead => unlockedLeads.has(lead.id))
                 : leads
+
+              // Applica filtri avanzati lato client (in aggiunta a quelli server-side)
+              // Questo serve come fallback e per garantire consistenza
+              filteredLeads = applyAdvancedFilters(filteredLeads)
 
               // Mantieni l'ordine naturale quando non usiamo il filtro "solo sbloccati"
               // Il riordinamento avviene solo quando si attiva il toggle specifico

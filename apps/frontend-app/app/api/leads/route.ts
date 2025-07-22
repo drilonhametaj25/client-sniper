@@ -36,12 +36,18 @@ export async function GET(request: NextRequest) {
     const minScore = searchParams.get('minScore')
     const maxScore = searchParams.get('maxScore')
     const showOnlyUnlocked = searchParams.get('showOnlyUnlocked') === '1'
-    // Filtri avanzati
-    const noWebsite = searchParams.get('noWebsite') === '1'
-    const noPixel = searchParams.get('noPixel') === '1'
-    const noAnalytics = searchParams.get('noAnalytics') === '1'
-    const noPrivacy = searchParams.get('noPrivacy') === '1'
-    const lowScore = searchParams.get('lowScore') === '1'
+    // Nuovi filtri avanzati
+    const scoreMin = searchParams.get('scoreMin')
+    const scoreMax = searchParams.get('scoreMax')
+    const hasEmail = searchParams.get('hasEmail') === '1'
+    const hasPhone = searchParams.get('hasPhone') === '1'
+    const noGoogleAds = searchParams.get('noGoogleAds') === '1'
+    const noFacebookPixel = searchParams.get('noFacebookPixel') === '1'
+    const slowLoading = searchParams.get('slowLoading') === '1'
+    const noSSL = searchParams.get('noSSL') === '1'
+    const onlyUncontacted = searchParams.get('onlyUncontacted') === '1'
+    const followUpOverdue = searchParams.get('followUpOverdue') === '1'
+    const crmStatus = searchParams.get('crmStatus')
     
     // Parametri di ordinamento
     const sortBy = searchParams.get('sortBy') || 'score'
@@ -178,34 +184,143 @@ export async function GET(request: NextRequest) {
     if (category) {
       query = query.eq('category', category)
     }
+    
+    // Range punteggio (più specifico dei filtri singoli)
+    if (scoreMin) {
+      query = query.gte('score', parseInt(scoreMin))
+    }
+    if (scoreMax) {
+      query = query.lte('score', parseInt(scoreMax))
+    }
     if (minScore) {
       query = query.gte('score', parseInt(minScore))
     }
     if (maxScore) {
       query = query.lte('score', parseInt(maxScore))
     }
+    
     if (city) {
       query = query.ilike('city', `%${city}%`)
     }
-    // ⚡ FILTRI AVANZATI
-    if (noWebsite) {
-      query = query.or('website_url.is.null,website_url.eq.,website_url.eq,null')
+    
+    // Filtri contatti
+    if (hasEmail) {
+      query = query.not('email', 'is', null).not('email', 'eq', '')
     }
-    if (noPixel) {
-      query = query.or('analysis->has_tracking_pixel.eq.false,analysis->has_tracking_pixel.is.null')
+    if (hasPhone) {
+      query = query.not('phone', 'is', null).not('phone', 'eq', '')
     }
-    if (noAnalytics) {
-      query = query.or('analysis->tracking->>hasGoogleAnalytics.eq.false,analysis->tracking->>hasGoogleAnalytics.is.null')
+    
+    // ⚡ FILTRI TECNICI AVANZATI
+    if (noGoogleAds) {
+      query = query.or('analysis->tracking->>hasGoogleAds.eq.false,analysis->tracking->>hasGoogleAds.is.null')
     }
-    if (noPrivacy) {
-      query = query.or('analysis->gdpr->>hasPrivacyPolicy.eq.false,analysis->gdpr->>hasPrivacyPolicy.is.null')
+    if (noFacebookPixel) {
+      query = query.or('analysis->tracking->>hasFacebookPixel.eq.false,analysis->tracking->>hasFacebookPixel.is.null')
     }
-    if (lowScore) {
-      query = query.lte('score', 40)
+    if (slowLoading) {
+      query = query.gte('analysis->performance->>loadTime', 3.0)
+    }
+    if (noSSL) {
+      query = query.or('analysis->security->>hasSSL.eq.false,analysis->security->>hasSSL.is.null')
     }
     // ⚡ OTTIMIZZAZIONE: Ricerca testuale solo su campi indicizzati
     if (search) {
       query = query.or(`business_name.ilike.%${search}%,city.ilike.%${search}%`)
+    }
+    
+    // 🔥 FILTRI CRM - solo per utenti PRO
+    if (userProfile.plan === 'pro' && (onlyUncontacted || followUpOverdue || (crmStatus && crmStatus !== 'all'))) {
+      // Ottieni tutti i lead con stati CRM per questo utente
+      const { data: crmData, error: crmError } = await supabaseAdmin
+        .from('crm_entries')
+        .select('lead_id, status, follow_up_date')
+        .eq('user_id', user.id)
+      
+      if (crmError) {
+        console.warn('Errore filtri CRM:', crmError)
+      } else {
+        const crmMap = new Map(crmData?.map(crm => [crm.lead_id, crm]) || [])
+        let filteredLeadIds: string[] = []
+        
+        if (onlyUncontacted) {
+          // Lead senza entry CRM o con status 'to_contact'/'new'  
+          const allLeadIds = await supabaseAdmin
+            .from('leads')
+            .select('id')
+            .then(({ data }) => data?.map(l => l.id) || [])
+          
+          filteredLeadIds = allLeadIds.filter(leadId => {
+            const crmEntry = crmMap.get(leadId)
+            return !crmEntry || crmEntry.status === 'to_contact' || !crmEntry.status
+          })
+        }
+        
+        if (followUpOverdue) {
+          const today = new Date().toISOString().split('T')[0]
+          const overdueLeads = Array.from(crmMap.entries())
+            .filter(([_, crm]) => crm.follow_up_date && crm.follow_up_date < today)
+            .map(([leadId, _]) => leadId)
+          
+          if (filteredLeadIds.length > 0) {
+            filteredLeadIds = filteredLeadIds.filter(id => overdueLeads.includes(id))
+          } else {
+            filteredLeadIds = overdueLeads
+          }
+        }
+        
+        if (crmStatus && crmStatus !== 'all') {
+          // Mappa status frontend a DB
+          const dbStatus = (() => {
+            switch (crmStatus) {
+              case 'new': return 'to_contact'
+              case 'contacted': return ['on_hold', 'follow_up']
+              case 'in_negotiation': return 'in_negotiation'
+              case 'won': return 'closed_positive'
+              case 'lost': return 'closed_negative'
+              default: return null
+            }
+          })()
+          
+          const statusLeads = Array.from(crmMap.entries())
+            .filter(([_, crm]) => {
+              if (Array.isArray(dbStatus)) {
+                return dbStatus.includes(crm.status)
+              }
+              return crm.status === dbStatus
+            })
+            .map(([leadId, _]) => leadId)
+          
+          if (filteredLeadIds.length > 0) {
+            filteredLeadIds = filteredLeadIds.filter(id => statusLeads.includes(id))
+          } else {
+            filteredLeadIds = statusLeads
+          }
+        }
+        
+        if (filteredLeadIds.length === 0) {
+          // Nessun lead soddisfa i criteri CRM
+          return NextResponse.json({
+            success: true,
+            data: {
+              leads: [],
+              user_profile: {
+                role: userProfile.role,
+                plan: userProfile.plan,
+                credits_remaining: userProfile.credits_remaining
+              },
+              pagination: {
+                page,
+                limit,
+                total: 0,
+                totalPages: 0
+              }
+            }
+          })
+        }
+        
+        query = query.in('id', filteredLeadIds)
+      }
     }
     // ⚡ OTTIMIZZAZIONE: Paginazione e ordinamento efficiente
     // Applica ordinamento dinamico
