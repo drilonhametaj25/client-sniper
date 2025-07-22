@@ -10,6 +10,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { debugUserSession } from '@/lib/auth'
+import { LeadStatusBadge } from '@/components/LeadStatusBadge'
+import { LeadWithCRM, CRMStatusType } from '@/lib/types/crm'
 import { 
   Target, 
   Users, 
@@ -25,20 +27,15 @@ import {
   Shield,
   BarChart3,
   Play,
-  Cog
+  Cog,
+  ExternalLink,
+  MessageCircle
 } from 'lucide-react'
 
-interface Lead {
-  id: string
-  business_name: string
-  website_url: string
+interface Lead extends LeadWithCRM {
   phone: string
-  city: string
-  category: string
-  score: number
   needed_roles: string[]
   issues: string[]
-  created_at: string
 }
 
 interface Stats {
@@ -56,6 +53,59 @@ export default function AdminDashboard() {
   const [loadingData, setLoadingData] = useState(true)
   const [filterRole, setFilterRole] = useState<string>('')
   const [selectedLeads, setSelectedLeads] = useState<string[]>([])
+  const [updatingCRM, setUpdatingCRM] = useState<string | null>(null)
+
+  // Gestione aggiornamento rapido stato CRM
+  const handleQuickStatusUpdate = async (leadId: string, newStatus: CRMStatusType) => {
+    if (!user) return
+    
+    setUpdatingCRM(leadId)
+    
+    try {
+      // Ottieni il token corrente
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        alert('Sessione scaduta, effettua nuovamente il login')
+        return
+      }
+
+      const response = await fetch('/api/crm/quick-update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          leadId,
+          status: newStatus,
+          notes: `Stato aggiornato da admin dashboard a ${newStatus}`
+        })
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        // Aggiorna lo stato locale del lead
+        setLeads(prevLeads => 
+          prevLeads.map(lead => 
+            lead.id === leadId 
+              ? { ...lead, crm_status: newStatus }
+              : lead
+          )
+        )
+        
+        // Mostra feedback positivo
+        alert(`Status aggiornato con successo a "${newStatus}"`)
+      } else {
+        alert(`Errore: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Errore aggiornamento CRM:', error)
+      alert('Errore durante l\'aggiornamento dello stato CRM')
+    } finally {
+      setUpdatingCRM(null)
+    }
+  }
 
   // Redirect se non admin
   useEffect(() => {
@@ -383,6 +433,11 @@ export default function AdminDashboard() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Score
                   </th>
+                  {user?.plan === 'pro' && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      CRM Status
+                    </th>
+                  )}
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Needed Roles
                   </th>
@@ -403,6 +458,16 @@ export default function AdminDashboard() {
                           {lead.business_name}
                         </div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">{lead.category}</div>
+                        {/* Per utenti PRO, mostra il badge CRM sotto il nome */}
+                        {user?.plan === 'pro' && (
+                          <div className="mt-1">
+                            <LeadStatusBadge 
+                              status={lead.crm_status} 
+                              nextFollowUp={lead.next_follow_up}
+                              size="sm"
+                            />
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -414,6 +479,35 @@ export default function AdminDashboard() {
                         {lead.score}
                       </span>
                     </td>
+                    {user?.plan === 'pro' && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col gap-2">
+                          <LeadStatusBadge 
+                            status={lead.crm_status} 
+                            nextFollowUp={lead.next_follow_up}
+                          />
+                          {/* Azioni rapide CRM */}
+                          <div className="flex gap-1">
+                            {lead.crm_status === 'new' && (
+                              <button
+                                onClick={() => handleQuickStatusUpdate(lead.id, 'contacted')}
+                                disabled={updatingCRM === lead.id}
+                                className="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded border border-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {updatingCRM === lead.id ? '...' : 'Contatta'}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => router.push(`/crm?leadId=${lead.id}`)}
+                              className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded border border-gray-200 inline-flex items-center gap-1"
+                            >
+                              <MessageCircle className="h-3 w-3" />
+                              CRM
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    )}
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1">
                         {lead.needed_roles?.slice(0, 3).map((role) => (
@@ -437,9 +531,26 @@ export default function AdminDashboard() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button className="text-brand-600 hover:text-brand-900 dark:text-brand-400 dark:hover:text-brand-300 mr-3">
-                        <Eye className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => router.push(`/lead/${lead.id}`)}
+                          className="text-brand-600 hover:text-brand-900 dark:text-brand-400 dark:hover:text-brand-300"
+                          title="Visualizza analisi dettagliata"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        {lead.website_url && (
+                          <a
+                            href={lead.website_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                            title="Visita sito web"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

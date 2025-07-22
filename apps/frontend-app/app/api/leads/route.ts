@@ -258,7 +258,60 @@ export async function GET(request: NextRequest) {
     }
     
     // ⚡ OTTIMIZZAZIONE: Filtraggio campi già fatto nella query SELECT
-    const filteredLeads = leads // Non serve più filtrare, già fatto nella SELECT
+    let filteredLeads = leads // Non serve più filtrare, già fatto nella SELECT
+    
+    // 🔥 INTEGRAZIONE CRM: Per utenti PRO, aggiungere stato CRM
+    if (userProfile.plan === 'pro' && leads && leads.length > 0) {
+      try {
+        const leadIds = leads.map((lead: any) => lead.id)
+        
+        // Query stato CRM per tutti i lead
+        const { data: crmActivities, error: crmError } = await supabaseAdmin
+          .from('crm_entries')
+          .select(`
+            lead_id,
+            status,
+            updated_at,
+            follow_up_date,
+            note
+          `)
+          .in('lead_id', leadIds)
+          .eq('user_id', user.id)
+        
+        if (crmError) {
+          console.warn('Errore recupero stati CRM (continuando senza):', crmError)
+        } else {
+          // Mappa stati CRM ai lead
+          const crmMap = new Map(
+            crmActivities?.map(crm => [crm.lead_id, crm]) || []
+          )
+          
+          // Funzione per mappare stati DB a stati frontend
+          const mapCRMStatus = (dbStatus: string | null) => {
+            if (!dbStatus) return 'new'
+            switch (dbStatus) {
+              case 'to_contact': return 'new'
+              case 'in_negotiation': return 'in_negotiation'
+              case 'closed_positive': return 'won'
+              case 'closed_negative': return 'lost'
+              case 'on_hold': return 'contacted'
+              case 'follow_up': return 'contacted'
+              default: return 'new'
+            }
+          }
+          
+          filteredLeads = leads.map((lead: any) => ({
+            ...lead,
+            crm_status: mapCRMStatus(crmMap.get(lead.id)?.status),
+            last_contact_date: null, // Non disponibile in crm_entries
+            next_follow_up: crmMap.get(lead.id)?.follow_up_date,
+            crm_notes: crmMap.get(lead.id)?.note
+          }))
+        }
+      } catch (crmIntegrationError) {
+        console.warn('Errore integrazione CRM (continuando senza):', crmIntegrationError)
+      }
+    }
     
     return NextResponse.json({
       success: true,

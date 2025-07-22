@@ -12,6 +12,8 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { getDaysUntilReset, formatResetDate } from '@/lib/auth'
 import { createPortal } from 'react-dom'
+import { LeadStatusBadge } from '@/components/LeadStatusBadge'
+import { LeadWithCRM, CRMStatusType } from '@/lib/types/crm'
 import { 
   Target, 
   CreditCard,
@@ -28,23 +30,16 @@ import {
   ChevronDown,
   Users,
   Calendar,
-  Eye
+  Eye,
+  MessageCircle
 } from 'lucide-react'
 import { TourTarget } from '@/components/onboarding/TourTarget'
 import UpgradeUrgencyBanner from '@/components/UpgradeUrgencyBanner'
 
-interface Lead {
-  id: string
-  business_name: string
-  website_url: string
+interface Lead extends LeadWithCRM {
   phone?: string
   email?: string
   address?: string
-  city: string
-  category: string
-  score: number
-  analysis?: any
-  created_at: string
   last_seen_at?: string
   needed_roles?: string[] // Può essere null o undefined
   issues?: string[] // Può essere null o undefined
@@ -103,6 +98,9 @@ export default function ClientDashboard() {
   const [availableCities, setAvailableCities] = useState<string[]>([])
   const [citySearchTerm, setCitySearchTerm] = useState<string>('')
   const [showCityDropdown, setShowCityDropdown] = useState(false)
+  
+  // Stato per CRM
+  const [updatingCRM, setUpdatingCRM] = useState<string | null>(null)
   const cityInputRef = useRef<HTMLInputElement>(null)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 })
 
@@ -590,6 +588,58 @@ export default function ClientDashboard() {
     } catch (error) {
       console.error('Errore generale:', error)
       alert('Errore nel sbloccare il lead. Riprova.')
+    }
+  }
+
+  // Gestione aggiornamento rapido stato CRM
+  const handleQuickStatusUpdate = async (leadId: string, newStatus: CRMStatusType) => {
+    if (!user) return
+    
+    setUpdatingCRM(leadId)
+    
+    try {
+      // Ottieni il token corrente
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        alert('Sessione scaduta, effettua nuovamente il login')
+        return
+      }
+
+      const response = await fetch('/api/crm/quick-update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          leadId,
+          status: newStatus,
+          notes: `Stato aggiornato da dashboard a ${newStatus}`
+        })
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        // Aggiorna lo stato locale del lead
+        setLeads(prevLeads => 
+          prevLeads.map(lead => 
+            lead.id === leadId 
+              ? { ...lead, crm_status: newStatus }
+              : lead
+          )
+        )
+        
+        // Mostra feedback positivo (senza alert per UX migliore)
+        console.log(`Status CRM aggiornato con successo a "${newStatus}"`)
+      } else {
+        alert(`Errore: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Errore aggiornamento CRM:', error)
+      alert('Errore durante l\'aggiornamento dello stato CRM')
+    } finally {
+      setUpdatingCRM(null)
     }
   }
 
@@ -1458,32 +1508,43 @@ export default function ClientDashboard() {
                     }`}
                   >
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-                      {/* Info Principale */}
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          {isUnlocked ? (
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                              {lead.business_name}
-                            </h3>
-                          ) : (
-                            <div className="flex items-center space-x-3">
+                        {/* Info Principale */}
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3 mb-2">
+                            {isUnlocked ? (
                               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                🔒 {translateCategory(lead.category)} in {lead.city}
+                                {lead.business_name}
                               </h3>
-                              <div className="px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-bold rounded-full animate-pulse">
-                                LEAD QUALIFICATO
+                            ) : (
+                              <div className="flex items-center space-x-3">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                  🔒 {translateCategory(lead.category)} in {lead.city}
+                                </h3>
+                                <div className="px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-bold rounded-full animate-pulse">
+                                  LEAD QUALIFICATO
+                                </div>
                               </div>
+                            )}
+                            <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getScoreColor(lead.score)}`}>
+                              {getScoreLabel(lead.score)} ({lead.score})
                             </div>
-                          )}
-                          <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getScoreColor(lead.score)}`}>
-                            {getScoreLabel(lead.score)} ({lead.score})
+                            {isUnlocked && (
+                              <div className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full border border-green-200">
+                                ✓ Sbloccato
+                              </div>
+                            )}
                           </div>
-                          {isUnlocked && (
-                            <div className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full border border-green-200">
-                              ✓ Sbloccato
+                          
+                          {/* Badge CRM Status per utenti PRO - Solo per lead sbloccati */}
+                          {isUnlocked && userProfile?.plan === 'pro' && (
+                            <div className="mb-3">
+                              <LeadStatusBadge 
+                                status={lead.crm_status} 
+                                nextFollowUp={lead.next_follow_up}
+                                size="sm"
+                              />
                             </div>
                           )}
-                        </div>
                         
                         {/* Informazioni strategiche per incentivare lo sblocco */}
                         {!isUnlocked ? (
@@ -1781,6 +1842,8 @@ export default function ClientDashboard() {
                               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                               <span>✅ SBLOCCATO</span>
                             </div>
+                            
+                            {/* Azioni standard */}
                             <div className="flex space-x-2">
                               <button
                                 onClick={() => window.open(lead.website_url, '_blank')}
@@ -1797,6 +1860,31 @@ export default function ClientDashboard() {
                                 Analisi
                               </button>
                             </div>
+                            
+                            {/* Azioni rapide CRM per utenti PRO */}
+                            {userProfile?.plan === 'pro' && (
+                              <div className="border-t border-gray-200 pt-2 mt-2 w-full">
+                                <div className="text-xs text-gray-500 text-center mb-2">🎯 Azioni rapide CRM</div>
+                                <div className="flex flex-col space-y-1 w-full">
+                                  {lead.crm_status === 'new' && (
+                                    <button
+                                      onClick={() => handleQuickStatusUpdate(lead.id, 'contacted')}
+                                      disabled={updatingCRM === lead.id}
+                                      className="w-full px-2 py-1 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      {updatingCRM === lead.id ? '...' : '📞 Segna come contattato'}
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => router.push(`/crm/${lead.id}`)}
+                                    className="w-full px-2 py-1 text-xs bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded transition-colors inline-flex items-center justify-center gap-1"
+                                  >
+                                    <MessageCircle className="h-3 w-3" />
+                                    Gestisci nel CRM
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
