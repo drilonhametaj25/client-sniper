@@ -95,6 +95,10 @@ export default function ClientDashboard() {
   // Stato per tracciare quali lead sono stati "sbloccati"
   const [unlockedLeads, setUnlockedLeads] = useState<Set<string>>(new Set())
   
+  // Stati per gestire scroll e effetto visivo dopo sblocco
+  const [scrollPosition, setScrollPosition] = useState(0)
+  const [lastUnlockedLeadId, setLastUnlockedLeadId] = useState<string | null>(null)
+  
   // Stato per le città disponibili
   const [availableCities, setAvailableCities] = useState<string[]>([])
   const [citySearchTerm, setCitySearchTerm] = useState<string>('')
@@ -273,6 +277,28 @@ export default function ClientDashboard() {
     loadUnlockedLeads() // Carica i lead sbloccati dal database
     loadAvailableCities() // Carica le città disponibili
   }, [user?.id]) // Solo user.id come dipendenza
+
+  // useEffect per ripristinare la posizione dello scroll dopo sblocco
+  useEffect(() => {
+    if (scrollPosition > 0 && lastUnlockedLeadId) {
+      const timer = setTimeout(() => {
+        window.scrollTo({ 
+          top: scrollPosition,
+          behavior: 'smooth' 
+        })
+      }, 100) // Piccolo delay per assicurarsi che il DOM sia aggiornato
+
+      // Timer per rimuovere l'effetto visivo dopo 2 secondi
+      const effectTimer = setTimeout(() => {
+        setLastUnlockedLeadId(null)
+      }, 2000)
+
+      return () => {
+        clearTimeout(timer)
+        clearTimeout(effectTimer)
+      }
+    }
+  }, [unlockedLeads, scrollPosition, lastUnlockedLeadId])
 
   // Ricarica quando cambiano i filtri (con debounce più lungo per la ricerca) - CON CONTROLLO INIZIALIZZAZIONE
   useEffect(() => {
@@ -506,6 +532,9 @@ export default function ClientDashboard() {
       return
     }
 
+    // Salva la posizione corrente dello scroll
+    setScrollPosition(window.scrollY)
+
     // Sblocca il lead usando l'API REST
     try {
       // Ottieni la sessione per il token
@@ -532,12 +561,24 @@ export default function ClientDashboard() {
         return
       }
 
-      // Aggiorna lo stato locale SENZA ricaricare la pagina
+      // Aggiorna solo il lead specifico nello stato invece di ricaricare tutto
+      setLeads(prevLeads => 
+        prevLeads.map(lead => 
+          lead.id === leadId 
+            ? { ...lead, ...(data.lead || {}) } // Aggiorna con i dati restituiti dall'API se presenti
+            : lead
+        )
+      )
+      
+      // Aggiorna lo stato dei lead sbloccati
       setUnlockedLeads(prev => {
         const newSet = new Set(prev)
         newSet.add(leadId)
         return newSet
       })
+
+      // Imposta il lead come ultimo sbloccato per l'effetto visivo
+      setLastUnlockedLeadId(leadId)
       
       // Aggiorna solo i crediti senza ricaricare tutto il profilo
       if (userProfile) {
@@ -1376,20 +1417,8 @@ export default function ClientDashboard() {
                 ? leads.filter(lead => unlockedLeads.has(lead.id))
                 : leads
 
-              // Quando non usiamo il filtro "solo sbloccati", ordiniamo per mettere i sbloccati in cima
-              if (!showOnlyUnlocked && unlockedLeads.size > 0) {
-                filteredLeads = [...filteredLeads].sort((a, b) => {
-                  const aUnlocked = unlockedLeads.has(a.id)
-                  const bUnlocked = unlockedLeads.has(b.id)
-                  
-                  // Prima i sbloccati, poi i non sbloccati
-                  if (aUnlocked && !bUnlocked) return -1
-                  if (!aUnlocked && bUnlocked) return 1
-                  
-                  // Se entrambi sbloccati o entrambi non sbloccati, ordina per score (peggiore prima)
-                  return a.score - b.score
-                })
-              }
+              // Mantieni l'ordine naturale quando non usiamo il filtro "solo sbloccati"
+              // Il riordinamento avviene solo quando si attiva il toggle specifico
 
               if (filteredLeads.length === 0) {
                 return (
@@ -1409,16 +1438,24 @@ export default function ClientDashboard() {
 
               return filteredLeads.map((lead, index) => {
                 const isUnlocked = unlockedLeads.has(lead.id)
+                const isLastUnlocked = lastUnlockedLeadId === lead.id
+                
+                // Gestisce l'id in base al caso
+                const cardProps = index === 0 
+                  ? { id: 'dashboard-first-lead', 'data-tour': 'dashboard-first-lead' }
+                  : { id: `lead-${lead.id}` }
                 
                 return (
                   <div
                     key={lead.id}
+                    {...cardProps}
                     className={`bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border transition-all duration-300 ${
-                      isUnlocked 
+                      isLastUnlocked 
+                        ? 'ring-2 ring-green-500 ring-offset-2 border-green-200 dark:border-green-700 shadow-lg shadow-green-100 dark:shadow-green-900/20'
+                        : isUnlocked 
                         ? 'border-green-200 dark:border-green-700 shadow-lg shadow-green-100 dark:shadow-green-900/20'
                         : 'border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg'
                     }`}
-                    {...(index === 0 ? { id: 'dashboard-first-lead', 'data-tour': 'dashboard-first-lead' } : {})}
                   >
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
                       {/* Info Principale */}
