@@ -16,7 +16,22 @@ export async function POST(request: NextRequest) {
     const authHeader = request.headers.get('authorization')
     const cronSecret = process.env.CRON_SECRET || 'development-secret'
     
-    if (authHeader !== `Bearer ${cronSecret}`) {
+    // Vercel Cron Jobs includono un header speciale
+    const vercelCronSecret = request.headers.get('authorization')
+    const isVercelCron = request.headers.get('user-agent')?.includes('vercel-cron')
+    
+    // Accetta sia Bearer token che Vercel cron
+    const isAuthorized = 
+      authHeader === `Bearer ${cronSecret}` ||
+      (isVercelCron && vercelCronSecret === cronSecret) ||
+      authHeader === cronSecret // Per compatibilità diretta
+    
+    if (!isAuthorized) {
+      console.log('❌ Unauthorized cron request')
+      console.log('Auth header:', authHeader)
+      console.log('User agent:', request.headers.get('user-agent'))
+      console.log('Is Vercel cron:', isVercelCron)
+      
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

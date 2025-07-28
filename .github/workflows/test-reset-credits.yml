@@ -1,0 +1,110 @@
+# 🧪 Workflow di test per il reset crediti
+# Questo workflow serve per testare l'endpoint senza aspettare il cron giornaliero
+
+name: Test Reset Credits
+
+on:
+  # Solo trigger manuale
+  workflow_dispatch:
+    inputs:
+      test_mode:
+        description: 'Modalità test'
+        required: true
+        default: 'dry-run'
+        type: choice
+        options:
+          - dry-run     # Solo preview, no modifiche
+          - force-test  # Esegue reset vero (usa con cautela!)
+
+jobs:
+  test-reset:
+    name: Test Reset Endpoint
+    runs-on: ubuntu-latest
+    environment: Production
+    
+    steps:
+      - name: 🧪 Test Reset Credits API
+        run: |
+          echo "🔍 Testing reset credits endpoint..."
+          echo "Mode: ${{ github.event.inputs.test_mode }}"
+          
+          # URL base
+          BASE_URL="${{ secrets.APP_URL }}/api/cron/reset-credits"
+          
+          # Headers
+          HEADERS=(
+            -H "Content-Type: application/json"
+            -H "User-Agent: GitHub-Actions-Test/1.0"
+          )
+          
+          # Aggiungi auth se presente
+          if [[ -n "${{ secrets.CRON_SECRET }}" ]]; then
+            HEADERS+=(-H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+            echo "🔐 Using authentication"
+          else
+            echo "⚠️ No CRON_SECRET found - endpoint might reject request"
+          fi
+          
+          # Modalità dry-run: solo GET per preview
+          if [[ "${{ github.event.inputs.test_mode }}" == "dry-run" ]]; then
+            echo "🔍 DRY RUN - Getting preview of users to reset..."
+            
+            response=$(curl -s -w "HTTPSTATUS:%{http_code}" -X GET "$BASE_URL" "${HEADERS[@]}")
+            
+            http_code=$(echo "$response" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+            body=$(echo "$response" | sed -e 's/HTTPSTATUS:.*//g')
+            
+            echo "📊 Preview HTTP Status: $http_code"
+            echo "📋 Preview Response:"
+            echo "$body" | head -20  # Limita output per GitHub Actions
+            
+            if [[ "$http_code" -eq 200 ]]; then
+              echo "✅ Endpoint reachable and working"
+            else
+              echo "❌ Endpoint test failed"
+              exit 1
+            fi
+            
+          # Modalità force-test: esegue reset vero
+          elif [[ "${{ github.event.inputs.test_mode }}" == "force-test" ]]; then
+            echo "⚠️  FORCE TEST - Executing actual reset!"
+            echo "🚨 This will modify the database!"
+            
+            response=$(curl -s -w "HTTPSTATUS:%{http_code}" -X POST "$BASE_URL" "${HEADERS[@]}")
+            
+            http_code=$(echo "$response" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+            body=$(echo "$response" | sed -e 's/HTTPSTATUS:.*//g')
+            
+            echo "📊 Reset HTTP Status: $http_code"
+            echo "📋 Reset Response: $body"
+            
+            if [[ "$http_code" -eq 200 ]]; then
+              echo "✅ Reset executed successfully"
+              
+              # Parse risultati se possibile
+              if command -v jq &> /dev/null && echo "$body" | jq . &> /dev/null; then
+                users_processed=$(echo "$body" | jq -r '.usersProcessed // "N/A"')
+                credits_reset=$(echo "$body" | jq -r '.creditsReset // "N/A"')
+                echo "📈 Users processed: $users_processed"
+                echo "🔄 Credits reset: $credits_reset"
+              fi
+            else
+              echo "❌ Reset failed"
+              exit 1
+            fi
+          fi
+
+      - name: 📊 Test Summary
+        run: |
+          echo "🎯 Test completed successfully!"
+          echo "⏰ Timestamp: $(date -u)"
+          echo "🔧 Mode: ${{ github.event.inputs.test_mode }}"
+          echo "🌐 Endpoint: ${{ secrets.APP_URL }}/api/cron/reset-credits"
+          
+          if [[ "${{ github.event.inputs.test_mode }}" == "dry-run" ]]; then
+            echo "💡 This was a dry run - no data was modified"
+            echo "🚀 To test actual reset, run again with 'force-test' mode"
+          else
+            echo "⚠️  This was a live test - data was modified!"
+            echo "🔍 Check your database to verify the changes"
+          fi

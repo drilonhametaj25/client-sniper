@@ -1,0 +1,114 @@
+# 🔄 Workflow per reset automatico crediti utenti
+# Questo workflow viene eseguito ogni giorno a mezzanotte UTC
+# per resettare i crediti degli utenti che non hanno Stripe
+
+name: Reset Credits Daily
+
+on:
+  schedule:
+    # Ogni giorno a mezzanotte UTC (1:00 AM CET in inverno, 2:00 AM CEST in estate)
+    - cron: '0 0 * * *'
+  
+  # Permette di triggerare manualmente dal GitHub UI
+  workflow_dispatch:
+    inputs:
+      force_reset:
+        description: 'Forza reset anche per utenti con Stripe'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  reset-credits:
+    name: Reset User Credits
+    runs-on: ubuntu-latest
+    environment: Production  # Usa lo stesso environment dello scraper
+    
+    steps:
+      - name: 🏷️ Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: 🔄 Call Reset Credits API
+        run: |
+          echo "🚀 Starting credits reset..."
+          
+          # Costruisci URL e headers
+          API_URL="${{ secrets.APP_URL }}/api/cron/reset-credits"
+          
+          # Headers per autenticazione
+          HEADERS=(
+            -H "Content-Type: application/json"
+            -H "User-Agent: GitHub-Actions-Cron/1.0"
+          )
+          
+          # Aggiungi autenticazione se presente
+          if [[ -n "${{ secrets.CRON_SECRET }}" ]]; then
+            HEADERS+=(-H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          fi
+          
+          # Aggiungi parametro force se specificato
+          if [[ "${{ github.event.inputs.force_reset }}" == "true" ]]; then
+            API_URL="${API_URL}?force=true"
+            echo "⚠️ Force reset enabled - will reset ALL users"
+          fi
+          
+          # Esegui chiamata API
+          response=$(curl -s -w "HTTPSTATUS:%{http_code}" -X POST "$API_URL" "${HEADERS[@]}")
+          
+          # Estrai status code e body
+          http_code=$(echo "$response" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+          body=$(echo "$response" | sed -e 's/HTTPSTATUS:.*//g')
+          
+          echo "📊 HTTP Status: $http_code"
+          echo "📋 Response: $body"
+          
+          # Verifica successo
+          if [[ "$http_code" -eq 200 ]]; then
+            echo "✅ Credits reset completed successfully"
+            
+            # Parse JSON response per statistiche
+            if command -v jq &> /dev/null && echo "$body" | jq . &> /dev/null; then
+              users_processed=$(echo "$body" | jq -r '.usersProcessed // "N/A"')
+              credits_reset=$(echo "$body" | jq -r '.creditsReset // "N/A"')
+              echo "📈 Users processed: $users_processed"
+              echo "🔄 Credits reset: $credits_reset"
+            fi
+          else
+            echo "❌ Credits reset failed with status $http_code"
+            echo "💬 Response: $body"
+            exit 1
+          fi
+
+      - name: 📊 Report Status
+        if: always()
+        run: |
+          echo "🕐 Reset job completed at $(date -u)"
+          echo "⏰ Next scheduled run: $(date -u -d 'tomorrow')"
+          
+          # Log per debugging
+          echo "🔧 Environment info:"
+          echo "- Repository: ${{ github.repository }}"
+          echo "- Branch: ${{ github.ref_name }}"
+          echo "- Workflow: ${{ github.workflow }}"
+          echo "- Run ID: ${{ github.run_id }}"
+
+  # Job opzionale per notifiche (puoi rimuoverlo se non serve)
+  notify-status:
+    name: Notify Reset Status
+    needs: reset-credits
+    runs-on: ubuntu-latest
+    if: failure() && github.event_name == 'schedule'
+    
+    steps:
+      - name: 📧 Send failure notification
+        run: |
+          echo "⚠️ Credits reset failed on scheduled run"
+          echo "🔗 Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          
+          # Qui puoi aggiungere notifiche Slack, Discord, email, etc.
+          # Esempio Slack webhook:
+          # if [[ -n "${{ secrets.SLACK_WEBHOOK }}" ]]; then
+          #   curl -X POST "${{ secrets.SLACK_WEBHOOK }}" \
+          #     -H "Content-Type: application/json" \
+          #     -d '{"text": "❌ Credits reset failed. Check GitHub Actions logs."}'
+          # fi
