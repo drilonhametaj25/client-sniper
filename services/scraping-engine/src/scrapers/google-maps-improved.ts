@@ -24,6 +24,8 @@ import { EnhancedWebsiteAnalyzer } from '../analyzers/enhanced-website-analyzer'
 import { BusinessContactParser } from '../utils/business-contact-parser'
 import { WebsiteStatusChecker } from '../utils/website-status-checker'
 import { RobustWebsiteAnalyzer } from '../utils/robust-website-analyzer'
+import { getScrapingConfig, ScrapingConfig } from '../config/scraping-config'
+import { scrapingMonitor, ScrapingMetrics } from '../utils/scraping-monitor'
 
 export interface GoogleMapsScrapingOptions {
   query: string
@@ -36,6 +38,7 @@ export interface GoogleMapsScrapingOptions {
 
 export class GoogleMapsScraper {
   private browser: Browser | null = null
+  private config: ScrapingConfig
   private userAgents = [
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -48,6 +51,7 @@ export class GoogleMapsScraper {
   private robustAnalyzer: RobustWebsiteAnalyzer
 
   constructor() {
+    this.config = getScrapingConfig()
     this.enhancedAnalyzer = new EnhancedWebsiteAnalyzer()
     this.contactParser = new BusinessContactParser()
     this.statusChecker = new WebsiteStatusChecker()
@@ -55,99 +59,243 @@ export class GoogleMapsScraper {
   }
 
   /**
-   * Scraping principale da Google Maps
+   * Scraping principale da Google Maps con sistema di retry e monitoraggio
    */
   async scrape(options: GoogleMapsScrapingOptions): Promise<ScrapingResult> {
     const startTime = Date.now()
     console.log(`🔍 Avvio scraping Google Maps: "${options.query}" in ${options.location}`)
 
-    try {
-      await this.initBrowser()
+    let lastError: Error | null = null
+    const maxRetries = this.config.retry.maxAttempts
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      const attemptStartTime = Date.now()
+      let browserInitTime: number | undefined
+      let pageLoadTime: number | undefined
       
-      const businessData = await this.scrapeBusinesses(options)
-      const leads = await this.processBusinessData(businessData, options)
+      try {
+        if (attempt > 1) {
+          console.log(`🔄 Tentativo ${attempt}/${maxRetries} dopo errore: ${lastError?.message}`)
+          // Attesa progressiva tra i tentativi
+          const delay = Math.min(
+            this.config.retry.baseDelay * Math.pow(this.config.retry.timeoutMultiplier, attempt - 1),
+            this.config.retry.maxDelay
+          )
+          await this.randomDelay(delay * 0.8, delay * 1.2)
+        }
+        
+        const browserStartTime = Date.now()
+        await this.initBrowser()
+        browserInitTime = Date.now() - browserStartTime
+        
+        const pageStartTime = Date.now()
+        const businessData = await this.scrapeBusinesses(options)
+        pageLoadTime = Date.now() - pageStartTime
+        
+        const leads = await this.processBusinessData(businessData, options)
 
-      const totalAnalyzed = leads.filter(lead => lead.websiteAnalysis?.isAccessible).length
-      const avgAnalysisTime = totalAnalyzed > 0 
-        ? leads.reduce((sum, lead) => sum + (lead.websiteAnalysis?.analysisTime || 0), 0) / totalAnalyzed 
-        : 0
+        const totalAnalyzed = leads.filter(lead => lead.websiteAnalysis?.isAccessible).length
+        const avgAnalysisTime = totalAnalyzed > 0 
+          ? leads.reduce((sum, lead) => sum + (lead.websiteAnalysis?.analysisTime || 0), 0) / totalAnalyzed 
+          : 0
 
-      console.log(`✅ Scraping completato: ${leads.length} lead trovati, ${totalAnalyzed} siti analizzati`)
+        console.log(`✅ Scraping completato: ${leads.length} lead trovati, ${totalAnalyzed} siti analizzati`)
 
-      return {
-        success: true,
-        leads,
-        errors: [],
-        totalFound: businessData.length,
-        totalAnalyzed,
-        avgAnalysisTime,
-        source: 'google_maps',
-        query: options.query,
-        location: options.location
+        // Registra successo nel monitor
+        scrapingMonitor.recordAttempt({
+          timestamp: new Date(),
+          attempt,
+          success: true,
+          timing: {
+            browserInit: browserInitTime,
+            pageLoad: pageLoadTime,
+            totalDuration: Date.now() - attemptStartTime
+          },
+          config: {
+            maxRetries,
+            timeouts: this.config.pageLoad.strategies.map(s => s.timeout),
+            strategy: 'multi-strategy'
+          }
+        })
+
+        return {
+          success: true,
+          leads,
+          errors: [],
+          totalFound: businessData.length,
+          totalAnalyzed,
+          avgAnalysisTime,
+          source: 'google_maps',
+          query: options.query,
+          location: options.location
+        }
+        
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error('Errore sconosciuto')
+        console.error(`❌ Tentativo ${attempt} fallito:`, lastError.message)
+        
+        // Registra fallimento nel monitor
+        scrapingMonitor.recordAttempt({
+          timestamp: new Date(),
+          attempt,
+          success: false,
+          error: lastError.message,
+          timing: {
+            browserInit: browserInitTime,
+            pageLoad: pageLoadTime,
+            totalDuration: Date.now() - attemptStartTime
+          },
+          config: {
+            maxRetries,
+            timeouts: this.config.pageLoad.strategies.map(s => s.timeout),
+            strategy: 'multi-strategy'
+          }
+        })
+        
+        // Chiudi browser in caso di errore per liberare risorse
+        await this.closeBrowser()
+        
+        // Se è l'ultimo tentativo, restituisci l'errore
+        if (attempt === maxRetries) {
+          break
+        }
       }
+    }
 
-    } catch (error) {
-      console.error('❌ Errore durante scraping Google Maps:', error)
-      return {
-        success: false,
-        leads: [],
-        errors: [error instanceof Error ? error.message : 'Errore sconosciuto'],
-        totalFound: 0,
-        totalAnalyzed: 0,
-        avgAnalysisTime: 0,
-        source: 'google_maps',
-        query: options.query,
-        location: options.location
-      }
-    } finally {
-      await this.closeBrowser()
+    console.error('❌ Errore durante scraping Google Maps:', lastError)
+    
+    // Mostra raccomandazioni se disponibili
+    const recommendations = scrapingMonitor.getOptimizationRecommendations()
+    if (recommendations.length > 0) {
+      console.log('💡 Raccomandazioni per ottimizzare:', recommendations.join(', '))
+    }
+    
+    return {
+      success: false,
+      leads: [],
+      errors: [lastError?.message || 'Errore sconosciuto dopo multipli tentativi'],
+      totalFound: 0,
+      totalAnalyzed: 0,
+      avgAnalysisTime: 0,
+      source: 'google_maps',
+      query: options.query,
+      location: options.location
     }
   }
 
   /**
-   * Inizializza il browser con configurazioni ottimizzate
+   * Inizializza il browser con configurazioni ottimizzate per stabilità
    */
   private async initBrowser(): Promise<void> {
     if (this.browser) return
 
     this.browser = await chromium.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-blink-features=AutomationControlled',
-        '--disable-features=VizDisplayCompositor',
-        '--disable-extensions',
-        '--disable-plugins',
-        '--disable-images', // Velocizza il caricamento
-        '--disable-javascript', // Disabilita JS non necessario
-      ]
+      headless: this.config.browser.headless,
+      args: this.config.browser.args,
+      timeout: this.config.browser.launchTimeout
     })
   }
 
   /**
-   * Estrae i dati business da Google Maps
+   * Verifica la salute del browser e lo riavvia se necessario
+   */
+  private async ensureBrowserHealth(): Promise<void> {
+    try {
+      if (!this.browser || !this.browser.isConnected()) {
+        console.log('🔄 Browser disconnesso, riavvio...')
+        await this.closeBrowser()
+        await this.initBrowser()
+        return
+      }
+
+      // Test con pagina temporanea per verificare funzionalità
+      const testPage = await this.browser.newPage()
+      await testPage.goto('data:text/html,<html><body>test</body></html>', { 
+        timeout: this.config.pageLoad.healthCheckTimeout 
+      })
+      await testPage.close()
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto'
+      console.log('⚠️ Browser health check fallito, riavvio necessario:', errorMessage)
+      await this.closeBrowser()
+      await this.initBrowser()
+    }
+  }
+
+  /**
+   * Gestisce il caricamento di una pagina con strategia di fallback multipla
+   */
+  private async robustPageLoad(page: Page, url: string): Promise<void> {
+    const strategies = this.config.pageLoad.strategies
+    let lastError: Error | null = null
+
+    for (const [index, strategy] of strategies.entries()) {
+      try {
+        console.log(`🌐 Strategia ${index + 1}: ${strategy.description}`)
+        await page.goto(url, { 
+          waitUntil: strategy.waitUntil as any, 
+          timeout: strategy.timeout 
+        })
+
+        // Verifica che la pagina sia effettivamente caricata
+        const isPageReady = await page.evaluate(() => {
+          return document.readyState !== 'loading' && 
+                 document.querySelector('body') !== null
+        })
+
+        if (isPageReady) {
+          console.log(`✅ Caricamento riuscito con strategia: ${strategy.description}`)
+          return
+        }
+
+      } catch (error) {
+        lastError = error as Error
+        const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto'
+        console.log(`⚠️ Strategia ${index + 1} fallita: ${errorMessage}`)
+        
+        if (index < strategies.length - 1) {
+          await this.randomDelay(
+            this.config.pageLoad.contentWaitMin, 
+            this.config.pageLoad.contentWaitMax
+          )
+        }
+      }
+    }
+
+    throw new Error(`Tutte le strategie di caricamento fallite. Ultimo errore: ${lastError?.message}`)
+  }
+
+  /**
+   * Estrae i dati business da Google Maps con gestione robusta degli errori
    */
   private async scrapeBusinesses(options: GoogleMapsScrapingOptions): Promise<RawBusinessData[]> {
     if (!this.browser) throw new Error('Browser non inizializzato')
 
+    // Verifica salute del browser prima di procedere
+    await this.ensureBrowserHealth()
+
     const page = await this.browser.newPage()
     
-    // Configura user agent casuale e viewport
-    await page.setExtraHTTPHeaders({
-      'User-Agent': this.userAgents[Math.floor(Math.random() * this.userAgents.length)]
-    })
-    await page.setViewportSize({ width: 1366, height: 768 })
-
     try {
+      // Configura user agent casuale e viewport
+      await page.setExtraHTTPHeaders({
+        'User-Agent': this.userAgents[Math.floor(Math.random() * this.userAgents.length)]
+      })
+      await page.setViewportSize({ width: 1366, height: 768 })
+
       // Costruisci l'URL di ricerca Google Maps
       const searchQuery = `${options.query} ${options.location}`
-      const searchUrl = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`
+      const searchUrl = `${this.config.googleMaps.baseUrl}${encodeURIComponent(searchQuery)}`
       
       console.log(`🌐 Navigazione a: ${searchUrl}`)
       
-      await page.goto(searchUrl, { waitUntil: 'networkidle', timeout: 20000 })
-      await this.randomDelay(2000, 4000)
+      // Usa il nuovo metodo robusto per il caricamento
+      await this.robustPageLoad(page, searchUrl)
+      await this.randomDelay(
+        this.config.pageLoad.contentWaitMin, 
+        this.config.pageLoad.contentWaitMax
+      )
 
       // Accetta i cookie se richiesto
       await this.handleCookieConsent(page)
@@ -1303,12 +1451,22 @@ export class GoogleMapsScraper {
   }
 
   /**
-   * Chiude il browser
+   * Chiude il browser e pulisce le risorse in modo sicuro
    */
   private async closeBrowser(): Promise<void> {
     if (this.browser) {
-      await this.browser.close()
-      this.browser = null
+      try {
+        // Chiudi il browser direttamente
+        await this.browser.close()
+      } catch (error) {
+        console.log('⚠️ Errore durante chiusura browser:', error instanceof Error ? error.message : 'Errore sconosciuto')
+        // Forza la chiusura se necessario
+        try {
+          await this.browser.close()
+        } catch {}
+      } finally {
+        this.browser = null
+      }
     }
   }
 }
