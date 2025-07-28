@@ -25,12 +25,21 @@ export async function POST(request: NextRequest) {
 
     let user = null
 
-    // Se è fornita un'email (registrazione diretta), usala
+    // Se è fornita un'email (registrazione diretta), validala e usala
     if (userEmail && autoConfirm) {
-      // Per la registrazione diretta, creiamo un utente "virtuale" per Stripe
+      // Validazione email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(userEmail)) {
+        return NextResponse.json(
+          { error: 'Email non valida' },
+          { status: 400 }
+        )
+      }
+
+      // Per la registrazione diretta, creiamo un identificatore basato su email
       // L'aggiornamento del database avverrà nel webhook dopo il pagamento
       user = {
-        id: 'temp_' + Date.now(), // ID temporaneo
+        id: `email_${userEmail}`, // Identificatore email-based invece di temp
         email: userEmail
       }
     } else {

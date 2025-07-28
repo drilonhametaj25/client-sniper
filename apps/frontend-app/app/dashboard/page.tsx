@@ -1177,7 +1177,7 @@ export default function ClientDashboard() {
                   <p className={`text-2xl font-bold mb-1 ${remainingCredits <= 1 ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
                     {remainingCredits}
                   </p>
-                  {remainingCredits <= 1 && (
+                  {remainingCredits <= 1 && user?.plan !== 'free' &&  (
                     <p className="text-xs text-red-500 font-medium">Crediti in esaurimento!</p>
                   )}
                 </div>
@@ -1284,7 +1284,7 @@ export default function ClientDashboard() {
           )}
 
           {/* Banner Informativo sui Crediti */}
-          {remainingCredits <= 2 && remainingCredits > 0 && (
+          {remainingCredits <= 2 && remainingCredits > 0 && user?.plan !== 'free' && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 mb-8">
               <div className="flex items-center space-x-3">
                 <div className="bg-yellow-100 rounded-full p-2">

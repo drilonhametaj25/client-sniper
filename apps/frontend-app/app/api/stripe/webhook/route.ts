@@ -17,6 +17,122 @@ const supabase = createClient(
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
+// 🔧 UTILITY FUNCTIONS: Funzioni di supporto per la ricerca utenti
+
+/**
+ * Trova un utente con fallback multipli
+ * 1. Cerca per stripe_subscription_id
+ * 2. Cerca per stripe_customer_id  
+ * 3. Cerca per email
+ */
+async function findUserWithFallback(
+  subscriptionId?: string, 
+  customerId?: string, 
+  email?: string
+): Promise<string | null> {
+  console.log(`🔍 Finding user - subscription: ${subscriptionId}, customer: ${customerId}, email: ${email}`)
+  
+  // Metodo 1: Cerca per subscription_id
+  if (subscriptionId) {
+    const { data: userBySubscription } = await supabase
+      .from('users')
+      .select('id')
+      .eq('stripe_subscription_id', subscriptionId)
+      .single()
+    
+    if (userBySubscription) {
+      console.log(`✅ Found user by subscription: ${userBySubscription.id}`)
+      return userBySubscription.id
+    }
+  }
+  
+  // Metodo 2: Cerca per customer_id
+  if (customerId) {
+    const { data: userByCustomer } = await supabase
+      .from('users')
+      .select('id')
+      .eq('stripe_customer_id', customerId)
+      .single()
+    
+    if (userByCustomer) {
+      console.log(`✅ Found user by customer: ${userByCustomer.id}`)
+      return userByCustomer.id
+    }
+  }
+  
+  // Metodo 3: Cerca per email
+  if (email) {
+    const { data: userByEmail } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .single()
+    
+    if (userByEmail) {
+      console.log(`✅ Found user by email: ${userByEmail.id}`)
+      return userByEmail.id
+    }
+  }
+  
+  console.log(`❌ User not found with any method`)
+  return null
+}
+
+/**
+ * Aggiorna i dati Stripe di un utente se mancanti
+ */
+async function updateUserStripeData(userId: string, customerId?: string, subscriptionId?: string) {
+  const updates: any = {}
+  if (customerId) updates.stripe_customer_id = customerId
+  if (subscriptionId) updates.stripe_subscription_id = subscriptionId
+  
+  if (Object.keys(updates).length > 0) {
+    console.log(`🔧 Updating user ${userId} with Stripe data:`, updates)
+    await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', userId)
+  }
+}
+
+/**
+ * Salva evento webhook per debug e retry
+ */
+async function saveWebhookEvent(event: Stripe.Event, processed: boolean = false, error?: string) {
+  try {
+    await supabase
+      .from('stripe_webhook_events')
+      .insert({
+        stripe_event_id: event.id,
+        type: event.type,
+        data: event.data.object,
+        processed,
+        error,
+        retry_count: error ? 1 : 0
+      })
+  } catch (saveError) {
+    console.error('Failed to save webhook event:', saveError)
+  }
+}
+
+/**
+ * Marca evento webhook come processato
+ */
+async function markEventProcessed(eventId: string, success: boolean, error?: string) {
+  try {
+    await supabase
+      .from('stripe_webhook_events')
+      .update({ 
+        processed: success, 
+        processed_at: new Date().toISOString(),
+        error: success ? null : error
+      })
+      .eq('stripe_event_id', eventId)
+  } catch (updateError) {
+    console.error('Failed to mark event as processed:', updateError)
+  }
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.text()
   const sig = request.headers.get('stripe-signature')!
@@ -33,7 +149,10 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // 🔧 ENHANCED LOGGING: Log tutti gli eventi webhook per debug
+  // � SAVE EVENT: Salva sempre l'evento per debug e retry
+  await saveWebhookEvent(event)
+
+  // �🔧 ENHANCED LOGGING: Log tutti gli eventi webhook per debug
   console.log(`\n🎯 WEBHOOK RICEVUTO:`)
   console.log(`Type: ${event.type}`)
   console.log(`ID: ${event.id}`)
@@ -83,14 +202,20 @@ export async function POST(request: NextRequest) {
         console.log(`⚠️ UNHANDLED EVENT: ${event.type}`)
     }
 
+    // ✅ MARK AS PROCESSED: Marca l'evento come processato con successo
+    await markEventProcessed(event.id, true)
+
     return NextResponse.json({ received: true })
   } catch (error) {
     // ⚡ ENHANCED ERROR LOGGING: Log l'errore in modo dettagliato
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    const errorStack = error instanceof Error ? error.stack : 'No stack available'
+    
     console.error('\n🚨 ERRORE WEBHOOK CRITICO:')
     console.error('Event Type:', event?.type || 'UNKNOWN')
     console.error('Event ID:', event?.id || 'UNKNOWN')
-    console.error('Error Message:', error instanceof Error ? error.message : String(error))
-    console.error('Error Stack:', error instanceof Error ? error.stack : 'No stack available')
+    console.error('Error Message:', errorMessage)
+    console.error('Error Stack:', errorStack)
     
     // Log i dettagli dell'evento per debug
     if (event?.type === 'checkout.session.completed') {
@@ -103,7 +228,10 @@ export async function POST(request: NextRequest) {
       })
     }
     
-    // 🔧 FALLBACK: Prova a salvare l'errore nel database per debug
+    // 💾 MARK AS FAILED: Marca l'evento come fallito con dettagli errore
+    await markEventProcessed(event.id, false, errorMessage)
+    
+    // 🔧 FALLBACK: Prova a salvare l'errore nei log di piano per debug
     try {
       await supabase
         .from('plan_status_logs')
@@ -112,7 +240,7 @@ export async function POST(request: NextRequest) {
           action: 'webhook_error',
           previous_status: 'unknown',
           new_status: 'error',
-          reason: `Webhook failed: ${error instanceof Error ? error.message : String(error)}`,
+          reason: `Webhook failed: ${errorMessage}`,
           triggered_by: 'stripe_webhook_error',
           stripe_event_id: event?.id || 'unknown'
         })
@@ -145,54 +273,99 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   console.log(`Metadata - Plan ID: ${planId}`)
   console.log(`Metadata - Auto Confirm: ${autoConfirm}`)
 
-  if ((!userId || userId.startsWith('temp_')) && !userEmail) {
+  // 🔧 ENHANCED USER RESOLUTION: Improved user finding logic
+  if ((!userId || userId.startsWith('temp_') || userId.startsWith('email_')) && !userEmail) {
     console.error('❌ Missing user_id/email or plan_id in session metadata')
     console.log('Available metadata:', session.metadata)
     return
   }
 
-  // Se auto_confirm è true, trova l'utente tramite email e confermalo
+  // Se auto_confirm è true, trova/crea l'utente tramite email
   if (autoConfirm && userEmail) {
     try {
+      console.log(`🔍 Looking for user with email: ${userEmail}`)
+      
       // Usa service role per trovare e confermare l'utente
       const supabaseServiceRole = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       )
       
-      // Trova l'utente tramite email nell'auth
-      const { data: authUsers } = await supabaseServiceRole.auth.admin.listUsers()
-      const foundUser = authUsers.users.find((u: any) => u.email === userEmail)
+      // 🎯 MULTI-STEP USER RESOLUTION: 
+      // 1. Prima cerca l'utente nell'auth
+      const { data: authUsers, error: listError } = await supabaseServiceRole.auth.admin.listUsers()
+      if (listError) {
+        console.error('Error listing users:', listError)
+        return
+      }
+      
+      let foundUser = authUsers.users.find((u: any) => u.email === userEmail)
       
       if (foundUser) {
-        // Conferma l'email dell'utente
-        const { error: confirmError } = await supabaseServiceRole.auth.admin.updateUserById(
-          foundUser.id,
-          { email_confirm: true }
-        )
+        console.log(`✅ Found existing user: ${foundUser.id}`)
         
-        if (confirmError) {
-          console.error('Errore durante la conferma email:', confirmError)
-        } else {
-          console.log(`Email confermata automaticamente per utente ${foundUser.id}`)
+        // Conferma l'email dell'utente se non confermata
+        if (!foundUser.email_confirmed_at) {
+          const { error: confirmError } = await supabaseServiceRole.auth.admin.updateUserById(
+            foundUser.id,
+            { email_confirm: true }
+          )
+          
+          if (confirmError) {
+            console.error('Errore durante la conferma email:', confirmError)
+          } else {
+            console.log(`📧 Email confermata automaticamente per utente ${foundUser.id}`)
+          }
         }
         
         // Usa l'ID reale dell'utente
         userId = foundUser.id
       } else {
-        console.error(`Utente con email ${userEmail} non trovato`)
-        return
+        // 2. Se non trovato nell'auth, cerca nella tabella users (possibile utente orfano)
+        const { data: dbUser, error: dbError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', userEmail)
+          .single()
+        
+        if (dbUser && !dbError) {
+          console.log(`✅ Found user in database: ${dbUser.id}`)
+          userId = dbUser.id
+        } else {
+          console.error(`❌ User not found in auth or database for email: ${userEmail}`)
+          console.error('This should not happen - user should be created before payment')
+          return
+        }
       }
     } catch (error) {
-      console.error('Errore durante l\'auto-conferma:', error)
+      console.error('🚨 Errore durante la risoluzione utente:', error)
+      return
+    }
+  }
+
+  // 🔍 FALLBACK USER SEARCH: Se l'userId è ancora temp/email-based, prova ricerca avanzata
+  if (userId && (userId.startsWith('temp_') || userId.startsWith('email_'))) {
+    const fallbackUserId = await findUserWithFallback(
+      session.subscription as string,
+      session.customer as string,
+      userEmail
+    )
+    
+    if (fallbackUserId) {
+      userId = fallbackUserId
+    } else {
+      console.error(`❌ Could not resolve user ID from temp/email ID: ${userId}`)
       return
     }
   }
 
   if (!userId || !planId) {
-    console.error('Missing user_id or plan_id after processing')
+    console.error('❌ Missing user_id or plan_id after processing')
     return
   }
+
+  // 🎯 UPDATE STRIPE DATA: Assicurati che i dati Stripe siano salvati
+  await updateUserStripeData(userId, session.customer as string, session.subscription as string)
 
   // Ottieni i crediti dal database invece che hardcoded
   const { data: planData, error: planError } = await supabase
@@ -209,6 +382,12 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   const credits = planData?.max_credits || 0
   console.log(`Assegnando ${credits} crediti per piano ${planId} (da database)`)
 
+  // Calcola la prossima data di reset dei crediti (primo del mese successivo)
+  const nextResetDate = new Date()
+  nextResetDate.setMonth(nextResetDate.getMonth() + 1)
+  nextResetDate.setDate(1)
+  nextResetDate.setHours(0, 0, 0, 0)
+
   // Aggiorna l'utente con il nuovo piano
   console.log(`\n🔄 Aggiornando utente ${userId} con piano ${planId} e ${credits} crediti`)
   
@@ -219,6 +398,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       credits_remaining: credits,
       stripe_customer_id: session.customer as string,
       stripe_subscription_id: session.subscription as string,
+      credits_reset_date: nextResetDate.toISOString()
     })
     .eq('id', userId)
 
@@ -249,43 +429,113 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 }
 
 async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
-  const subscriptionId = invoice.subscription as string
+  console.log('\n💰 PROCESSING INVOICE PAYMENT SUCCEEDED:')
+  console.log(`Invoice ID: ${invoice.id}`)
+  console.log(`Subscription: ${invoice.subscription}`)
+  console.log(`Customer: ${invoice.customer}`)
   
-  if (!subscriptionId) return
-
-  // Ottieni la subscription per i metadati
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-  const userId = subscription.metadata?.user_id
-  const planId = subscription.metadata?.plan_id
-
-  if (!userId || !planId) return
-
-  // Ottieni i crediti dal database per il rinnovo
-  const { data: planData, error: planError } = await supabase
-    .from('plans')
-    .select('max_credits')
-    .eq('name', planId)
-    .single()
-
-  if (planError) {
-    console.error('Errore durante la query del piano per rinnovo:', planError)
+  const subscriptionId = invoice.subscription as string
+  const customerId = invoice.customer as string
+  
+  if (!subscriptionId) {
+    console.log('❌ No subscription ID in invoice')
     return
   }
 
-  const credits = planData?.max_credits || 0
-  console.log(`Rinnovando ${credits} crediti per piano ${planId} (da database)`)
+  // 🔍 ENHANCED USER SEARCH: Usa fallback multipli per trovare l'utente
+  let userId: string | null = null
+  
+  try {
+    // Ottieni la subscription per i metadati
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+    const metadataUserId = subscription.metadata?.user_id
+    const planId = subscription.metadata?.plan_id
+    
+    console.log(`Subscription metadata - User ID: ${metadataUserId}, Plan: ${planId}`)
+    
+    // Ottieni email del customer da Stripe se necessario
+    let customerEmail: string | undefined
+    if (customerId) {
+      try {
+        const customer = await stripe.customers.retrieve(customerId)
+        if (customer && !customer.deleted && typeof customer.email === 'string') {
+          customerEmail = customer.email
+        }
+      } catch (customerError) {
+        console.error('Error retrieving customer:', customerError)
+      }
+    }
+    
+    // Usa la funzione di fallback per trovare l'utente
+    userId = await findUserWithFallback(subscriptionId, customerId, customerEmail)
+    
+    if (!userId) {
+      console.error(`❌ Utente non trovato per subscription: ${subscriptionId}`)
+      return
+    }
+    
+    if (!planId) {
+      console.error(`❌ Plan ID non trovato nei metadata della subscription: ${subscriptionId}`)
+      return
+    }
 
-  const { error } = await supabase
-    .from('users')
-    .update({
-      credits_remaining: credits,
-    })
-    .eq('id', userId)
+    // Ottieni i crediti dal database per il rinnovo
+    const { data: planData, error: planError } = await supabase
+      .from('plans')
+      .select('max_credits')
+      .eq('name', planId)
+      .single()
 
-  if (error) {
-    console.error('Errore durante il rinnovo dei crediti:', error)
-  } else {
-    console.log(`Crediti rinnovati per utente ${userId}: ${credits}`)
+    if (planError) {
+      console.error('Errore durante la query del piano per rinnovo:', planError)
+      return
+    }
+
+    const credits = planData?.max_credits || 0
+    console.log(`🔄 Rinnovando ${credits} crediti per piano ${planId} (da database)`)
+
+    // Calcola la prossima data di reset (30 giorni da oggi)
+    const nextResetDate = new Date()
+    nextResetDate.setDate(nextResetDate.getDate() + 30)
+    nextResetDate.setHours(0, 0, 0, 0)
+
+    // 🎯 AGGIORNA DATI STRIPE: Assicurati che i dati Stripe siano salvati
+    await updateUserStripeData(userId, customerId, subscriptionId)
+
+    const { error } = await supabase
+      .from('users')
+      .update({
+        credits_remaining: credits,
+        credits_reset_date: nextResetDate.toISOString()
+      })
+      .eq('id', userId)
+
+    if (error) {
+      console.error('❌ Errore durante il rinnovo dei crediti:', error)
+    } else {
+      console.log(`✅ Crediti rinnovati per utente ${userId}: ${credits}`)
+      
+      // Crea log dell'operazione
+      const { error: logError } = await supabase
+        .from('plan_status_logs')
+        .insert({
+          user_id: userId,
+          action: 'renew_credits',
+          previous_status: 'active',
+          new_status: 'active',
+          reason: `Stripe subscription renewed - Invoice: ${invoice.id}`,
+          triggered_by: 'stripe_webhook',
+          stripe_event_id: invoice.id
+        })
+      
+      if (logError) {
+        console.error('❌ Errore creazione log rinnovo:', logError)
+      } else {
+        console.log('✅ Log rinnovo creato')
+      }
+    }
+  } catch (error) {
+    console.error('🚨 Errore durante il rinnovo crediti:', error)
   }
 }
 
@@ -472,7 +722,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   }
 }
 
-// 🎯 NUOVO: Gestione pagamento fallito
+// 🎯 ENHANCED: Gestione pagamento fallito con ricerca fallback
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   console.log('\n❌ PAYMENT FAILED:')
   console.log(`Invoice ID: ${invoice.id}`)
@@ -486,20 +736,46 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
       return
     }
 
-    // Trova l'utente dalla subscription
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('id, email')
-      .eq('stripe_subscription_id', invoice.subscription as string)
-      .single()
-
-    if (error || !user) {
-      console.error('❌ Utente non trovato per subscription:', invoice.subscription)
+    const subscriptionId = invoice.subscription as string
+    const customerId = invoice.customer as string
+    
+    // 🔍 ENHANCED USER SEARCH: Usa fallback multipli per trovare l'utente
+    let customerEmail: string | undefined
+    if (customerId) {
+      try {
+        const customer = await stripe.customers.retrieve(customerId)
+        if (customer && !customer.deleted && typeof customer.email === 'string') {
+          customerEmail = customer.email
+        }
+      } catch (customerError) {
+        console.error('Error retrieving customer for failed payment:', customerError)
+      }
+    }
+    
+    // Usa la funzione di fallback per trovare l'utente
+    const userId = await findUserWithFallback(subscriptionId, customerId, customerEmail)
+    
+    if (!userId) {
+      console.error(`❌ Utente non trovato per subscription: ${subscriptionId}`)
       return
     }
 
-    const userId = user.id
+    // Ottieni i dettagli dell'utente
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, email')
+      .eq('id', userId)
+      .single()
+
+    if (userError || !user) {
+      console.error('❌ Errore nel recupero dettagli utente:', userError)
+      return
+    }
+
     console.log(`⚠️ Pagamento fallito per utente: ${userId} (${user.email})`)
+
+    // 🎯 AGGIORNA DATI STRIPE: Assicurati che i dati Stripe siano salvati
+    await updateUserStripeData(userId, customerId, subscriptionId)
 
     // Log del pagamento fallito
     await supabase
@@ -517,6 +793,6 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
     console.log('✅ Log pagamento fallito creato')
 
   } catch (error) {
-    console.error('❌ Errore handleInvoicePaymentFailed:', error)
+    console.error('🚨 Errore handleInvoicePaymentFailed:', error)
   }
 }
