@@ -29,12 +29,34 @@ interface LeafletMapProps {
 export default function LeafletMap({ data, center, zoom }: LeafletMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
+  
+  // SISTEMATO: Genera una chiave univoca per forzare re-render quando cambiano i dati
+  const mapKey = `map-${data.length}-${center[0]}-${center[1]}-${zoom}`
 
   useEffect(() => {
     if (!mapRef.current) return
 
+    // SISTEMATO: Pulizia completa del container prima di inizializzare
+    if (mapInstanceRef.current) {
+      try {
+        mapInstanceRef.current.remove()
+      } catch (e) {
+        console.warn('Errore nella rimozione della mappa precedente:', e)
+      }
+      mapInstanceRef.current = null
+    }
+
+    // Pulisci anche il DOM container
+    if (mapRef.current) {
+      mapRef.current.innerHTML = ''
+      ;(mapRef.current as any)._leaflet_id = null
+    }
+
     // Import dinamico di Leaflet per evitare problemi SSR
     import('leaflet').then((L) => {
+      // Verifica nuovamente che il ref esista dopo l'import asincrono
+      if (!mapRef.current) return
+
       // Fix per le icone dei marker
       delete (L.Icon.Default.prototype as any)._getIconUrl
       L.Icon.Default.mergeOptions({
@@ -43,15 +65,24 @@ export default function LeafletMap({ data, center, zoom }: LeafletMapProps) {
         shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
       })
 
-      // Crea la mappa
-      const map = L.map(mapRef.current!).setView(center, zoom)
+      try {
+        // Verifica che il container non sia già inizializzato
+        if ((mapRef.current as any)._leaflet_id) {
+          console.warn('Container già inizializzato, pulizia forzata')
+          ;(mapRef.current as any)._leaflet_id = null
+          mapRef.current.innerHTML = ''
+        }
 
-      // Aggiungi layer tile con stile carino
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 20
-      }).addTo(map)
+        // Crea la mappa
+        const map = L.map(mapRef.current!).setView(center, zoom)
+        mapInstanceRef.current = map
+
+        // Aggiungi layer tile con stile carino
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          subdomains: 'abcd',
+          maxZoom: 20
+        }).addTo(map)
 
       // Funzione per ottenere il colore del marker basato sui lead
       const getMarkerColor = (leadCount: number) => {
@@ -171,6 +202,19 @@ export default function LeafletMap({ data, center, zoom }: LeafletMapProps) {
       // Salva l'istanza della mappa
       mapInstanceRef.current = map
 
+      } catch (error) {
+        console.error('Errore durante l\'inizializzazione della mappa:', error)
+        // Pulisci in caso di errore
+        if (mapInstanceRef.current) {
+          try {
+            mapInstanceRef.current.remove()
+          } catch (e) {
+            // Ignora errori nella pulizia
+          }
+          mapInstanceRef.current = null
+        }
+      }
+
       // Cleanup
       return () => {
         if (mapInstanceRef.current) {
@@ -185,8 +229,17 @@ export default function LeafletMap({ data, center, zoom }: LeafletMapProps) {
   useEffect(() => {
     return () => {
       if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove()
+        try {
+          mapInstanceRef.current.remove()
+        } catch (e) {
+          console.warn('Errore nella pulizia della mappa:', e)
+        }
         mapInstanceRef.current = null
+      }
+      // Pulisci anche il DOM container
+      if (mapRef.current) {
+        mapRef.current.innerHTML = ''
+        ;(mapRef.current as any)._leaflet_id = null
       }
     }
   }, [])
@@ -194,6 +247,7 @@ export default function LeafletMap({ data, center, zoom }: LeafletMapProps) {
   return (
     <div 
       ref={mapRef} 
+      key={mapKey}
       className="w-full h-full rounded-lg border border-gray-200 bg-gray-50"
       style={{ minHeight: '400px' }}
     />

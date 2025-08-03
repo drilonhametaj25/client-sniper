@@ -32,7 +32,8 @@ export function ROICalculator() {
   useEffect(() => {
     const fetchHistoricalData = async () => {
       try {
-        const data = await analyticsService.getROIData('30d')
+        // SISTEMATO: Ora usa tutti i dati storici invece che solo 30 giorni
+        const data = await analyticsService.getROIData('all')
         setHistoricalData(data)
         
         // Imposta valori predefiniti basati sui dati storici

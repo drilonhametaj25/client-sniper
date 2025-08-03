@@ -57,6 +57,9 @@ export default function AdminDashboard() {
   const [selectedLeads, setSelectedLeads] = useState<string[]>([])
   const [updatingCRM, setUpdatingCRM] = useState<string | null>(null)
   const [expandedLeads, setExpandedLeads] = useState<Set<string>>(new Set())
+  const [autoRefresh, setAutoRefresh] = useState(true)
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
+  const [loadingStats, setLoadingStats] = useState(false)
 
   // Gestisce l'espansione/contrazione dei dettagli lead
   const toggleLeadExpansion = (leadId: string) => {
@@ -137,6 +140,25 @@ export default function AdminDashboard() {
     }
   }, [user])
 
+  // Auto-refresh statistiche ogni 30 secondi se attivato
+  useEffect(() => {
+    if (!autoRefresh || !user?.role) return
+
+    const interval = setInterval(() => {
+      // Aggiorna solo le statistiche per essere più efficiente
+      loadStats()
+    }, 30000) // 30 secondi
+
+    return () => clearInterval(interval)
+  }, [autoRefresh, user?.role])
+
+  // Ricarica dati quando cambia il filtro
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      loadDashboardData()
+    }
+  }, [filterRole, user?.role])
+
   const loadDashboardData = async () => {
     try {
       setLoadingData(true)
@@ -156,36 +178,84 @@ export default function AdminDashboard() {
 
       if (leadsError) throw leadsError
 
-      // Carica statistiche
-      const [
-        { count: totalLeads },
-        { count: totalUsers },
-        { data: avgData },
-        { count: leadsToday }
-      ] = await Promise.all([
-        supabase.from('leads').select('*', { count: 'exact', head: true }),
-        supabase.from('users').select('*', { count: 'exact', head: true }),
-        supabase.from('leads').select('score'),
-        supabase.from('leads').select('*', { count: 'exact', head: true })
-          .gte('created_at', new Date().toISOString().split('T')[0])
-      ])
-
-      const avgScore = avgData?.length 
-        ? Math.round(avgData.reduce((sum, item) => sum + item.score, 0) / avgData.length)
-        : 0
+      // Carica statistiche con query separate per garantire dati in tempo reale
+      await loadStats()
 
       setLeads(leadsData || [])
-      setStats({
-        totalLeads: totalLeads || 0,
-        totalUsers: totalUsers || 0,
-        avgScore,
-        leadsToday: leadsToday || 0
-      })
 
     } catch (error) {
       console.error('Errore caricamento dashboard:', error)
     } finally {
       setLoadingData(false)
+    }
+  }
+
+  // Funzione separata per aggiornare solo le statistiche
+  const loadStats = async () => {
+    try {
+      setLoadingStats(true)
+      
+      const [
+        { count: totalLeads },
+        { data: avgData },
+        { count: leadsToday }
+      ] = await Promise.all([
+        supabase.from('leads').select('*', { count: 'exact', head: true }),
+        supabase.from('leads').select('score'),
+        supabase.from('leads').select('*', { count: 'exact', head: true })
+          .gte('created_at', new Date().toISOString().split('T')[0])
+      ])
+
+      // Contiamo gli utenti in modo semplice e diretto
+      let totalUsers = 1 // Fallback di default
+      
+      try {
+        // Query semplice e diretta per contare utenti
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('id')
+        
+        
+        if (usersData && Array.isArray(usersData)) {
+          totalUsers = usersData.length
+        }
+        
+        // Se ancora abbiamo solo 1, proviamo con una query count
+        if (totalUsers === 1) {
+          const { count: userCount, error: countError } = await supabase
+            .from('users')
+            .select('*', { count: 'exact', head: true })
+          
+          
+          if (userCount && userCount > 1) {
+            totalUsers = userCount
+          }
+        }
+        
+      } catch (error) {
+        console.error('Errore conteggio utenti:', error)
+        totalUsers = 1
+      }
+
+      // Debug per vedere cosa restituisce la query
+
+      const avgScore = avgData?.length 
+        ? Math.round(avgData.reduce((sum, item) => sum + item.score, 0) / avgData.length)
+        : 0
+
+      setStats({
+        totalLeads: totalLeads || 0,
+        totalUsers: totalUsers,
+        avgScore,
+        leadsToday: leadsToday || 0
+      })
+
+      // Aggiorna timestamp ultimo aggiornamento
+      setLastUpdate(new Date())
+    } catch (error) {
+      console.error('Errore caricamento statistiche:', error)
+    } finally {
+      setLoadingStats(false)
     }
   }
 
@@ -259,6 +329,22 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              {/* Indicatore ultimo aggiornamento */}
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                Ultimo aggiornamento: {lastUpdate.toLocaleTimeString('it-IT')}
+              </div>
+              
+              {/* Toggle auto-refresh */}
+              <label className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={autoRefresh}
+                  onChange={(e) => setAutoRefresh(e.target.checked)}
+                  className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                />
+                <span>Auto-refresh (30s)</span>
+              </label>
+              
               <span className="text-sm text-gray-600 dark:text-gray-300">Ciao, {user.email}</span>
               <button
                 onClick={() => router.push('/logout')}
@@ -353,7 +439,12 @@ export default function AdminDashboard() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700 relative">
+            {(loadingData || loadingStats) && (
+              <div className="absolute top-2 right-2">
+                <RefreshCw className="h-4 w-4 text-blue-600 animate-spin" />
+              </div>
+            )}
             <div className="flex items-center">
               <Database className="h-8 w-8 text-blue-600 dark:text-blue-400" />
               <div className="ml-4">
@@ -363,7 +454,12 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700 relative">
+            {(loadingData || loadingStats) && (
+              <div className="absolute top-2 right-2">
+                <RefreshCw className="h-4 w-4 text-green-600 animate-spin" />
+              </div>
+            )}
             <div className="flex items-center">
               <BarChart3 className="h-8 w-8 text-green-600 dark:text-green-400" />
               <div className="ml-4">
@@ -373,7 +469,12 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700 relative">
+            {(loadingData || loadingStats) && (
+              <div className="absolute top-2 right-2">
+                <RefreshCw className="h-4 w-4 text-purple-600 animate-spin" />
+              </div>
+            )}
             <div className="flex items-center">
               <TrendingUp className="h-8 w-8 text-purple-600 dark:text-purple-400" />
               <div className="ml-4">
@@ -383,12 +484,19 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700 relative">
+            {(loadingData || loadingStats) && (
+              <div className="absolute top-2 right-2">
+                <RefreshCw className="h-4 w-4 text-orange-600 animate-spin" />
+              </div>
+            )}
             <div className="flex items-center">
               <CheckCircle className="h-8 w-8 text-orange-600 dark:text-orange-400" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Sistema</p>
-                <p className="text-lg font-bold text-green-600 dark:text-green-400">Attivo</p>
+                <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                  {autoRefresh ? 'Auto-sync' : 'Manuale'}
+                </p>
               </div>
             </div>
           </div>
@@ -418,11 +526,23 @@ export default function AdminDashboard() {
                 </select>
 
                 <button
-                  onClick={loadDashboardData}
-                  className="flex items-center px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
+                  onClick={loadStats}
+                  disabled={loadingData || loadingStats}
+                  className="flex items-center px-3 py-2 text-sm bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Aggiorna solo statistiche (veloce)"
                 >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh
+                  <BarChart3 className={`h-4 w-4 mr-2 ${loadingStats ? 'animate-spin' : ''}`} />
+                  {loadingStats ? 'Stats...' : 'Stats'}
+                </button>
+
+                <button
+                  onClick={loadDashboardData}
+                  disabled={loadingData || loadingStats}
+                  className="flex items-center px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Aggiorna tutto (statistiche + leads)"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loadingData ? 'animate-spin' : ''}`} />
+                  {loadingData ? 'Aggiornando...' : 'Refresh All'}
                 </button>
 
                 <button

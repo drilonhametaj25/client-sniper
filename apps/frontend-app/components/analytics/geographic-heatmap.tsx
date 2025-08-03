@@ -19,6 +19,8 @@ export function GeographicHeatmap() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map')
+  const [currentPage, setCurrentPage] = useState(1)
+  const citiesPerPage = 20
 
   useEffect(() => {
     const fetchData = async () => {
@@ -82,9 +84,12 @@ export function GeographicHeatmap() {
   const mapCenter: [number, number] = [41.9028, 12.4964] // Roma
   const mapZoom = 6
 
-  // Dati per la vista lista
+  // Dati per la vista lista - SISTEMATO: Gestisce tutte le città con paginazione
   const sortedData = [...data].sort((a, b) => b.leadCount - a.leadCount)
-  const topCities = sortedData.slice(0, 10)
+  const totalPages = Math.ceil(sortedData.length / citiesPerPage)
+  const startIndex = (currentPage - 1) * citiesPerPage
+  const endIndex = startIndex + citiesPerPage
+  const currentCities = sortedData.slice(startIndex, endIndex)
 
   const getIntensityColor = (leadCount: number, maxLeads: number) => {
     const intensity = leadCount / maxLeads
@@ -140,8 +145,8 @@ export function GeographicHeatmap() {
         </div>
       ) : (
         <div className="h-80 overflow-y-auto space-y-3">
-          {topCities.map((city, index) => (
-            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+          {currentCities.map((city, index) => (
+            <div key={`${city.city}-${index}`} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
               <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0">
                   <div 
@@ -170,6 +175,34 @@ export function GeographicHeatmap() {
               </div>
             </div>
           ))}
+          
+          {/* Paginazione per vista lista */}
+          {viewMode === 'list' && totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+              <div className="text-sm text-gray-600">
+                Pagina {currentPage} di {totalPages} ({sortedData.length} città totali)
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Precedente
+                </button>
+                <span className="text-sm text-gray-600">
+                  {startIndex + 1}-{Math.min(endIndex, sortedData.length)} di {sortedData.length}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Successiva
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
       

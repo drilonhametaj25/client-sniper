@@ -63,7 +63,8 @@ export default function ClientDashboard() {
   // Stato per paginazione
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
-  const [totalLeads, setTotalLeads] = useState(0)
+  const [totalLeads, setTotalLeads] = useState(0) // Lead totali con filtri applicati
+  const [allLeadsCount, setAllLeadsCount] = useState(0) // Tutti i lead nel database (senza filtri)
   const LEADS_PER_PAGE = 20
 
   // Stato per API
@@ -167,6 +168,12 @@ export default function ClientDashboard() {
             setTotalLeads(cached.data.pagination.total)
             setTotalPages(cached.data.pagination.totalPages)
             setCurrentPage(cached.data.pagination.page)
+            
+            // Carica anche il conteggio totale dal cache se disponibile
+            if (cached.data.all_leads_count !== undefined) {
+              setAllLeadsCount(cached.data.all_leads_count)
+            }
+            
             return
           }
         } catch (e) {
@@ -238,6 +245,11 @@ export default function ClientDashboard() {
         setTotalLeads(result.data.pagination.total)
         setTotalPages(result.data.pagination.totalPages)
         setCurrentPage(result.data.pagination.page)
+        
+        // Aggiorna anche il conteggio totale (senza filtri) se disponibile
+        if (result.data.all_leads_count !== undefined) {
+          setAllLeadsCount(result.data.all_leads_count)
+        }
         
         // Cache dei risultati (solo se validi)
         if (result.data.leads.length >= 0) {
@@ -433,6 +445,39 @@ export default function ClientDashboard() {
       setIsSearching(false)
     }
   }, [searchInput])
+
+  // Carica il conteggio totale di TUTTI i lead (senza filtri) una sola volta
+  const loadAllLeadsCount = async () => {
+    if (!user) return
+    
+    try {
+      const session = await supabase.auth.getSession()
+      if (!session.data.session) return
+      
+      const response = await fetch('/api/leads/count', {
+        headers: {
+          'Authorization': `Bearer ${session.data.session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success) {
+          setAllLeadsCount(result.count)
+        }
+      }
+    } catch (error) {
+      console.error('Errore caricamento conteggio totale lead:', error)
+    }
+  }
+
+  // Carica il conteggio totale solo una volta all'inizio
+  useEffect(() => {
+    if (user) {
+      loadAllLeadsCount()
+    }
+  }, [user])
 
   // Funzione per eseguire ricerca immediata
   const executeSearch = () => {
@@ -1220,8 +1265,18 @@ export default function ClientDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Lead Disponibili</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalLeads}</p>
-                  <p className="text-xs text-gray-500">totali nel database</p>
+                  <div className="flex items-center space-x-2">
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalLeads}</p>
+                    {totalLeads !== allLeadsCount && allLeadsCount > 0 && (
+                      <span className="text-sm text-gray-500">/ {allLeadsCount}</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {totalLeads !== allLeadsCount && allLeadsCount > 0 
+                      ? 'filtrati / totali nel database'
+                      : 'totali nel database'
+                    }
+                  </p>
                 </div>
                 <Users className="h-8 w-8 text-green-500" />
               </div>

@@ -58,61 +58,56 @@ export class AnalyticsService {
 
   async getAnalyticsOverview(): Promise<AnalyticsOverview> {
     try {
-      // Prova prima con la vista materializzata se esiste
-      const { data: viewData, error: viewError } = await this.supabase
-        .from('analytics_overview')
-        .select('*')
-        .maybeSingle()
-
-      if (viewData && !viewError) {
-        return {
-          totalLeads: Number(viewData.total_leads) || 0,
-          totalConversions: Number(viewData.total_conversions) || 0,
-          conversionRate: Number(viewData.conversion_rate) || 0,
-          totalRevenue: Number(viewData.total_revenue) || 0,
-          averageROI: Number(viewData.average_roi) || 0,
-          weeklyGrowth: Number(viewData.weekly_growth) || 0,
-        }
-      }
-
-      // Fallback con query dirette se vista non esiste o è vuota
-      const { data: leadsData, error: leadsError } = await this.supabase
+      // SISTEMATO: Usa sempre query dirette per evitare errori di viste mancanti
+      // SISTEMATO: Conta tutti i lead usando count() invece di select() per evitare il limite di 1000
+      const { count: totalLeads, error: leadsCountError } = await this.supabase
         .from('leads')
-        .select('id, created_at, analysis, score')
-        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+        .select('*', { count: 'exact', head: true })
 
-      if (leadsError) {
-        console.error('Error fetching leads data:', leadsError)
-        throw leadsError
+      if (leadsCountError) {
+        console.error('Error counting leads:', leadsCountError)
+        throw leadsCountError
       }
 
-      const { data: conversionsData, error: conversionsError } = await this.supabase
+      const { count: totalConversions, error: conversionsCountError } = await this.supabase
         .from('lead_conversions')
-        .select('*')
-        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+        .select('*', { count: 'exact', head: true })
 
-      if (conversionsError) {
-        console.warn('Error fetching conversions data:', conversionsError)
+      if (conversionsCountError) {
+        console.warn('Error counting conversions:', conversionsCountError)
         // Non bloccare se le conversioni non esistono ancora
       }
 
-      const totalLeads = leadsData?.length || 0
-      const totalConversions = conversionsData?.length || 0
-      const conversionRate = totalLeads > 0 ? (totalConversions / totalLeads) * 100 : 0
-
-      // Calcola settimana corrente vs precedente per growth
+      // Per il calcolo della crescita settimanale, prendiamo solo le date necessarie
       const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-      const currentWeekLeads = leadsData?.filter((lead: any) => 
-        new Date(lead.created_at) >= oneWeekAgo
-      ).length || 0
-      const previousWeekLeads = totalLeads - currentWeekLeads
-      const weeklyGrowth = previousWeekLeads > 0 ? ((currentWeekLeads - previousWeekLeads) / previousWeekLeads) * 100 : 0
+      const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
+      
+      const { count: currentWeekLeads, error: currentWeekError } = await this.supabase
+        .from('leads')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', oneWeekAgo.toISOString())
+
+      const { count: previousWeekLeads, error: previousWeekError } = await this.supabase
+        .from('leads')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', twoWeeksAgo.toISOString())
+        .lt('created_at', oneWeekAgo.toISOString())
+
+      const weeklyGrowth = (previousWeekLeads && previousWeekLeads > 0) 
+        ? (((currentWeekLeads || 0) - previousWeekLeads) / previousWeekLeads) * 100 
+        : 0
+
+      const totalLeadsCount = totalLeads || 0
+      const totalConversionsCount = totalConversions || 0
+      const conversionRate = totalLeadsCount > 0 ? (totalConversionsCount / totalLeadsCount) * 100 : 0
+
+      console.log(`Analytics Overview: ${totalLeadsCount} lead totali, ${totalConversionsCount} conversioni`) // SISTEMATO: Log per debug
 
       return {
-        totalLeads,
-        totalConversions,
+        totalLeads: totalLeadsCount,
+        totalConversions: totalConversionsCount,
         conversionRate,
-        totalRevenue: totalConversions * 50, // Stima revenue per conversione
+        totalRevenue: totalConversionsCount * 50, // Stima revenue per conversione
         averageROI: conversionRate > 0 ? conversionRate * 2 : 0, // Stima ROI
         weeklyGrowth,
       }
@@ -131,39 +126,39 @@ export class AnalyticsService {
 
   async getGeographicData(): Promise<GeographicData[]> {
     try {
-      // Prova prima con la vista aggregata se esiste
-      const { data: viewData, error: viewError } = await this.supabase
-        .from('lead_geography_aggregated')
-        .select('*')
-        .order('lead_count', { ascending: false })
+      // SISTEMATO: Recupera TUTTI i lead usando paginazione se necessario
+      let allLeads: any[] = []
+      let page = 0
+      const pageSize = 1000
+      let hasMore = true
 
-      if (viewData && viewData.length > 0) {
-        return viewData.map((item: any) => {
-          const cityName = String(item.city || 'Unknown')
-          const coords = getCityCoordinatesWithFallback(cityName, item.region)
-          
-          return {
-            city: cityName,
-            region: coords ? getCityCoordinates(cityName)?.region || 'Unknown' : 'Unknown',
-            lat: coords.lat,
-            lng: coords.lng,
-            leadCount: Number(item.lead_count) || 0,
-            conversionCount: Number(item.conversion_count) || 0,
-            score: Number(item.avg_score) || 0,
-          }
-        })
+      while (hasMore) {
+        const { data: leadsPage, error: leadsError } = await this.supabase
+          .from('leads')
+          .select('city, analysis, score')
+          .range(page * pageSize, (page + 1) * pageSize - 1)
+
+        if (leadsError) {
+          console.error('Error fetching geographic data:', leadsError)
+          throw leadsError
+        }
+
+        if (leadsPage && leadsPage.length > 0) {
+          allLeads = [...allLeads, ...leadsPage]
+          hasMore = leadsPage.length === pageSize
+          page++
+        } else {
+          hasMore = false
+        }
       }
 
-      // Fallback con query diretta su leads - TUTTI i lead, non solo quelli con città
-      const { data: leadsData, error: leadsError } = await this.supabase
-        .from('leads')
-        .select('city, analysis, score')
+      console.log(`Geographic Data: Recuperati ${allLeads.length} lead totali`) // SISTEMATO: Log per debug
 
-      if (leadsData) {
+      if (allLeads.length > 0) {
         // Aggrega i dati manualmente
         const cityMap = new Map<string, { count: number; totalScore: number }>()
         
-        leadsData.forEach((lead: any) => {
+        allLeads.forEach((lead: any) => {
           // Se non c'è città, usa "Località non specificata" 
           const city = String(lead.city || 'Località non specificata')
           const score = Number(lead.analysis?.score) || Number(lead.score) || 0
@@ -210,37 +205,46 @@ export class AnalyticsService {
     }
   }
 
-  async getConversionData(period: '7d' | '30d' | '90d' = '30d'): Promise<ConversionData[]> {
+  async getConversionData(period: '7d' | '30d' | '90d' | 'all' = '30d'): Promise<ConversionData[]> {
     try {
-      // Prova prima con la vista se esiste
-      const { data: viewData, error: viewError } = await this.supabase
-        .from('conversion_funnel_daily')
-        .select('*')
-        .gte('date', this.getDateRange(period))
-        .order('date', { ascending: true })
+      // SISTEMATO: Recupera TUTTI i lead usando paginazione se necessario
+      let allLeads: any[] = []
+      let page = 0
+      const pageSize = 1000
+      let hasMore = true
 
-      if (viewData && viewData.length > 0) {
-        return viewData.map((item: any) => ({
-          date: String(item.date),
-          leads: Number(item.leads_count) || 0,
-          conversions: Number(item.conversions_count) || 0,
-          conversionRate: Number(item.conversion_rate) || 0,
-          revenue: Number(item.revenue) || 0,
-        }))
+      while (hasMore) {
+        let leadsQuery = this.supabase
+          .from('leads')
+          .select('created_at, analysis')
+          .range(page * pageSize, (page + 1) * pageSize - 1)
+          
+        // Solo aggiunge filtro data se non è "all"
+        if (period !== 'all') {
+          leadsQuery = leadsQuery.gte('created_at', this.getDateRange(period))
+        }
+        
+        const { data: leadsPage, error: leadsError } = await leadsQuery.order('created_at', { ascending: true })
+
+        if (leadsError) {
+          console.error('Error fetching conversion data:', leadsError)
+          throw leadsError
+        }
+
+        if (leadsPage && leadsPage.length > 0) {
+          allLeads = [...allLeads, ...leadsPage]
+          hasMore = leadsPage.length === pageSize
+          page++
+        } else {
+          hasMore = false
+        }
       }
 
-      // Fallback con aggregazione manuale
-      const { data: leadsData, error: leadsError } = await this.supabase
-        .from('leads')
-        .select('created_at, analysis')
-        .gte('created_at', this.getDateRange(period))
-        .order('created_at', { ascending: true })
-
-      if (leadsData) {
+      if (allLeads.length > 0) {
         // Aggrega per giorno
         const dailyMap = new Map<string, { leads: number; conversions: number }>()
         
-        leadsData.forEach((lead: any) => {
+        allLeads.forEach((lead: any) => {
           const date = new Date(lead.created_at).toISOString().split('T')[0]
           const isConverted = lead.analysis?.converted || false
           
@@ -269,26 +273,9 @@ export class AnalyticsService {
     }
   }
 
-  async getROIData(period: '7d' | '30d' | '90d' = '30d'): Promise<ROIData[]> {
+  async getROIData(period: '7d' | '30d' | '90d' | 'all' = '30d'): Promise<ROIData[]> {
     try {
-      // Prova prima con la vista se esiste
-      const { data: viewData, error: viewError } = await this.supabase
-        .from('roi_metrics_daily')
-        .select('*')
-        .gte('date', this.getDateRange(period))
-        .order('date', { ascending: true })
-
-      if (viewData && viewData.length > 0) {
-        return viewData.map((item: any) => ({
-          period: String(item.date),
-          investment: Number(item.total_investment) || 0,
-          revenue: Number(item.total_revenue) || 0,
-          roi: Number(item.roi_percentage) || 0,
-          profit: Number(item.profit) || 0,
-        }))
-      }
-
-      // Fallback con calcolo manuale
+      // SISTEMATO: Usa sempre query dirette per evitare errori di viste mancanti
       const conversionData = await this.getConversionData(period)
       return conversionData.map(item => {
         const investment = item.leads * 2 // Stima costo per lead
@@ -326,7 +313,7 @@ export class AnalyticsService {
     }
   }
 
-  async exportReport(format: 'csv' | 'pdf' | 'json', period: '7d' | '30d' | '90d' = '30d'): Promise<Blob> {
+  async exportReport(format: 'csv' | 'pdf' | 'json', period: '7d' | '30d' | '90d' | 'all' = '30d'): Promise<Blob> {
     try {
       const [overview, geographic, conversion, roi] = await Promise.all([
         this.getAnalyticsOverview(),
@@ -363,7 +350,12 @@ export class AnalyticsService {
     }
   }
 
-  private getDateRange(period: '7d' | '30d' | '90d'): string {
+  private getDateRange(period: '7d' | '30d' | '90d' | 'all'): string {
+    if (period === 'all') {
+      // Restituisce una data molto antica per recuperare tutti i dati
+      return '1900-01-01'
+    }
+    
     const days = period === '7d' ? 7 : period === '30d' ? 30 : 90
     const date = new Date()
     date.setDate(date.getDate() - days)

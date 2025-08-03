@@ -188,16 +188,16 @@ export default function AdvancedFilters({
         
         <div className="flex items-center gap-2">
           {hasActiveFilters && (
-            <button
+            <div
               onClick={(e) => {
                 e.stopPropagation()
                 handleReset()
               }}
-              className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+              className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
               title="Reset Filtri"
             >
               <RotateCcw className="h-4 w-4" />
-            </button>
+            </div>
           )}
           {isOpen ? (
             <ChevronUp className="h-5 w-5 text-gray-400" />

@@ -17,7 +17,7 @@ export function ConversionRateChart() {
   const [data, setData] = useState<ConversionData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [period, setPeriod] = useState<'7d' | '30d' | '90d'>('30d')
+  const [period, setPeriod] = useState<'7d' | '30d' | '90d' | 'all'>('30d')
 
   useEffect(() => {
     const fetchData = async () => {
@@ -98,12 +98,13 @@ export function ConversionRateChart() {
         <div className="flex items-center space-x-2">
           <select
             value={period}
-            onChange={(e) => setPeriod(e.target.value as '7d' | '30d' | '90d')}
+            onChange={(e) => setPeriod(e.target.value as '7d' | '30d' | '90d' | 'all')}
             className="text-sm border border-gray-300 rounded-md px-2 py-1"
           >
             <option value="7d">7 giorni</option>
             <option value="30d">30 giorni</option>
             <option value="90d">90 giorni</option>
+            <option value="all">Tutti i dati</option>
           </select>
         </div>
       </div>
