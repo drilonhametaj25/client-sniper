@@ -77,9 +77,6 @@ export default function BlogPage() {
             {featuredPosts.map((post) => (
               <Link key={post.slug} href={`/blog/${post.slug}`} className="group">
                 <article className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
-                  <div className="aspect-video bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
-                    <span className="text-4xl">{post.emoji}</span>
-                  </div>
                   <div className="p-6">
                     <div className="flex items-center space-x-4 text-sm text-gray-500 mb-3">
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -118,9 +115,6 @@ export default function BlogPage() {
               {recentPosts.map((post) => (
                 <Link key={post.slug} href={`/blog/${post.slug}`} className="group">
                   <article className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
-                    <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                      <span className="text-3xl">{post.emoji}</span>
-                    </div>
                     <div className="p-5">
                       <div className="flex items-center space-x-3 text-sm text-gray-500 mb-2">
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">

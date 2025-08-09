@@ -132,13 +132,6 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
           </div>
         </header>
 
-        {/* Hero Visual */}
-        <div className="mb-8">
-          <div className="aspect-video bg-gradient-to-br from-blue-100 to-indigo-200 rounded-lg flex items-center justify-center">
-            <span className="text-6xl">{post.emoji}</span>
-          </div>
-        </div>
-
         {/* CTA Above Content */}
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 mb-8">
           <div className="text-center">
@@ -266,9 +259,6 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
               {relatedPosts.map((relatedPost: BlogPost) => (
                 <Link key={relatedPost.slug} href={`/blog/${relatedPost.slug}`} className="group">
                   <article className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
-                    <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                      <span className="text-3xl">{relatedPost.emoji}</span>
-                    </div>
                     <div className="p-4">
                       <span className="inline-block px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full mb-2">
                         {relatedPost.category}
