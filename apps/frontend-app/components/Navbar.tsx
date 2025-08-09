@@ -9,7 +9,7 @@ import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Target, User, Settings, LogOut, Menu, X, Crown, Shield, Users, Home, MessageSquare, FolderOpen, GraduationCap, BarChart } from 'lucide-react'
+import { Target, User, Settings, LogOut, Menu, X, Crown, Shield, Users, Home, MessageSquare, FolderOpen, GraduationCap, BarChart, BookOpen } from 'lucide-react'
 import Button from './ui/Button'
 import Badge from './ui/Badge'
 import ThemeToggle from './theme/ThemeToggle'
@@ -89,6 +89,7 @@ export default function Navbar() {
       { name: 'Feedback', href: '/admin/feedback', icon: MessageSquare, description: 'Segnalazioni Utenti' },
       { name: 'Settings', href: '/admin/settings', icon: Settings, description: 'Configurazioni Sistema' },
     ] : [
+      { name: 'Blog', href: '/blog', icon: BookOpen, description: 'Guide e strategie per trovare clienti' },
       { name: 'Feedback', href: '/feedback', icon: MessageSquare, description: 'Feedback e suggerimenti della community' },
     ]),
     { name: 'Analisi', href: '/tools/manual-scan', icon: Target, description: 'Analizza qualsiasi sito web' },
@@ -105,6 +106,7 @@ export default function Navbar() {
     },
   ] : [
     { name: 'Dashboard', href: '/dashboard', icon: Home, description: 'I miei lead' },
+    { name: 'Blog', href: '/blog', icon: BookOpen, description: 'Guide e strategie per trovare clienti' },
     { name: 'Analisi', href: '/tools/manual-scan', icon: Target, description: 'Analizza qualsiasi sito web' },
     ...(user?.plan === 'pro' ? [
       { name: 'CRM', href: '/crm', icon: FolderOpen, description: 'Gestisci i tuoi lead sbloccati' },
