@@ -490,23 +490,17 @@ export default function ClientDashboard() {
     setSearchTerm('')
   }
 
-  // Carica le città disponibili
+  // Carica le città disponibili usando RPC per bypassare RLS policy
   const loadAvailableCities = async () => {
     try {
-      const { data, error } = await supabase
-        .from('leads')
-        .select('city')
-        .not('city', 'is', null)
-        .not('city', 'eq', '')
-        .order('city')
+      const { data, error } = await supabase.rpc('get_all_available_cities')
       
       if (error) throw error
       
-      // Rimuovi duplicati e ordina
-      const citySet = new Set(data.map(item => item.city))
-      const uniqueCities = Array.from(citySet)
+      // La funzione RPC già restituisce città uniche e ordinate
+      const uniqueCities = (data || [])
+        .map(item => item.city)
         .filter(city => city && city.trim().length > 0)
-        .sort()
       
       setAvailableCities(uniqueCities)
     } catch (error) {
