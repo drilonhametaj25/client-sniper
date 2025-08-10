@@ -499,8 +499,8 @@ export default function ClientDashboard() {
       
       // La funzione RPC già restituisce città uniche e ordinate
       const uniqueCities = (data || [])
-        .map(item => item.city)
-        .filter(city => city && city.trim().length > 0)
+        .map((item: any) => item.city)
+        .filter((city: any) => city && city.trim().length > 0)
       
       setAvailableCities(uniqueCities)
     } catch (error) {
