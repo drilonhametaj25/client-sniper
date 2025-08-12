@@ -32,6 +32,15 @@ import {
 import NewsletterForm from '@/components/NewsletterForm'
 import ThemeToggle from '@/components/theme/ThemeToggle'
 
+// Estende il tipo Window per includere le funzioni di tracking
+declare global {
+  interface Window {
+    fbq?: any
+    gtag?: (...args: any[]) => void
+    gtag_report_conversion?: () => void
+  }
+}
+
 interface Plan {
   id: string
   name: string
@@ -148,6 +157,11 @@ export default function RegisterPage() {
     }
 
     setLoading(true)
+
+    // Track Google Ads conversion per piani paganti (Starter e Pro) quando si clicca "Crea Account"
+    if ((selectedPlan === 'starter' || selectedPlan === 'pro') && typeof window !== 'undefined' && window.gtag_report_conversion) {
+      window.gtag_report_conversion()
+    }
 
     try {
       const selectedPlanData = plans.find(p => p.id === selectedPlan)
@@ -270,6 +284,25 @@ export default function RegisterPage() {
               page_location: window.location.href,
               send_page_view: true
             });
+          `}
+        </Script>
+
+        {/* Google Ads Conversion Tracking */}
+        <Script id="google-ads-conversion" strategy="afterInteractive">
+          {`
+            function gtag_report_conversion(url) {
+              var callback = function () {
+                if (typeof(url) != 'undefined') {
+                  window.location = url;
+                }
+              };
+              gtag('event', 'conversion', {
+                  'send_to': 'AW-11367445055/zGjTCN_23oQbEL_ktawq',
+                  'transaction_id': '',
+                  'event_callback': callback
+              });
+              return false;
+            }
           `}
         </Script>
 
