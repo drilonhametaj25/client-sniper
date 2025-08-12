@@ -32,7 +32,7 @@ export default function SocialProofStats() {
     },
     {
       label: 'Lead Generati',
-      value: 1486,
+      value: 3830,
       suffix: '',
       color: 'green',
       icon: Users,
@@ -48,7 +48,7 @@ export default function SocialProofStats() {
     },
     {
       label: 'Clienti Soddisfatti',
-      value: 247,
+      value: 243,
       suffix: '',
       color: 'indigo',
       icon: CheckCircle,
