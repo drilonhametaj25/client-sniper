@@ -14,7 +14,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: NextRequest) {
   try {
-    const { priceId, planId, userEmail, autoConfirm } = await request.json()
+    const { priceId, planId, userEmail, autoConfirm, isAnnual } = await request.json()
 
     if (!priceId || !planId) {
       return NextResponse.json(
@@ -37,14 +37,12 @@ export async function POST(request: NextRequest) {
       }
 
       // Per la registrazione diretta, creiamo un identificatore basato su email
-      // L'aggiornamento del database avverrà nel webhook dopo il pagamento
       user = {
-        id: `email_${userEmail}`, // Identificatore email-based invece di temp
+        id: `email_${userEmail}`,
         email: userEmail
       }
     } else {
       // Metodo normale: utente già loggato
-      // Prima prova con il cookie (Next.js route handler)
       const supabase = createRouteHandlerClient({ cookies })
       
       let sessionResult = await supabase.auth.getSession()
@@ -56,13 +54,11 @@ export async function POST(request: NextRequest) {
         if (authHeader && authHeader.startsWith('Bearer ')) {
           const token = authHeader.substring(7)
           
-          // Crea un client temporaneo con il token
           const supabaseWithToken = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
           )
           
-          // Imposta la sessione con il token
           const { data: { user: tokenUser }, error: tokenError } = await supabaseWithToken.auth.getUser(token)
           
           if (tokenError || !tokenUser) {
@@ -100,9 +96,10 @@ export async function POST(request: NextRequest) {
       customer_email: user.email,
       metadata: {
         user_id: user.id,
-        user_email: user.email, // Importante per il webhook
+        user_email: user.email,
         plan_id: planId,
         auto_confirm: autoConfirm ? 'true' : 'false',
+        is_annual: isAnnual ? 'true' : 'false',
       },
       subscription_data: {
         metadata: {
@@ -110,6 +107,7 @@ export async function POST(request: NextRequest) {
           user_email: user.email,
           plan_id: planId,
           auto_confirm: autoConfirm ? 'true' : 'false',
+          is_annual: isAnnual ? 'true' : 'false',
         },
       },
     })

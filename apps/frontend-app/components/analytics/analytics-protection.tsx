@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import LoadingSpinner from '@/components/ui/loading-spinner'
+import { isProOrHigher } from '@/lib/utils/plan-helpers'
 
 interface AnalyticsProtectionProps {
   children: React.ReactNode
@@ -27,7 +28,7 @@ export function AnalyticsProtection({ children }: AnalyticsProtectionProps) {
       return
     }
 
-    if (!loading && user && user.plan !== 'pro') {
+    if (!loading && user && !isProOrHigher(user.plan || 'free')) {
       router.push('/upgrade')
       return
     }
@@ -45,7 +46,7 @@ export function AnalyticsProtection({ children }: AnalyticsProtectionProps) {
     return null
   }
 
-  if (user.plan !== 'pro') {
+  if (!isProOrHigher(user.plan || 'free')) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">

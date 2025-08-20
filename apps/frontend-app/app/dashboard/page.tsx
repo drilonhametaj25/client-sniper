@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { getDaysUntilReset, formatResetDate } from '@/lib/auth'
+import { isProOrHigher } from '@/lib/utils/plan-helpers'
 import { createPortal } from 'react-dom'
 import { LeadStatusBadge } from '@/components/LeadStatusBadge'
 import { LeadWithCRM, CRMStatusType } from '@/lib/types/crm'
@@ -317,7 +318,7 @@ export default function ClientDashboard() {
       }
       
       // Filtri CRM (solo per utenti PRO)
-      if (userProfile?.plan === 'pro') {
+      if (isProOrHigher(userProfile?.plan || 'free')) {
         if (advancedFilters.crmFilters.onlyUncontacted) {
           const crmStatus = (lead as LeadWithCRM).crm_status
           if (crmStatus && crmStatus !== 'new') return false
@@ -1676,7 +1677,7 @@ export default function ClientDashboard() {
                           </div>
                           
                           {/* Badge CRM Status per utenti PRO - Solo per lead sbloccati */}
-                          {isUnlocked && userProfile?.plan === 'pro' && (
+                          {isUnlocked && isProOrHigher(userProfile?.plan || 'free') && (
                             <div className="mb-3">
                               <LeadStatusBadge 
                                 status={lead.crm_status} 
@@ -1795,7 +1796,7 @@ export default function ClientDashboard() {
                                 {/* Contiamo i dati disponibili SOLO se il piano li supporta */}
                                 {(() => {
                                   const userPlan = userProfile?.plan || 'free'
-                                  const isProOrAdmin = userPlan === 'pro' || userProfile?.role === 'admin'
+                                  const isProOrAdmin = isProOrHigher(userPlan) || userProfile?.role === 'admin'
                                   
                                   // Solo per piani Pro/Admin controlliamo i contatti (perché l'API li restituisce)
                                   if (isProOrAdmin) {
@@ -2010,7 +2011,7 @@ export default function ClientDashboard() {
                             </div>
                             
                             {/* Azioni rapide CRM per utenti PRO */}
-                            {userProfile?.plan === 'pro' && (
+                            {isProOrHigher(userProfile?.plan || 'free') && (
                               <div className="border-t border-gray-200 pt-2 mt-2 w-full">
                                 <div className="text-xs text-gray-500 text-center mb-2">🎯 Azioni rapide CRM</div>
                                 <div className="flex flex-col space-y-1 w-full">

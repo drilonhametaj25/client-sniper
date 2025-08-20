@@ -6,12 +6,14 @@
 
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { isStarterOrHigher } from '@/lib/utils/plan-helpers'
 import Script from 'next/script'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/ToastProvider'
+import { supabase } from '@/lib/supabase'
 import { validatePassword, validateEmail, getPasswordStrengthColor, getPasswordStrengthBg } from '@/lib/validation'
 import { 
   Check, 
@@ -31,6 +33,7 @@ import {
 } from 'lucide-react'
 import NewsletterForm from '@/components/NewsletterForm'
 import ThemeToggle from '@/components/theme/ThemeToggle'
+import NewPlanSelector from '@/components/NewPlanSelector'
 
 // Estende il tipo Window per includere le funzioni di tracking
 declare global {
@@ -51,51 +54,12 @@ interface Plan {
   stripePriceId?: string
 }
 
-const plans: Plan[] = [
-  {
-    id: 'free',
-    name: 'Free',
-    price: 0,
-    credits: 2,
-    features: [
-      '2 audit al mese',
-      'Report base',
-      'Supporto community'
-    ]
-  },
-  {
-    id: 'starter',
-    name: 'Starter',
-    price: 19,
-    credits: 25,
-    features: [
-      '25 audit completi al mese',
-      'Intelligence tecnica avanzata',
-      'Supporto email',
-      'Filtri di targeting'
-    ],
-    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_STARTER_PRICE_ID || 'price_starter_test'
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    price: 49,
-    credits: 100,
-    features: [
-      '100 audit al mese',
-      'Suite completa di analisi',
-      'CRM personale integrato',
-      'Supporto prioritario',
-      'Targeting geografico',
-      'API access',
-      'Scoring intelligence proprietario'
-    ],
-    popular: true,
-    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID || 'price_pro_test'
-  }
-]
-
 export default function RegisterPage() {
+  // Stati piani dinamici dal database
+  const [availablePlans, setAvailablePlans] = useState<any[]>([])
+  const [plansLoading, setPlansLoading] = useState(true)
+
+  // Stato per il piano selezionato
   const [selectedPlan, setSelectedPlan] = useState('free')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -108,6 +72,59 @@ export default function RegisterPage() {
   const { signUp } = useAuth()
   const { success, error: showError } = useToast()
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Carica parametri URL per auto-selezione piano
+  useEffect(() => {
+    const planParam = searchParams.get('plan')
+    const stepParam = searchParams.get('step')
+    
+    if (planParam) {
+      // Estrae il nome base del piano (rimuove suffissi _monthly/_annual)
+      const basePlanName = planParam.replace('_monthly', '').replace('_annual', '')
+      setSelectedPlan(basePlanName)
+    }
+    
+    if (stepParam) {
+      const stepValue = parseInt(stepParam)
+      if (stepValue >= 1 && stepValue <= 3) {
+        setStep(stepValue)
+      }
+    }
+
+    // Carica piani dal database
+    loadAvailablePlans()
+  }, [searchParams])
+
+  // Carica piani disponibili dal database
+  const loadAvailablePlans = async () => {
+    try {
+      const { data: plans, error } = await supabase
+        .from('plans')
+        .select('*')
+        .eq('is_visible', true)
+        .order('sort_order')
+      
+      if (error) throw error
+      setAvailablePlans(plans || [])
+    } catch (error) {
+      console.error('Errore caricamento piani:', error)
+    } finally {
+      setPlansLoading(false)
+    }
+  }
+
+  // Trova il piano selezionato dai dati del database
+  const getSelectedPlanData = () => {
+    if (!availablePlans.length) return null
+    
+    // Cerca prima la versione mensile del piano selezionato
+    const monthlyPlan = availablePlans.find(plan => 
+      plan.name === selectedPlan || plan.name === `${selectedPlan}_monthly`
+    )
+    
+    return monthlyPlan || null
+  }
 
   // Validazione password in tempo reale
   const passwordValidation = validatePassword(password)
@@ -121,7 +138,7 @@ export default function RegisterPage() {
       window.fbq('track', 'InitiateCheckout', {
         content_name: `Piano ${planId}`,
         content_category: 'Registration',
-        value: plans.find(p => p.id === planId)?.price || 0,
+        value: 0,
         currency: 'EUR'
       })
     }
@@ -130,7 +147,7 @@ export default function RegisterPage() {
       window.gtag('event', 'begin_checkout', {
         event_category: 'Registration',
         event_label: `Piano ${planId}`,
-        value: plans.find(p => p.id === planId)?.price || 0
+        value: 0
       })
     }
   }
@@ -159,13 +176,11 @@ export default function RegisterPage() {
     setLoading(true)
 
     // Track Google Ads conversion per piani paganti (Starter e Pro) quando si clicca "Crea Account"
-    if ((selectedPlan === 'starter' || selectedPlan === 'pro') && typeof window !== 'undefined' && window.gtag_report_conversion) {
+    if (isStarterOrHigher(selectedPlan) && typeof window !== 'undefined' && window.gtag_report_conversion) {
       window.gtag_report_conversion()
     }
 
     try {
-      const selectedPlanData = plans.find(p => p.id === selectedPlan)
-
       // Crea l'account
       const signUpResult = await signUp(email, password)
       
@@ -178,7 +193,7 @@ export default function RegisterPage() {
         window.fbq('track', 'CompleteRegistration', {
           content_name: `Piano ${selectedPlan}`,
           content_category: 'Registration Complete',
-          value: selectedPlanData?.price || 0,
+          value: 0,
           currency: 'EUR'
         })
       }
@@ -187,7 +202,7 @@ export default function RegisterPage() {
         window.gtag('event', 'sign_up', {
           event_category: 'Registration',
           event_label: `Piano ${selectedPlan}`,
-          value: selectedPlanData?.price || 0
+          value: 0
         })
       }
 
@@ -199,7 +214,7 @@ export default function RegisterPage() {
       }
 
       // Se piano a pagamento, vai DIRETTAMENTE al checkout (senza conferma email)
-      if (selectedPlanData?.stripePriceId) {
+      if (selectedPlan !== 'free') {
         success('Account creato!', 'Procediamo al pagamento...')
         
         // Attendiamo un momento per assicurarci che l'utente sia nel database
@@ -207,16 +222,24 @@ export default function RegisterPage() {
         
         // Vai direttamente al checkout
         try {
+          // Recupera dati del piano selezionato
+          const planData = getSelectedPlanData()
+          
+          if (!planData || !planData.stripe_price_id_monthly) {
+            throw new Error('Piano non configurato correttamente. Contatta il supporto.')
+          }
+
           const response = await fetch('/api/stripe/create-checkout', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              priceId: selectedPlanData.stripePriceId,
+              priceId: planData.stripe_price_id_monthly, // Usa il vero Stripe Price ID
               planId: selectedPlan,
               userEmail: email,
-              autoConfirm: true
+              autoConfirm: true,
+              isAnnual: false // Sempre mensile per la registrazione
             })
           })
 
@@ -232,7 +255,7 @@ export default function RegisterPage() {
               window.fbq('track', 'AddPaymentInfo', {
                 content_name: `Piano ${selectedPlan}`,
                 content_category: 'Payment Initiation',
-                value: selectedPlanData?.price || 0,
+                value: 0, // Il prezzo verrà tracciato successivamente dopo il checkout
                 currency: 'EUR'
               })
             }
@@ -241,7 +264,7 @@ export default function RegisterPage() {
               window.gtag('event', 'add_payment_info', {
                 event_category: 'Payment',
                 event_label: `Piano ${selectedPlan}`,
-                value: selectedPlanData?.price || 0
+                value: 0 // Il prezzo verrà tracciato successivamente dopo il checkout
               })
             }
 
@@ -391,64 +414,11 @@ export default function RegisterPage() {
             </section>
 
             {/* Plans Grid */}
-            <section className="mb-12" aria-labelledby="plans-heading">
-              <h2 id="plans-heading" className="sr-only">Piani disponibili</h2>
-              <div className="grid md:grid-cols-3 gap-8">
-                {plans.map((plan) => (
-                  <div
-                    key={plan.id}
-                    className={`relative rounded-2xl p-8 cursor-pointer transition-all ${
-                      plan.popular
-                        ? 'border-2 border-blue-500 shadow-xl'
-                        : 'border border-gray-200 shadow-lg hover:shadow-xl'
-                    } ${
-                      selectedPlan === plan.id
-                        ? 'ring-2 ring-blue-500 scale-105'
-                        : 'hover:border-blue-300'
-                    } bg-white`}
-                    onClick={() => handlePlanSelect(plan.id)}
-                  >
-                    {plan.popular && (
-                      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                        <span className="inline-flex items-center px-4 py-1 rounded-full text-xs font-medium bg-blue-500 text-white">
-                          <Star className="w-3 h-3 mr-1" />
-                          Più Popolare
-                        </span>
-                      </div>
-                    )}
-                    
-                    <div className="text-center">
-                      <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
-                      <div className="mb-4">
-                        <span className="text-4xl font-bold text-gray-900">€{plan.price}</span>
-                        {plan.price > 0 && <span className="text-gray-500">/mese</span>}
-                      </div>
-                      
-                      <p className="text-gray-600 mb-6">
-                        {plan.credits} audit {plan.price === 0 ? 'gratuiti' : 'inclusi'}
-                      </p>
-                      
-                      <ul className="space-y-3 mb-8">
-                        {plan.features.map((feature, idx) => (
-                          <li key={idx} className="flex items-center text-sm text-gray-600">
-                            <Check className="h-4 w-4 text-green-500 mr-3 flex-shrink-0" />
-                            {feature}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    
-                    <div className={`w-full py-3 px-4 rounded-lg font-medium text-center transition-colors ${
-                      plan.popular
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : 'bg-gray-900 text-white hover:bg-gray-800'
-                    }`}>
-                      Scegli {plan.name}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
+            <NewPlanSelector 
+              currentPlan={selectedPlan}
+              onPlanSelect={(planId, isAnnual) => handlePlanSelect(planId)}
+              showFree={true}
+            />
 
             {/* CTA Section */}
             <section className="text-center mb-16">
@@ -823,7 +793,7 @@ export default function RegisterPage() {
                 ) : (
                   <>
                     <Crown className="h-5 w-5 mr-2" />
-                    Crea Account {selectedPlan === 'free' ? 'Gratuito' : `${plans.find(p => p.id === selectedPlan)?.name}`}
+                    Crea Account {selectedPlan === 'free' ? 'Gratuito' : selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}
                   </>
                 )}
               </button>

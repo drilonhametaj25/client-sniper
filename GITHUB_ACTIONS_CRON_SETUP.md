@@ -1,118 +1,228 @@
-# 🔧 Configurazione GitHub Actions per Reset Crediti
+# Configurazione Cron Job Mensile TrovaMi.pro
 
-Questo documento spiega come configurare GitHub Actions per il reset automatico dei crediti utenti.
+Questo documento descrive come configurare il cron job automatico per il reset mensile delle sostituzioni nel sistema TrovaMi.pro.
 
-## 📋 Setup Secrets
+## 🎯 Panoramica
 
-Devi aggiungere questi secrets nel repository GitHub:
+Il sistema prevede un reset automatico delle sostituzioni ogni primo giorno del mese alle 00:01, permettendo agli utenti di utilizzare nuovamente i loro crediti mensili per le sostituzioni.
 
-### 1. 🌐 APP_URL
-```
-Nome: APP_URL
-Valore: https://yourdomain.com
-```
-**Dove**: L'URL della tua app in produzione (senza trailing slash)
+## 🗄️ Componenti Database
 
-### 2. 🔐 CRON_SECRET  
-```
-Nome: CRON_SECRET
-Valore: [genera con: openssl rand -base64 32]
-```
-**Dove**: Lo stesso secret che hai in Vercel come variabile ambiente
+### Funzione di Reset Automatico
+La funzione `monthly_reset_replacements_job()` è già inclusa nel file `/database/new-pricing-system.sql`:
 
-## 🔧 Come aggiungere i secrets
-
-1. Vai su GitHub → Repository → Settings → Secrets and variables → Actions
-
-2. Clicca "New repository secret"
-
-3. Aggiungi i secrets sopra
-
-## 📅 Schedule del Workflow
-
-Il workflow è configurato per:
-- **Automatico**: Ogni giorno a mezzanotte UTC
-- **Manuale**: Puoi triggerarlo da GitHub Actions tab
-
-## 🔄 Schedule Options
-
-Puoi modificare lo schedule nel file `.github/workflows/reset-credits.yml`:
-
-```yaml
-schedule:
-  - cron: '0 0 * * *'    # Ogni giorno a mezzanotte UTC
-  # - cron: '0 0 1 * *'  # Primo di ogni mese
-  # - cron: '0 2 * * 1'  # Ogni lunedì alle 2:00 AM
+```sql
+CREATE OR REPLACE FUNCTION monthly_reset_replacements_job()
+RETURNS TEXT AS $$
+DECLARE
+    reset_count INTEGER;
+BEGIN
+    -- Reset counter sostituzioni per tutti gli utenti
+    UPDATE public.user_replacement_requests 
+    SET used_this_month = 0
+    WHERE date_trunc('month', last_reset::date) < date_trunc('month', CURRENT_DATE);
+    
+    GET DIAGNOSTICS reset_count = ROW_COUNT;
+    
+    -- Aggiorna timestamp ultimo reset
+    UPDATE public.user_replacement_requests 
+    SET last_reset = NOW()
+    WHERE date_trunc('month', last_reset::date) < date_trunc('month', CURRENT_DATE);
+    
+    -- Log operazione
+    INSERT INTO public.system_logs (operation, details, created_at)
+    VALUES ('monthly_replacement_reset', 
+            format('Reset effettuato per %s utenti', reset_count),
+            NOW());
+    
+    RETURN format('✅ Reset completato per %s utenti', reset_count);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
-## 🧪 Testing
+## 🖥️ Setup Server
 
-### Test Manuale
-1. Vai su GitHub → Actions → "Reset Credits Daily"
-2. Clicca "Run workflow" 
-3. Scegli se forzare il reset anche per utenti Stripe
-4. Clicca "Run workflow"
+### 1. Installazione Script
+Esegui lo script di setup sul tuo server:
 
-### Verifica Logs
-1. Dopo l'esecuzione, clicca sul run
-2. Espandi "Reset User Credits" 
-3. Controlla i logs per vedere:
-   - Utenti processati
-   - Crediti resettati
-   - Eventuali errori
+```bash
+# Scarica e esegui lo script di configurazione
+chmod +x scripts/setup-monthly-reset-cron.sh
+sudo ./scripts/setup-monthly-reset-cron.sh
+```
 
-## 🚀 Vantaggi GitHub Actions
+### 2. Configurazione Credenziali
+Modifica il file delle variabili d'ambiente:
 
-✅ **Integrato**: Usa la stessa infrastruttura dello scraper
-✅ **Gratis**: Per repository pubblici o con limiti generosi per privati  
-✅ **Reliable**: GitHub ha un'uptime eccellente
-✅ **Logs**: Logs persistenti e facili da consultare
-✅ **Manual trigger**: Puoi triggerare manualmente quando serve
-✅ **Notifications**: Notifica automatica su fallimenti
+```bash
+sudo nano /opt/trovami/cron.env
+```
 
-## 🔍 Monitoring
+Imposta i valori corretti:
 
-Il workflow logga automaticamente:
-- HTTP status code della chiamata API
-- Numero di utenti processati
-- Numero di crediti resettati
-- Timestamp dell'operazione
-- Link ai logs per debugging
+```bash
+# Configurazione database per cron job TrovaMi.pro
+SUPABASE_DB_HOST=your-project-id.supabase.co
+SUPABASE_DB_PORT=5432
+SUPABASE_DB_NAME=postgres
+SUPABASE_DB_USER=postgres
+SUPABASE_DB_PASSWORD=your-database-password
 
-## 🆚 Confronto con altre opzioni
+# Configurazioni opzionali
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
 
-| Metodo | Costo | Setup | Reliability | Logs |
-|--------|-------|-------|-------------|------|
-| **GitHub Actions** | 🟢 Gratis | 🟡 Medio | 🟢 Alto | 🟢 Eccellenti |
-| Vercel Cron | 🟢 Gratis | 🟢 Facile | 🟢 Alto | 🟡 Basilari |
-| Server esterno | 🔴 Costo | 🔴 Complesso | 🟡 Dipende | 🟡 Custom |
+# Timezone
+TZ=Europe/Rome
+```
 
-## 🔗 Integrazione con l'ecosistema esistente
+### 3. Test Manuale
+Testa il funzionamento prima dell'attivazione automatica:
 
-Dato che già usate GitHub Actions per lo scraping engine, questa è la scelta più coerente:
+```bash
+# Test dello script
+sudo /opt/trovami/monthly-reset.sh
 
-- **Stesso environment**: Usa "Production" environment
-- **Stesso pattern**: Schedule + manual trigger
-- **Stessi logs**: Upload artifacts per debugging  
-- **Stessa security**: Secrets gestiti in modo uniforme
+# Verifica log
+tail -f /var/log/trovami/monthly-reset-$(date +%Y%m).log
+```
 
-## 🎯 Next Steps
+## 📅 Configurazione Cron Job
 
-1. ✅ Aggiungi i secrets (APP_URL, CRON_SECRET)
-2. ✅ Commit del workflow file (già fatto)
-3. ✅ Test manuale del workflow
-4. ✅ Verifica che il primo reset automatico funzioni
-5. ✅ Monitora i logs per le prime settimane
+### Verifica Cron Job Attivo
+```bash
+# Visualizza cron job attivi
+sudo crontab -l
 
-## 🆘 Troubleshooting
+# Output atteso:
+# 1 0 1 * * /bin/bash -c 'source /opt/trovami/cron.env && /opt/trovami/monthly-reset.sh'
+```
 
-**Se il workflow fallisce**:
-1. Controlla che i secrets siano impostati correttamente
-2. Verifica che APP_URL sia raggiungibile
-3. Controlla i logs del workflow per errori specifici
-4. Testa manualmente l'endpoint `/api/cron/reset-credits`
+### Modifica Pianificazione
+Se vuoi modificare l'orario di esecuzione:
 
-**Se non ricevi credits reset**:
-1. Verifica che ci siano utenti che soddisfano i criteri
-2. Controlla che `credits_reset_date` sia null o > 30 giorni fa
-3. Verifica che `stripe_customer_id` sia null (per utenti non Stripe)
+```bash
+sudo crontab -e
+```
+
+Formato cron: `minuto ora giorno mese giorno_settimana comando`
+- `1 0 1 * *` = alle 00:01 del primo giorno di ogni mese
+
+Esempi alternativi:
+```bash
+# Ogni giorno alle 02:00 (per test)
+0 2 * * * /bin/bash -c 'source /opt/trovami/cron.env && /opt/trovami/monthly-reset.sh'
+
+# Primo di ogni mese alle 06:00
+0 6 1 * * /bin/bash -c 'source /opt/trovami/cron.env && /opt/trovami/monthly-reset.sh'
+```
+
+## � Monitoraggio
+
+### Log System
+I log vengono salvati automaticamente:
+
+```bash
+# Log corrente
+tail -f /var/log/trovami/monthly-reset-$(date +%Y%m).log
+
+# Tutti i log
+ls -la /var/log/trovami/
+
+# Log precedenti
+cat /var/log/trovami/monthly-reset-202312.log
+```
+
+### Verifica Ultima Esecuzione
+Query per controllare l'ultimo reset:
+
+```sql
+SELECT * FROM system_logs 
+WHERE operation = 'monthly_replacement_reset' 
+ORDER BY created_at DESC 
+LIMIT 5;
+```
+
+## � Troubleshooting
+
+### Problemi Comuni
+
+**1. Permessi Negati**
+```bash
+# Verifica permessi script
+ls -la /opt/trovami/monthly-reset.sh
+# Deve essere: -rwxr-xr-x root root
+
+# Correggi permessi se necessario
+sudo chmod +x /opt/trovami/monthly-reset.sh
+```
+
+**2. Connessione Database Fallita**
+```bash
+# Test connessione manuale
+PGPASSWORD="your-password" psql -h your-project.supabase.co -p 5432 -U postgres -d postgres -c "SELECT NOW();"
+```
+
+**3. Cron Job Non Eseguito**
+```bash
+# Verifica servizio cron attivo
+sudo systemctl status cron
+
+# Riavvia se necessario
+sudo systemctl restart cron
+
+# Log cron system
+sudo tail -f /var/log/syslog | grep CRON
+```
+
+### Notifiche Opzionali
+
+Per ricevere notifiche Slack, configura il webhook:
+
+```bash
+# Nel file /opt/trovami/cron.env
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
+```
+
+Poi decomenta le righe nel script di reset:
+
+```bash
+sudo nano /opt/trovami/monthly-reset.sh
+
+# Decommenta:
+curl -X POST "$SLACK_WEBHOOK_URL" \
+     -H 'Content-type: application/json' \
+     --data '{"text":"✅ Reset sostituzioni TrovaMi completato per '"$(date +%B\ %Y)"'"}'
+```
+
+## 🚀 Deploy Checklist
+
+- [ ] Database migrato con funzione `monthly_reset_replacements_job()`
+- [ ] Script cron installato con `setup-monthly-reset-cron.sh`
+- [ ] Credenziali configurate in `/opt/trovami/cron.env`
+- [ ] Test manuale dello script completato
+- [ ] Cron job verificato con `sudo crontab -l`
+- [ ] Log directory creata in `/var/log/trovami/`
+- [ ] (Opzionale) Notifiche Slack configurate
+
+## 📱 Monitoraggio Continuo
+
+### Dashboard Query
+Per monitorare il sistema dal dashboard admin:
+
+```sql
+-- Statistiche reset mensili
+SELECT 
+    DATE_TRUNC('month', created_at) as mese,
+    COUNT(*) as reset_eseguiti,
+    details
+FROM system_logs 
+WHERE operation = 'monthly_replacement_reset'
+GROUP BY DATE_TRUNC('month', created_at), details
+ORDER BY mese DESC;
+
+-- Prossimo reset previsto
+SELECT 
+    'Prossimo reset: ' || TO_CHAR(DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month', 'DD/MM/YYYY alle 00:01') as info;
+```
+
+Il sistema è ora completamente configurato per gestire automaticamente il reset mensile delle sostituzioni! 🎉

@@ -14,6 +14,7 @@ import Button from './ui/Button'
 import Badge from './ui/Badge'
 import ThemeToggle from './theme/ThemeToggle'
 import TourControlMenu from './onboarding/TourControlMenu'
+import { isProOrHigher } from '@/lib/utils/plan-helpers'
 
 export default function Navbar() {
   const { user, signOut } = useAuth()
@@ -93,7 +94,7 @@ export default function Navbar() {
       { name: 'Feedback', href: '/feedback', icon: MessageSquare, description: 'Feedback e suggerimenti della community' },
     ]),
     { name: 'Analisi', href: '/tools/manual-scan', icon: Target, description: 'Analizza qualsiasi sito web' },
-    ...(user?.plan === 'pro' ? [
+    ...(user?.plan && isProOrHigher(user.plan) ? [
       { name: 'CRM', href: '/crm', icon: FolderOpen, description: 'Gestisci i tuoi lead sbloccati' },
       { name: 'Analytics', href: '/analytics', icon: BarChart, description: 'Dashboard analytics e ROI' },
     ] : []),
@@ -108,7 +109,7 @@ export default function Navbar() {
     { name: 'Dashboard', href: '/dashboard', icon: Home, description: 'I miei lead' },
     { name: 'Blog', href: '/blog', icon: BookOpen, description: 'Guide e strategie per trovare clienti' },
     { name: 'Analisi', href: '/tools/manual-scan', icon: Target, description: 'Analizza qualsiasi sito web' },
-    ...(user?.plan === 'pro' ? [
+    ...(user?.plan && isProOrHigher(user.plan) ? [
       { name: 'CRM', href: '/crm', icon: FolderOpen, description: 'Gestisci i tuoi lead sbloccati' },
       { name: 'Analytics', href: '/analytics', icon: BarChart, description: 'Dashboard analytics e ROI' },
     ] : []),

@@ -515,6 +515,20 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     } else {
       console.log(`✅ Crediti rinnovati per utente ${userId}: ${credits}`)
       
+      // 🔄 RESET SOSTITUZIONI MENSILI: Resetta le sostituzioni quando si rinnova il piano
+      try {
+        const { error: resetError } = await supabase
+          .rpc('reset_user_replacements', { p_user_id: userId })
+        
+        if (resetError) {
+          console.error('❌ Errore reset sostituzioni:', resetError)
+        } else {
+          console.log('✅ Sostituzioni mensili resettate per utente:', userId)
+        }
+      } catch (resetError) {
+        console.error('🚨 Errore critico reset sostituzioni:', resetError)
+      }
+      
       // Crea log dell'operazione
       const { error: logError } = await supabase
         .from('plan_status_logs')
@@ -523,7 +537,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
           action: 'renew_credits',
           previous_status: 'active',
           new_status: 'active',
-          reason: `Stripe subscription renewed - Invoice: ${invoice.id}`,
+          reason: `Stripe subscription renewed - Invoice: ${invoice.id} - Credits and replacements reset`,
           triggered_by: 'stripe_webhook',
           stripe_event_id: invoice.id
         })

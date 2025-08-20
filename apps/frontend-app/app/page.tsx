@@ -12,6 +12,7 @@ import NewsletterForm from '@/components/NewsletterForm'
 import StructuredFAQ from '@/components/StructuredFAQ'
 import LeadCostComparison from '@/components/LeadCostComparison'
 import UpgradeUrgencyBanner from '@/components/UpgradeUrgencyBanner'
+import NewPlanSelector from '@/components/NewPlanSelector'
 
 export default function HomePage() {
   const { user } = useAuth()
@@ -413,151 +414,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="py-24 bg-gradient-to-b from-white to-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-20">
-            <div className="inline-flex items-center px-4 py-2 bg-purple-50 border border-purple-200 rounded-full text-purple-700 text-sm font-medium mb-6">
-              <Target className="w-4 h-4 mr-2" />
-              Scegli il piano perfetto per te
-            </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Prezzi <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">Trasparenti</span>
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Inizia gratis con 2 lead, poi scala quando la tua agenzia cresce
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-8 lg:gap-12 max-w-6xl mx-auto">
-            {/* Free Plan */}
-            <div className="group relative">
-              <div className="bg-white rounded-3xl p-8 border-2 border-gray-200 hover:border-gray-300 transition-all duration-300 hover:shadow-lg">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                    <Target className="w-8 h-8 text-gray-600" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-4">Free</h3>
-                  <div className="mb-6">
-                    <span className="text-4xl font-bold text-gray-900">€0</span>
-                    <span className="text-gray-600 ml-2">/mese</span>
-                  </div>
-                  <ul className="space-y-4 mb-8 text-left">
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                      <span className="text-gray-700">2 lead qualificati gratuiti</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                      <span className="text-gray-700">Dati base (nome, sito, score)</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                      <span className="text-gray-700">Accesso dashboard</span>
-                    </li>
-                  </ul>
-                  <Link 
-                    href="/register" 
-                    className="w-full inline-flex items-center justify-center px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:border-gray-400 hover:bg-gray-50 transition-all duration-200"
-                  >
-                    Inizia Gratis
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* Starter Plan */}
-            <div className="group relative">
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
-                <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-full text-sm font-semibold shadow-lg">
-                  Più Popolare
-                </span>
-              </div>
-              <div className="bg-white rounded-3xl p-8 border-2 border-blue-500 hover:border-blue-600 transition-all duration-300 hover:shadow-xl relative">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                    <Zap className="w-8 h-8 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-4">Starter</h3>
-                  <div className="mb-6">
-                    <span className="text-4xl font-bold text-gray-900">€19</span>
-                    <span className="text-gray-600 ml-2">/mese</span>
-                  </div>
-                  <ul className="space-y-4 mb-8 text-left">
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                      <span className="text-gray-700">25 lead qualificati al mese</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                      <span className="text-gray-700">Dati completi + contatti</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                      <span className="text-gray-700">Analisi tecnica dettagliata</span>
-                    </li>
-
-                  </ul>
-                  <Link 
-                    href="/register" 
-                    className="w-full inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-                  >
-                    Inizia Starter
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* Pro Plan */}
-            <div className="group relative">
-              <div className="bg-white rounded-3xl p-8 border-2 border-gray-200 hover:border-purple-300 transition-all duration-300 hover:shadow-lg">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                    <Users className="w-8 h-8 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-4">Pro</h3>
-                  <div className="mb-6">
-                    <span className="text-4xl font-bold text-gray-900">€49</span>
-                    <span className="text-gray-600 ml-2">/mese</span>
-                  </div>
-                  <ul className="space-y-4 mb-8 text-left">
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                      <span className="text-gray-700">100 lead qualificati al mese</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                      <span className="text-gray-700">Tutti i dati disponibili</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                      <span className="text-gray-700">CRM personale integrato</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                      <span className="text-gray-700">Report personalizzati</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                      <span className="text-gray-700">API access</span>
-                    </li>
-                    <li className="flex items-center">
-                      <CheckCircle className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                      <span className="text-gray-700">Supporto prioritario</span>
-                    </li>
-                  </ul>
-                  <Link 
-                    href="/register" 
-                    className="w-full inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-                  >
-                    Inizia Pro
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Pricing Section - Completa e Ottimizzata */}
+            {/* Pricing Section - Hero Position */}
+      <NewPlanSelector 
+        currentPlan="free"
+        showFree={true}
+        redirectToRegister={true}
+      />
 
       {/* Lead Cost Comparison */}
       <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
@@ -628,6 +491,13 @@ export default function HomePage() {
 
       {/* FAQ Section */}
       <StructuredFAQ className="bg-gray-50" />
+
+      {/* Bottom Pricing Section - Before Newsletter */}
+      <NewPlanSelector 
+        currentPlan="free"
+        showFree={true}
+        redirectToRegister={true}
+      />
 
       {/* Newsletter Section */}
       <section className="py-24 bg-gradient-to-b from-gray-50 to-white">

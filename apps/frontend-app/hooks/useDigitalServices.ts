@@ -4,8 +4,9 @@
  * Chiamato da: Componente dettaglio lead, sezione servizi
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { apiCache } from '@/lib/utils/api-cache'
 
 export interface DigitalService {
   id: string
@@ -113,42 +114,22 @@ export function useDigitalServices(): UseDigitalServicesReturn {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchServices = async (filters: ServiceFilters = {}) => {
+  const fetchServices = useCallback(async (filters: ServiceFilters = {}) => {
     if (!user) return
 
+    const cacheKey = '/api/digital-services'
+    
     try {
       setIsLoading(true)
       setError(null)
 
-      // Usa il sistema di autenticazione dell'app
-      const accessToken = getAccessToken()
-      
-      if (!accessToken) {
-        throw new Error('Sessione non disponibile')
-      }
-
-      // Costruisci URL con filtri
-      const searchParams = new URLSearchParams()
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          searchParams.append(key, value.toString())
-        }
-      })
-
-      const response = await fetch(`/api/digital-services?${searchParams}`, {
-        method: 'GET',
+      // Usa il sistema di cache globale
+      const data = await apiCache.cachedFetch(cacheKey, filters, {
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      })
+          'Authorization': `Bearer ${getAccessToken()}`,
+        }
+      }, 30000) // Cache per 30 secondi
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Errore nel caricamento dei servizi')
-      }
-
-      const data = await response.json()
       if (data.success) {
         setServices(data.data.services)
         setServicesByCategory(data.data.servicesByCategory)
@@ -163,9 +144,9 @@ export function useDigitalServices(): UseDigitalServicesReturn {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [user, getAccessToken]) // Memoizza con dipendenze stabili
 
-  const proposeService = async (
+  const proposeService = useCallback(async (
     leadId: string,
     serviceId: string,
     customPrice?: number,
@@ -174,17 +155,11 @@ export function useDigitalServices(): UseDigitalServicesReturn {
     if (!user) return false
 
     try {
-      const accessToken = getAccessToken()
-      
-      if (!accessToken) {
-        throw new Error('Sessione non disponibile')
-      }
-
       const response = await fetch('/api/lead-proposed-services', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
+          'Authorization': `Bearer ${getAccessToken()}`,
         },
         body: JSON.stringify({
           lead_id: leadId,
@@ -200,6 +175,12 @@ export function useDigitalServices(): UseDigitalServicesReturn {
       }
 
       const data = await response.json()
+      
+      if (data.success) {
+        // Invalida la cache per forzare reload
+        apiCache.invalidatePattern('lead-proposed-services')
+      }
+      
       return data.success
 
     } catch (err) {
@@ -207,14 +188,14 @@ export function useDigitalServices(): UseDigitalServicesReturn {
       setError(err instanceof Error ? err.message : 'Errore sconosciuto')
       return false
     }
-  }
+  }, [user, getAccessToken]) // Memoizza con dipendenze stabili
 
-  // Carica servizi automaticamente quando l'utente è disponibile
-  useEffect(() => {
-    if (user) {
-      fetchServices()
-    }
-  }, [user])
+  // OTTIMIZZAZIONE: Non caricare automaticamente, lasciare al componente decidere quando caricare
+  // useEffect(() => {
+  //   if (user) {
+  //     fetchServices()
+  //   }
+  // }, [user])
 
   return {
     services,
@@ -243,38 +224,23 @@ export function useProposedServices(): UseProposedServicesReturn {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchProposedServices = async (leadId?: string) => {
+  const fetchProposedServices = useCallback(async (leadId?: string) => {
     if (!user) return
+
+    const cacheKey = '/api/lead-proposed-services'
+    const params = leadId ? { lead_id: leadId } : {}
 
     try {
       setIsLoading(true)
       setError(null)
 
-      const accessToken = getAccessToken()
-      
-      if (!accessToken) {
-        throw new Error('Sessione non disponibile')
-      }
-
-      const searchParams = new URLSearchParams()
-      if (leadId) {
-        searchParams.append('lead_id', leadId)
-      }
-
-      const response = await fetch(`/api/lead-proposed-services?${searchParams}`, {
-        method: 'GET',
+      // Usa il sistema di cache globale
+      const data = await apiCache.cachedFetch(cacheKey, params, {
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      })
+          'Authorization': `Bearer ${getAccessToken()}`,
+        }
+      }, 15000) // Cache per 15 secondi
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Errore nel caricamento dei servizi proposti')
-      }
-
-      const data = await response.json()
       if (data.success) {
         setProposedServices(data.data.proposedServices)
         setStats(data.data.stats)
@@ -288,23 +254,17 @@ export function useProposedServices(): UseProposedServicesReturn {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [user, getAccessToken]) // Memoizza con dipendenze stabili
 
-  const updateServiceStatus = async (id: string, status: ProposedService['status']): Promise<boolean> => {
+  const updateServiceStatus = useCallback(async (id: string, status: ProposedService['status']): Promise<boolean> => {
     if (!user) return false
 
     try {
-      const accessToken = getAccessToken()
-      
-      if (!accessToken) {
-        throw new Error('Sessione non disponibile')
-      }
-
       const response = await fetch('/api/lead-proposed-services', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
+          'Authorization': `Bearer ${getAccessToken()}`,
         },
         body: JSON.stringify({ id, status })
       })
@@ -322,6 +282,9 @@ export function useProposedServices(): UseProposedServicesReturn {
             service.id === id ? { ...service, status } : service
           )
         )
+        
+        // Invalida la cache per forzare reload
+        apiCache.invalidatePattern('lead-proposed-services')
         return true
       }
 
@@ -332,23 +295,17 @@ export function useProposedServices(): UseProposedServicesReturn {
       setError(err instanceof Error ? err.message : 'Errore sconosciuto')
       return false
     }
-  }
+  }, [user, getAccessToken]) // Memoizza
 
-  const deleteProposedService = async (id: string): Promise<boolean> => {
+  const deleteProposedService = useCallback(async (id: string): Promise<boolean> => {
     if (!user) return false
 
     try {
-      const accessToken = getAccessToken()
-      
-      if (!accessToken) {
-        throw new Error('Sessione non disponibile')
-      }
-
       const response = await fetch(`/api/lead-proposed-services?id=${id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
+          'Authorization': `Bearer ${getAccessToken()}`,
         },
       })
 
@@ -361,6 +318,9 @@ export function useProposedServices(): UseProposedServicesReturn {
       if (data.success) {
         // Rimuovi dallo stato locale
         setProposedServices(prev => prev.filter(service => service.id !== id))
+        
+        // Invalida la cache per forzare reload
+        apiCache.invalidatePattern('lead-proposed-services')
         return true
       }
 
@@ -371,7 +331,7 @@ export function useProposedServices(): UseProposedServicesReturn {
       setError(err instanceof Error ? err.message : 'Errore sconosciuto')
       return false
     }
-  }
+  }, [user, getAccessToken]) // Memoizza
 
   return {
     proposedServices,

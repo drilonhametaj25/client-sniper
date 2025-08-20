@@ -10,6 +10,7 @@ import React, { useState } from 'react'
 import { useOnboarding } from '@/contexts/OnboardingContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { TourSection } from '@/../../libs/types/onboarding'
+import { isProOrHigher } from '@/lib/utils/plan-helpers'
 import { 
   GraduationCap, 
   RotateCcw, 
@@ -85,7 +86,7 @@ const TourControlMenu: React.FC<TourControlMenuProps> = ({ onClose }) => {
 
   // Filtra sezioni in base al piano utente
   const userSections = availableSections.filter(item => 
-    !item.isPro || user?.plan === 'pro'
+    !item.isPro || (user?.plan && isProOrHigher(user.plan))
   )
 
   return (

@@ -4,9 +4,10 @@
  * Chiamato da: Tutte le pagine che richiedono un piano attivo
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { getBasePlanType, isStarterOrHigher, isProOrHigher } from '@/lib/utils/plan-helpers'
 
 interface PlanStatus {
   plan: string
@@ -30,7 +31,6 @@ interface PlanLimitations {
 
 export function usePlanStatus(): PlanStatus {
   const { user } = useAuth()
-  const supabase = createClientComponentClient()
   
   const [planStatus, setPlanStatus] = useState<PlanStatus>({
     plan: 'free',
@@ -40,28 +40,16 @@ export function usePlanStatus(): PlanStatus {
     isLoading: true
   })
 
-  useEffect(() => {
-    if (!user) {
-      setPlanStatus(prev => ({ ...prev, isLoading: false }))
-      return
-    }
-
-    loadPlanStatus()
-  }, [user])
-
-  const loadPlanStatus = async () => {
+  const loadPlanStatus = useCallback(async () => {
     try {
-      // ⚡ OTTIMIZZAZIONE: Usa i dati dell'AuthContext che sono già completi e aggiornati
-      // Evita query duplicate e problemi di sincronizzazione
-      
       if (!user) {
         setPlanStatus(prev => ({ ...prev, isLoading: false }))
         return
       }
 
-      
       // Usa i dati già disponibili dall'AuthContext che sono affidabili
-      const canAccessPremium = (user.status === 'active' && user.plan && user.plan !== 'free') || false
+      // Controlla se ha un piano premium (starter o superiore)
+      const canAccessPremium = (user.status === 'active' && user.plan && isStarterOrHigher(user.plan)) || false
 
       setPlanStatus({
         plan: user.plan || 'free',
@@ -82,7 +70,11 @@ export function usePlanStatus(): PlanStatus {
         error: 'Errore caricamento stato piano' 
       }))
     }
-  }
+  }, [user])
+
+  useEffect(() => {
+    loadPlanStatus()
+  }, [loadPlanStatus])
 
   return planStatus
 }
@@ -121,8 +113,10 @@ export function usePlanLimitations(): PlanLimitations {
     }
   }
 
-  // Limitazioni in base al piano
-  switch (planStatus.plan) {
+  // Limitazioni in base al piano (usando il tipo base per compatibilità)
+  const basePlanType = getBasePlanType(planStatus.plan)
+  
+  switch (basePlanType) {
     case 'free':
       return {
         canUnlockLeads: planStatus.credits_remaining > 0,
@@ -151,6 +145,16 @@ export function usePlanLimitations(): PlanLimitations {
         maxLeadsPerMonth: 100,
         message: planStatus.credits_remaining === 0 ? 
           'Hai esaurito i crediti del piano Pro.' : undefined
+      }
+
+    case 'agency':
+      return {
+        canUnlockLeads: planStatus.credits_remaining > 0,
+        canViewContacts: true,
+        canExportData: true,
+        maxLeadsPerMonth: 500,
+        message: planStatus.credits_remaining === 0 ? 
+          'Hai esaurito i crediti del piano Agency.' : undefined
       }
 
     default:

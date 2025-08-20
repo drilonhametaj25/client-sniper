@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateUser } from '@/lib/auth-middleware'
 import { createClient } from '@supabase/supabase-js'
+import { isProOrHigher } from '@/lib/utils/plan-helpers'
 
 // Client per operazioni amministrative (usa service role)
 const supabaseAdmin = createClient(
@@ -42,9 +43,9 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    if (userData.plan !== 'pro' || userData.status !== 'active') {
+    if (!isProOrHigher(userData.plan) || userData.status !== 'active') {
       return NextResponse.json(
-        { error: 'Funzionalità disponibile solo per utenti PRO con piano attivo' },
+        { error: 'Funzionalità disponibile solo per utenti PRO+ con piano attivo' },
         { status: 403 }
       )
     }

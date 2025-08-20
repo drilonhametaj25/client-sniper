@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { getBasePlanType } from '@/lib/utils/plan-helpers'
 import { 
   Users, 
   Crown, 
@@ -220,9 +221,9 @@ export default function AdminUsers() {
       clients: users.filter(u => u.role === 'client').length,
       confirmed: users.filter(u => u.email_confirmed_at).length,
       unconfirmed: users.filter(u => !u.email_confirmed_at).length,
-      freePlan: users.filter(u => u.plan === 'free').length,
-      starterPlan: users.filter(u => u.plan === 'starter').length,
-      proPlan: users.filter(u => u.plan === 'pro').length
+      freePlan: users.filter(u => getBasePlanType(u.plan) === 'free').length,
+      starterPlan: users.filter(u => getBasePlanType(u.plan) === 'starter').length,
+      proPlan: users.filter(u => getBasePlanType(u.plan) === 'pro').length
     }
   }
 

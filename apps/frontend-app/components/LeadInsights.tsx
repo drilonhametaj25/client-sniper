@@ -12,23 +12,23 @@
 
 'use client';
 
-import Card from '@/components/ui/Card';
+import { AlertTriangle, TrendingUp, Euro, Clock } from 'lucide-react'
+import { isStarterOrHigher, getBasePlanType } from '@/lib/utils/plan-helpers'
+import Card from '@/components/ui/Card'
 
 interface InsightSuggestion {
   id: string;
   title: string;
   description: string;
-  estimatedValue: {
-    min: number;
-    max: number;
-  };
-  priority: number; // 1 = alta, 2 = media, 3 = bassa
+  estimatedValue: { min: number; max: number };
+  priority: 1 | 2 | 3; // 1 = alta, 2 = media, 3 = bassa
 }
 
 interface LeadInsightsProps {
   lead: {
     id: string;
     business_name?: string;
+    category?: string;
     analysis?: {
       seo_score?: number;
       performance?: {
@@ -36,9 +36,26 @@ interface LeadInsightsProps {
       };
       compliance?: {
         has_privacy_policy?: boolean;
+        has_cookie_policy?: boolean;
       };
       security?: {
         has_ssl?: boolean;
+      };
+      social?: {
+        has_facebook_pixel?: boolean;
+        has_google_analytics?: boolean;
+      };
+      mobile?: {
+        is_mobile_friendly?: boolean;
+      };
+      local_seo?: {
+        has_local_schema?: boolean;
+        has_google_my_business?: boolean;
+      };
+      content?: {
+        missing_h1?: boolean;
+        missing_meta_description?: boolean;
+        missing_meta_keywords?: boolean;
       };
       tracking?: {
         has_google_analytics?: boolean;
@@ -48,16 +65,15 @@ interface LeadInsightsProps {
       technical?: {
         broken_images?: boolean;
         missing_meta_description?: boolean;
-        missing_meta_keywords?: boolean;
       };
     };
   };
-  userPlan: 'free' | 'starter' | 'pro';
+  userPlan: string;
 }
 
 export default function LeadInsights({ lead, userPlan }: LeadInsightsProps) {
   // Piano free non mostra suggerimenti
-  if (userPlan === 'free') {
+  if (!isStarterOrHigher(userPlan)) {
     return null;
   }
 
@@ -177,7 +193,7 @@ export default function LeadInsights({ lead, userPlan }: LeadInsightsProps) {
   }
 
   // Limita suggerimenti in base al piano
-  const maxSuggestions = userPlan === 'starter' ? 1 : 3;
+  const maxSuggestions = getBasePlanType(userPlan) === 'starter' ? 1 : 3;
   const displaySuggestions = suggestions.slice(0, maxSuggestions);
 
   const formatCurrency = (amount: number) => {
@@ -216,7 +232,7 @@ export default function LeadInsights({ lead, userPlan }: LeadInsightsProps) {
             </div>
           ))}
           
-          {userPlan === 'starter' && suggestions.length > 1 && (
+          {getBasePlanType(userPlan) === 'starter' && suggestions.length > 1 && (
             <div className="text-xs text-blue-600 dark:text-blue-400 font-medium pt-2 border-t border-blue-200 dark:border-blue-600">
               +{suggestions.length - 1} {suggestions.length === 2 ? 'opportunità aggiuntiva' : 'opportunità aggiuntive'} con piano PRO
             </div>

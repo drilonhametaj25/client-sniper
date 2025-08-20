@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { isProOrHigher } from '@/lib/utils/plan-helpers'
 import { debugUserSession } from '@/lib/auth'
 import { LeadStatusBadge } from '@/components/LeadStatusBadge'
 import { LeadWithCRM, CRMStatusType } from '@/lib/types/crm'
@@ -359,7 +360,7 @@ export default function AdminDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <button
             onClick={() => router.push('/admin/users')}
             className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer group"
@@ -380,19 +381,77 @@ export default function AdminDashboard() {
           </button>
 
           <button
+            onClick={() => router.push('/admin/plans')}
+            className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Target className="h-8 w-8 text-green-600 group-hover:text-green-700" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Configurazione</p>
+                  <p className="text-lg font-bold text-gray-900">Piani</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <Settings className="h-8 w-8 text-green-600" />
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => router.push('/admin/replacements')}
+            className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <RefreshCw className="h-8 w-8 text-purple-600 group-hover:text-purple-700" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Richieste</p>
+                  <p className="text-lg font-bold text-gray-900">Sostituzioni</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <MessageCircle className="h-8 w-8 text-purple-600" />
+              </div>
+            </div>
+          </button>
+
+          <button
             onClick={() => router.push('/admin/settings')}
             className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer group"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <Settings className="h-8 w-8 text-purple-600 group-hover:text-purple-700" />
+                <Settings className="h-8 w-8 text-gray-600 group-hover:text-gray-700" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Sistema</p>
                   <p className="text-lg font-bold text-gray-900">Settings</p>
                 </div>
               </div>
               <div className="text-right">
-                <Cog className="h-8 w-8 text-purple-600" />
+                <Cog className="h-8 w-8 text-gray-600" />
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {/* Sezione Feedback Management */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <button
+            onClick={() => router.push('/admin/feedback')}
+            className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <MessageCircle className="h-8 w-8 text-blue-600 group-hover:text-blue-700" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-blue-700">Gestione</p>
+                  <p className="text-lg font-bold text-blue-900">Feedback</p>
+                  <p className="text-xs text-blue-600">Recensioni e segnalazioni utenti</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <Shield className="h-8 w-8 text-blue-600" />
               </div>
             </div>
           </button>
@@ -411,27 +470,6 @@ export default function AdminDashboard() {
                 className="bg-white/20 hover:bg-white/30 rounded-lg p-2 transition-colors"
               >
                 <Target className="h-6 w-6" />
-              </button>
-            </div>
-          </div>
-
-          {/* DEBUG - Rimuovi in produzione */}
-          <div className="bg-gradient-to-r from-red-500 to-orange-600 rounded-lg shadow p-6 text-white">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <AlertTriangle className="h-8 w-8 text-white" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-red-100">Debug</p>
-                  <p className="text-lg font-bold text-white">Sessione</p>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  debugUserSession()
-                }}
-                className="bg-white/20 hover:bg-white/30 rounded-lg p-2 transition-colors"
-              >
-                <Shield className="h-6 w-6" />
               </button>
             </div>
           </div>
@@ -572,7 +610,7 @@ export default function AdminDashboard() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Score
                   </th>
-                  {user?.plan === 'pro' && (
+                  {user?.plan && isProOrHigher(user.plan) && (
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       CRM Status
                     </th>
@@ -610,8 +648,8 @@ export default function AdminDashboard() {
                             {lead.business_name}
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">{lead.category}</div>
-                          {/* Per utenti PRO, mostra il badge CRM sotto il nome */}
-                          {user?.plan === 'pro' && (
+                          {/* Per utenti PRO+, mostra il badge CRM sotto il nome */}
+                          {user?.plan && isProOrHigher(user.plan) && (
                             <div className="mt-1">
                               <LeadStatusBadge 
                                 status={lead.crm_status} 
@@ -631,7 +669,7 @@ export default function AdminDashboard() {
                         {lead.score}
                       </span>
                     </td>
-                    {user?.plan === 'pro' && (
+                    {user?.plan && isProOrHigher(user.plan) && (
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col gap-2">
                           <LeadStatusBadge 
@@ -712,7 +750,7 @@ export default function AdminDashboard() {
                       <td colSpan={6} className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50">
                         <LeadInsights 
                           lead={lead} 
-                          userPlan={(user?.plan as 'free' | 'starter' | 'pro') || 'free'}
+                          userPlan={user?.plan || 'free'}
                         />
                       </td>
                     </tr>

@@ -27,6 +27,7 @@ import {
 import Link from 'next/link'
 import InactivePlanBanner from '@/components/InactivePlanBanner'
 import { usePlanStatus } from '@/hooks/usePlanStatus'
+import { getBasePlanType, isProOrHigher } from '@/lib/utils/plan-helpers'
 
 interface UserData {
   id: string
@@ -562,9 +563,9 @@ export default function SettingsPage() {
             </div>
             
             {/* Caratteristiche del piano */}
-            {userData.plan === 'pro' && (
+            {isProOrHigher(userData.plan) && (
               <div className="mt-4 p-4 bg-purple-50 dark:bg-purple-900 rounded-xl">
-                <h3 className="text-sm font-medium text-purple-900 dark:text-purple-200 mb-2">Caratteristiche Piano Pro</h3>
+                <h3 className="text-sm font-medium text-purple-900 dark:text-purple-200 mb-2">Caratteristiche Piano Pro+</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-purple-800 dark:text-purple-300">
                   <div className="flex items-center">
                     <CheckCircle className="w-4 h-4 text-purple-600 dark:text-purple-400 mr-2" />

@@ -17,6 +17,7 @@
 import React, { useState, useCallback } from 'react'
 import { Copy, Mail, Phone, MessageCircle, CheckCircle, ExternalLink } from 'lucide-react'
 import Card from '@/components/ui/Card'
+import { isStarterOrHigher, isProOrHigher } from '@/lib/utils/plan-helpers'
 
 interface ContactTemplatesProps {
   lead: {
@@ -31,7 +32,7 @@ interface ContactTemplatesProps {
     phone?: string;
     score?: number;
   };
-  userPlan: 'free' | 'starter' | 'pro';
+  userPlan: string;
 }
 
 type TemplateType = 'email' | 'linkedin' | 'cold_call';
@@ -354,7 +355,7 @@ ${urgency === 'critica' ? '**URGENZA:** Questi problemi stanno causando perdite 
         </div>
 
         {/* Tab Template Types - Solo per Starter/Pro */}
-        {(userPlan === 'starter' || userPlan === 'pro') && (
+        {isStarterOrHigher(userPlan) && (
           <div className="flex gap-2 mb-4 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
             <button
               onClick={() => setSelectedTemplate('email')}
@@ -378,7 +379,7 @@ ${urgency === 'critica' ? '**URGENZA:** Questi problemi stanno causando perdite 
               <MessageCircle className="h-4 w-4" />
               LinkedIn
             </button>
-            {userPlan === 'pro' && (
+            {isProOrHigher(userPlan) && (
               <button
                 onClick={() => setSelectedTemplate('cold_call')}
                 className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
@@ -425,7 +426,7 @@ ${urgency === 'critica' ? '**URGENZA:** Questi problemi stanno causando perdite 
           </button>
 
           {/* Mailto Integration per PRO con template email */}
-          {userPlan === 'pro' && selectedTemplate === 'email' && lead.email && (
+          {isProOrHigher(userPlan) && selectedTemplate === 'email' && lead.email && (
             <button
               onClick={() => openMailto(currentTemplate)}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
@@ -436,7 +437,7 @@ ${urgency === 'critica' ? '**URGENZA:** Questi problemi stanno causando perdite 
           )}
 
           {/* LinkedIn direct per PRO con LinkedIn template */}
-          {userPlan === 'pro' && selectedTemplate === 'linkedin' && (
+          {isProOrHigher(userPlan) && selectedTemplate === 'linkedin' && (
             <button
               onClick={() => window.open('https://www.linkedin.com/messaging', '_blank')}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"

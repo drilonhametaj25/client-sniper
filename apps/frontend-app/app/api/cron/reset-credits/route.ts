@@ -1,6 +1,6 @@
-// API Route per reset automatico dei crediti mensili
-// Utilizzato da cron job o chiamate manuali per resettare i crediti 
-// di utenti con piani custom/admin alla scadenza del mese
+// API Route per reset automatico crediti e sostituzioni
+// Utilizzato da cron job per resettare crediti e sostituzioni mensili
+// di utenti in base al loro ciclo di rinnovo individuale (ogni 30 giorni)
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -131,15 +131,27 @@ export async function POST(request: NextRequest) {
           continue
         }
 
+        // 🔄 RESET USER REPLACEMENTS: Reset sostituzioni per l'utente
+        console.log(`🔄 Resetting replacements for user ${user.id}`)
+        const { error: replacementError } = await supabase
+          .rpc('reset_user_replacements', { p_user_id: user.id })
+
+        if (replacementError) {
+          console.error(`❌ Error resetting replacements for user ${user.id}:`, replacementError)
+          // Non consideriamo questo un errore critico per non bloccare il reset crediti
+        } else {
+          console.log(`✅ Replacements reset successfully for user ${user.id}`)
+        }
+
         // 📝 LOG OPERATION: Crea log dell'operazione
         const { error: logError } = await supabase
           .from('plan_status_logs')
           .insert({
             user_id: user.id,
-            action: 'auto_reset_credits',
+            action: 'auto_reset_credits_and_replacements',
             previous_status: 'active',
             new_status: 'active',
-            reason: `Automatic monthly credits reset from ${user.credits_remaining} to ${newCredits}`,
+            reason: `Automatic renewal reset: credits ${user.credits_remaining}→${newCredits}, replacements reset`,
             triggered_by: 'cron_job'
           })
 
@@ -148,8 +160,9 @@ export async function POST(request: NextRequest) {
           // Non consideriamo questo un errore critico
         }
 
-        console.log(`✅ Successfully reset credits for user ${user.id}`)
+        console.log(`✅ Successfully reset credits and replacements for user ${user.id}`)
         console.log(`   Previous: ${user.credits_remaining} → New: ${newCredits}`)
+        console.log(`   Replacements: Reset to plan limits`)
         console.log(`   Next reset: ${nextResetDate.toISOString()}`)
         
         processed++

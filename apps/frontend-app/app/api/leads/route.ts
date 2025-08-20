@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getBasePlanType, isProOrHigher, isStarterOrHigher } from '@/lib/utils/plan-helpers'
 
 
 // Client per verificare il token (usa anon key)
@@ -126,9 +127,10 @@ export async function GET(request: NextRequest) {
     
     // ⚡ OTTIMIZZAZIONE: Query principale ottimizzata con meno campi se non necessari
     const isAdmin = userProfile.role === 'admin'
-    const selectFields = isAdmin || userProfile.plan === 'pro' 
+    const userBasePlan = getBasePlanType(userProfile.plan)
+    const selectFields = isAdmin || isProOrHigher(userProfile.plan) 
       ? `id, business_name, website_url, phone, email, address, city, category, score, analysis, created_at, last_seen_at`
-      : userProfile.plan === 'starter'
+      : userBasePlan === 'starter'
       ? `id, business_name, website_url, city, category, score, created_at`
       : `id, business_name, city, category, score, created_at`
     
@@ -230,7 +232,7 @@ export async function GET(request: NextRequest) {
     }
     
     // 🔥 FILTRI CRM - solo per utenti PRO
-    if (userProfile.plan === 'pro' && (onlyUncontacted || followUpOverdue || (crmStatus && crmStatus !== 'all'))) {
+    if (isProOrHigher(userProfile.plan) && (onlyUncontacted || followUpOverdue || (crmStatus && crmStatus !== 'all'))) {
       // Ottieni tutti i lead con stati CRM per questo utente
       const { data: crmData, error: crmError } = await supabaseAdmin
         .from('crm_entries')
@@ -376,7 +378,7 @@ export async function GET(request: NextRequest) {
     let filteredLeads = leads // Non serve più filtrare, già fatto nella SELECT
     
     // 🔥 INTEGRAZIONE CRM: Per utenti PRO, aggiungere stato CRM
-    if (userProfile.plan === 'pro' && leads && leads.length > 0) {
+    if (isProOrHigher(userProfile.plan) && leads && leads.length > 0) {
       try {
         const leadIds = leads.map((lead: any) => lead.id)
         
