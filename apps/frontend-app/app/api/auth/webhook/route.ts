@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
             id: user.id,
             email: user.email,
             plan: 'free',
-            credits_remaining: 2,
+            credits_remaining: 5,
             created_at: new Date().toISOString()
           }, {
             onConflict: 'id',

@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
           email: user.email || 'unknown@example.com',
           plan: 'free',
           status: 'active',
-          credits_remaining: 2,
+          credits_remaining: 5,
           created_at: new Date().toISOString()
         })
         .select('id, email, plan, status, stripe_subscription_id')
@@ -206,7 +206,7 @@ export async function POST(req: NextRequest) {
         .update({
           status: 'inactive',
           plan: 'free',
-          credits_remaining: 2,
+          credits_remaining: 5,
           deactivated_at: new Date().toISOString(),
           deactivation_reason: reason || 'Nessun abbonamento attivo',
           updated_at: new Date().toISOString()
@@ -304,7 +304,7 @@ export async function GET(req: NextRequest) {
           email: user.email || 'unknown@example.com',
           plan: 'free',
           status: 'active',
-          credits_remaining: 2,
+          credits_remaining: 5,
           created_at: new Date().toISOString()
         })
         .select('id, plan, status, deactivated_at, deactivation_reason, reactivated_at')

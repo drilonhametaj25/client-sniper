@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
           email: user.email,
           plan: 'free',
           status: 'active',
-          credits_remaining: 2,
+          credits_remaining: 5,
           created_at: new Date().toISOString()
         })
         .select('*')

@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
                 id: data.user.id,
                 email: data.user.email,
                 plan: 'free',
-                credits_remaining: 2,
+                credits_remaining: 5,
                 created_at: new Date().toISOString()
               })
 
@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
               id: data.user.id,
               email: data.user.email,
               plan: 'free',
-              credits_remaining: 2,
+              credits_remaining: 5,
               created_at: new Date().toISOString()
             }, {
               onConflict: 'id',

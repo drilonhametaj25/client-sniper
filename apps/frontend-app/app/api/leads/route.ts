@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
           email: user.email,
           role: 'client',
           plan: 'free',
-          credits_remaining: 2,
+          credits_remaining: 5,
           created_at: new Date().toISOString()
         })
         .select('id, role, plan, credits_remaining')

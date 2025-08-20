@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
           email: user.email || 'unknown@example.com',
           plan: 'free',
           status: 'active',
-          credits_remaining: 2,
+          credits_remaining: 5,
           created_at: new Date().toISOString()
         })
         .select('id, email, plan, status, stripe_subscription_id, stripe_customer_id')
