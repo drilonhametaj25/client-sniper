@@ -6,6 +6,7 @@
 
 import { TourConfiguration, TourSection } from '@/../../libs/types/onboarding'
 import React from 'react'
+import { getBasePlanType, isProOrHigher, isStarterOrHigher } from '@/lib/utils/plan-helpers'
 
 // Componente per contenuto ricco degli step
 const TourStepContent: React.FC<{
@@ -439,9 +440,9 @@ export const isTourAvailable = (
   const { minPlan, requiresAuth, customCondition } = config.prerequisites
   
   if (requiresAuth && !user) return false
-  if (minPlan && (!user?.plan || !['starter', 'pro'].includes(user.plan))) {
-    if (minPlan === 'pro' && user?.plan !== 'pro') return false
-    if (minPlan === 'starter' && user?.plan === 'free') return false
+  if (minPlan && user) {
+    if (minPlan === 'pro' && !isProOrHigher(user.plan || '')) return false
+    if (minPlan === 'starter' && !isStarterOrHigher(user.plan || '')) return false
   }
   
   if (customCondition && !customCondition()) return false

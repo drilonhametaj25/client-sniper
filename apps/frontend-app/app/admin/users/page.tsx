@@ -223,7 +223,8 @@ export default function AdminUsers() {
       unconfirmed: users.filter(u => !u.email_confirmed_at).length,
       freePlan: users.filter(u => getBasePlanType(u.plan) === 'free').length,
       starterPlan: users.filter(u => getBasePlanType(u.plan) === 'starter').length,
-      proPlan: users.filter(u => getBasePlanType(u.plan) === 'pro').length
+      proPlan: users.filter(u => getBasePlanType(u.plan) === 'pro').length,
+      agencyPlan: users.filter(u => getBasePlanType(u.plan) === 'agency').length
     }
   }
 
@@ -303,6 +304,10 @@ export default function AdminUsers() {
           <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-4 border border-gray-200/50 dark:border-gray-700/50 text-center">
             <div className="text-2xl font-bold text-purple-600">{stats.proPlan}</div>
             <div className="text-xs text-gray-600 dark:text-gray-400">Pro</div>
+          </div>
+          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-4 border border-gray-200/50 dark:border-gray-700/50 text-center">
+            <div className="text-2xl font-bold text-amber-600">{stats.agencyPlan}</div>
+            <div className="text-xs text-gray-600 dark:text-gray-400">Agency</div>
           </div>
         </div>
 

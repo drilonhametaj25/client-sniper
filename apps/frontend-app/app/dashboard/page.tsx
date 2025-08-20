@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { getDaysUntilReset, formatResetDate } from '@/lib/auth'
-import { isProOrHigher } from '@/lib/utils/plan-helpers'
+import { isProOrHigher, getBasePlanType } from '@/lib/utils/plan-helpers'
 import { createPortal } from 'react-dom'
 import { LeadStatusBadge } from '@/components/LeadStatusBadge'
 import { LeadWithCRM, CRMStatusType } from '@/lib/types/crm'
@@ -52,6 +52,7 @@ interface Settings {
   free_limit: number
   starter_limit: number
   pro_limit: number
+  agency_limit: number
 }
 
 export default function ClientDashboard() {
@@ -59,7 +60,7 @@ export default function ClientDashboard() {
   const router = useRouter()
   const [leads, setLeads] = useState<Lead[]>([])
   const [loadingData, setLoadingData] = useState(true)
-  const [settings, setSettings] = useState<Settings>({ free_limit: 2, starter_limit: 50, pro_limit: 200 })
+  const [settings, setSettings] = useState<Settings>({ free_limit: 2, starter_limit: 50, pro_limit: 200, agency_limit: 500 })
   
   // Stato per paginazione
   const [currentPage, setCurrentPage] = useState(1)
@@ -549,9 +550,10 @@ export default function ClientDashboard() {
         }, {} as Settings)
         
         const newSettings = {
-          free_limit: settingsObj.free_limit || 2,
-          starter_limit: settingsObj.starter_limit || 50,
-          pro_limit: settingsObj.pro_limit || 200
+          free_limit: settingsObj.free_limit || 5,
+          starter_limit: settingsObj.starter_limit || 25,
+          pro_limit: settingsObj.pro_limit || 100,
+          agency_limit: settingsObj.agency_limit || 300
         }
         
         setSettings(newSettings)
@@ -586,9 +588,11 @@ export default function ClientDashboard() {
   }
 
   const getPlanLimit = () => {
-    switch (user?.plan) {
+    const basePlan = getBasePlanType(user?.plan || '')
+    switch (basePlan) {
       case 'starter': return settings.starter_limit
       case 'pro': return settings.pro_limit
+      case 'agency': return settings.agency_limit
       default: return settings.free_limit
     }
   }
@@ -1128,9 +1132,11 @@ export default function ClientDashboard() {
     const badges = {
       free: { label: 'Free', color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200', icon: null },
       starter: { label: 'Starter', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300', icon: Zap },
-      pro: { label: 'Pro', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300', icon: Crown }
+      pro: { label: 'Pro', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300', icon: Crown },
+      agency: { label: 'Agency', color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300', icon: Crown }
     }
-    return badges[user?.plan as keyof typeof badges] || badges.free
+    const basePlan = getBasePlanType(user?.plan || '')
+    return badges[basePlan as keyof typeof badges] || badges.free
   }
 
   // Opzioni per i filtri - per ora uso i dati della pagina corrente
@@ -1217,7 +1223,7 @@ export default function ClientDashboard() {
                   <p className={`text-2xl font-bold mb-1 ${remainingCredits <= 1 ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
                     {remainingCredits}
                   </p>
-                  {remainingCredits <= 1 && user?.plan !== 'free' &&  (
+                  {remainingCredits <= 1 && getBasePlanType(user?.plan || '') !== 'free' &&  (
                     <p className="text-xs text-red-500 font-medium">Crediti in esaurimento!</p>
                   )}
                 </div>
@@ -1327,14 +1333,14 @@ export default function ClientDashboard() {
           </div>
 
           {/* Banner Urgenza per Upgrade (solo utenti free) */}
-          {user?.plan === 'free' && (
+          {getBasePlanType(user?.plan || '') === 'free' && (
             <div className="mb-8">
               <UpgradeUrgencyBanner variant="compact" />
             </div>
           )}
 
           {/* Banner Informativo sui Crediti */}
-          {remainingCredits <= 2 && remainingCredits > 0 && user?.plan !== 'free' && (
+          {remainingCredits <= 2 && remainingCredits > 0 && getBasePlanType(user?.plan || '') !== 'free' && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 mb-8">
               <div className="flex items-center space-x-3">
                 <div className="bg-yellow-100 rounded-full p-2">
@@ -1868,7 +1874,7 @@ export default function ClientDashboard() {
                                           <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
                                             <span>🔗 Accesso diretto al sito web</span>
                                           </div>
-                                          {userPlan === 'free' && (
+                                          {getBasePlanType(userPlan) === 'free' && (
                                             <div className="flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400">
                                               <Crown className="h-4 w-4" />
                                               <span>💎 Upgrade per contatti diretti</span>
@@ -1929,7 +1935,7 @@ export default function ClientDashboard() {
                       {isUnlocked && (
                         <LeadInsights 
                           lead={lead} 
-                          userPlan={(userProfile?.plan as 'free' | 'starter' | 'pro') || 'free'}
+                          userPlan={userProfile?.plan || 'free'}
                         />
                       )}
 

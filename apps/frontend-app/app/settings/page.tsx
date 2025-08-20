@@ -363,13 +363,27 @@ export default function SettingsPage() {
   const planNames = {
     free: 'Gratuito',
     starter: 'Starter',
-    pro: 'Pro'
+    starter_monthly: 'Starter (Mensile)',
+    starter_annual: 'Starter (Annuale)',
+    pro: 'Pro',
+    pro_monthly: 'Pro (Mensile)',
+    pro_annual: 'Pro (Annuale)',
+    agency: 'Agency',
+    agency_monthly: 'Agency (Mensile)',
+    agency_annual: 'Agency (Annuale)'
   }
 
   const planColors = {
     free: 'bg-gray-100 text-gray-800',
     starter: 'bg-blue-100 text-blue-800',
-    pro: 'bg-purple-100 text-purple-800'
+    starter_monthly: 'bg-blue-100 text-blue-800',
+    starter_annual: 'bg-blue-100 text-blue-800',
+    pro: 'bg-purple-100 text-purple-800',
+    pro_monthly: 'bg-purple-100 text-purple-800',
+    pro_annual: 'bg-purple-100 text-purple-800',
+    agency: 'bg-amber-100 text-amber-800',
+    agency_monthly: 'bg-amber-100 text-amber-800',
+    agency_annual: 'bg-amber-100 text-amber-800'
   }
 
   const statusColors = {
@@ -514,10 +528,12 @@ export default function SettingsPage() {
               </div>
               <div className="flex items-center space-x-2">
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  userData.plan === 'pro' 
+                  getBasePlanType(userData.plan) === 'pro' 
                     ? 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200'
-                    : userData.plan === 'starter'
+                    : getBasePlanType(userData.plan) === 'starter'
                     ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+                    : getBasePlanType(userData.plan) === 'agency'
+                    ? 'bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200'
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
                 }`}>
                   {planNames[userData.plan as keyof typeof planNames]}

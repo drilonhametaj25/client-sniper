@@ -13,7 +13,7 @@
 'use client';
 
 import { AlertTriangle, TrendingUp, Euro, Clock } from 'lucide-react'
-import { isStarterOrHigher, getBasePlanType } from '@/lib/utils/plan-helpers'
+import { isStarterOrHigher, getBasePlanType, isProOrHigher } from '@/lib/utils/plan-helpers'
 import Card from '@/components/ui/Card'
 
 interface InsightSuggestion {
@@ -224,7 +224,7 @@ export default function LeadInsights({ lead, userPlan }: LeadInsightsProps) {
               <div className="text-xs text-gray-600 dark:text-gray-400 mb-2 leading-relaxed">
                 {suggestion.description}
               </div>
-              {userPlan === 'pro' && (
+              {isProOrHigher(userPlan) && (
                 <div className="text-xs font-medium text-green-600 dark:text-green-400">
                   Valore stimato: {formatCurrency(suggestion.estimatedValue.min)} - {formatCurrency(suggestion.estimatedValue.max)}
                 </div>
