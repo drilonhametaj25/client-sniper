@@ -16,6 +16,7 @@ import FeedbackWidget from '@/components/FeedbackWidget'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://trovami.it'),
   title: {
     default: 'TrovaMi - Trova Lead Qualificati per la Tua Agenzia | Lead Generation Automatica',
     template: '%s | TrovaMi'

@@ -6,6 +6,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+// Forza rendering dinamico per questa API route
+export const dynamic = 'force-dynamic'
+
 // Client per operazioni amministrative (usa service role)
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

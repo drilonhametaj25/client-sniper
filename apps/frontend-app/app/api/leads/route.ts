@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getBasePlanType, isProOrHigher, isStarterOrHigher } from '@/lib/utils/plan-helpers'
 
+// Forza rendering dinamico per questa API route
+export const dynamic = 'force-dynamic'
 
 // Client per verificare il token (usa anon key)
 const supabaseClient = createClient(

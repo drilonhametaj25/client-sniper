@@ -5,6 +5,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+// Forza rendering dinamico per questa API route
+export const dynamic = 'force-dynamic'
+
 // Client per verificare il token (usa anon key)
 const supabaseClient = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

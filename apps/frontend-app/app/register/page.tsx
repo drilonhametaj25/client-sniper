@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { isStarterOrHigher } from '@/lib/utils/plan-helpers'
@@ -54,7 +54,21 @@ interface Plan {
   stripePriceId?: string
 }
 
+// Componente principale con Suspense wrapper
 export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      </div>
+    }>
+      <RegisterPageContent />
+    </Suspense>
+  )
+}
+
+// Componente con logica che usa useSearchParams
+function RegisterPageContent() {
   // Stati piani dinamici dal database
   const [availablePlans, setAvailablePlans] = useState<any[]>([])
   const [plansLoading, setPlansLoading] = useState(true)
