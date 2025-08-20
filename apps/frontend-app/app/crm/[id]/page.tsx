@@ -18,6 +18,8 @@ import Input from '@/components/ui/Input';
 import Badge from '@/components/ui/Badge';
 import { useToast } from '@/components/ToastProvider';
 import { useTheme } from '@/contexts/ThemeContext';
+import { usePlanStatus } from '@/hooks/usePlanStatus';
+import { isProOrHigher } from '@/lib/utils/plan-helpers';
 import { supabase } from '@/lib/supabase';
 import { 
   ArrowLeft,
@@ -100,6 +102,7 @@ export default function CrmLeadDetailPage() {
   const leadId = params.id as string;
   const { success, error: showError } = useToast();
   const { actualTheme } = useTheme();
+  const planStatus = usePlanStatus();
 
   // Stati componente
   const [lead, setLead] = useState<CrmLead | null>(null);
@@ -116,13 +119,27 @@ export default function CrmLeadDetailPage() {
     follow_up_date: null as Date | null
   });
 
-  // Carica dati lead
+  // Verifica piano e carica dati
   useEffect(() => {
+    if (planStatus.isLoading) return;
+    
+    if (!isProOrHigher(planStatus.plan)) {
+      showError('Accesso Limitato', 'Il CRM è disponibile solo per utenti con piano PRO o AGENCY');
+      router.push('/upgrade');
+      return;
+    }
+
+    if (planStatus.status === 'inactive') {
+      showError('Piano Disattivato', 'Il tuo piano è temporaneamente disattivato. Riattivalo per accedere al CRM');
+      router.push('/settings');
+      return;
+    }
+
     if (leadId) {
       loadLeadData();
       loadComments();
     }
-  }, [leadId]);
+  }, [leadId, planStatus.isLoading, planStatus.plan, planStatus.status]);
 
   const loadLeadData = async () => {
     try {
@@ -149,7 +166,27 @@ export default function CrmLeadDetailPage() {
           follow_up_date: data.follow_up_date ? new Date(data.follow_up_date) : null
         });
       } else {
-        showError("Impossibile caricare i dati del lead");
+        // Gestione errori migliorata
+        try {
+          const errorData = await response.json();
+          console.error('Error response:', errorData);
+          
+          if (response.status === 403) {
+            if (errorData.error === 'Piano PRO richiesto') {
+              showError(errorData.message || 'Il CRM richiede un piano PRO');
+              router.push('/upgrade');
+              return;
+            } else if (errorData.error === 'Piano disattivato') {
+              showError(errorData.message || 'Il tuo piano è disattivato');
+              router.push('/settings');
+              return;
+            }
+          }
+          
+          showError(errorData.message || "Impossibile caricare i dati del lead");
+        } catch (parseError) {
+          showError("Impossibile caricare i dati del lead");
+        }
       }
     } catch (error) {
       console.error('Errore nel caricamento lead:', error);

@@ -5,6 +5,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { isProOrHigher } from '@/lib/utils/plan-helpers';
+
+// Forza rendering dinamico per questa API route
+export const dynamic = 'force-dynamic'
 
 // Client per operazioni amministrative (usa service role)
 const supabaseAdmin = createClient(
@@ -35,15 +39,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verifica che l'utente sia PRO
+    // Verifica che l'utente sia PRO o superiore
     const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
       .select('plan')
       .eq('id', user.id)
       .single();
 
-    if (userError || userData?.plan !== 'pro') {
-      return NextResponse.json({ error: 'PRO plan required' }, { status: 403 });
+    if (userError || !isProOrHigher(userData?.plan || '')) {
+      return NextResponse.json(
+        { 
+          error: 'Access denied. CRM is available for PRO and AGENCY users only.',
+          currentPlan: userData?.plan || 'free'
+        }, 
+        { status: 403 }
+      );
     }
 
     // Trova tutti i lead assegnati all'utente

@@ -1,5 +1,5 @@
-/*
- * API per aggiornamento rapido dello stato CRM
+/**
+ * API endpoint per aggiornamento rapido dello stato CRM
  * 
  * Permette agli utenti PRO di aggiornare rapidamente lo stato di un lead
  * direttamente dalla dashboard senza aprire il pannello CRM completo.
@@ -10,7 +10,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { isProOrHigher } from '@/lib/utils/plan-helpers';
 import { CRMQuickUpdateRequest, CRMStatusType } from '@/lib/types/crm';
+
+// Forza rendering dinamico per questa API route
+export const dynamic = 'force-dynamic'
 
 // Client per operazioni amministrative (usa service role)
 const supabaseAdmin = createClient(
@@ -55,9 +59,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (userProfile.plan !== 'pro') {
+    if (!isProOrHigher(userProfile.plan)) {
       return NextResponse.json(
-        { success: false, error: 'Funzionalità disponibile solo per utenti PRO' },
+        { error: 'Access denied. CRM is available for PRO and AGENCY users only.' },
         { status: 403 }
       );
     }

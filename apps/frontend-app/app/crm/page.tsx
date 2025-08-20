@@ -14,6 +14,8 @@ import Input from '@/components/ui/Input';
 import Badge from '@/components/ui/Badge';
 import { useToast } from '@/components/ToastProvider';
 import { useTheme } from '@/contexts/ThemeContext';
+import { usePlanStatus } from '@/hooks/usePlanStatus';
+import { isProOrHigher } from '@/lib/utils/plan-helpers';
 import { TourTarget } from '@/components/onboarding/TourTarget';
 import { 
   Search, 
@@ -30,7 +32,8 @@ import {
   XCircle,
   Pause,
   RotateCcw,
-  Filter
+  Filter,
+  Lock
 } from 'lucide-react';
 
 // Tipi per TypeScript
@@ -86,12 +89,26 @@ export default function CrmPage() {
   });
   const { success, error } = useToast();
   const { actualTheme } = useTheme();
+  const planStatus = usePlanStatus();
+
+  // Verifica piano e stato prima di procedere
+  useEffect(() => {
+    if (planStatus.isLoading) return;
+    
+    if (!isProOrHigher(planStatus.plan)) {
+      error('Accesso Limitato', 'Il CRM è disponibile solo per utenti con piano PRO o AGENCY');
+      return;
+    }
+
+    if (planStatus.status === 'inactive') {
+      error('Piano Disattivato', 'Il tuo piano è temporaneamente disattivato. Riattivalo per accedere al CRM');
+      return;
+    }
+
+    loadCrmData();
+  }, [planStatus.isLoading, planStatus.plan, planStatus.status]);
 
   // Carica dati CRM
-  useEffect(() => {
-    loadCrmData();
-  }, []);
-
   const loadCrmData = async () => {
     try {
       setLoading(true);
@@ -126,9 +143,29 @@ export default function CrmPage() {
         }
       } else {
         console.error('CRM API Error:', response.status, response.statusText);
-        const errorData = await response.text();
-        console.error('Error response:', errorData);
-        throw new Error(`HTTP ${response.status}`);
+        
+        // Prova a leggere la risposta JSON per ottenere dettagli dell'errore
+        try {
+          const errorData = await response.json();
+          console.error('Error response:', errorData);
+          
+          if (response.status === 403) {
+            if (errorData.error === 'Piano PRO richiesto') {
+              error('Piano Insufficiente', errorData.message || 'Il CRM richiede un piano PRO');
+              return;
+            } else if (errorData.error === 'Piano disattivato') {
+              error('Piano Disattivato', errorData.message || 'Il tuo piano è disattivato');
+              return;
+            } else if (errorData.error === 'Piano cancellato') {
+              error('Piano Cancellato', errorData.message || 'Il tuo piano è stato cancellato');
+              return;
+            }
+          }
+          
+          throw new Error(errorData.message || `HTTP ${response.status}`);
+        } catch (parseError) {
+          throw new Error(`HTTP ${response.status}`);
+        }
       }
     } catch (err) {
       console.error('Errore nel caricamento dati CRM:', err);
@@ -264,7 +301,7 @@ export default function CrmPage() {
     return new Date(dateString).toLocaleDateString('it-IT');
   };
 
-  if (loading) {
+  if (loading || planStatus.isLoading) {
     return (
       <div className="container mx-auto px-4 py-8 min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="animate-pulse">
@@ -280,6 +317,56 @@ export default function CrmPage() {
             ))}
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Se il piano non è PRO o superiore, mostra messaggio di upgrade
+  if (!isProOrHigher(planStatus.plan)) {
+    return (
+      <div className="container mx-auto px-4 py-8 min-h-screen bg-gray-50 dark:bg-gray-900">
+        <Card className="max-w-2xl mx-auto text-center">
+          <div className="py-12">
+            <Lock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              CRM Personale - Solo Piano PRO/AGENCY
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Il sistema CRM è disponibile esclusivamente per gli utenti con piano PRO o AGENCY. 
+              Aggiorna il tuo piano per accedere a tutte le funzionalità di gestione lead.
+            </p>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Il tuo piano attuale: <Badge variant="info">{planStatus.plan.toUpperCase()}</Badge>
+              </p>
+              <Button onClick={() => window.location.href = '/upgrade'}>
+                Aggiorna a Piano PRO
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Se il piano è disattivato, mostra messaggio di riattivazione
+  if (planStatus.status === 'inactive') {
+    return (
+      <div className="container mx-auto px-4 py-8 min-h-screen bg-gray-50 dark:bg-gray-900">
+        <Card className="max-w-2xl mx-auto text-center">
+          <div className="py-12">
+            <Pause className="w-16 h-16 text-orange-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              Piano Temporaneamente Disattivato
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Il tuo piano PRO è temporaneamente disattivato. Riattivalo per accedere al CRM.
+            </p>
+            <Button onClick={() => window.location.href = '/settings'}>
+              Riattiva Piano
+            </Button>
+          </div>
+        </Card>
       </div>
     );
   }

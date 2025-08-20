@@ -6,6 +6,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { isProOrHigher } from '@/lib/utils/plan-helpers';
+
+// Forza rendering dinamico per questa API route
+export const dynamic = 'force-dynamic'
 
 // Client per operazioni amministrative (usa service role)
 const supabaseAdmin = createClient(
@@ -41,15 +45,42 @@ export async function GET(
       );
     }
 
-    // Verifica che l'utente sia PRO
+    // Verifica che l'utente sia PRO e attivo
     const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
-      .select('plan, role')
+      .select('plan, status, role')
       .eq('id', user.id)
       .single();
 
-    if (userError || userData?.plan !== 'pro') {
-      return NextResponse.json({ error: 'PRO plan required' }, { status: 403 });
+    if (userError) {
+      console.error('Errore nel recupero dati utente:', userError);
+      return NextResponse.json({ error: 'Errore nel recupero dati utente' }, { status: 500 });
+    }
+
+    // Verifica piano PRO o superiore (include pro_monthly, pro_annual, agency_monthly, agency_annual)
+    if (!isProOrHigher(userData?.plan || '')) {
+      return NextResponse.json({ 
+        error: 'Piano PRO richiesto', 
+        current_plan: userData?.plan || 'unknown',
+        message: 'Il CRM è disponibile solo per utenti con piano PRO o AGENCY'
+      }, { status: 403 });
+    }
+
+    // Verifica che il piano sia attivo
+    if (userData?.status === 'inactive') {
+      return NextResponse.json({ 
+        error: 'Piano disattivato', 
+        message: 'Il tuo piano è temporaneamente disattivato. Riattivalo per accedere al CRM',
+        status: userData.status
+      }, { status: 403 });
+    }
+
+    // Se il piano è cancellato, nega l'accesso
+    if (userData?.status === 'cancelled') {
+      return NextResponse.json({ 
+        error: 'Piano cancellato', 
+        message: 'Il tuo piano è stato cancellato. Aggiorna il piano per accedere al CRM'
+      }, { status: 403 });
     }
 
     // Recupera il lead con dettagli completi
@@ -204,8 +235,12 @@ export async function POST(
       .eq('id', user.id)
       .single();
 
-    if (userError || userData?.plan !== 'pro') {
-      return NextResponse.json({ error: 'PRO plan required' }, { status: 403 });
+    if (userError || !isProOrHigher(userData?.plan || '')) {
+      return NextResponse.json({ 
+        error: 'Piano PRO richiesto',
+        current_plan: userData?.plan || 'unknown',
+        message: 'La modifica entry CRM richiede piano PRO o AGENCY'
+      }, { status: 403 });
     }
 
     // Verifica che il lead sia sbloccato dall'utente

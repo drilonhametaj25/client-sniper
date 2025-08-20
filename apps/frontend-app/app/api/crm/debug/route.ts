@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { isProOrHigher } from '@/lib/utils/plan-helpers';
 
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
@@ -116,8 +117,8 @@ export async function GET(request: NextRequest) {
       suggestions: [
         (assignedLeads?.length || 0) > 0 && (crmEntries?.length || 0) === 0 ? 
           'Found assigned leads but no CRM entries - entries should be auto-created' : null,
-        userProfile?.plan !== 'pro' ? 
-          'User is not on PRO plan - CRM access restricted' : null,
+        !isProOrHigher(userProfile?.plan || '') ? 
+          'User is not on STARTER+ plan - CRM access restricted' : null,
         debugInfo.rpc_test?.success === false ? 
           'RPC functions not working - using direct queries as fallback' : null
       ].filter(Boolean)
