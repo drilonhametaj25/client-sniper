@@ -41,7 +41,6 @@ export function hasPlan(userPlan: string, requiredPlan: PlanType): boolean {
  */
 export function hasMinimumPlan(userPlan: string, minimumPlan: PlanType): boolean {
   const userBasePlan = getBasePlanType(userPlan)
-  
   const planLevels: Record<PlanType, number> = {
     'free': 0,
     'starter': 1,

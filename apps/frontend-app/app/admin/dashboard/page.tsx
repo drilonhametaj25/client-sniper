@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { isProOrHigher } from '@/lib/utils/plan-helpers'
+import { isProOrHigher, getBasePlanType } from '@/lib/utils/plan-helpers'
 import { debugUserSession } from '@/lib/auth'
 import { LeadStatusBadge } from '@/components/LeadStatusBadge'
 import { LeadWithCRM, CRMStatusType } from '@/lib/types/crm'
@@ -750,7 +750,7 @@ export default function AdminDashboard() {
                       <td colSpan={6} className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50">
                         <LeadInsights 
                           lead={lead} 
-                          userPlan={user?.plan || 'free'}
+                          userPlan={getBasePlanType(user?.plan || 'free')}
                         />
                       </td>
                     </tr>

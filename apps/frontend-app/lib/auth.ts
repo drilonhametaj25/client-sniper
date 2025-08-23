@@ -8,7 +8,7 @@ import { User, Session } from '@supabase/supabase-js'
 
 export interface AuthUser extends User {
   role?: 'admin' | 'client'
-  plan?: 'free' | 'starter' | 'pro'
+  plan?: string // Ora supporta tutti i nuovi nomi: free, starter_monthly, starter_annual, pro_monthly, pro_annual, agency_monthly, agency_annual
   credits_remaining?: number
   billing_cycle_start?: string
   credits_reset_date?: string
@@ -87,7 +87,7 @@ export async function getUserProfile(userId: string, sessionUser?: User): Promis
     const completeProfile: AuthUser = {
       ...authUser,
       role: data.role as 'admin' | 'client',
-      plan: data.plan as 'free' | 'starter' | 'pro',
+      plan: data.plan, // Ora supporta tutti i nuovi nomi
       credits_remaining: data.credits_remaining || 0,
       billing_cycle_start: data.billing_cycle_start,
       credits_reset_date: data.credits_reset_date,

@@ -18,7 +18,7 @@ import Input from '@/components/ui/Input';
 import Badge from '@/components/ui/Badge';
 import { useToast } from '@/components/ToastProvider';
 import { useTheme } from '@/contexts/ThemeContext';
-import { usePlanStatus } from '@/hooks/usePlanStatus';
+import { useAuth } from '@/contexts/AuthContext';
 import { isProOrHigher } from '@/lib/utils/plan-helpers';
 import { supabase } from '@/lib/supabase';
 import { 
@@ -102,7 +102,7 @@ export default function CrmLeadDetailPage() {
   const leadId = params.id as string;
   const { success, error: showError } = useToast();
   const { actualTheme } = useTheme();
-  const planStatus = usePlanStatus();
+  const { user, loading: authLoading } = useAuth();
 
   // Stati componente
   const [lead, setLead] = useState<CrmLead | null>(null);
@@ -121,15 +121,22 @@ export default function CrmLeadDetailPage() {
 
   // Verifica piano e carica dati
   useEffect(() => {
-    if (planStatus.isLoading) return;
+    if (authLoading) return;
     
-    if (!isProOrHigher(planStatus.plan)) {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+
+    if (!isProOrHigher(user.plan || '')) {
+      console.error('❌ Access denied - Plan not Pro or higher:', user.plan);
       showError('Accesso Limitato', 'Il CRM è disponibile solo per utenti con piano PRO o AGENCY');
       router.push('/upgrade');
       return;
     }
 
-    if (planStatus.status === 'inactive') {
+    if (user.status === 'inactive') {
+      console.error('❌ Access denied - Plan inactive');
       showError('Piano Disattivato', 'Il tuo piano è temporaneamente disattivato. Riattivalo per accedere al CRM');
       router.push('/settings');
       return;
@@ -139,7 +146,7 @@ export default function CrmLeadDetailPage() {
       loadLeadData();
       loadComments();
     }
-  }, [leadId, planStatus.isLoading, planStatus.plan, planStatus.status]);
+  }, [leadId, authLoading, user]);
 
   const loadLeadData = async () => {
     try {
@@ -468,7 +475,7 @@ export default function CrmLeadDetailPage() {
     return 'text-green-600';
   };
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="container mx-auto px-4 py-8 min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="animate-pulse">

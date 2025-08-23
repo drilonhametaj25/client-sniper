@@ -32,7 +32,7 @@ interface User {
   id: string
   email: string
   role: 'admin' | 'client'
-  plan: 'free' | 'starter' | 'pro'
+  plan: string // Ora supporta tutti i nuovi nomi dei piani
   credits_remaining: number
   email_confirmed_at: string | null
   created_at: string
@@ -149,7 +149,7 @@ export default function AdminUsers() {
     }
 
     if (filterPlan) {
-      filtered = filtered.filter(u => u.plan === filterPlan)
+      filtered = filtered.filter(u => getBasePlanType(u.plan) === filterPlan)
     }
 
     setFilteredUsers(filtered)
@@ -197,12 +197,16 @@ export default function AdminUsers() {
   }
 
   const getPlanBadge = (plan: string) => {
+    const basePlan = getBasePlanType(plan)
+    const isAnnual = plan.includes('_annual')
+    
     const badges = {
       free: { label: 'Free', color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200' },
-      starter: { label: 'Starter', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
-      pro: { label: 'Pro', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' }
+      starter: { label: isAnnual ? 'Starter Annual' : 'Starter', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
+      pro: { label: isAnnual ? 'Pro Annual' : 'Pro', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' },
+      agency: { label: isAnnual ? 'Agency Annual' : 'Agency', color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' }
     }
-    return badges[plan as keyof typeof badges] || badges.free
+    return badges[basePlan as keyof typeof badges] || badges.free
   }
 
   const getStatusBadge = (status: string) => {
@@ -276,7 +280,7 @@ export default function AdminUsers() {
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-8">
           <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-4 border border-gray-200/50 dark:border-gray-700/50 text-center">
             <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</div>
             <div className="text-xs text-gray-600 dark:text-gray-400">Totali</div>
@@ -375,6 +379,7 @@ export default function AdminUsers() {
                     <option value="free">Free</option>
                     <option value="starter">Starter</option>
                     <option value="pro">Pro</option>
+                    <option value="agency">Agency</option>
                   </select>
                 </div>
               </div>
@@ -499,8 +504,12 @@ export default function AdminUsers() {
                     className="w-full p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                   >
                     <option value="free">Free</option>
-                    <option value="starter">Starter</option>
-                    <option value="pro">Pro</option>
+                    <option value="starter_monthly">Starter Monthly</option>
+                    <option value="starter_annual">Starter Annual</option>
+                    <option value="pro_monthly">Pro Monthly</option>
+                    <option value="pro_annual">Pro Annual</option>
+                    <option value="agency_monthly">Agency Monthly</option>
+                    <option value="agency_annual">Agency Annual</option>
                   </select>
                 </div>
                 

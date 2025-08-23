@@ -595,17 +595,25 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   console.log(`Metadata:`, subscription.metadata)
 
   try {
-    // Determina il piano dal price_id
+    // Ottieni il piano direttamente dal database usando il price_id
     const priceId = subscription.items.data[0]?.price?.id
+    console.log(`Cercando piano per Price ID: ${priceId}`)
     
-    let planName = 'free'
-    if (priceId === process.env.NEXT_PUBLIC_STRIPE_STARTER_PRICE_ID) {
-      planName = 'starter'
-    } else if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID) {
-      planName = 'pro'
+    // Cerca il piano nel database usando il price_id
+    const { data: planData, error: planError } = await supabase
+      .from('plans')
+      .select('name, max_credits')
+      .or(`stripe_price_id_monthly.eq.${priceId},stripe_price_id_annual.eq.${priceId}`)
+      .single()
+
+    if (planError || !planData) {
+      console.error(`❌ Piano non trovato per Price ID: ${priceId}`)
+      return
     }
 
-    console.log(`Piano determinato: ${planName}`)
+    const planName = planData.name
+    const credits = planData.max_credits || 0
+    console.log(`Piano determinato dal database: ${planName} (${credits} crediti)`)
 
     // Trova l'utente dal customer ID
     let userId = subscription.metadata?.user_id
@@ -636,14 +644,6 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       }
     }
 
-    // Ottieni crediti dal database
-    const { data: planData } = await supabase
-      .from('plans')
-      .select('max_credits')
-      .eq('name', planName)
-      .single()
-
-    const credits = planData?.max_credits || 0
     console.log(`Assegnando ${credits} crediti per piano ${planName}`)
 
     // Aggiorna l'utente

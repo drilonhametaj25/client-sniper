@@ -28,21 +28,21 @@ export type Database = {
         Row: {
           id: string
           email: string
-          plan: 'free' | 'starter' | 'pro'
+          plan: string // Ora supporta tutti i nuovi nomi dei piani
           credits_remaining: number
           created_at: string
         }
         Insert: {
           id?: string
           email: string
-          plan?: 'free' | 'starter' | 'pro'
+          plan?: string
           credits_remaining?: number
           created_at?: string
         }
         Update: {
           id?: string
           email?: string
-          plan?: 'free' | 'starter' | 'pro'
+          plan?: string
           credits_remaining?: number
           created_at?: string
         }

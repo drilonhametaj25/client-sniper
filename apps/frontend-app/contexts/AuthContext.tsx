@@ -367,10 +367,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isProfileDowngrade = useCallback((newProfile: AuthUser, currentProfile: AuthUser | null): boolean => {
     if (!currentProfile || !newProfile) return false
     
+    // Funzione per ottenere il livello base del piano (senza suffissi monthly/annual)
+    const getBasePlanLevel = (planName: string): number => {
+      const baseName = planName.replace('_monthly', '').replace('_annual', '')
+      const planPriority = { 'free': 1, 'starter': 2, 'pro': 3, 'agency': 4 }
+      return planPriority[baseName as keyof typeof planPriority] || 0
+    }
+    
     // Se il piano corrente è migliore del nuovo piano, potrebbe essere un errore
-    const planPriority = { 'free': 1, 'starter': 2, 'pro': 3 }
-    const currentPriority = planPriority[currentProfile.plan as keyof typeof planPriority] || 0
-    const newPriority = planPriority[newProfile.plan as keyof typeof planPriority] || 0
+    const currentPriority = getBasePlanLevel(currentProfile.plan || 'free')
+    const newPriority = getBasePlanLevel(newProfile.plan || 'free')
     
     if (currentPriority > newPriority && currentProfile.plan !== 'free') {
       console.warn('🛡️ PROTEZIONE: Possibile downgrade accidentale da', currentProfile.plan, 'a', newProfile.plan)

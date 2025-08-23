@@ -1935,7 +1935,7 @@ export default function ClientDashboard() {
                       {isUnlocked && (
                         <LeadInsights 
                           lead={lead} 
-                          userPlan={userProfile?.plan || 'free'}
+                          userPlan={getBasePlanType(userProfile?.plan || 'free')}
                         />
                       )}
 
