@@ -99,12 +99,6 @@ export default function LeadDetailPage() {
         (ul: any) => ul.lead_id === leadId
       );
 
-      // Se non è già sbloccato, verifica che l'utente abbia crediti sufficienti
-      if (!isAlreadyUnlocked && (!user || (user.credits_remaining || 0) <= 0)) {
-        setError("Crediti insufficienti per visualizzare i dettagli del lead");
-        return;
-      }
-
       // Carica il lead
       const { data: leadData, error: leadError } = await supabase
         .from("leads")
@@ -116,15 +110,22 @@ export default function LeadDetailPage() {
         setError("Lead non trovato");
         return;
       }
-
-      // Verifica se l'utente può vedere questo lead
-      if (
-        user?.role !== "admin" &&
-        leadData.assigned_to &&
-        leadData.assigned_to !== user?.id
-      ) {
-        setError("Non hai i permessi per visualizzare questo lead");
-        return;
+      
+      // Logica di accesso corretta:
+      // 1. Admin può vedere tutto
+      // 2. Se l'utente ha già sbloccato il lead, può vederlo
+      // 3. Se non è sbloccato ma ha crediti, può sbloccarlo
+      // 4. Altrimenti errore
+      if (user?.role !== "admin") {
+        if (!isAlreadyUnlocked) {
+          // Se non è già sbloccato, verifica che l'utente abbia crediti sufficienti
+          if (!user || (user.credits_remaining || 0) <= 0) {
+            setError("Crediti insufficienti per visualizzare i dettagli del lead");
+            return;
+          }
+          // Se ha crediti, procede a consumarli più avanti
+        }
+        // Se è già sbloccato o ha crediti, può procedere
       }
 
       setLead(leadData);
