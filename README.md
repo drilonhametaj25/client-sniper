@@ -12,6 +12,8 @@ TrovaMi identifica automaticamente aziende con siti web che necessitano di migli
 3. **Scoring**: Assegna un punteggio 0-100 basato sui difetti trovati
 4. **Distribuzione Lead**: Assegna i lead agli utenti in base al loro piano
 
+
+
 ## 🏗️ Architettura
 
 ```
