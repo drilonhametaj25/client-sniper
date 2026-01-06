@@ -40,10 +40,11 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
   const [currentTour, setCurrentTour] = useState<TourSection | null>(null)
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [autoToursEnabled, setAutoToursEnabled] = useState(true)
-  
-  // Ref per evitare avvio automatico multiplo
-  const autoTourTriggered = useRef<Set<TourSection>>(new Set())
+  const [toursSeenThisSession, setToursSeenThisSession] = useState<Set<TourSection>>(new Set())
+
+  // Flag per evitare trigger multipli nello stesso render
   const tourJustCompleted = useRef(false)
+  const isInitialized = useRef(false)
 
   // Ottieni configurazione tour corrente
   const getCurrentTourConfig = useCallback(() => {
@@ -126,18 +127,49 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
     }))
   }, [getCurrentTourConfig])
 
+  // Verifica se il tour è già stato mostrato (persistente)
+  const hasTourBeenShown = useCallback((section: TourSection): boolean => {
+    // Controlla prima se completato o saltato (già persistente)
+    if (isTourCompleted(section) || isTourSkipped(section)) {
+      return true
+    }
+    // Controlla localStorage per "già visto" (anche se non completato)
+    try {
+      const shownKey = `tour_shown_${user?.id || 'anonymous'}_${section}`
+      return localStorage.getItem(shownKey) === 'true'
+    } catch {
+      return false
+    }
+  }, [user?.id, isTourCompleted, isTourSkipped])
+
+  // Marca tour come mostrato
+  const markTourAsShown = useCallback((section: TourSection) => {
+    try {
+      const shownKey = `tour_shown_${user?.id || 'anonymous'}_${section}`
+      localStorage.setItem(shownKey, 'true')
+    } catch {
+      // Ignora errori localStorage
+    }
+  }, [user?.id])
+
   // Avvia tour
-  const startTour = useCallback((section: TourSection) => {
+  const startTour = useCallback((section: TourSection, forceStart: boolean = false) => {
     const config = getTourConfig(section)
-    
+
     if (!config || !isTourAvailable(config, user)) {
       console.warn(`Tour ${section} non disponibile per questo utente`)
       return
     }
 
-    // Controlla se già completato o saltato
-    if (isTourCompleted(section) || isTourSkipped(section)) {
-      console.log(`Tour ${section} già completato o saltato`)
+    // Controlla se già mostrato (skip se non forzato)
+    if (!forceStart && hasTourBeenShown(section)) {
+      console.log(`Tour ${section} già mostrato, skip`)
+      return
+    }
+
+    // Controlla se già visto in questa sessione
+    if (toursSeenThisSession.has(section)) {
+      console.log(`Tour ${section} già visto in questa sessione`)
       return
     }
 
@@ -146,7 +178,11 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
     setCurrentStepIndex(0)
     setIsRunning(true)
     tourJustCompleted.current = false
-  }, [user, isTourCompleted, isTourSkipped])
+
+    // Marca come mostrato
+    markTourAsShown(section)
+    setToursSeenThisSession(prev => new Set(prev).add(section))
+  }, [user, hasTourBeenShown, markTourAsShown, toursSeenThisSession])
 
   // Ferma tour
   const stopTour = useCallback(() => {
@@ -170,8 +206,19 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
   const resetTour = useCallback((section: TourSection) => {
     console.log(`🔄 Reset tour: ${section}`)
     resetTourProgress(section)
-    autoTourTriggered.current.delete(section)
-  }, [resetTourProgress])
+    // Rimuovi anche il flag "mostrato"
+    try {
+      const shownKey = `tour_shown_${user?.id || 'anonymous'}_${section}`
+      localStorage.removeItem(shownKey)
+    } catch {
+      // Ignora errori
+    }
+    setToursSeenThisSession(prev => {
+      const newSet = new Set(prev)
+      newSet.delete(section)
+      return newSet
+    })
+  }, [resetTourProgress, user?.id])
 
   // Step successivo
   const nextStep = useCallback(() => {
@@ -210,9 +257,19 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
   const resetAllTours = useCallback(() => {
     console.log('🔄 Reset tutti i tour')
     resetAllToursProgress()
-    autoTourTriggered.current.clear()
+    // Rimuovi tutti i flag "mostrato"
+    const allSections: TourSection[] = ['dashboard', 'filters', 'lead-card', 'lead-detail', 'crm', 'manual-scan', 'admin']
+    allSections.forEach(section => {
+      try {
+        const shownKey = `tour_shown_${user?.id || 'anonymous'}_${section}`
+        localStorage.removeItem(shownKey)
+      } catch {
+        // Ignora errori
+      }
+    })
+    setToursSeenThisSession(new Set())
     stopTour()
-  }, [resetAllToursProgress, stopTour])
+  }, [resetAllToursProgress, stopTour, user?.id])
 
   // Abilita/disabilita tour automatici
   const enableAutoTours = useCallback((enabled: boolean) => {
@@ -238,7 +295,8 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
 
   // Auto-trigger tour basato su pathname
   useEffect(() => {
-    if (!user || !autoToursEnabled || tourJustCompleted.current) return
+    // Skip se non autenticato, tour disabilitati, o tour appena completato
+    if (!user || !autoToursEnabled || tourJustCompleted.current || isRunning) return
 
     // Mappa pathname -> tour section
     const pathToSection: Record<string, TourSection> = {
@@ -261,24 +319,26 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
 
     if (!targetSection) return
 
-    // Evita trigger multipli per la stessa sezione
-    if (autoTourTriggered.current.has(targetSection)) return
+    // Controlla se tour è già stato mostrato (usa la nuova logica persistente)
+    if (hasTourBeenShown(targetSection)) {
+      return
+    }
 
-    // Controlla se tour è disponibile e non completato
+    // Controlla se tour è disponibile
     const config = getTourConfig(targetSection)
     if (!config || !config.autoTrigger || !isTourAvailable(config, user)) return
 
-    if (isTourCompleted(targetSection) || isTourSkipped(targetSection)) return
-
-    // Ritardo per assicurarsi che la pagina sia renderizzata
+    // Ritardo più lungo per assicurarsi che la pagina sia completamente renderizzata
     const timer = setTimeout(() => {
-      console.log(`🚀 Auto-avvio tour: ${targetSection}`)
-      autoTourTriggered.current.add(targetSection)
-      startTour(targetSection)
-    }, 1500) // 1.5s delay
+      // Double-check prima di avviare (lo stato potrebbe essere cambiato)
+      if (!tourJustCompleted.current && !isRunning) {
+        console.log(`🚀 Auto-avvio tour: ${targetSection}`)
+        startTour(targetSection)
+      }
+    }, 2000) // 2s delay per sicurezza
 
     return () => clearTimeout(timer)
-  }, [pathname, user, autoToursEnabled, isTourCompleted, isTourSkipped, startTour])
+  }, [pathname, user, autoToursEnabled, hasTourBeenShown, startTour, isRunning])
 
   // Reset flag completion quando cambia pagina
   useEffect(() => {

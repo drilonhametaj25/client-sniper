@@ -62,7 +62,7 @@ export interface OnboardingContextType {
   currentStepIndex: number
   
   // Funzioni di controllo
-  startTour: (section: TourSection) => void
+  startTour: (section: TourSection, forceStart?: boolean) => void
   stopTour: () => void
   resetTour: (section: TourSection) => void
   skipTour: () => void

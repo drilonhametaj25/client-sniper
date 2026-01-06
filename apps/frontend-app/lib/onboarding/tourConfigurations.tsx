@@ -81,7 +81,7 @@ export const dashboardTourConfig: TourConfiguration = {
       id: 'stats-cards',
       section: 'dashboard',
       order: 2,
-      target: '#dashboard-stats, .grid.grid-cols-1.md\\:grid-cols-5',
+      target: '[data-tour="dashboard-stats"]',
       placement: 'bottom',
       content: React.createElement(TourStepContent, {
         title: '📊 Panoramica del tuo account',
@@ -97,7 +97,7 @@ export const dashboardTourConfig: TourConfiguration = {
       id: 'search-filters',
       section: 'dashboard',
       order: 3,
-      target: '#dashboard-search, [data-tour="dashboard-search"]',
+      target: '[data-tour="dashboard-search"]',
       placement: 'bottom',
       content: React.createElement(TourStepContent, {
         title: '🔍 Ricerca e filtri intelligenti',
@@ -113,8 +113,8 @@ export const dashboardTourConfig: TourConfiguration = {
       id: 'lead-card',
       section: 'dashboard',
       order: 4,
-      target: '#dashboard-first-lead, [data-tour="dashboard-first-lead"]',
-      placement: 'right',
+      target: '[data-tour="lead-card"]',
+      placement: 'top',
       content: React.createElement(TourStepContent, {
         title: '📋 Le card dei lead',
         description: 'Ogni card mostra le informazioni principali di un\'azienda: nome, categoria, problemi tecnici identificati e punteggio di opportunità.',
@@ -130,7 +130,7 @@ export const dashboardTourConfig: TourConfiguration = {
       id: 'unlock-button',
       section: 'dashboard',
       order: 5,
-      target: '#dashboard-unlock-button, button[class*="SBLOCCA LEAD"]',
+      target: '[data-tour="unlock-button"]',
       placement: 'left',
       content: React.createElement(TourStepContent, {
         title: '🔓 Sbloccare un lead',

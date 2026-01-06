@@ -67,7 +67,8 @@ const TourControlMenu: React.FC<TourControlMenuProps> = ({ onClose }) => {
   ]
 
   const handleStartTour = (section: TourSection) => {
-    startTour(section)
+    // Forza l'avvio quando l'utente clicca manualmente
+    startTour(section, true)
     onClose?.()
   }
 

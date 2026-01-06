@@ -1637,9 +1637,9 @@ export default function ClientDashboard() {
                 const isUnlocked = unlockedLeads.has(lead.id)
                 const isLastUnlocked = lastUnlockedLeadId === lead.id
                 
-                // Gestisce l'id in base al caso
-                const cardProps = index === 0 
-                  ? { id: 'dashboard-first-lead', 'data-tour': 'dashboard-first-lead' }
+                // Gestisce l'id in base al caso (primo lead ha attributo tour per onboarding)
+                const cardProps = index === 0
+                  ? { id: 'dashboard-first-lead', 'data-tour': 'lead-card' }
                   : { id: `lead-${lead.id}` }
                 
                 return (
@@ -1955,7 +1955,7 @@ export default function ClientDashboard() {
                               className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-3 rounded-xl transition-all duration-300 relative disabled:opacity-50 disabled:cursor-not-allowed font-bold text-sm shadow-lg hover:shadow-xl transform hover:scale-105"
                               disabled={remainingCredits <= 0}
                               title={remainingCredits <= 0 ? "Non hai crediti sufficienti" : "Costa 1 credito per sbloccare tutti i dettagli"}
-                              {...(index === 0 ? { id: 'dashboard-unlock-button', 'data-tour': 'dashboard-unlock-button' } : {})}
+                              {...(index === 0 ? { id: 'dashboard-unlock-button', 'data-tour': 'unlock-button' } : {})}
                             >
                               <div className="flex items-center space-x-2">
                                 <Eye className="h-4 w-4" />

@@ -6,7 +6,10 @@
       "Bash(npm install:*)",
       "Bash(mkdir:*)",
       "Bash(npm run type-check:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(git commit:*)",
+      "Bash(git push)",
+      "Bash(git add:*)"
     ]
   }
 }
