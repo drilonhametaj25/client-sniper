@@ -179,14 +179,176 @@ export const SCRAPING_SOURCES = [
   'pagine_gialle'
 ] as const;
 
-// Categorie business da scrappare
+// Categorie business da scrappare - ESPANSE per maggiore copertura
 export const BUSINESS_CATEGORIES = [
+  // Ristorazione & Food
   'ristoranti',
-  'idraulici',
-  'barberie',
+  'pizzerie',
+  'bar caffetterie',
+  'pasticcerie',
+  'gelaterie',
+  'panifici',
+  'macellerie',
+  'pescherie',
+  'enoteche',
+  'catering',
+
+  // Salute & Benessere
+  'dentisti',
+  'fisioterapisti',
+  'osteopati',
+  'psicologi',
+  'nutrizionisti',
+  'centri estetici',
+  'palestre fitness',
+  'centri yoga',
+  'spa centri benessere',
+  'farmacie',
+  'ottici',
+  'veterinari',
+
+  // Cura Persona
   'parrucchieri',
-  'dentisti'
+  'barberie',
+  'estetiste',
+  'centri abbronzatura',
+  'nail salon',
+
+  // Casa & Manutenzione
+  'idraulici',
+  'elettricisti',
+  'fabbri',
+  'imbianchini',
+  'muratori',
+  'giardinieri',
+  'imprese pulizie',
+  'disinfestazioni',
+  'traslochi',
+  'falegnamerie',
+  'serramentisti',
+  'climatizzazione',
+  'caldaie riscaldamento',
+
+  // Auto & Trasporti
+  'officine meccaniche',
+  'carrozzerie',
+  'gommisti',
+  'autolavaggi',
+  'autoscuole',
+  'noleggio auto',
+  'taxi ncc',
+
+  // Servizi Professionali
+  'commercialisti',
+  'avvocati',
+  'notai',
+  'consulenti lavoro',
+  'agenzie immobiliari',
+  'agenzie assicurative',
+  'studi architettura',
+  'geometri',
+  'ingegneri',
+  'agenzie marketing',
+  'web agency',
+  'fotografi',
+  'videomaker',
+
+  // Retail & Commercio
+  'negozi abbigliamento',
+  'negozi scarpe',
+  'gioiellerie',
+  'fioristi',
+  'librerie',
+  'cartolerie',
+  'ferramenta',
+  'casalinghi',
+  'elettronica',
+  'telefonia',
+
+  // Educazione & Formazione
+  'scuole guida',
+  'scuole lingue',
+  'centri formazione',
+  'ripetizioni private',
+  'scuole musica',
+  'scuole danza',
+  'asili nido',
+
+  // Eventi & Tempo Libero
+  'wedding planner',
+  'agenzie viaggi',
+  'sale ricevimenti',
+  'discoteche club',
+  'cinema',
+  'teatri',
+  'bowling',
+  'escape room',
+
+  // Animali
+  'pet shop',
+  'toelettatura cani',
+  'pensioni animali',
+  'addestramento cani',
+
+  // Altro
+  'tipografie',
+  'copisterie',
+  'lavanderie',
+  'sartorie',
+  'calzolerie',
+  'orologerie',
+  'onoranze funebri'
 ] as const;
+
+// Categorie raggruppate per settore (utile per UI)
+export const CATEGORY_GROUPS = {
+  'Ristorazione & Food': [
+    'ristoranti', 'pizzerie', 'bar caffetterie', 'pasticcerie', 'gelaterie',
+    'panifici', 'macellerie', 'pescherie', 'enoteche', 'catering'
+  ],
+  'Salute & Benessere': [
+    'dentisti', 'fisioterapisti', 'osteopati', 'psicologi', 'nutrizionisti',
+    'centri estetici', 'palestre fitness', 'centri yoga', 'spa centri benessere',
+    'farmacie', 'ottici', 'veterinari'
+  ],
+  'Cura Persona': [
+    'parrucchieri', 'barberie', 'estetiste', 'centri abbronzatura', 'nail salon'
+  ],
+  'Casa & Manutenzione': [
+    'idraulici', 'elettricisti', 'fabbri', 'imbianchini', 'muratori',
+    'giardinieri', 'imprese pulizie', 'disinfestazioni', 'traslochi',
+    'falegnamerie', 'serramentisti', 'climatizzazione', 'caldaie riscaldamento'
+  ],
+  'Auto & Trasporti': [
+    'officine meccaniche', 'carrozzerie', 'gommisti', 'autolavaggi',
+    'autoscuole', 'noleggio auto', 'taxi ncc'
+  ],
+  'Servizi Professionali': [
+    'commercialisti', 'avvocati', 'notai', 'consulenti lavoro',
+    'agenzie immobiliari', 'agenzie assicurative', 'studi architettura',
+    'geometri', 'ingegneri', 'agenzie marketing', 'web agency', 'fotografi', 'videomaker'
+  ],
+  'Retail & Commercio': [
+    'negozi abbigliamento', 'negozi scarpe', 'gioiellerie', 'fioristi',
+    'librerie', 'cartolerie', 'ferramenta', 'casalinghi', 'elettronica', 'telefonia'
+  ],
+  'Educazione & Formazione': [
+    'scuole guida', 'scuole lingue', 'centri formazione', 'ripetizioni private',
+    'scuole musica', 'scuole danza', 'asili nido'
+  ],
+  'Eventi & Tempo Libero': [
+    'wedding planner', 'agenzie viaggi', 'sale ricevimenti', 'discoteche club',
+    'cinema', 'teatri', 'bowling', 'escape room'
+  ],
+  'Animali': [
+    'pet shop', 'toelettatura cani', 'pensioni animali', 'addestramento cani'
+  ],
+  'Altri Servizi': [
+    'tipografie', 'copisterie', 'lavanderie', 'sartorie', 'calzolerie',
+    'orologerie', 'onoranze funebri'
+  ]
+} as const;
 
 export type ScrapingSource = typeof SCRAPING_SOURCES[number];
 export type BusinessCategory = typeof BUSINESS_CATEGORIES[number];
+export type CategoryGroup = keyof typeof CATEGORY_GROUPS;

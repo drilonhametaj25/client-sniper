@@ -1,10 +1,11 @@
 /**
  * SocialAnalyzer - Analizza la presenza e le metriche base dei social di un sito web
- * Utilizzato sia dal job distribuito che dallo script manuale
+ * Versione Enhanced con reputation analysis, activity status e brand health
  *
  * - Estrae link social dal sito
- * - (Opzionale) Usa API pubbliche per metriche base
- * - Restituisce risultati strutturati
+ * - Analizza attività profili (attivo/dormiente)
+ * - Aggrega reputation da review platforms
+ * - Calcola brand health score
  */
 import { Page } from 'playwright'
 
@@ -13,12 +14,40 @@ export interface SocialProfile {
   url: string
   found: boolean
   followers?: number
+  isActive: boolean
+  lastPostDate?: string
+  postFrequency: 'daily' | 'weekly' | 'monthly' | 'dormant' | 'unknown'
+  engagementRate?: number
   extra?: Record<string, any>
+}
+
+export interface ReviewPlatform {
+  platform: string
+  rating: number
+  reviewCount: number
+  url?: string
+}
+
+export interface ReputationAnalysis {
+  avgRating: number
+  totalReviews: number
+  platforms: ReviewPlatform[]
+  sentiment: 'positive' | 'neutral' | 'negative'
+  responseRate: number
+  recentReviewsSentiment?: 'improving' | 'stable' | 'declining'
 }
 
 export interface SocialAnalysisResult {
   profiles: SocialProfile[]
   summary: string[]
+  // Enhanced fields
+  reputation: ReputationAnalysis
+  brandHealth: number // 0-100
+  socialOpportunities: string[]
+  activeProfileCount: number
+  dormantProfileCount: number
+  totalFollowers: number
+  avgEngagementRate: number
 }
 
 export class SocialAnalyzer {
@@ -41,13 +70,17 @@ export class SocialAnalyzer {
   async analyzeSocials(page: Page): Promise<SocialAnalysisResult> {
     const links = await page.$$eval('a', (as) => as.map(a => a.href))
     const profiles: SocialProfile[] = []
+
     for (const platform of SocialAnalyzer.knownPlatforms) {
       const foundUrl = links.find(url => platform.pattern.test(url))
       let profile: SocialProfile = {
         platform: platform.name,
         url: foundUrl || '',
-        found: !!foundUrl
+        found: !!foundUrl,
+        isActive: false,
+        postFrequency: 'unknown'
       }
+
       if (foundUrl) {
         try {
           // Usa un nuovo browser context per ogni profilo social
@@ -61,6 +94,7 @@ export class SocialAnalyzer {
           const socialPage = await context.newPage()
           await socialPage.goto(foundUrl, { waitUntil: 'domcontentloaded', timeout: 35000 })
           await socialPage.waitForTimeout(4000)
+
           if (platform.name === 'facebook') {
             profile = await this.analyzeFacebook(socialPage, profile)
           } else if (platform.name === 'instagram') {
@@ -72,6 +106,10 @@ export class SocialAnalyzer {
           } else if (platform.name === 'youtube') {
             profile = await this.analyzeYouTube(socialPage, profile)
           }
+
+          // Determine activity status from extra data
+          profile = this.determineActivityStatus(profile)
+
           await socialPage.close()
           await context.close()
         } catch (e) {
@@ -80,8 +118,250 @@ export class SocialAnalyzer {
       }
       profiles.push(profile)
     }
-    const summary = profiles.filter(p => p.found).map(p => `Trovato profilo ${p.platform}: ${p.url}`)
-    return { profiles, summary }
+
+    // Analyze reputation from page
+    const reputation = await this.analyzeReputation(page)
+
+    // Calculate metrics
+    const activeProfileCount = profiles.filter(p => p.found && p.isActive).length
+    const dormantProfileCount = profiles.filter(p => p.found && !p.isActive).length
+    const totalFollowers = profiles.reduce((sum, p) => sum + (p.followers || 0), 0)
+
+    const engagementRates = profiles.filter(p => p.engagementRate !== undefined).map(p => p.engagementRate!)
+    const avgEngagementRate = engagementRates.length > 0
+      ? Math.round((engagementRates.reduce((a, b) => a + b, 0) / engagementRates.length) * 100) / 100
+      : 0
+
+    // Calculate brand health
+    const brandHealth = this.calculateBrandHealth(profiles, reputation)
+
+    // Generate opportunities
+    const socialOpportunities = this.generateSocialOpportunities(profiles, reputation)
+
+    const summary = profiles.filter(p => p.found).map(p =>
+      `Trovato profilo ${p.platform}: ${p.url}${p.isActive ? ' (attivo)' : ' (dormiente)'}`
+    )
+
+    return {
+      profiles,
+      summary,
+      reputation,
+      brandHealth,
+      socialOpportunities,
+      activeProfileCount,
+      dormantProfileCount,
+      totalFollowers,
+      avgEngagementRate
+    }
+  }
+
+  /**
+   * Determine activity status based on profile data
+   */
+  private determineActivityStatus(profile: SocialProfile): SocialProfile {
+    // Check engagement rate and last post date
+    if (profile.extra?.lastPostDate) {
+      const lastPost = new Date(profile.extra.lastPostDate)
+      const daysSincePost = Math.floor((Date.now() - lastPost.getTime()) / (1000 * 60 * 60 * 24))
+
+      if (daysSincePost <= 7) {
+        profile.postFrequency = 'daily'
+        profile.isActive = true
+      } else if (daysSincePost <= 30) {
+        profile.postFrequency = 'weekly'
+        profile.isActive = true
+      } else if (daysSincePost <= 90) {
+        profile.postFrequency = 'monthly'
+        profile.isActive = false
+      } else {
+        profile.postFrequency = 'dormant'
+        profile.isActive = false
+      }
+
+      profile.lastPostDate = lastPost.toISOString()
+    } else if (profile.extra?.engagementRate !== undefined) {
+      // If we have engagement rate but no post date, assume active if engagement > 0
+      profile.isActive = profile.extra.engagementRate > 0
+      profile.postFrequency = profile.isActive ? 'unknown' : 'dormant'
+    } else if (profile.followers && profile.followers > 100) {
+      // Assume somewhat active if they have followers
+      profile.isActive = true
+      profile.postFrequency = 'unknown'
+    }
+
+    // Copy engagement rate to main profile
+    if (profile.extra?.engagementRate !== undefined) {
+      profile.engagementRate = profile.extra.engagementRate
+    }
+
+    return profile
+  }
+
+  /**
+   * Analyze reputation from reviews on the page
+   */
+  private async analyzeReputation(page: Page): Promise<ReputationAnalysis> {
+    try {
+      return await page.evaluate(() => {
+        const text = document.body.innerText.toLowerCase()
+        const html = document.body.innerHTML.toLowerCase()
+
+        const platforms: Array<{ platform: string; rating: number; reviewCount: number; url?: string }> = []
+
+        // Google Reviews detection
+        const googleRatingMatch = text.match(/(\d[.,]\d)\s*(?:\/\s*5|stelle|stars)/)
+        const googleReviewMatch = text.match(/(\d+)\s*(?:recensioni|reviews)/)
+        if (googleRatingMatch || googleReviewMatch) {
+          platforms.push({
+            platform: 'Google',
+            rating: googleRatingMatch ? parseFloat(googleRatingMatch[1].replace(',', '.')) : 0,
+            reviewCount: googleReviewMatch ? parseInt(googleReviewMatch[1]) : 0
+          })
+        }
+
+        // Facebook detection (from page or widgets)
+        if (html.includes('facebook') && (text.includes('mi piace') || text.includes('like'))) {
+          const fbRatingMatch = text.match(/(\d[.,]\d)\s*(?:su\s*5|\/\s*5)/)
+          if (fbRatingMatch) {
+            platforms.push({
+              platform: 'Facebook',
+              rating: parseFloat(fbRatingMatch[1].replace(',', '.')),
+              reviewCount: 0
+            })
+          }
+        }
+
+        // TrustPilot detection
+        if (html.includes('trustpilot')) {
+          const tpMatch = text.match(/trustpilot.*?(\d[.,]\d)/)
+          if (tpMatch) {
+            platforms.push({
+              platform: 'TrustPilot',
+              rating: parseFloat(tpMatch[1].replace(',', '.')),
+              reviewCount: 0
+            })
+          }
+        }
+
+        // TripAdvisor detection
+        if (html.includes('tripadvisor')) {
+          const taMatch = text.match(/tripadvisor.*?(\d[.,]\d)/)
+          if (taMatch) {
+            platforms.push({
+              platform: 'TripAdvisor',
+              rating: parseFloat(taMatch[1].replace(',', '.')),
+              reviewCount: 0
+            })
+          }
+        }
+
+        // Calculate aggregates
+        const ratingsWithValue = platforms.filter(p => p.rating > 0)
+        const avgRating = ratingsWithValue.length > 0
+          ? Math.round((ratingsWithValue.reduce((sum, p) => sum + p.rating, 0) / ratingsWithValue.length) * 10) / 10
+          : 0
+
+        const totalReviews = platforms.reduce((sum, p) => sum + p.reviewCount, 0)
+
+        // Determine sentiment
+        let sentiment: 'positive' | 'neutral' | 'negative' = 'neutral'
+        if (avgRating >= 4) sentiment = 'positive'
+        else if (avgRating > 0 && avgRating < 3) sentiment = 'negative'
+
+        return {
+          avgRating,
+          totalReviews,
+          platforms,
+          sentiment,
+          responseRate: 0 // Would need additional analysis
+        }
+      })
+    } catch {
+      return {
+        avgRating: 0,
+        totalReviews: 0,
+        platforms: [],
+        sentiment: 'neutral',
+        responseRate: 0
+      }
+    }
+  }
+
+  /**
+   * Calculate overall brand health score
+   */
+  private calculateBrandHealth(profiles: SocialProfile[], reputation: ReputationAnalysis): number {
+    let score = 0
+
+    // Social presence (40%)
+    const foundProfiles = profiles.filter(p => p.found).length
+    const totalPlatforms = profiles.length
+    score += (foundProfiles / totalPlatforms) * 20
+
+    // Activity status (20%)
+    const activeProfiles = profiles.filter(p => p.found && p.isActive).length
+    const foundCount = profiles.filter(p => p.found).length
+    if (foundCount > 0) {
+      score += (activeProfiles / foundCount) * 20
+    }
+
+    // Reputation (30%)
+    if (reputation.avgRating > 0) {
+      score += (reputation.avgRating / 5) * 30
+    }
+
+    // Review volume (10%)
+    if (reputation.totalReviews > 100) score += 10
+    else if (reputation.totalReviews > 50) score += 7
+    else if (reputation.totalReviews > 10) score += 4
+
+    return Math.round(Math.min(100, score))
+  }
+
+  /**
+   * Generate social/reputation opportunities
+   */
+  private generateSocialOpportunities(profiles: SocialProfile[], reputation: ReputationAnalysis): string[] {
+    const opportunities: string[] = []
+
+    // Missing key platforms
+    const keyPlatforms = ['facebook', 'instagram', 'linkedin']
+    keyPlatforms.forEach(platform => {
+      const profile = profiles.find(p => p.platform === platform)
+      if (!profile?.found) {
+        opportunities.push(`Creare profilo ${platform.charAt(0).toUpperCase() + platform.slice(1)}`)
+      }
+    })
+
+    // Dormant profiles
+    const dormantProfiles = profiles.filter(p => p.found && !p.isActive)
+    if (dormantProfiles.length > 0) {
+      opportunities.push(`Riattivare profili dormienti: ${dormantProfiles.map(p => p.platform).join(', ')}`)
+    }
+
+    // Low engagement
+    const lowEngagement = profiles.filter(p => p.engagementRate !== undefined && p.engagementRate < 1)
+    if (lowEngagement.length > 0) {
+      opportunities.push('Migliorare engagement con contenuti più interattivi')
+    }
+
+    // Reputation opportunities
+    if (reputation.avgRating === 0) {
+      opportunities.push('Iniziare a raccogliere e mostrare recensioni clienti')
+    } else if (reputation.avgRating < 4) {
+      opportunities.push('Migliorare rating medio rispondendo a recensioni negative')
+    }
+
+    if (reputation.totalReviews < 20) {
+      opportunities.push('Incentivare clienti a lasciare recensioni')
+    }
+
+    // Google Business
+    if (!profiles.find(p => p.platform === 'google_business')?.found) {
+      opportunities.push('Ottimizzare scheda Google Business Profile')
+    }
+
+    return opportunities.slice(0, 6)
   }
 
   // Analisi Facebook avanzata

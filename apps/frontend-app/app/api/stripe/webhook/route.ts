@@ -149,10 +149,24 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // � SAVE EVENT: Salva sempre l'evento per debug e retry
-  await saveWebhookEvent(event)
+  // 🔒 IDEMPOTENCY CHECK: Verifica se l'evento è già stato processato
+  const { data: existingEvent } = await supabase
+    .from('stripe_webhook_events')
+    .select('processed, processed_at')
+    .eq('stripe_event_id', event.id)
+    .single()
 
-  // �🔧 ENHANCED LOGGING: Log tutti gli eventi webhook per debug
+  if (existingEvent?.processed) {
+    console.log(`⏭️ Event ${event.id} already processed at ${existingEvent.processed_at}, skipping`)
+    return NextResponse.json({ received: true, skipped: 'already_processed' })
+  }
+
+  // 💾 SAVE EVENT: Salva l'evento per debug e retry (se non esiste già)
+  if (!existingEvent) {
+    await saveWebhookEvent(event)
+  }
+
+  // 🔧 ENHANCED LOGGING: Log tutti gli eventi webhook per debug
   console.log(`\n🎯 WEBHOOK RICEVUTO:`)
   console.log(`Type: ${event.type}`)
   console.log(`ID: ${event.id}`)
@@ -382,10 +396,24 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   const credits = planData?.max_credits || 0
   console.log(`Assegnando ${credits} crediti per piano ${planId} (da database)`)
 
-  // Calcola la prossima data di reset dei crediti (primo del mese successivo)
-  const nextResetDate = new Date()
-  nextResetDate.setMonth(nextResetDate.getMonth() + 1)
-  nextResetDate.setDate(1)
+  // Recupera la subscription per ottenere current_period_end (più preciso del "primo del mese")
+  let nextResetDate = new Date()
+  if (session.subscription) {
+    try {
+      const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
+      nextResetDate = new Date(subscription.current_period_end * 1000)
+      console.log(`📅 Data reset crediti da Stripe: ${nextResetDate.toISOString()}`)
+    } catch (subError) {
+      // Fallback: primo del mese successivo
+      nextResetDate.setMonth(nextResetDate.getMonth() + 1)
+      nextResetDate.setDate(1)
+      console.log(`📅 Data reset crediti (fallback): ${nextResetDate.toISOString()}`)
+    }
+  } else {
+    // Se non c'è subscription (one-time payment), usa primo del mese successivo
+    nextResetDate.setMonth(nextResetDate.getMonth() + 1)
+    nextResetDate.setDate(1)
+  }
   nextResetDate.setHours(0, 0, 0, 0)
 
   // Aggiorna l'utente con il nuovo piano
@@ -494,10 +522,11 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     const credits = planData?.max_credits || 0
     console.log(`🔄 Rinnovando ${credits} crediti per piano ${planId} (da database)`)
 
-    // Calcola la prossima data di reset (30 giorni da oggi)
-    const nextResetDate = new Date()
-    nextResetDate.setDate(nextResetDate.getDate() + 30)
+    // Usa current_period_end dalla subscription Stripe per la data di reset
+    // Questo è più preciso di "+30 giorni" e allineato con il ciclo di fatturazione
+    const nextResetDate = new Date(subscription.current_period_end * 1000)
     nextResetDate.setHours(0, 0, 0, 0)
+    console.log(`📅 Prossimo reset crediti: ${nextResetDate.toISOString()} (da Stripe current_period_end)`)
 
     // 🎯 AGGIORNA DATI STRIPE: Assicurati che i dati Stripe siano salvati
     await updateUserStripeData(userId, customerId, subscriptionId)
@@ -554,9 +583,34 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  const userId = subscription.metadata?.user_id
+  console.log('\n🔴 SUBSCRIPTION DELETED:')
+  console.log(`Subscription ID: ${subscription.id}`)
+  console.log(`Customer: ${subscription.customer}`)
+  console.log(`Metadata:`, subscription.metadata)
 
-  if (!userId) return
+  // Trova l'utente con fallback multipli
+  let userId = subscription.metadata?.user_id
+  const customerId = subscription.customer as string
+
+  if (!userId) {
+    // Prova a trovare l'utente dal customer_id o subscription_id
+    userId = await findUserWithFallback(subscription.id, customerId)
+  }
+
+  if (!userId) {
+    console.error('❌ Utente non trovato per subscription cancellata:', subscription.id)
+    return
+  }
+
+  // Ottieni lo stato corrente dell'utente per il log
+  const { data: currentUser } = await supabase
+    .from('users')
+    .select('plan, status')
+    .eq('id', userId)
+    .single()
+
+  const previousPlan = currentUser?.plan || 'unknown'
+  const previousStatus = currentUser?.status || 'unknown'
 
   // Ottieni i crediti del piano free dal database
   const { data: freePlanData } = await supabase
@@ -573,15 +627,37 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     .update({
       plan: 'free',
       credits_remaining: freeCredits,
+      status: 'cancelled',
       stripe_customer_id: null,
       stripe_subscription_id: null,
+      deactivated_at: new Date().toISOString(),
+      deactivation_reason: 'Subscription cancelled via Stripe'
     })
     .eq('id', userId)
 
   if (error) {
-    console.error('Errore durante il downgrade del piano:', error)
+    console.error('❌ Errore durante il downgrade del piano:', error)
   } else {
-    console.log(`Piano downgraded a free per utente ${userId}`)
+    console.log(`✅ Piano downgraded a free per utente ${userId}`)
+
+    // Log dell'operazione di cancellazione
+    const { error: logError } = await supabase
+      .from('plan_status_logs')
+      .insert({
+        user_id: userId,
+        action: 'subscription_cancelled',
+        previous_status: previousStatus,
+        new_status: 'cancelled',
+        reason: `Stripe subscription deleted - Previous plan: ${previousPlan} - Subscription: ${subscription.id}`,
+        triggered_by: 'stripe_webhook',
+        stripe_event_id: subscription.id
+      })
+
+    if (logError) {
+      console.error('❌ Errore creazione log cancellazione:', logError)
+    } else {
+      console.log('✅ Log cancellazione creato')
+    }
   }
 }
 

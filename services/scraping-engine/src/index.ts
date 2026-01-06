@@ -6,7 +6,7 @@
 import dotenv from 'dotenv'
 import { resolve } from 'path'
 import cron from 'node-cron'
-import { Orchestrator } from './orchestrator-new'
+import { Orchestrator } from './orchestrator'
 import { Logger } from './utils/logger'
 import { DatabaseMigrator } from './utils/database-migrator'
 

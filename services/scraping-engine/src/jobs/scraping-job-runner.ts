@@ -6,6 +6,7 @@
 import { ZoneManager, Zone } from '../utils/zone-manager'
 import { GoogleMapsScraper } from '../scrapers/google-maps-improved'
 import { YelpScraper } from '../scrapers/yelp'
+import { PagineGialleScraper } from '../scrapers/pagine-gialle'
 import { Logger } from '../utils/logger'
 import { BusinessData } from '../scrapers/google-maps'
 import { BusinessLead } from '../types/LeadAnalysis'
@@ -266,7 +267,7 @@ export class ScrapingJobRunner {
       case 'google_maps':
         const googleScraper = new GoogleMapsScraper()
         // Converti il target nel formato richiesto dal nuovo scraper
-        const options = {
+        const googleOptions = {
           query: zone.category,
           location: zone.location_name,
           category: zone.category,
@@ -274,10 +275,10 @@ export class ScrapingJobRunner {
           delayBetweenRequests: 1500,
           enableSiteAnalysis: true
         }
-        const result = await googleScraper.scrape(options)
-        
+        const googleResult = await googleScraper.scrape(googleOptions)
+
         // Converti BusinessLead[] in BusinessData[] per compatibilità
-        return result.leads.map(lead => ({
+        return googleResult.leads.map(lead => ({
           name: lead.businessName,
           website: lead.contacts.website,
           phone: lead.contacts.phone,
@@ -288,11 +289,27 @@ export class ScrapingJobRunner {
           reviews_count: undefined,
           source: 'google_maps'
         }))
-        
-      // case 'yelp':
-      //   const yelpScraper = new YelpScraper()
-      //   return await yelpScraper.scrape(target)
-        
+
+      case 'yelp':
+        const yelpScraper = new YelpScraper()
+        const yelpTarget = {
+          query: zone.category,
+          location: zone.location_name,
+          category: zone.category,
+          maxResults: 20
+        }
+        return await yelpScraper.scrape(yelpTarget)
+
+      case 'pagine_gialle':
+        const pgScraper = new PagineGialleScraper()
+        const pgTarget = {
+          query: zone.category,
+          location: zone.location_name,
+          category: zone.category,
+          maxResults: 20
+        }
+        return await pgScraper.scrape(pgTarget)
+
       default:
         throw new Error(`Scraper non supportato: ${zone.source}`)
     }
