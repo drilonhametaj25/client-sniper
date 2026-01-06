@@ -589,7 +589,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   console.log(`Metadata:`, subscription.metadata)
 
   // Trova l'utente con fallback multipli
-  let userId = subscription.metadata?.user_id
+  let userId: string | null | undefined = subscription.metadata?.user_id
   const customerId = subscription.customer as string
 
   if (!userId) {
