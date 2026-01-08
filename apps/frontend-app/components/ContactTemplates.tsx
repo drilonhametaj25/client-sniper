@@ -15,7 +15,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react'
-import { Copy, Mail, Phone, MessageCircle, CheckCircle, ExternalLink } from 'lucide-react'
+import { Copy, Mail, Phone, MessageCircle, CheckCircle, ExternalLink, MessageSquare } from 'lucide-react'
 import Card from '@/components/ui/Card'
 import { isStarterOrHigher, isProOrHigher } from '@/lib/utils/plan-helpers'
 
@@ -35,7 +35,7 @@ interface ContactTemplatesProps {
   userPlan: string;
 }
 
-type TemplateType = 'email' | 'linkedin' | 'cold_call';
+type TemplateType = 'email' | 'linkedin' | 'cold_call' | 'whatsapp';
 
 interface ProblemAnalysis {
   problems: string[];
@@ -161,7 +161,10 @@ export default function ContactTemplates({ lead, userPlan }: ContactTemplatesPro
       
       case 'cold_call':
         return generateColdCallScript(businessName, category, mainProblems, urgencyLevel)
-      
+
+      case 'whatsapp':
+        return generateWhatsAppTemplate(businessName, category, mainProblems.slice(0, 2), urgencyLevel)
+
       default:
         return ''
     }
@@ -287,6 +290,32 @@ ${urgency === 'critica' ? '**URGENZA:** Questi problemi stanno causando perdite 
 • Durata media chiamata: 3-5 minuti`
   }
 
+  const generateWhatsAppTemplate = (
+    businessName: string,
+    category: string,
+    problems: string[],
+    urgency: string
+  ): string => {
+    const emoji = urgency === 'critica' ? '🚨' : urgency === 'alta' ? '⚡' : '👋'
+
+    return `${emoji} Buongiorno!
+
+Mi chiamo [IL TUO NOME] e sono un consulente digitale specializzato nel settore ${category}.
+
+Ho analizzato il sito di ${businessName} e ho trovato alcune opportunità interessanti per migliorare la vostra visibilità online:
+
+${problems.map(p => `• ${p.charAt(0).toUpperCase() + p.slice(1)}`).join('\n')}
+
+Questi aspetti stanno limitando il numero di clienti che vi trovano su Google.
+
+📊 *Offerta:* Vi propongo un'analisi tecnica GRATUITA di 15 minuti dove vi mostro esattamente cosa potete migliorare.
+
+Vi va di fare una breve chiamata? Sono disponibile anche su WhatsApp per rispondere a qualsiasi domanda.
+
+Grazie e buona giornata!
+[IL TUO NOME]`
+  }
+
   const translateCategory = (category: string): string => {
     const translations: Record<string, string> = {
       'restaurants': 'ristorazione',
@@ -328,6 +357,25 @@ ${urgency === 'critica' ? '**URGENZA:** Questi problemi stanno causando perdite 
     
     const mailtoUrl = `mailto:${lead.email || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
     window.open(mailtoUrl, '_blank')
+  }
+
+  const openWhatsApp = (message: string) => {
+    // Pulisci il numero di telefono (rimuovi spazi, +, etc.)
+    let phone = lead.phone || ''
+    phone = phone.replace(/[\s\-\+\(\)]/g, '')
+
+    // Se inizia con 0, assumiamo Italia e aggiungiamo 39
+    if (phone.startsWith('0')) {
+      phone = '39' + phone.substring(1)
+    }
+    // Se non ha prefisso internazionale, aggiungi 39 (Italia)
+    if (!phone.startsWith('39') && phone.length <= 10) {
+      phone = '39' + phone
+    }
+
+    const encodedMessage = encodeURIComponent(message)
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`
+    window.open(whatsappUrl, '_blank')
   }
 
   const currentTemplate = generateTemplate(selectedTemplate)
@@ -392,6 +440,17 @@ ${urgency === 'critica' ? '**URGENZA:** Questi problemi stanno causando perdite 
                 Cold Call
               </button>
             )}
+            <button
+              onClick={() => setSelectedTemplate('whatsapp')}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                selectedTemplate === 'whatsapp'
+                  ? 'bg-white dark:bg-gray-700 text-green-600 dark:text-green-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
+            >
+              <MessageSquare className="h-4 w-4" />
+              WhatsApp
+            </button>
           </div>
         )}
 
@@ -446,6 +505,17 @@ ${urgency === 'critica' ? '**URGENZA:** Questi problemi stanno causando perdite 
               <span>Apri LinkedIn</span>
             </button>
           )}
+
+          {/* WhatsApp direct con telefono disponibile */}
+          {selectedTemplate === 'whatsapp' && lead.phone && (
+            <button
+              onClick={() => openWhatsApp(currentTemplate)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-green-500 text-white hover:bg-green-600 rounded-lg transition-colors"
+            >
+              <MessageSquare className="h-4 w-4" />
+              <span>Apri WhatsApp</span>
+            </button>
+          )}
         </div>
 
         {/* Info per template type */}
@@ -465,8 +535,14 @@ ${urgency === 'critica' ? '**URGENZA:** Questi problemi stanno causando perdite 
             )}
             {selectedTemplate === 'cold_call' && (
               <div>
-                <strong>📞 Script Cold Call (Solo PRO):</strong> Script strutturato in 4 fasi con gestione obiezioni e metriche. 
+                <strong>📞 Script Cold Call (Solo PRO):</strong> Script strutturato in 4 fasi con gestione obiezioni e metriche.
                 Include suggerimenti timing e follow-up. Tasso conversione tipico: 15-20%.
+              </div>
+            )}
+            {selectedTemplate === 'whatsapp' && (
+              <div>
+                <strong>💬 Template WhatsApp:</strong> Messaggio breve e informale ottimizzato per WhatsApp Business.
+                Tono amichevole e professionale. Tasso di risposta tipico: 30-45% (più alto di email e LinkedIn).
               </div>
             )}
           </div>

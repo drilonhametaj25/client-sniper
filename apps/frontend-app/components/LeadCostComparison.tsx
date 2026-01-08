@@ -15,10 +15,16 @@ interface CompetitorData {
   details?: string
 }
 
+// Costo per lead calcolato dai piani reali Stripe:
+// - Starter: €19/25 lead = €0.76/lead
+// - Pro: €49/100 lead = €0.49/lead
+// - Agency: €99/300 lead = €0.33/lead
+// Range: €0.33 - €0.76 per lead
+
 const competitorData: CompetitorData[] = [
   {
     source: 'TrovaMi.pro',
-    costRange: '0,49€ – 0,76€',
+    costRange: '0,33€ – 0,76€',
     comment: 'Contatto reale già profilato',
     commentIcon: 'success',
     details: 'Include analisi SEO, pixel tracking, social presence, contatti completi e P.IVA. Lead qualificato e pronto per il contatto.'
@@ -140,7 +146,7 @@ export default function LeadCostComparison({
           <div className="flex items-center justify-center mb-2">
             <TrendingDown className="w-5 h-5 text-green-600 mr-2" />
             <span className="text-sm font-semibold text-gray-900 dark:text-white">
-              🎯 Lead da soli 0,49€
+              🎯 Lead da soli 0,33€
             </span>
           </div>
           <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -249,7 +255,7 @@ export default function LeadCostComparison({
         <div className="mt-6 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 rounded-lg p-4">
           <div className="text-center">
             <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
-              🎯 Prezzo per lead da 0,49€
+              🎯 Prezzo per lead da 0,33€
             </h4>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Molto meno rispetto ai 5-20€ di Google Ads.<br />

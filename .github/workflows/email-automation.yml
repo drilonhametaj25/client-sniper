@@ -1,0 +1,62 @@
+# 📧 Workflow per Email Automation & Retention
+# Eseguito ogni giorno alle 9:00 CET per tracciare eventi su Klaviyo
+# Klaviyo poi gestisce l'invio delle email tramite i Flow configurati
+
+name: Email Automation Daily
+
+on:
+  schedule:
+    # Ogni giorno alle 8:00 UTC (9:00 CET in inverno, 10:00 CEST in estate)
+    - cron: '0 8 * * *'
+
+  # Permette trigger manuale
+  workflow_dispatch:
+
+jobs:
+  email-automation:
+    name: Run Email Automation
+    runs-on: ubuntu-latest
+    environment: Production
+
+    steps:
+      - name: 📧 Trigger Email Automation
+        run: |
+          echo "🚀 Starting email automation..."
+
+          API_URL="${{ secrets.APP_URL }}/api/cron/email-automation"
+
+          response=$(curl -s -w "HTTPSTATUS:%{http_code}" -X POST "$API_URL" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+
+          http_code=$(echo "$response" | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+          body=$(echo "$response" | sed -e 's/HTTPSTATUS:.*//g')
+
+          echo "📊 HTTP Status: $http_code"
+          echo "📋 Response: $body"
+
+          if [[ "$http_code" -eq 200 ]]; then
+            echo "✅ Email automation completed successfully"
+
+            if command -v jq &> /dev/null && echo "$body" | jq . &> /dev/null; then
+              inactive=$(echo "$body" | jq -r '.inactiveUsers // 0')
+              credits_low=$(echo "$body" | jq -r '.creditsLowUsers // 0')
+              credits_depleted=$(echo "$body" | jq -r '.creditsDepletedUsers // 0')
+              saved_search=$(echo "$body" | jq -r '.savedSearchAlerts // 0')
+
+              echo "📈 Results:"
+              echo "   - Inactive users notified: $inactive"
+              echo "   - Credits low alerts: $credits_low"
+              echo "   - Credits depleted alerts: $credits_depleted"
+              echo "   - Saved search alerts: $saved_search"
+            fi
+          else
+            echo "❌ Email automation failed with status $http_code"
+            exit 1
+          fi
+
+      - name: 📊 Report Status
+        if: always()
+        run: |
+          echo "🕐 Job completed at $(date -u)"
+          echo "⏰ Next scheduled run: tomorrow at 8:00 UTC"

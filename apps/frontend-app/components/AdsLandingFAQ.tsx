@@ -26,7 +26,7 @@ const faqData: FAQItem[] = [
   },
   {
     question: 'Perché costa così poco rispetto a Google Ads?',
-    answer: 'Non paghiamo per i click come Google Ads. I nostri algoritmi analizzano automaticamente migliaia di siti web e identificano solo quelli con problemi reali. Questo ci permette di offrire lead qualificati a 0,49€ invece di 5-20€ per click.',
+    answer: 'Non paghiamo per i click come Google Ads. I nostri algoritmi analizzano automaticamente migliaia di siti web e identificano solo quelli con problemi reali. Questo ci permette di offrire lead qualificati a partire da 0,33€ invece di 5-20€ per click.',
     category: 'pricing'
   },
   {

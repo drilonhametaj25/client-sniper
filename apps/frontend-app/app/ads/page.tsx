@@ -55,7 +55,7 @@ export default function AdsLandingPage() {
             "@type": "LandingPage",
             name: "TrovaMi - Trova Clienti Già Pronti a Comprare",
             description:
-              "Scopri clienti potenziali con problemi tecnici sui loro siti web. Lead qualificati a partire da 0,49€ - 40x meno di Google Ads",
+              "Scopri clienti potenziali con problemi tecnici sui loro siti web. Lead qualificati a partire da 0,33€ - 40x meno di Google Ads",
             url: "https://trovami.pro/ads",
             mainEntity: {
               "@type": "Service",
@@ -130,7 +130,7 @@ export default function AdsLandingPage() {
             in clienti.
             <span className="font-semibold text-gray-900">
               {" "}
-              Lead qualificati a partire da 0,49€
+              Lead qualificati a partire da 0,33€
             </span>{" "}
             - 40x meno di Google Ads
           </p>
@@ -182,7 +182,7 @@ export default function AdsLandingPage() {
 
               <div className="text-center mt-4">
                 <div className="text-3xl font-bold text-blue-600 mb-2">
-                  0,49€ - 0,76€
+                  0,33€ - 0,76€
                 </div>
                 <div className="text-gray-600 mb-4">per lead qualificato</div>
 
@@ -317,15 +317,15 @@ export default function AdsLandingPage() {
                 <div className="text-lg text-gray-600 mb-2">
                   Con TrovaMi (100 lead)
                 </div>
-                <div className="text-3xl font-bold text-green-600">62€</div>
+                <div className="text-3xl font-bold text-green-600">49€</div>
                 <div className="text-sm text-gray-500">
-                  (0,62€ per lead medio)
+                  (Piano Pro: 0,49€ per lead)
                 </div>
               </div>
             </div>
             <div className="mt-6 p-4 bg-green-100 rounded-lg">
               <div className="text-xl font-bold text-green-800">
-                Risparmio: 1.188€ (95% in meno!)
+                Risparmio: 1.201€ (96% in meno!)
               </div>
             </div>
           </div>

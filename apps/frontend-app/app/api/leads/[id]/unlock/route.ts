@@ -2,12 +2,18 @@
  * API per sbloccare lead specifici - TrovaMi
  * Gestisce lo sblocco dei lead utilizzando i crediti dell'utente
  * Usato da: Dashboard per sbloccare contatti dei lead
+ *
+ * TRACKING KLAVIYO:
+ * - Lead Unlocked: ogni sblocco
+ * - Credits Low: quando crediti <= 3
+ * - Credits Depleted: quando crediti = 0
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import { klaviyoServer } from '@/lib/services/klaviyo-server'
 
 // Client admin per operazioni che richiedono privilegi elevati
 const supabaseAdmin = createClient(
@@ -172,10 +178,62 @@ export async function POST(
         created_at: new Date().toISOString()
       })
 
+    // =====================================================
+    // TRACKING KLAVIYO - Asincrono, non blocca la risposta
+    // =====================================================
+    const newCreditsRemaining = userData.credits_remaining - 1
+
+    // Recupera dati lead per tracking
+    const { data: leadDetails } = await supabaseAdmin
+      .from('leads')
+      .select('business_name, category, city, score')
+      .eq('id', leadId)
+      .single()
+
+    // Conta totale lead sbloccati dall'utente
+    const { count: totalUnlocked } = await supabaseAdmin
+      .from('user_unlocked_leads')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+
+    // Track Lead Unlocked (fire and forget)
+    klaviyoServer.trackLeadUnlocked(
+      user.email!,
+      {
+        leadId,
+        businessName: leadDetails?.business_name || 'N/A',
+        category: leadDetails?.category || 'N/A',
+        score: leadDetails?.score || 50,
+        city: leadDetails?.city
+      },
+      {
+        creditsRemaining: newCreditsRemaining,
+        totalUnlocked: (totalUnlocked || 0) + 1,
+        plan: userData.plan || 'free'
+      }
+    ).catch(err => console.error('Klaviyo trackLeadUnlocked error:', err))
+
+    // Track Credits Low (quando <= 3, ma > 0)
+    if (newCreditsRemaining > 0 && newCreditsRemaining <= 3) {
+      klaviyoServer.trackCreditsLow(
+        user.email!,
+        newCreditsRemaining,
+        userData.plan || 'free'
+      ).catch(err => console.error('Klaviyo trackCreditsLow error:', err))
+    }
+
+    // Track Credits Depleted (quando = 0)
+    if (newCreditsRemaining === 0) {
+      klaviyoServer.trackCreditsDepleted(
+        user.email!,
+        userData.plan || 'free'
+      ).catch(err => console.error('Klaviyo trackCreditsDepleted error:', err))
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Lead sbloccato con successo',
-      credits_remaining: userData.credits_remaining - 1
+      credits_remaining: newCreditsRemaining
     })
 
   } catch (error) {

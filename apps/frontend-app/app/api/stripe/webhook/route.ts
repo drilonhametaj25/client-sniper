@@ -1,10 +1,15 @@
 // API Route per gestire i webhook di Stripe
 // Riceve notifiche da Stripe sui pagamenti completati e aggiorna il database
 // Essenziale per sincronizzare lo stato dei pagamenti con Supabase
+//
+// TRACKING KLAVIYO:
+// - Credits Renewed: al rinnovo subscription
+// - Subscription Changed: cambio piano (upgrade/downgrade)
 
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { klaviyoServer } from '@/lib/services/klaviyo-server'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-08-16',
@@ -576,6 +581,19 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
       } else {
         console.log('✅ Log rinnovo creato')
       }
+
+      // =====================================================
+      // TRACKING KLAVIYO - Credits Renewed
+      // =====================================================
+      if (customerEmail) {
+        klaviyoServer.trackCreditsRenewed(customerEmail, {
+          plan: planId,
+          newCredits: credits,
+          nextRenewalDate: nextResetDate.toISOString()
+        }).catch(err => console.error('Klaviyo trackCreditsRenewed error:', err))
+
+        console.log(`📧 Klaviyo: Credits Renewed event inviato per ${customerEmail}`)
+      }
     }
   } catch (error) {
     console.error('🚨 Errore durante il rinnovo crediti:', error)
@@ -771,7 +789,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     // Trova l'utente dalla subscription
     const { data: user, error } = await supabase
       .from('users')
-      .select('id, plan')
+      .select('id, plan, email')
       .eq('stripe_subscription_id', subscription.id)
       .single()
 
@@ -781,7 +799,8 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     }
 
     const userId = user.id
-    console.log(`✅ Utente trovato: ${userId}`)
+    const previousPlan = user.plan
+    console.log(`✅ Utente trovato: ${userId}, piano attuale: ${previousPlan}`)
 
     // Se la subscription è cancellata o incompleta, aggiorna lo status
     let newStatus = 'active'
@@ -791,8 +810,80 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       newStatus = 'inactive'
     }
 
-    // Aggiorna solo lo status se necessario
-    if (newStatus !== 'active') {
+    // Ottieni il nuovo piano dal price_id
+    const priceId = subscription.items.data[0]?.price?.id
+    let newPlan: string | null = null
+    let newCredits = 0
+
+    if (priceId) {
+      const { data: planData } = await supabase
+        .from('plans')
+        .select('name, max_credits')
+        .or(`stripe_price_id_monthly.eq.${priceId},stripe_price_id_annual.eq.${priceId}`)
+        .single()
+
+      if (planData) {
+        newPlan = planData.name
+        newCredits = planData.max_credits || 0
+      }
+    }
+
+    // Controlla se c'è stato un cambio piano (upgrade/downgrade)
+    const planChanged = newPlan && newPlan !== previousPlan && subscription.status === 'active'
+
+    if (planChanged) {
+      console.log(`🔄 Cambio piano rilevato: ${previousPlan} → ${newPlan}`)
+
+      // Determina se è upgrade o downgrade
+      const planOrder = ['free', 'starter', 'pro', 'agency']
+      const previousIndex = planOrder.indexOf(previousPlan || 'free')
+      const newIndex = planOrder.indexOf(newPlan!)
+      const isUpgrade = newIndex > previousIndex
+
+      // Aggiorna il piano e i crediti
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          plan: newPlan,
+          credits_remaining: newCredits,
+          status: newStatus
+        })
+        .eq('id', userId)
+
+      if (updateError) {
+        console.error('❌ Errore aggiornamento piano:', updateError)
+      } else {
+        console.log(`✅ Piano aggiornato a ${newPlan} con ${newCredits} crediti`)
+
+        // Log del cambio piano
+        await supabase
+          .from('plan_status_logs')
+          .insert({
+            user_id: userId,
+            action: isUpgrade ? 'upgrade' : 'downgrade',
+            previous_status: previousPlan,
+            new_status: newPlan,
+            reason: `Subscription updated via Stripe - ${isUpgrade ? 'Upgrade' : 'Downgrade'} to ${newPlan}`,
+            triggered_by: 'stripe_webhook',
+            stripe_event_id: subscription.id
+          })
+
+        // =====================================================
+        // TRACKING KLAVIYO - Subscription Changed
+        // =====================================================
+        if (user.email) {
+          klaviyoServer.trackSubscriptionChanged(user.email, {
+            previousPlan: previousPlan || 'free',
+            newPlan: newPlan!,
+            isUpgrade,
+            newCredits
+          }).catch(err => console.error('Klaviyo trackSubscriptionChanged error:', err))
+
+          console.log(`📧 Klaviyo: Subscription Changed event inviato per ${user.email}`)
+        }
+      }
+    } else if (newStatus !== 'active') {
+      // Aggiorna solo lo status se necessario (senza cambio piano)
       const { error: updateError } = await supabase
         .from('users')
         .update({

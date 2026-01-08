@@ -123,14 +123,17 @@ export default function PlanSelector({
         })
       })
 
-      const { url, error } = await response.json()
+      const result = await response.json()
 
-      if (error) {
-        throw new Error(error)
+      if (result.error) {
+        throw new Error(result.error)
       }
 
-      if (url) {
-        window.location.href = url
+      // Gestisce sia nuovo checkout (url) che upgrade subscription esistente (redirect)
+      if (result.redirect) {
+        window.location.href = result.redirect
+      } else if (result.url) {
+        window.location.href = result.url
       }
     } catch (error) {
       console.error('Errore durante il checkout:', error)
