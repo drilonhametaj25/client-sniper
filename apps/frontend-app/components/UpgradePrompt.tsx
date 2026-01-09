@@ -90,11 +90,11 @@ export default function UpgradePrompt({
   onDismiss,
   variant = 'inline'
 }: UpgradePromptProps) {
-  const { profile } = useAuth()
+  const { user } = useAuth()
   const [isDismissed, setIsDismissed] = useState(false)
 
   // Non mostrare per utenti già premium
-  const isPro = profile?.subscription_tier && !['free'].includes(profile.subscription_tier)
+  const isPro = user?.plan && !['free'].includes(user.plan)
   if (isPro) return null
 
   // Check se già dismissato oggi
@@ -229,7 +229,7 @@ export default function UpgradePrompt({
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
             className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full overflow-hidden"
           >
             <div className={`bg-gradient-to-r ${colors.bg} p-6 text-white text-center`}>

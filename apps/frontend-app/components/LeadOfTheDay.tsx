@@ -19,7 +19,7 @@ interface Lead {
 }
 
 export default function LeadOfTheDay() {
-  const { session, profile } = useAuth()
+  const { session, user } = useAuth()
   const [lead, setLead] = useState<Lead | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [dismissed, setDismissed] = useState(false)
@@ -72,7 +72,7 @@ export default function LeadOfTheDay() {
 
   if (dismissed || !lead) return null
 
-  const isPro = profile?.subscription_tier && profile.subscription_tier !== 'free'
+  const isPro = user?.plan && user.plan !== 'free'
 
   return (
     <motion.div

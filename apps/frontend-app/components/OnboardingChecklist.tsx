@@ -105,7 +105,7 @@ interface OnboardingData {
 }
 
 export default function OnboardingChecklist() {
-  const { session, profile } = useAuth()
+  const { session, user } = useAuth()
   const [onboarding, setOnboarding] = useState<OnboardingData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isMinimized, setIsMinimized] = useState(false)
@@ -168,7 +168,7 @@ export default function OnboardingChecklist() {
     return null
   }
 
-  const isPro = profile?.subscription_tier && profile.subscription_tier !== 'free'
+  const isPro = user?.plan && user.plan !== 'free'
 
   return (
     <AnimatePresence>
