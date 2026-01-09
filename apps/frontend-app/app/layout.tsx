@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     default: 'TrovaMi - Trova Lead Qualificati per la Tua Agenzia | Lead Generation Automatica',
     template: '%s | TrovaMi'
   },
-  description: 'Trova clienti potenziali analizzando siti web con problemi tecnici. Lead generation automatica per agenzie web, freelancer e consulenti SEO. 2 lead gratuiti per iniziare.',
+  description: 'Trova clienti potenziali analizzando siti web con problemi tecnici. Lead generation automatica per agenzie web, freelancer e consulenti SEO. 5 lead gratuiti per iniziare.',
   keywords: [
     'lead generation',
     'trova clienti',

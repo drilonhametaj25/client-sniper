@@ -110,6 +110,7 @@ export default function OnboardingChecklist() {
   const [isLoading, setIsLoading] = useState(true)
   const [isMinimized, setIsMinimized] = useState(false)
   const [isDismissed, setIsDismissed] = useState(false)
+  const [canDismiss, setCanDismiss] = useState(false)
 
   useEffect(() => {
     if (session?.access_token) {
@@ -118,12 +119,20 @@ export default function OnboardingChecklist() {
   }, [session?.access_token])
 
   useEffect(() => {
-    // Check if dismissed in localStorage
+    // Check if dismissed in localStorage (only if allowed)
     const dismissed = localStorage.getItem('onboarding_dismissed')
     if (dismissed === 'true') {
       setIsDismissed(true)
     }
-  }, [])
+
+    // Check if user can dismiss (account older than 24h)
+    if (user?.created_at) {
+      const createdAt = new Date(user.created_at)
+      const now = new Date()
+      const hoursSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60)
+      setCanDismiss(hoursSinceCreation >= 24)
+    }
+  }, [user?.created_at])
 
   const fetchOnboarding = async () => {
     try {
@@ -142,6 +151,9 @@ export default function OnboardingChecklist() {
   }
 
   const handleSkip = async () => {
+    // Non permettere skip nelle prime 24h
+    if (!canDismiss) return
+
     try {
       await fetch('/api/onboarding', {
         method: 'PUT',
@@ -159,6 +171,9 @@ export default function OnboardingChecklist() {
   }
 
   const handleDismiss = () => {
+    // Non permettere dismiss nelle prime 24h
+    if (!canDismiss) return
+
     setIsDismissed(true)
     localStorage.setItem('onboarding_dismissed', 'true')
   }
@@ -200,12 +215,15 @@ export default function OnboardingChecklist() {
             >
               <ChevronRight className={`w-5 h-5 text-gray-500 transition-transform ${isMinimized ? '' : 'rotate-90'}`} />
             </button>
-            <button
-              onClick={handleDismiss}
-              className="p-2 hover:bg-blue-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
+            {canDismiss && (
+              <button
+                onClick={handleDismiss}
+                className="p-2 hover:bg-blue-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                title="Nascondi checklist"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -310,12 +328,18 @@ export default function OnboardingChecklist() {
         {/* Footer */}
         {!isMinimized && (
           <div className="p-4 bg-blue-50/50 dark:bg-gray-700/50 border-t border-blue-100 dark:border-gray-600">
-            <button
-              onClick={handleSkip}
-              className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-            >
-              Salta per ora
-            </button>
+            {canDismiss ? (
+              <button
+                onClick={handleSkip}
+                className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              >
+                Salta per ora
+              </button>
+            ) : (
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                Completa i primi passi per iniziare al meglio con TrovaMi
+              </p>
+            )}
           </div>
         )}
       </motion.div>

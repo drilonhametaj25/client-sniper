@@ -38,6 +38,9 @@ import {
 import AdvancedFilters, { AdvancedFiltersState } from '@/components/AdvancedFilters'
 import { TourTarget } from '@/components/onboarding/TourTarget'
 import UpgradeUrgencyBanner from '@/components/UpgradeUrgencyBanner'
+import FirstTimeUserModal from '@/components/FirstTimeUserModal'
+import { useOnboarding } from '@/contexts/OnboardingContext'
+import EmailTemplatePreview from '@/components/EmailTemplatePreview'
 
 interface Lead extends LeadWithCRM {
   phone?: string
@@ -58,6 +61,7 @@ interface Settings {
 export default function ClientDashboard() {
   const { user, loading, refreshProfile } = useAuth()
   const router = useRouter()
+  const { startTour } = useOnboarding()
   const [leads, setLeads] = useState<Lead[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [settings, setSettings] = useState<Settings>({ free_limit: 2, starter_limit: 50, pro_limit: 200, agency_limit: 500 })
@@ -120,6 +124,9 @@ export default function ClientDashboard() {
   const [updatingCRM, setUpdatingCRM] = useState<string | null>(null)
   const cityInputRef = useRef<HTMLInputElement>(null)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 })
+
+  // Stato per FirstTimeUserModal (onboarding nuovi utenti)
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false)
 
   // Calcola posizione del dropdown
   const calculateDropdownPosition = () => {
@@ -480,6 +487,23 @@ export default function ClientDashboard() {
       loadAllLeadsCount()
     }
   }, [user])
+
+  // Mostra FirstTimeUserModal per nuovi utenti
+  useEffect(() => {
+    if (!user || !userProfile) return
+
+    // Verifica se l'utente è nuovo (ha tutti i 5 crediti gratuiti e non ha mai visto il welcome)
+    const hasSeenWelcome = localStorage.getItem('trovami_welcome_seen') === 'true'
+    const isNewUser = userProfile.credits_remaining === 5 && userProfile.plan === 'free'
+
+    if (isNewUser && !hasSeenWelcome) {
+      // Mostra il modal dopo un breve delay per permettere alla pagina di caricarsi
+      const timer = setTimeout(() => {
+        setShowWelcomeModal(true)
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [user, userProfile])
 
   // Funzione per eseguire ricerca immediata
   const executeSearch = () => {
@@ -1182,6 +1206,12 @@ export default function ClientDashboard() {
   const currentLimit = getPlanLimit()
   const remainingCredits = getAvailableCredits()
 
+  // Check se utente è nuovo (ha tutti i 5 crediti gratuiti = non ha mai usato il tool)
+  const isNewUser = userProfile?.credits_remaining === 5 && userProfile?.plan === 'free'
+
+  // Lead consigliati per nuovi utenti (primi 3 lead con score alto)
+  const recommendedLeads = isNewUser ? leads.filter(l => l.score >= 50).slice(0, 3) : []
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 pt-24">
       
@@ -1336,6 +1366,95 @@ export default function ClientDashboard() {
           {getBasePlanType(user?.plan || '') === 'free' && (
             <div className="mb-8">
               <UpgradeUrgencyBanner variant="compact" />
+            </div>
+          )}
+
+          {/* Sezione Lead Consigliati per Nuovi Utenti */}
+          {isNewUser && recommendedLeads.length > 0 && (
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-700 rounded-2xl p-6 mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
+                    <span className="mr-2">🎯</span>
+                    Lead Consigliati per Te
+                  </h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Abbiamo selezionato questi lead con alta opportunità per iniziare
+                  </p>
+                </div>
+                <div className="bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100 px-3 py-1 rounded-full text-sm font-medium">
+                  {recommendedLeads.length} lead
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {recommendedLeads.map((lead) => (
+                  <div
+                    key={lead.id}
+                    className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-green-100 dark:border-green-700 hover:shadow-lg transition-shadow"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                          {lead.business_name}
+                        </h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {lead.category} • {lead.city}
+                        </p>
+                      </div>
+                      <div className={`flex-shrink-0 ml-2 px-2 py-1 rounded-full text-xs font-bold ${
+                        lead.score >= 70
+                          ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300'
+                          : lead.score >= 50
+                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300'
+                            : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300'
+                      }`}>
+                        {lead.score}
+                      </div>
+                    </div>
+
+                    {/* Tooltip Perché questo lead */}
+                    <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-2 mb-3">
+                      <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">
+                        💡 Perché questo lead?
+                      </p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                        Score {lead.score} = sito con problemi tecnici risolvibili
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => unlockLead(lead.id)}
+                      disabled={unlockedLeads.has(lead.id) || remainingCredits === 0}
+                      className={`w-full py-2 rounded-lg text-sm font-medium transition-colors ${
+                        unlockedLeads.has(lead.id)
+                          ? 'bg-green-100 text-green-700 cursor-default'
+                          : remainingCredits === 0
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                      }`}
+                    >
+                      {unlockedLeads.has(lead.id)
+                        ? '✓ Sbloccato'
+                        : remainingCredits === 0
+                          ? 'Crediti esauriti'
+                          : '🔓 Sblocca (1 credito)'
+                      }
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Preview Template Email */}
+              <div className="mt-6">
+                <EmailTemplatePreview />
+              </div>
+
+              <div className="mt-4 text-center">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Scorri in basso per vedere tutti i {totalLeads} lead disponibili →
+                </p>
+              </div>
             </div>
           )}
 
@@ -1592,14 +1711,16 @@ export default function ClientDashboard() {
               </div>
             )}
 
-            {/* Nuovo Sistema Filtri Avanzati */}
-            <AdvancedFilters
-              isOpen={showAdvancedFilters}
-              onToggle={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              filters={advancedFilters}
-              onFiltersChange={(filters: AdvancedFiltersState) => setAdvancedFilters(filters)}
-              leadCount={leads.length}
-            />
+            {/* Nuovo Sistema Filtri Avanzati - Nascosto per nuovi utenti */}
+            {!isNewUser && (
+              <AdvancedFilters
+                isOpen={showAdvancedFilters}
+                onToggle={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                filters={advancedFilters}
+                onFiltersChange={(filters: AdvancedFiltersState) => setAdvancedFilters(filters)}
+                leadCount={leads.length}
+              />
+            )}
           </TourTarget>
 
           {/* Lista Lead */}
@@ -1675,6 +1796,13 @@ export default function ClientDashboard() {
                             <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getScoreColor(lead.score)}`}>
                               {getScoreLabel(lead.score)} ({lead.score})
                             </div>
+                            {/* Badge Consigliato per lead ad alta opportunità */}
+                            {!isUnlocked && lead.score >= 60 && (
+                              <div className="px-2 py-1 bg-gradient-to-r from-amber-400 to-orange-500 text-white text-xs font-bold rounded-full shadow-sm flex items-center space-x-1">
+                                <span>⭐</span>
+                                <span>Consigliato</span>
+                              </div>
+                            )}
                             {isUnlocked && (
                               <div className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full border border-green-200">
                                 ✓ Sbloccato
@@ -2099,6 +2227,15 @@ export default function ClientDashboard() {
           )}
         </div>
       </div>
+
+      {/* FirstTimeUserModal per nuovi utenti */}
+      <FirstTimeUserModal
+        isOpen={showWelcomeModal}
+        onClose={() => setShowWelcomeModal(false)}
+        onStartTour={() => startTour('dashboard', true)}
+        userName={user?.email?.split('@')[0]}
+        creditsRemaining={userProfile?.credits_remaining || 5}
+      />
     </div>
   )
 }

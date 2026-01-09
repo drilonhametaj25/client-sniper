@@ -95,7 +95,7 @@ export default function TermsOfService() {
             </h3>
             <div className="bg-gray-50 p-4 rounded-lg mb-4">
               <ul className="space-y-2 text-gray-700">
-                <li><strong>Piano Free:</strong> 2 lead gratuiti per sempre</li>
+                <li><strong>Piano Free:</strong> 5 lead gratuiti</li>
                 <li><strong>Piano Starter:</strong> 50 lead/mese - €29/mese</li>
                 <li><strong>Piano Pro:</strong> 200 lead/mese - €79/mese</li>
               </ul>
@@ -254,8 +254,8 @@ export default function TermsOfService() {
             </p>
             <div className="space-y-2 text-gray-700">
               <p><strong>Email:</strong> legal@trovami.pro</p>
-              <p><strong>Indirizzo:</strong> TrovaMi S.r.l., Via Roma 123, 20121 Milano, Italia</p>
-              <p><strong>P.IVA:</strong> IT12345678901</p>
+              <p><strong>Indirizzo:</strong> TrovaMi, Via Roma 123, 20121 Milano, Italia</p>
+              <p><strong>P.IVA:</strong> 07327360488</p>
             </div>
           </section>
         </div>

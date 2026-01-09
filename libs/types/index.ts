@@ -145,7 +145,7 @@ export interface StripeCheckoutData {
 export const PLANS_CONFIG = {
   free: {
     name: 'Free',
-    max_credits: 2,
+    max_credits: 5,
     price_monthly: 0,
     visible_fields: ['business_name', 'website_url', 'score']
   },

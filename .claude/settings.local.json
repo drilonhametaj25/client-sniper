@@ -17,7 +17,9 @@
       "Bash(do if ! grep -q \"export const dynamic\" \"$f\")",
       "Bash(then echo \"$f\" fi done)",
       "Bash(npm run lint:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(find:*)",
+      "Bash(xargs basename:*)"
     ]
   }
 }

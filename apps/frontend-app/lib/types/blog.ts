@@ -9,7 +9,7 @@ export interface BlogPost {
   title: string
   excerpt: string
   content: string
-  author: string
+  author?: string
   date: string
   readTime: string
   category: string

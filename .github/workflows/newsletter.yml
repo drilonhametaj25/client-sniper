@@ -1,0 +1,42 @@
+name: Weekly Newsletter
+
+on:
+  schedule:
+    # Ogni Martedi alle 09:00 UTC (10:00 CET / 11:00 CEST)
+    - cron: '0 9 * * 2'
+  workflow_dispatch:
+    # Permette trigger manuale
+
+jobs:
+  send-newsletter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Send Weekly Newsletter
+        run: |
+          echo "📬 Starting weekly newsletter..."
+          echo "Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.APP_URL }}/api/cron/newsletter")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Response code: $http_code"
+          echo "Response body: $body"
+
+          if [ "$http_code" != "200" ]; then
+            echo "❌ Newsletter failed with status $http_code"
+            exit 1
+          fi
+
+          echo "✅ Newsletter sent successfully!"
+
+      - name: Log Results
+        if: always()
+        run: |
+          echo "📊 Newsletter job completed at $(date -u +"%Y-%m-%dT%H:%M:%SZ")"

@@ -639,7 +639,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     .eq('name', 'free')
     .single()
 
-  const freeCredits = freePlanData?.max_credits || 2
+  const freeCredits = freePlanData?.max_credits || 5
 
   // Downgrade a piano gratuito
   const { error } = await supabase

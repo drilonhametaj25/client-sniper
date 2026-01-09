@@ -110,7 +110,7 @@ export default function AdsLandingPage() {
         <div className="max-w-4xl mx-auto text-center">
           {/* Badge urgency */}
           <div className="inline-flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium mb-6">
-            <Zap className="h-4 w-4 mr-2" />2 Lead Gratuiti - Nessuna Carta di
+            <Zap className="h-4 w-4 mr-2" />5 Lead Gratuiti - Nessuna Carta di
             Credito
           </div>
 
@@ -143,7 +143,7 @@ export default function AdsLandingPage() {
               onClick={() => trackCTAClick("hero")}
             >
               <Target className="h-5 w-5 mr-2" />
-              Inizia con 2 Lead Gratuiti
+              Inizia con 5 Lead Gratuiti
               <ArrowRight className="h-5 w-5 ml-2" />
             </Link>
 
@@ -535,7 +535,7 @@ export default function AdsLandingPage() {
               Pronto a Trovare i Tuoi Primi Clienti?
             </h2>
             <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-              Inizia subito con 2 lead gratuiti. Nessuna carta di credito
+              Inizia subito con 5 lead gratuiti. Nessuna carta di credito
               richiesta. Scopri perché centinaia di agenzie scelgono TrovaMi.
             </p>
 
@@ -546,7 +546,7 @@ export default function AdsLandingPage() {
                 onClick={() => trackCTAClick("final")}
               >
                 <Target className="h-5 w-5 mr-2" />
-                Inizia con 2 Lead Gratuiti
+                Inizia con 5 Lead Gratuiti
                 <ArrowRight className="h-5 w-5 ml-2" />
               </Link>
             </div>

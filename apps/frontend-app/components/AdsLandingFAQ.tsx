@@ -15,8 +15,8 @@ interface FAQItem {
 
 const faqData: FAQItem[] = [
   {
-    question: 'Come funzionano i 2 lead gratuiti?',
-    answer: 'Ti registri in 2 minuti e ricevi subito 2 lead completi senza costi. Puoi scaricare i dati, vedere i contatti e testare la qualità prima di decidere se acquistare crediti aggiuntivi.',
+    question: 'Come funzionano i 5 lead gratuiti?',
+    answer: 'Ti registri in 2 minuti e ricevi subito 5 lead completi senza costi. Puoi scaricare i dati, vedere i contatti e testare la qualità prima di decidere se acquistare crediti aggiuntivi.',
     category: 'usage'
   },
   {
@@ -139,14 +139,14 @@ export default function AdsLandingFAQ() {
               Altre domande?
             </h3>
             <p className="text-gray-600 mb-6">
-              Il nostro team è qui per aiutarti. Contattaci o inizia subito con 2 lead gratuiti.
+              Il nostro team è qui per aiutarti. Contattaci o inizia subito con 5 lead gratuiti.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a
                 href="/register"
                 className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
               >
-                Inizia con 2 Lead Gratuiti
+                Inizia con 5 Lead Gratuiti
               </a>
               <a
                 href="mailto:support@trovami.pro"

@@ -200,6 +200,7 @@ export default function PrivacyPolicy() {
             <div className="space-y-2 text-gray-700">
               <p><strong>Email:</strong> privacy@trovami.pro</p>
               <p><strong>Indirizzo:</strong> TrovaMi, Via Roma 123, 20121 Milano, Italia</p>
+              <p><strong>P.IVA:</strong> 07327360488</p>
               <p><strong>Data Protection Officer:</strong> dpo@trovami.pro</p>
             </div>
           </section>

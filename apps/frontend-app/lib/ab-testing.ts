@@ -26,7 +26,7 @@ export const AD_LANDING_AB_TESTS: ABTestVariant[] = [
     config: {
       headline: 'Trova Clienti Già Pronti a Comprare i Tuoi Servizi',
       subheadline: 'Scopri aziende con problemi tecnici sui loro siti web e convertile in clienti. Lead qualificati a partire da 0,49€ - 40x meno di Google Ads',
-      ctaText: 'Inizia con 2 Lead Gratuiti',
+      ctaText: 'Inizia con 5 Lead Gratuiti',
       ctaColor: 'blue',
       urgencyMessage: 'Offerta Limitata',
       testimonialOrder: ['marco', 'laura', 'giuseppe'],
@@ -40,7 +40,7 @@ export const AD_LANDING_AB_TESTS: ABTestVariant[] = [
     weight: 25,
     config: {
       headline: 'Ogni Euro Investito Ti Frutta 15€',
-      subheadline: 'Lead qualificati che convertono davvero. Risparmia il 95% sui costi di acquisizione rispetto a Google Ads. Prova con 2 lead gratuiti.',
+      subheadline: 'Lead qualificati che convertono davvero. Risparmia il 95% sui costi di acquisizione rispetto a Google Ads. Prova con 5 lead gratuiti.',
       ctaText: 'Risparmia il 95% Ora',
       ctaColor: 'green',
       urgencyMessage: 'Solo per Oggi',
@@ -54,7 +54,7 @@ export const AD_LANDING_AB_TESTS: ABTestVariant[] = [
     name: 'Variante B - Urgenza Forte',
     weight: 25,
     config: {
-      headline: 'ULTIMI 2 Lead Gratuiti Disponibili',
+      headline: 'ULTIMI 5 Lead Gratuiti Disponibili',
       subheadline: 'Centinaia di agenzie stanno già usando TrovaMi. Non perdere l\'opportunità di trovare clienti a 0,49€ invece di 20€.',
       ctaText: 'Prendi i Tuoi Lead Ora',
       ctaColor: 'red',

@@ -199,7 +199,7 @@ export default function CategoryPage({ params }: CategoryPageProps) {
               href="/register"
               className="inline-flex items-center px-8 py-3 bg-white text-blue-600 rounded-md hover:bg-gray-50 transition-colors duration-200 font-semibold"
             >
-              Inizia Gratis - 2 Lead Inclusi
+              Inizia Gratis - 5 Lead Inclusi
             </Link>
             <Link 
               href="/tools/public-scan"

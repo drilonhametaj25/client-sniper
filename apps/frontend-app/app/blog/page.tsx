@@ -8,7 +8,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import { blogPosts, getAllCategories } from '@/lib/blog-data'
 import { BlogPost } from '@/lib/types/blog'
-import { Clock, User, Tag, TrendingUp } from 'lucide-react'
+import { Clock, TrendingUp } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'Blog Lead Generation | Guide Gratuite per Trovare Clienti Online',
@@ -93,11 +93,8 @@ export default function BlogPage() {
                     <p className="text-gray-600 line-clamp-3">
                       {post.excerpt}
                     </p>
-                    <div className="mt-4 flex items-center text-sm text-gray-500">
-                      <User className="h-4 w-4 mr-1" />
-                      <span>{post.author}</span>
-                      <span className="mx-2">•</span>
-                      <span>{post.date}</span>
+                    <div className="mt-4 text-sm text-gray-500">
+                      {post.date}
                     </div>
                   </div>
                 </article>
@@ -131,10 +128,8 @@ export default function BlogPage() {
                       <p className="text-gray-600 text-sm line-clamp-2 mb-3">
                         {post.excerpt}
                       </p>
-                      <div className="flex items-center text-xs text-gray-500">
-                        <span>{post.author}</span>
-                        <span className="mx-1">•</span>
-                        <span>{post.date}</span>
+                      <div className="text-xs text-gray-500">
+                        {post.date}
                       </div>
                     </div>
                   </article>

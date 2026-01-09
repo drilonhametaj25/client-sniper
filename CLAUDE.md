@@ -96,7 +96,7 @@ The scraping uses geographic zones with intelligent scheduling:
 
 - `users` - Accounts with plan, credits, Stripe info
 - `leads` - Lead data with scores and JSONB analysis
-- `plans` - Subscription tier definitions (free, starter, pro)
+- `plans` - Subscription tier definitions (free, starter, pro, agency - monthly & annual)
 - `crm_entries` - CRM data linked to leads
 - `zones_to_scrape` - Geographic scraping zones
 - `scrape_logs` - Scraping execution history
@@ -111,6 +111,41 @@ Lower score = more technical issues = better opportunity for digital agencies:
 - -10: Broken images
 - -15: Poor performance
 
+## Subscription Plans
+
+| Piano | Crediti | Prezzo Mensile | Prezzo Annuale |
+|-------|---------|----------------|----------------|
+| Free | 5 | €0 | - |
+| Starter | 25/mese | €19 | €190 |
+| Pro | 100/mese | €49 | €490 |
+| Agency | 300/mese | €99 | €990 |
+
+**Note**: I prezzi sono gestiti dinamicamente dal database nella tabella `plans`.
+
+## Business Info
+
+- **P.IVA**: 07327360488
+- **Website**: https://trovami.pro
+- **Support**: support@trovami.pro
+
+## Public Tools (no authentication required)
+
+Tutti i tool gratuiti hanno un limite di 3 analisi/giorno per IP.
+
+| Tool | Path | Descrizione |
+|------|------|-------------|
+| Public Scan | `/tools/public-scan` | Analisi completa sito (2/giorno) |
+| SEO Checker | `/tools/seo-checker` | Analisi SEO on-page (title, meta, heading, ecc.) |
+| Tech Detector | `/tools/tech-detector` | Rileva CMS, framework, analytics, CDN |
+| Security Check | `/tools/security-check` | Verifica HTTPS, header sicurezza, CSP, HSTS |
+| Accessibility Audit | `/tools/accessibility-check` | Conformità WCAG 2.1 A/AA |
+
+### Struttura Tool
+Ogni tool ha:
+- API route: `/app/api/tools/[tool-name]/route.ts`
+- Page: `/app/tools/[tool-name]/page.tsx`
+- Layout con SEO: `/app/tools/[tool-name]/layout.tsx`
+
 ## Key Conventions
 
 1. **File Headers**: Each file should have a comment explaining purpose, location, and usage
@@ -118,6 +153,7 @@ Lower score = more technical issues = better opportunity for digital agencies:
 3. **API Routes**: RESTful with Supabase auth middleware
 4. **Stripe Webhooks**: Handle `invoice.payment_succeeded` for auto-reactivation of inactive plans
 5. **Credit System**: Users consume credits to unlock lead details
+6. **Free Credits**: Piano Free = 5 lead gratuiti (non 2)
 
 ## Environment Variables
 
