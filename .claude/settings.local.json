@@ -12,7 +12,10 @@
       "Bash(git add:*)",
       "Bash(findstr:*)",
       "Bash(git -C /Users/drilonhametaj/workspace/ClientSniper log --oneline -10)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(while read f)",
+      "Bash(do if ! grep -q \"export const dynamic\" \"$f\")",
+      "Bash(then echo \"$f\" fi done)"
     ]
   }
 }

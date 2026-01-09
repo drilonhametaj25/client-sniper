@@ -1,7 +1,7 @@
 /**
  * API endpoint per analisi manuale di siti web
  * POST /api/tools/manual-scan
- * 
+ *
  * Funzionalità:
  * - Verifica autenticazione utente
  * - Controlla crediti disponibili
@@ -10,6 +10,8 @@
  * - Decrementa crediti utente
  * - Logga operazione per audit
  */
+
+export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'

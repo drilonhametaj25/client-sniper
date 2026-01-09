@@ -4,6 +4,8 @@
 // Include validazione e rate limiting basilare
 // Supporta feedback pubblici con titolo per la vista collaborativa
 
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { FeedbackSubmissionDataExtended } from '@/../../libs/types'

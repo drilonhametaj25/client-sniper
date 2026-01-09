@@ -4,6 +4,8 @@
  * Chiamato da: Supabase Auth quando avvengono eventi di signup/confirm
  */
 
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { emailService } from '@/lib/email-service'

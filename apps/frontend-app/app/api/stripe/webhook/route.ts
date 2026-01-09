@@ -6,6 +6,8 @@
 // - Credits Renewed: al rinnovo subscription
 // - Subscription Changed: cambio piano (upgrade/downgrade)
 
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'

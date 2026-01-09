@@ -2,25 +2,9 @@
  * API endpoint per l'analisi pubblica di siti web
  * Permette analisi limitate (2 al giorno) per IP senza registrazione
  * Mostra risultati parziali per invogliare la registrazione
- * Usato dal    // Se il lead esiste già, restituiamo l'analisi esistente limitata
-    if (existingLead) {
-      // Aggiungiamo l'overallScore all'analisi se manca
-      const analysisWithScore = existingLead.analysis ? {
-        ...existingLead.analysis,
-        overallScore: existingLead.analysis.overallScore || existingLead.score
-      } : null
-      
-      return NextResponse.json({
-        success: true,
-        existingLead: true,
-        analysis: analysisWithScore ? generateLimitedAnalysis(analysisWithScore) : null,
-        message: `Questo sito è già nella nostra database! È stato analizzato il ${new Date(existingLead.created_at).toLocaleDateString('it-IT')}.`,
-        leadInfo: {
-          businessName: existingLead.business_name,
-          score: existingLead.score,
-          analyzedDate: existingLead.created_at
-        },ools/public-scan
  */
+
+export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'

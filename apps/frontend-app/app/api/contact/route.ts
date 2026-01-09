@@ -4,6 +4,8 @@
  * Chiamato da: Pagina /contact
  */
 
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { emailService } from '@/lib/email-service'

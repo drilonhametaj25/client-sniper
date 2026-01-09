@@ -1,6 +1,8 @@
 // API per segnalare contenuti inappropriati nei feedback pubblici
 // Richiede autenticazione e previene segnalazioni multiple
 
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 

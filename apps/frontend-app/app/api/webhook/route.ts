@@ -3,6 +3,8 @@
 // È parte del modulo apps/frontend-app
 // ⚠️ Aggiornare quando si aggiungono nuovi piani o si modificano i crediti
 
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { supabase } from '@/lib/supabase'

@@ -3,6 +3,8 @@
 // UPGRADE/DOWNGRADE: Se l'utente ha già una subscription, la modifica invece di crearne una nuova
 // Utilizzato dal componente PlanSelector
 
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
