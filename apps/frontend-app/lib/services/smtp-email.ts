@@ -2235,6 +2235,98 @@ class SMTPEmailService {
     })
   }
 
+  // =====================================================
+  // TEMPLATE: Risposta Admin a Feedback
+  // =====================================================
+  async sendFeedbackResponseEmail(
+    email: string,
+    feedbackTitle: string | null,
+    feedbackType: string,
+    adminResponse: string,
+    feedbackId: string
+  ): Promise<boolean> {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://trovami.pro'
+    const feedbackUrl = `${appUrl}/dashboard/feedback`
+
+    const typeLabels: Record<string, string> = {
+      bug: 'Segnalazione Bug',
+      suggestion: 'Suggerimento',
+      contact: 'Richiesta di Contatto',
+      other: 'Altro'
+    }
+
+    const typeEmoji: Record<string, string> = {
+      bug: '🐛',
+      suggestion: '💡',
+      contact: '📧',
+      other: '📝'
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
+
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center;">
+            <div style="font-size: 40px; margin-bottom: 10px;">💬</div>
+            <h1 style="color: white; margin: 0; font-size: 24px;">Abbiamo risposto al tuo feedback!</h1>
+          </div>
+
+          <div style="padding: 30px;">
+            <div style="background-color: #f0fdf4; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+              <p style="color: #166534; margin: 0; font-size: 14px;">
+                ${typeEmoji[feedbackType] || '📝'} <strong>${typeLabels[feedbackType] || 'Feedback'}</strong>
+                ${feedbackTitle ? `: ${feedbackTitle}` : ''}
+              </p>
+            </div>
+
+            <h3 style="color: #1a202c; font-size: 16px; margin-bottom: 15px;">La nostra risposta:</h3>
+
+            <div style="background-color: #f7fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #10b981;">
+              <p style="color: #4a5568; margin: 0; line-height: 1.6; white-space: pre-wrap;">${adminResponse}</p>
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${feedbackUrl}"
+                 style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+                        color: white;
+                        text-decoration: none;
+                        padding: 14px 28px;
+                        border-radius: 8px;
+                        font-weight: 600;
+                        font-size: 16px;
+                        display: inline-block;">
+                Visualizza i tuoi feedback
+              </a>
+            </div>
+
+            <p style="color: #718096; font-size: 14px; text-align: center;">
+              Grazie per averci aiutato a migliorare TrovaMi!
+            </p>
+          </div>
+
+          <div style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="color: #a0aec0; margin: 0; font-size: 12px;">
+              © 2025 TrovaMi - Trova clienti potenziali con difetti tecnici
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+
+    return this.sendEmail({
+      to: email,
+      subject: `💬 Abbiamo risposto al tuo feedback - TrovaMi`,
+      html
+    })
+  }
+
   // Test della connessione SMTP
   async testConnection(): Promise<boolean> {
     if (!this.transporter) {

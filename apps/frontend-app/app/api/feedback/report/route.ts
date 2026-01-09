@@ -62,16 +62,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verifica che l'utente sia autenticato
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Devi essere loggato per segnalare contenuti' },
-        { status: 401 }
-      )
-    }
-
     // Chiama la funzione RPC per segnalare abuso
     const { data, error } = await supabase.rpc('report_feedback_abuse', {
       feedback_id: feedbackId,

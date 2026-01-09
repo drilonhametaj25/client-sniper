@@ -151,30 +151,60 @@ export default function AdminFeedback() {
   const handleUpdateStatus = async (feedbackId: string, newStatus: string) => {
     try {
       setIsUpdating(true)
-      
+
       const { data, error } = await supabase.rpc('admin_update_feedback_status', {
         feedback_id: feedbackId,
         new_status: newStatus,
         admin_response: adminResponse.trim() || null,
         internal_note: adminNote.trim() || null
       })
-      
+
       if (error) {
         alert(`Errore: ${error.message}`)
         return
       }
-      
+
       if (!data.success) {
         alert(`Errore: ${data.error}`)
         return
       }
-      
+
+      // Invia email di notifica se c'è una nuova risposta
+      if (adminResponse.trim()) {
+        try {
+          const session = await supabase.auth.getSession()
+          const token = session.data.session?.access_token
+
+          if (token) {
+            const notifyResponse = await fetch('/api/feedback/notify', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                feedbackId,
+                adminResponse: adminResponse.trim()
+              })
+            })
+
+            const notifyResult = await notifyResponse.json()
+            if (notifyResult.emailSent) {
+              console.log('Email di notifica inviata')
+            }
+          }
+        } catch (emailError) {
+          console.error('Errore invio email notifica:', emailError)
+          // Non bloccare il flusso se l'email fallisce
+        }
+      }
+
       // Aggiorna lo stato locale
       setFeedbacks(prev =>
-        prev.map(f => 
-          f.id === feedbackId 
-            ? { 
-                ...f, 
+        prev.map(f =>
+          f.id === feedbackId
+            ? {
+                ...f,
                 status: newStatus as any,
                 response: adminResponse.trim() || f.response,
                 admin_note: adminNote.trim() || f.admin_note
@@ -182,12 +212,12 @@ export default function AdminFeedback() {
             : f
         )
       )
-      
+
       // Reset form
       setAdminResponse('')
       setAdminNote('')
       setSelectedFeedback(null)
-      
+
     } catch (error) {
       alert('Si è verificato un errore durante l\'aggiornamento')
     } finally {
@@ -195,27 +225,35 @@ export default function AdminFeedback() {
     }
   }
 
-  const togglePublicVisibility = async (feedbackId: string, isPublic: boolean) => {
+  const togglePublicVisibility = async (feedbackId: string, isPublic: boolean, title?: string | null) => {
+    // Se stiamo rendendo pubblico un feedback senza titolo, chiedi conferma
+    if (!isPublic && !title) {
+      const confirmed = window.confirm(
+        'Questo feedback non ha un titolo. I feedback pubblici senza titolo potrebbero non essere visualizzati correttamente. Vuoi continuare?'
+      )
+      if (!confirmed) return
+    }
+
     try {
       const { error } = await supabase
         .from('feedback_reports')
         .update({ is_public: !isPublic })
         .eq('id', feedbackId)
-      
+
       if (error) {
         alert('Errore nel cambiare visibilità')
         return
       }
-      
+
       // Aggiorna lo stato locale
       setFeedbacks(prev =>
-        prev.map(f => 
-          f.id === feedbackId 
+        prev.map(f =>
+          f.id === feedbackId
             ? { ...f, is_public: !isPublic }
             : f
         )
       )
-      
+
     } catch (error) {
       alert('Errore nel cambiare visibilità')
     }
@@ -390,6 +428,9 @@ export default function AdminFeedback() {
                   Stato
                 </th>
                 <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Risposta
+                </th>
+                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Azioni
                 </th>
               </tr>
@@ -397,7 +438,7 @@ export default function AdminFeedback() {
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
               {loadingData ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center">
+                  <td colSpan={8} className="px-6 py-8 text-center">
                     <div className="flex justify-center">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
                     </div>
@@ -406,7 +447,7 @@ export default function AdminFeedback() {
                 </tr>
               ) : filteredFeedbacks.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center">
+                  <td colSpan={8} className="px-6 py-8 text-center">
                     {searchTerm || filterType || filterStatus ? (
                       <p className="text-gray-500">Nessun feedback corrisponde ai criteri di ricerca</p>
                     ) : (
@@ -471,7 +512,7 @@ export default function AdminFeedback() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <button
-                          onClick={() => togglePublicVisibility(feedback.id, feedback.is_public || false)}
+                          onClick={() => togglePublicVisibility(feedback.id, feedback.is_public || false, feedback.title)}
                           className={`p-2 rounded-lg transition-colors ${
                             feedback.is_public
                               ? 'bg-green-100 text-green-600 hover:bg-green-200'
@@ -510,7 +551,16 @@ export default function AdminFeedback() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <button 
+                        {feedback.response ? (
+                          <div className="flex items-center justify-center">
+                            <CheckCircle className="w-5 h-5 text-green-500" />
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <button
                           onClick={() => openFeedbackDetail(feedback)}
                           className="text-blue-600 hover:text-blue-900 flex items-center justify-center mx-auto"
                         >
@@ -552,13 +602,28 @@ export default function AdminFeedback() {
                     </p>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => setSelectedFeedback(null)}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <XCircle className="w-6 h-6" />
                 </button>
               </div>
+
+              {/* Mostra risposta esistente se presente */}
+              {selectedFeedback.response && (
+                <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                    <span className="text-sm font-medium text-green-800 dark:text-green-300">
+                      Risposta già inviata
+                    </span>
+                  </div>
+                  <p className="text-sm text-green-700 dark:text-green-400 whitespace-pre-wrap">
+                    {selectedFeedback.response}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Contenuto */}

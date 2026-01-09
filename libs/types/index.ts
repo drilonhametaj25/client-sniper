@@ -239,6 +239,20 @@ export interface FeedbackAbuseReport {
   created_at: string;
 }
 
+// Tipo per i feedback dell'utente nella dashboard personale
+export interface UserFeedback {
+  id: string;
+  title: string | null;
+  type: 'bug' | 'suggestion' | 'contact' | 'other';
+  message: string;
+  is_public: boolean;
+  status: 'open' | 'in_review' | 'closed';
+  response: string | null;
+  created_at: string;
+  upvotes: number;
+  downvotes: number;
+}
+
 // Estensione del tipo FeedbackSubmissionData esistente
 export interface FeedbackSubmissionDataExtended extends FeedbackSubmissionData {
   title?: string;

@@ -113,6 +113,7 @@ export default function Navbar() {
       { name: 'CRM', href: '/crm', icon: FolderOpen, description: 'Gestisci i tuoi lead sbloccati' },
       { name: 'Analytics', href: '/analytics', icon: BarChart, description: 'Dashboard analytics e ROI' },
     ] : []),
+    { name: 'I miei Feedback', href: '/dashboard/feedback', icon: MessageSquare, description: 'I tuoi feedback e risposte' },
     { name: 'Feedback', href: '/feedback', icon: MessageSquare, description: 'Feedback e suggerimenti della community' },
     { name: 'Account', href: '/settings', icon: User, description: 'Gestisci account e abbonamento' },
     { name: 'Upgrade', href: '/upgrade', icon: Crown, description: 'Aggiorna piano' },
