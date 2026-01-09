@@ -19,7 +19,8 @@
       "Bash(npm run lint:*)",
       "Bash(npm run build:*)",
       "Bash(find:*)",
-      "Bash(xargs basename:*)"
+      "Bash(xargs basename:*)",
+      "Bash(wc:*)"
     ]
   }
 }
