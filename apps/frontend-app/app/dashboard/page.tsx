@@ -289,63 +289,72 @@ export default function ClientDashboard() {
   }
 
   // Funzione per applicare filtri avanzati lato client (fallback)
+  // NOTA: Non applica filtri per campi che non esistono nei dati (per utenti FREE/STARTER)
   const applyAdvancedFilters = (leadsToFilter: Lead[]) => {
+    // Determina se l'utente ha accesso ai campi avanzati
+    const hasAdvancedAccess = isProOrHigher(userProfile?.plan || 'free')
+
     return leadsToFilter.filter(lead => {
-      // Range punteggio
+      // Range punteggio - sempre disponibile
       if (lead.score < advancedFilters.scoreRange.min || lead.score > advancedFilters.scoreRange.max) {
         return false
       }
-      
-      // Filtri contatti
-      if (advancedFilters.hasEmail && (!lead.email || lead.email.trim() === '')) {
-        return false
+
+      // Filtri contatti - solo se utente ha accesso E il campo esiste nei dati
+      // (l'API gestisce il filtro server-side, qui è solo un fallback di sicurezza)
+      if (hasAdvancedAccess) {
+        if (advancedFilters.hasEmail && 'email' in lead && (!lead.email || lead.email.trim() === '')) {
+          return false
+        }
+        if (advancedFilters.hasPhone && 'phone' in lead && (!lead.phone || lead.phone.trim() === '')) {
+          return false
+        }
       }
-      if (advancedFilters.hasPhone && (!lead.phone || lead.phone.trim() === '')) {
-        return false
+
+      // Problemi tecnici - solo se utente ha accesso E analysis esiste
+      if (hasAdvancedAccess && lead.analysis) {
+        if (advancedFilters.technicalIssues.noGoogleAds) {
+          const hasGoogleAds = lead.analysis?.tracking?.hasGoogleAds === true
+          if (hasGoogleAds) return false
+        }
+
+        if (advancedFilters.technicalIssues.noFacebookPixel) {
+          const hasFacebookPixel = lead.analysis?.tracking?.hasFacebookPixel === true
+          if (hasFacebookPixel) return false
+        }
+
+        if (advancedFilters.technicalIssues.slowLoading) {
+          const loadTime = lead.analysis?.performance?.loadTime
+          if (!loadTime || loadTime < 3.0) return false
+        }
+
+        if (advancedFilters.technicalIssues.noSSL) {
+          const hasSSL = lead.analysis?.security?.hasSSL === true
+          if (hasSSL) return false
+        }
       }
-      
-      // Problemi tecnici - controlli sull'analysis
-      if (advancedFilters.technicalIssues.noGoogleAds) {
-        const hasGoogleAds = lead.analysis?.tracking?.hasGoogleAds === true
-        if (hasGoogleAds) return false
-      }
-      
-      if (advancedFilters.technicalIssues.noFacebookPixel) {
-        const hasFacebookPixel = lead.analysis?.tracking?.hasFacebookPixel === true
-        if (hasFacebookPixel) return false
-      }
-      
-      if (advancedFilters.technicalIssues.slowLoading) {
-        const loadTime = lead.analysis?.performance?.loadTime
-        if (!loadTime || loadTime < 3.0) return false
-      }
-      
-      if (advancedFilters.technicalIssues.noSSL) {
-        const hasSSL = lead.analysis?.security?.hasSSL === true
-        if (hasSSL) return false
-      }
-      
+
       // Filtri CRM (solo per utenti PRO)
-      if (isProOrHigher(userProfile?.plan || 'free')) {
+      if (hasAdvancedAccess) {
         if (advancedFilters.crmFilters.onlyUncontacted) {
           const crmStatus = (lead as LeadWithCRM).crm_status
           if (crmStatus && crmStatus !== 'new') return false
         }
-        
+
         if (advancedFilters.crmFilters.followUpOverdue) {
           const nextFollowUp = (lead as LeadWithCRM).next_follow_up
           if (!nextFollowUp) return false
-          
+
           const today = new Date().toISOString().split('T')[0]
           if (nextFollowUp >= today) return false
         }
-        
+
         if (advancedFilters.crmFilters.crmStatus !== 'all') {
           const crmStatus = (lead as LeadWithCRM).crm_status
           if (crmStatus !== advancedFilters.crmFilters.crmStatus) return false
         }
       }
-      
+
       return true
     })
   }
@@ -363,6 +372,48 @@ export default function ClientDashboard() {
       localStorage.removeItem('advancedFilters')
     }
   }, [])
+
+  // Pulisci filtri non disponibili per il piano utente
+  useEffect(() => {
+    if (!userProfile?.plan) return
+
+    const hasAdvancedAccess = isProOrHigher(userProfile.plan)
+
+    // Se l'utente non ha accesso ai filtri avanzati, resetta quelli che richiedono PRO
+    if (!hasAdvancedAccess) {
+      const needsReset =
+        advancedFilters.hasEmail ||
+        advancedFilters.hasPhone ||
+        advancedFilters.technicalIssues.noGoogleAds ||
+        advancedFilters.technicalIssues.noFacebookPixel ||
+        advancedFilters.technicalIssues.slowLoading ||
+        advancedFilters.technicalIssues.noSSL ||
+        advancedFilters.crmFilters.onlyUncontacted ||
+        advancedFilters.crmFilters.followUpOverdue ||
+        advancedFilters.crmFilters.crmStatus !== 'all'
+
+      if (needsReset) {
+        const cleanedFilters = {
+          ...advancedFilters,
+          hasEmail: false,
+          hasPhone: false,
+          technicalIssues: {
+            noGoogleAds: false,
+            noFacebookPixel: false,
+            slowLoading: false,
+            noSSL: false
+          },
+          crmFilters: {
+            onlyUncontacted: false,
+            followUpOverdue: false,
+            crmStatus: 'all'
+          }
+        }
+        setAdvancedFilters(cleanedFilters)
+        localStorage.setItem('advancedFilters', JSON.stringify(cleanedFilters))
+      }
+    }
+  }, [userProfile?.plan])
 
   // ⚡ ULTRA-OTTIMIZZATO: Redirect ottimizzato per performance
   useEffect(() => {
@@ -1719,6 +1770,7 @@ export default function ClientDashboard() {
                 filters={advancedFilters}
                 onFiltersChange={(filters: AdvancedFiltersState) => setAdvancedFilters(filters)}
                 leadCount={leads.length}
+                userPlan={userProfile?.plan}
               />
             )}
           </TourTarget>
