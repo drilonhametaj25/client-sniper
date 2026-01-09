@@ -1203,6 +1203,46 @@ export default function ClientDashboard() {
     return 'Basso Potenziale'
   }
 
+  // Icone per categoria lead
+  const getCategoryIcon = (category: string): string => {
+    const icons: Record<string, string> = {
+      'ristorante': '🍽️', 'ristoranti': '🍽️', 'pizzeria': '🍕', 'bar': '🍺',
+      'hotel': '🏨', 'albergo': '🏨', 'b&b': '🏠',
+      'dentista': '🦷', 'dentisti': '🦷', 'odontoiatra': '🦷',
+      'avvocato': '⚖️', 'avvocati': '⚖️', 'studio legale': '⚖️',
+      'parrucchiere': '💇', 'parrucchieri': '💇', 'barbiere': '💈',
+      'meccanico': '🔧', 'officina': '🔧', 'autofficina': '🚗',
+      'medico': '⚕️', 'dottore': '⚕️', 'clinica': '🏥',
+      'palestra': '💪', 'fitness': '💪', 'gym': '💪',
+      'negozio': '🛍️', 'shop': '🛍️', 'abbigliamento': '👔',
+      'immobiliare': '🏠', 'agenzia immobiliare': '🏠',
+      'commercialista': '📊', 'consulente': '💼',
+      'fotografo': '📷', 'studio fotografico': '📷',
+      'estetista': '💅', 'centro estetico': '💅', 'spa': '🧖',
+      'fiorista': '💐', 'fiori': '💐',
+      'farmacia': '💊', 'ottico': '👓',
+      'veterinario': '🐾', 'pet shop': '🐾',
+      'architetto': '📐', 'geometra': '📐',
+      'elettricista': '⚡', 'idraulico': '🔧',
+      'assicurazione': '🛡️', 'agenzia': '🏢'
+    }
+    const lowerCategory = category.toLowerCase()
+    for (const [key, icon] of Object.entries(icons)) {
+      if (lowerCategory.includes(key)) return icon
+    }
+    return '🏢'
+  }
+
+  // Badge freshness (quando è stato aggiunto il lead)
+  const getFreshnessBadge = (created_at: string) => {
+    const days = Math.floor((Date.now() - new Date(created_at).getTime()) / 86400000)
+    if (days === 0) return { label: 'Oggi', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' }
+    if (days === 1) return { label: 'Ieri', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' }
+    if (days <= 7) return { label: `${days}g fa`, color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' }
+    if (days <= 30) return { label: `${days}g fa`, color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' }
+    return { label: '30+ giorni', color: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500' }
+  }
+
   const getPlanBadge = () => {
     const badges = {
       free: { label: 'Free', color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200', icon: null },
@@ -1836,13 +1876,24 @@ export default function ClientDashboard() {
                                 {lead.business_name}
                               </h3>
                             ) : (
-                              <div className="flex items-center space-x-3">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                  🔒 {translateCategory(lead.category)} in {lead.city}
-                                </h3>
-                                <div className="px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-bold rounded-full animate-pulse">
-                                  LEAD QUALIFICATO
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-xl">
+                                  {getCategoryIcon(lead.category)}
                                 </div>
+                                <div>
+                                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                                    {translateCategory(lead.category)}
+                                  </h3>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    📍 {lead.city}
+                                  </p>
+                                </div>
+                                {/* Freshness badge */}
+                                {lead.created_at && (
+                                  <span className={`text-xs px-2 py-1 rounded-full ${getFreshnessBadge(lead.created_at).color}`}>
+                                    {getFreshnessBadge(lead.created_at).label}
+                                  </span>
+                                )}
                               </div>
                             )}
                             <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getScoreColor(lead.score)}`}>
@@ -1873,71 +1924,65 @@ export default function ClientDashboard() {
                             </div>
                           )}
                         
-                        {/* Informazioni strategiche per incentivare lo sblocco */}
+                        {/* Informazioni REALI del lead per incentivare lo sblocco */}
                         {!isUnlocked ? (
-                          <div className="space-y-3">
-                            {/* Problemi identificati */}
-                            <div className="flex items-center space-x-2">
-                              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                              <span className="text-sm font-medium text-red-600">
-                                {lead.score <= 20 ? 'Sito con gravi problemi tecnici critici' : 
-                                 lead.score <= 40 ? 'Problemi SEO e performance critici identificati' :
-                                 lead.score <= 60 ? 'Opportunità di miglioramento evidenti' :
-                                 'Potenziale cliente con margini di crescita'}
-                              </span>
-                            </div>
-                            
-                            {/* Valore stimato articolato */}
-                            <div className="flex items-center space-x-2">
-                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                              <span className="text-sm text-gray-700 dark:text-gray-300">
-                                💰 Valore progetto stimato: €{(() => {
-                                  const { min, max } = calculateProjectValue(lead.score, lead.category)
-                                  return `${min.toLocaleString()}-${max.toLocaleString()}`
-                                })()}
-                              </span>
-                            </div>
-                            
-                            {/* Urgenza con emoji dinamica */}
-                            <div className="flex items-center space-x-2">
-                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                              <span className="text-sm text-gray-700 dark:text-gray-300">
-                                {(() => {
-                                  const urgency = getUrgencyLevel(lead.score)
-                                  return `${urgency.icon} Priorità: ${urgency.level}`
-                                })()}
-                              </span>
-                            </div>
-                            
-                            {/* Servizi suggeriti più specifici */}
-                            <div className="flex items-center space-x-2">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                              <span className="text-sm text-gray-700 dark:text-gray-300">
-                                🎯 Servizi richiesti: {(() => {
-                                  const services = getServicesNeeded(lead.score, lead.category)
-                                  return services.slice(0, 2).join(', ')
-                                })()}
-                              </span>
-                            </div>
-
-                            {/* Suggerimenti per la conversione */}
-                            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50 rounded-lg p-3 mt-2">
-                              <div className="flex items-start space-x-2">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5"></div>
-                                <div className="flex-1">
-                                  <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-1">
-                                    📈 Analisi commerciale
-                                  </h4>
-                                  <div className="space-y-1">
-                                    {getConversionTips(lead.score).map((tip, i) => (
-                                      <div key={i} className="text-xs text-blue-700 dark:text-blue-300">
-                                        • {tip}
-                                      </div>
-                                    ))}
-                                  </div>
+                          <div className="space-y-4 mt-3">
+                            {/* Sezione Problemi Tecnici REALI (da analysis) */}
+                            {lead.analysis && (
+                              <div>
+                                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                                  <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                                  Problemi identificati:
+                                </h4>
+                                <div className="flex flex-wrap gap-2">
+                                  {/* No SSL */}
+                                  {lead.analysis?.security?.hasSSL === false && (
+                                    <span className="text-xs bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 px-2 py-1 rounded-lg">🔓 Senza HTTPS</span>
+                                  )}
+                                  {/* Sito lento */}
+                                  {lead.analysis?.performance?.loadTime && lead.analysis.performance.loadTime > 3 && (
+                                    <span className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 px-2 py-1 rounded-lg">🐢 Sito lento ({lead.analysis.performance.loadTime.toFixed(1)}s)</span>
+                                  )}
+                                  {/* No Google Analytics */}
+                                  {lead.analysis?.tracking?.hasGoogleAnalytics === false && (
+                                    <span className="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 px-2 py-1 rounded-lg">📊 No Analytics</span>
+                                  )}
+                                  {/* No Facebook Pixel */}
+                                  {lead.analysis?.tracking?.hasFacebookPixel === false && (
+                                    <span className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-1 rounded-lg">📱 No FB Pixel</span>
+                                  )}
+                                  {/* No Google Ads */}
+                                  {lead.analysis?.tracking?.hasGoogleAds === false && (
+                                    <span className="text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 px-2 py-1 rounded-lg">📣 No Google Ads</span>
+                                  )}
+                                  {/* Mobile non ottimizzato */}
+                                  {lead.analysis?.mobile?.isMobileOptimized === false && (
+                                    <span className="text-xs bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300 px-2 py-1 rounded-lg">📵 Non mobile-friendly</span>
+                                  )}
+                                  {/* SEO mancante */}
+                                  {(lead.analysis?.seo?.hasTitle === false || lead.analysis?.seo?.hasDescription === false) && (
+                                    <span className="text-xs bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300 px-2 py-1 rounded-lg">🔍 SEO carente</span>
+                                  )}
+                                  {/* Fallback se nessun problema specifico ma score basso */}
+                                  {!lead.analysis?.security?.hasSSL !== false &&
+                                   !(lead.analysis?.performance?.loadTime > 3) &&
+                                   lead.analysis?.tracking?.hasGoogleAnalytics !== false &&
+                                   lead.score <= 50 && (
+                                    <span className="text-xs bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded-lg">⚠️ Miglioramenti possibili</span>
+                                  )}
                                 </div>
                               </div>
-                            </div>
+                            )}
+
+                            {/* Fallback se no analysis ma score basso */}
+                            {!lead.analysis && lead.score <= 60 && (
+                              <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                                <span className="text-sm text-orange-600 dark:text-orange-400">
+                                  Score {lead.score}/100 - Opportunità di miglioramento
+                                </span>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
@@ -1976,98 +2021,66 @@ export default function ClientDashboard() {
                             )}
                           </div>
                         ) : (
-                          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border border-yellow-200 dark:border-yellow-700/50 rounded-xl p-4 mt-3">
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1">
-                                {/* Contiamo i dati disponibili SOLO se il piano li supporta */}
-                                {(() => {
-                                  const userPlan = userProfile?.plan || 'free'
-                                  const isProOrAdmin = isProOrHigher(userPlan) || userProfile?.role === 'admin'
-                                  
-                                  // Solo per piani Pro/Admin controlliamo i contatti (perché l'API li restituisce)
-                                  if (isProOrAdmin) {
-                                    // Verifica più rigorosa: controlla che i campi esistano e non siano vuoti
-                                    const hasPhone = lead.phone && typeof lead.phone === 'string' && lead.phone.trim() !== ''
-                                    const hasEmail = lead.email && typeof lead.email === 'string' && lead.email.trim() !== '' && lead.email !== 'null'
-                                    const hasAddress = lead.address && typeof lead.address === 'string' && lead.address.trim() !== ''
-                                    
-                                    const availableContacts = [
-                                      hasPhone && '📱 Numero di telefono diretto',
-                                      hasEmail && '✉️ Email aziendale verificata', 
-                                      hasAddress && '📍 Indirizzo completo ufficio'
-                                    ].filter(Boolean)
-                                    
-                                    const hasContactData = availableContacts.length > 0
-                                    
-                                    return hasContactData ? (
-                                      <>
-                                        <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
-                                          📞 {availableContacts.length} Contatt{availableContacts.length === 1 ? 'o' : 'i'} Disponibil{availableContacts.length === 1 ? 'e' : 'i'}
-                                        </h4>
-                                        <div className="space-y-2">
-                                          {hasPhone && (
-                                            <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
-                                              <Phone className="h-4 w-4" />
-                                              <span>📱 Numero di telefono diretto</span>
-                                            </div>
-                                          )}
-                                          {hasEmail && (
-                                            <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
-                                              <Mail className="h-4 w-4" />
-                                              <span>✉️ Email aziendale verificata</span>
-                                            </div>
-                                          )}
-                                          {hasAddress && (
-                                            <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
-                                              <MapPin className="h-4 w-4" />
-                                              <span>📍 Indirizzo completo ufficio</span>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
-                                          🏢 Dettagli Azienda Completi
-                                        </h4>
-                                        <div className="space-y-2">
-                                          <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
-                                            <span>📄 Nome e dettagli azienda completi</span>
-                                          </div>
-                                          <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
-                                            <span>🌐 Analisi tecnica dettagliata del sito</span>
-                                          </div>
-                                        </div>
-                                      </>
-                                    )
-                                  } else {
-                                    // Per piani Free/Starter: mostra benefici generici
-                                    return (
-                                      <>
-                                        <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
-                                          🔓 Dettagli Completi Disponibili
-                                        </h4>
-                                        <div className="space-y-2">
-                                          <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
-                                            <span>🏢 Nome e informazioni azienda</span>
-                                          </div>
-                                          <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
-                                            <span>🔗 Accesso diretto al sito web</span>
-                                          </div>
-                                          {getBasePlanType(userPlan) === 'free' && (
-                                            <div className="flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400">
-                                              <Crown className="h-4 w-4" />
-                                              <span>💎 Upgrade per contatti diretti</span>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </>
-                                    )
-                                  }
-                                })()}
-                              </div>
-                              <div className="text-2xl">🔓</div>
-                            </div>
+                          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 mt-3">
+                            {(() => {
+                              // Verifica REALE dei dati nel DB (ora l'API restituisce tutto a tutti)
+                              const hasPhone = lead.phone && typeof lead.phone === 'string' && lead.phone.trim() !== ''
+                              const hasEmail = lead.email && typeof lead.email === 'string' && lead.email.trim() !== '' && lead.email !== 'null'
+                              const hasAddress = lead.address && typeof lead.address === 'string' && lead.address.trim() !== ''
+                              const contactCount = [hasPhone, hasEmail, hasAddress].filter(Boolean).length
+
+                              if (contactCount > 0) {
+                                return (
+                                  <>
+                                    <h4 className="font-medium text-gray-900 dark:text-white mb-2">
+                                      📋 Disponibile allo sblocco:
+                                    </h4>
+                                    <div className="flex flex-wrap gap-2">
+                                      {hasPhone && (
+                                        <span className="text-sm bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 px-2 py-1 rounded-lg">
+                                          📱 Telefono
+                                        </span>
+                                      )}
+                                      {hasEmail && (
+                                        <span className="text-sm bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-1 rounded-lg">
+                                          ✉️ Email
+                                        </span>
+                                      )}
+                                      {hasAddress && (
+                                        <span className="text-sm bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 px-2 py-1 rounded-lg">
+                                          📍 Indirizzo
+                                        </span>
+                                      )}
+                                      <span className="text-sm bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded-lg">
+                                        🏢 Nome azienda
+                                      </span>
+                                      <span className="text-sm bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded-lg">
+                                        🌐 Sito web
+                                      </span>
+                                    </div>
+                                  </>
+                                )
+                              } else {
+                                return (
+                                  <>
+                                    <h4 className="font-medium text-gray-900 dark:text-white mb-2">
+                                      📋 Disponibile allo sblocco:
+                                    </h4>
+                                    <div className="flex flex-wrap gap-2">
+                                      <span className="text-sm bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded-lg">
+                                        🏢 Nome azienda
+                                      </span>
+                                      <span className="text-sm bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded-lg">
+                                        🌐 Sito web
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                      Contatti diretti non disponibili per questo lead
+                                    </p>
+                                  </>
+                                )
+                              }
+                            })()}
                           </div>
                         )}
 
