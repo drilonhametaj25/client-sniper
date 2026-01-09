@@ -29,10 +29,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Verifica che l'utente abbia un piano PRO
+    // Verifica che l'utente abbia un piano PRO (admin hanno sempre accesso)
     const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
-      .select('plan, status')
+      .select('plan, status, role')
       .eq('id', user.id)
       .single()
 
@@ -43,7 +43,9 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    if (!isProOrHigher(userData.plan) || userData.status !== 'active') {
+    // Admin hanno sempre accesso, altri utenti devono avere PRO+ attivo
+    const isAdmin = userData.role === 'admin'
+    if (!isAdmin && (!isProOrHigher(userData.plan) || userData.status !== 'active')) {
       return NextResponse.json(
         { error: 'Funzionalità disponibile solo per utenti PRO+ con piano attivo' },
         { status: 403 }
