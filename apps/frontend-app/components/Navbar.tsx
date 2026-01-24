@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
@@ -17,12 +17,35 @@ import TourControlMenu from './onboarding/TourControlMenu'
 import NotificationCenter from './NotificationCenter'
 import { isProOrHigher } from '@/lib/utils/plan-helpers'
 
+// Tools disponibili per il dropdown
+const toolsMenu = [
+  { name: 'Tutti i Tool', href: '/tools', icon: Wrench, description: 'Scopri tutti gli strumenti' },
+  { name: 'Analisi Completa', href: '/tools/public-scan', icon: Globe, description: 'Scansione completa del sito' },
+  { name: 'SEO Checker', href: '/tools/seo-checker', icon: Search, description: 'Verifica SEO on-page' },
+  { name: 'Tech Detector', href: '/tools/tech-detector', icon: Code, description: 'Rileva tecnologie usate' },
+  { name: 'Security Check', href: '/tools/security-check', icon: Shield, description: 'Audit sicurezza' },
+  { name: 'Accessibility', href: '/tools/accessibility-check', icon: Accessibility, description: 'Verifica WCAG' },
+]
+
 export default function Navbar() {
   const { user, signOut } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showTourMenu, setShowTourMenu] = useState(false)
+  const [showToolsMenu, setShowToolsMenu] = useState(false)
+  const toolsMenuRef = useRef<HTMLDivElement>(null)
+
+  // Chiudi dropdown tools quando si clicca fuori
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (toolsMenuRef.current && !toolsMenuRef.current.contains(event.target as Node)) {
+        setShowToolsMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handleSignOut = async () => {
     await signOut()
@@ -94,26 +117,27 @@ export default function Navbar() {
       { name: 'Blog', href: '/blog', icon: BookOpen, description: 'Guide e strategie per trovare clienti' },
       { name: 'Feedback', href: '/feedback', icon: MessageSquare, description: 'Feedback e suggerimenti della community' },
     ]),
-    { name: 'Analisi', href: '/tools/manual-scan', icon: Target, description: 'Analizza qualsiasi sito web' },
+    { name: 'Tools', href: '/tools', icon: Wrench, description: 'Strumenti di analisi', isDropdown: true },
     ...(user?.plan && isProOrHigher(user.plan) ? [
       { name: 'CRM', href: '/crm', icon: FolderOpen, description: 'Gestisci i tuoi lead sbloccati' },
       { name: 'Analytics', href: '/analytics', icon: BarChart, description: 'Dashboard analytics e ROI' },
     ] : []),
     { name: 'Account', href: '/settings', icon: User, description: 'Gestisci account e abbonamento' },
-    { 
-      name: isAdminRoute ? 'Client' : 'Admin', 
-      href: isAdminRoute ? '/dashboard' : '/admin/dashboard', 
+    {
+      name: isAdminRoute ? 'Client' : 'Admin',
+      href: isAdminRoute ? '/dashboard' : '/admin/dashboard',
       icon: isAdminRoute ? User : Shield,
       description: isAdminRoute ? 'Passa alla vista client' : 'Passa alla vista admin'
     },
   ] : [
     { name: 'Dashboard', href: '/dashboard', icon: Home, description: 'I miei lead' },
     { name: 'Blog', href: '/blog', icon: BookOpen, description: 'Guide e strategie per trovare clienti' },
-    { name: 'Analisi', href: '/tools/manual-scan', icon: Target, description: 'Analizza qualsiasi sito web' },
+    { name: 'Tools', href: '/tools', icon: Wrench, description: 'Strumenti di analisi', isDropdown: true },
     ...(user?.plan && isProOrHigher(user.plan) ? [
       { name: 'CRM', href: '/crm', icon: FolderOpen, description: 'Gestisci i tuoi lead sbloccati' },
       { name: 'Analytics', href: '/analytics', icon: BarChart, description: 'Dashboard analytics e ROI' },
     ] : []),
+    { name: 'I miei Feedback', href: '/dashboard/feedback', icon: MessageSquare, description: 'I tuoi feedback e risposte' },
     { name: 'Feedback', href: '/feedback', icon: MessageSquare, description: 'Feedback e suggerimenti della community' },
     { name: 'Account', href: '/settings', icon: User, description: 'Gestisci account e abbonamento' },
     { name: 'Upgrade', href: '/upgrade', icon: Crown, description: 'Aggiorna piano' },
@@ -147,8 +171,48 @@ export default function Navbar() {
             <div className="hidden md:flex items-center space-x-6">
               {/* Navigation Links */}
               <div className="flex items-center space-x-1">
-                {navigation.map((item) => {
-                  const isActive = pathname === item.href
+                {navigation.map((item: any) => {
+                  const isActive = pathname === item.href || (item.isDropdown && pathname.startsWith('/tools'))
+
+                  // Dropdown per Tools
+                  if (item.isDropdown) {
+                    return (
+                      <div key={item.name} className="relative" ref={toolsMenuRef}>
+                        <button
+                          onClick={() => setShowToolsMenu(!showToolsMenu)}
+                          className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
+                            isActive
+                              ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
+                              : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
+                          }`}
+                        >
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.name}</span>
+                          <ChevronDown className={`h-3 w-3 transition-transform ${showToolsMenu ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {showToolsMenu && (
+                          <div className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50">
+                            {toolsMenu.map((tool) => (
+                              <Link
+                                key={tool.href}
+                                href={tool.href}
+                                onClick={() => setShowToolsMenu(false)}
+                                className="flex items-center px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                              >
+                                <tool.icon className="h-4 w-4 text-gray-500 dark:text-gray-400 mr-3" />
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900 dark:text-white">{tool.name}</div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">{tool.description}</div>
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  }
+
                   return (
                     <Link
                       key={item.name}
@@ -249,8 +313,43 @@ export default function Navbar() {
           {mobileMenuOpen && (
             <div className="md:hidden border-t border-gray-200/50 dark:border-gray-700/50 py-4">
               <div className="space-y-2">
-                {navigation.map((item) => {
-                  const isActive = pathname === item.href
+                {navigation.map((item: any) => {
+                  const isActive = pathname === item.href || (item.isDropdown && pathname.startsWith('/tools'))
+
+                  // Per Tools mostriamo la lista espansa nel mobile
+                  if (item.isDropdown) {
+                    return (
+                      <div key={item.name} className="space-y-1">
+                        <Link
+                          href="/tools"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
+                            isActive
+                              ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
+                              : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
+                          }`}
+                        >
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.name}</span>
+                        </Link>
+                        {/* Sub-menu tools nel mobile */}
+                        <div className="ml-6 space-y-1">
+                          {toolsMenu.slice(1).map((tool) => (
+                            <Link
+                              key={tool.href}
+                              href={tool.href}
+                              onClick={() => setMobileMenuOpen(false)}
+                              className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                            >
+                              <tool.icon className="h-3 w-3" />
+                              <span>{tool.name}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  }
+
                   return (
                     <Link
                       key={item.name}

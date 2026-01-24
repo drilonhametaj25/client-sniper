@@ -29,26 +29,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Verifica che l'utente abbia un piano PRO
-    const { data: userData, error: userError } = await supabaseAdmin
-      .from('users')
-      .select('plan, status')
-      .eq('id', user.id)
-      .single()
-
-    if (userError || !userData) {
-      return NextResponse.json(
-        { error: 'Utente non trovato' },
-        { status: 404 }
-      )
-    }
-
-    if (!isProOrHigher(userData.plan) || userData.status !== 'active') {
-      return NextResponse.json(
-        { error: 'Funzionalità disponibile solo per utenti PRO+ con piano attivo' },
-        { status: 403 }
-      )
-    }
+    // Catalogo servizi visibile a tutti gli utenti autenticati
+    // Utile come strumento di marketing per mostrare cosa si può offrire ai lead
 
     // Parametri di filtro
     const category = searchParams.get('category')

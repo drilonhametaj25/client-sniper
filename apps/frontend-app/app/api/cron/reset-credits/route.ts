@@ -2,6 +2,8 @@
 // Utilizzato da cron job per resettare crediti e sostituzioni mensili
 // di utenti in base al loro ciclo di rinnovo individuale (ogni 30 giorni)
 
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 

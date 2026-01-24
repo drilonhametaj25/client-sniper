@@ -4,6 +4,8 @@
  * PUT: Aggiorna preferenze
  */
 
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
@@ -66,6 +68,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Errore recupero preferenze' }, { status: 500 })
     }
 
+    // Recupera anche newsletter_subscribed dalla tabella users
+    const { data: userData } = await supabaseAdmin
+      .from('users')
+      .select('newsletter_subscribed')
+      .eq('id', user.id)
+      .single()
+
     // Trasforma in formato camelCase per frontend
     const response = {
       id: preferences.id,
@@ -83,7 +92,8 @@ export async function GET(request: NextRequest) {
       preferredSendHour: preferences.preferred_send_hour,
       timezone: preferences.timezone,
       createdAt: preferences.created_at,
-      updatedAt: preferences.updated_at
+      updatedAt: preferences.updated_at,
+      newsletterSubscribed: userData?.newsletter_subscribed ?? true
     }
 
     return NextResponse.json({ success: true, data: response })
@@ -136,6 +146,22 @@ export async function PUT(request: NextRequest) {
     if (error) {
       console.error('Errore aggiornamento preferenze:', error)
       return NextResponse.json({ error: 'Errore aggiornamento preferenze' }, { status: 500 })
+    }
+
+    // Aggiorna newsletter_subscribed nella tabella users (campo separato)
+    if (body.newsletterSubscribed !== undefined) {
+      const { error: userError } = await supabaseAdmin
+        .from('users')
+        .update({
+          newsletter_subscribed: body.newsletterSubscribed,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id)
+
+      if (userError) {
+        console.error('Errore aggiornamento newsletter:', userError)
+        // Non blocchiamo, il resto è stato salvato
+      }
     }
 
     return NextResponse.json({ success: true, data })

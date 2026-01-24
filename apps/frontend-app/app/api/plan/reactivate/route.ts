@@ -60,8 +60,14 @@ export async function POST(req: NextRequest) {
 
     console.log('🔍 Autenticazione riuscita per utente:', user.id)
 
+    // Usa il service role per TUTTE le operazioni DB (come in /api/plan/deactivate)
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     // Recupera dati utente correnti con fallback creation
-    let { data: userData, error: userError } = await supabase
+    let { data: userData, error: userError } = await supabaseAdmin
       .from('users')
       .select('id, email, plan, status, stripe_subscription_id, stripe_customer_id')
       .eq('id', user.id)
@@ -70,8 +76,8 @@ export async function POST(req: NextRequest) {
     // Se l'utente non esiste, crealo con dati di default
     if (userError && userError.code === 'PGRST116') {
       console.log('🔧 Utente non trovato, creazione automatica...')
-      
-      const { data: newUser, error: createError } = await supabase
+
+      const { data: newUser, error: createError } = await supabaseAdmin
         .from('users')
         .insert({
           id: user.id,
@@ -140,7 +146,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Riattiva il piano
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('users')
       .update({
         status: 'active',
@@ -158,7 +164,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Log dell'operazione
-    const { error: logError } = await supabase
+    const { error: logError } = await supabaseAdmin
       .from('plan_status_logs')
       .insert({
         user_id: user.id,

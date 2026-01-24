@@ -1,6 +1,6 @@
 /**
  * Pagina dedicata ai servizi digitali con prezzi - ClientSniper
- * Usato per: Visualizzare catalogo completo servizi digitali per utenti PRO
+ * Usato per: Visualizzare catalogo completo servizi digitali per tutti gli utenti
  * Chiamato da: Link dalla sezione servizi suggeriti nel dettaglio lead
  */
 
@@ -8,7 +8,6 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { usePlanStatus } from '@/hooks/usePlanStatus'
 import { useDigitalServices, type DigitalService } from '@/hooks/useDigitalServices'
 import {
   Zap,
@@ -53,7 +52,6 @@ import { useRouter } from 'next/navigation'
 export default function DigitalServicesPage() {
   const router = useRouter()
   const { user } = useAuth()
-  const planStatus = usePlanStatus()
   const { services, servicesByCategory, stats, isLoading, error, fetchServices } = useDigitalServices()
 
   // Stati per filtri e UI
@@ -66,19 +64,12 @@ export default function DigitalServicesPage() {
   const [onlyHighProfit, setOnlyHighProfit] = useState(false)
   const [sortBy, setSortBy] = useState<'name' | 'price_asc' | 'price_desc' | 'popularity'>('name')
 
-  // Verifica accesso PRO (admin hanno sempre accesso)
+  // Carica servizi per tutti gli utenti autenticati
   useEffect(() => {
-    if (user && user.role !== 'admin' && planStatus.plan === 'free') {
-      router.push('/upgrade')
-    }
-  }, [user?.id, user?.role, planStatus.plan, router])
-
-  // Carica servizi (admin hanno sempre accesso)
-  useEffect(() => {
-    if (user && (user.role === 'admin' || planStatus.plan !== 'free')) {
+    if (user) {
       fetchServices()
     }
-  }, [user?.id, user?.role, planStatus.plan])
+  }, [user?.id])
 
   // Funzione per filtrare servizi
   const filteredServices = services.filter(service => {

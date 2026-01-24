@@ -1,6 +1,8 @@
 // API per segnalare contenuti inappropriati nei feedback pubblici
 // Richiede autenticazione e previene segnalazioni multiple
 
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
@@ -54,16 +56,6 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser(token)
     
     if (!user) {
-      return NextResponse.json(
-        { error: 'Devi essere loggato per segnalare contenuti' },
-        { status: 401 }
-      )
-    }
-
-    // Verifica che l'utente sia autenticato
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session) {
       return NextResponse.json(
         { error: 'Devi essere loggato per segnalare contenuti' },
         { status: 401 }

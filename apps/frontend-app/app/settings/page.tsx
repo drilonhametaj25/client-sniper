@@ -649,7 +649,7 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-700 dark:text-gray-300">
                   <div className="flex items-center">
                     <CheckCircle className="w-4 h-4 text-gray-600 dark:text-gray-400 mr-2" />
-                    2 lead al mese
+                    5 lead gratuiti
                   </div>
                   <div className="flex items-center">
                     <CheckCircle className="w-4 h-4 text-gray-600 dark:text-gray-400 mr-2" />

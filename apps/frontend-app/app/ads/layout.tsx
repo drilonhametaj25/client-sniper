@@ -6,7 +6,7 @@ import { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Trova Clienti Già Pronti a Comprare | TrovaMi - Lead Generation',
-  description: 'Scopri clienti con problemi tecnici sui loro siti web. Lead qualificati a partire da 0,33€ - 40x meno di Google Ads. 2 lead gratuiti per iniziare.',
+  description: 'Scopri clienti con problemi tecnici sui loro siti web. Lead qualificati a partire da 0,33€ - 40x meno di Google Ads. 5 lead gratuiti per iniziare.',
   keywords: [
     'trova clienti',
     'lead generation',
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Trova Clienti Già Pronti a Comprare | TrovaMi',
-    description: 'Lead qualificati a partire da 0,33€ - 40x meno di Google Ads. 2 lead gratuiti per iniziare.',
+    description: 'Lead qualificati a partire da 0,33€ - 40x meno di Google Ads. 5 lead gratuiti per iniziare.',
     images: ['https://trovami.pro/og-ads.jpg']
   },
   alternates: {

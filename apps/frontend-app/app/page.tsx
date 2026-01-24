@@ -36,7 +36,7 @@ export default function HomePage() {
               "@type": "Offer",
               "price": "0",
               "priceCurrency": "EUR",
-              "description": "2 lead gratuiti per iniziare"
+              "description": "5 lead gratuiti per iniziare"
             },
             "creator": {
               "@type": "Organization",
@@ -164,7 +164,7 @@ export default function HomePage() {
                 href="/register" 
                 className="group inline-flex items-center justify-center px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
-                Inizia con 2 Lead Gratuiti
+                Inizia con 5 Lead Gratuiti
                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link 
@@ -448,7 +448,7 @@ export default function HomePage() {
               <span className="block">Primi Lead?</span>
             </h2>
             <p className="text-xl md:text-2xl text-blue-100 mb-12 leading-relaxed">
-              Registrati ora e ricevi <strong className="text-white">2 lead qualificati</strong> completamente gratis. 
+              Registrati ora e ricevi <strong className="text-white">5 lead qualificati</strong> completamente gratis. 
               Nessuna carta di credito richiesta.
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
@@ -594,9 +594,9 @@ export default function HomePage() {
               </div>
             </div>
             <div className="flex items-center space-x-6 text-sm text-gray-400">
-              <span>Made in Italy 🇮🇹</span>
+              <span>P.IVA 07327360488</span>
               <span>•</span>
-              <span>Powered by Drilon Hametaj</span>
+              <span>Made in Italy 🇮🇹</span>
             </div>
           </div>
         </div>

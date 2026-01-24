@@ -93,11 +93,15 @@ export default function UpgradePrompt({
   const { user } = useAuth()
   const [isDismissed, setIsDismissed] = useState(false)
 
+<<<<<<< HEAD
   // Non mostrare per utenti già premium
   const isPro = user?.plan && !['free'].includes(user.plan)
   if (isPro) return null
 
   // Check se già dismissato oggi
+=======
+  // Check se già dismissato oggi - DEVE essere prima di qualsiasi return condizionale
+>>>>>>> c732b54f8c1b7a8ea7ab495e3e4f65c3088c9bdb
   useEffect(() => {
     const dismissKey = `upgrade_prompt_${trigger}_dismissed`
     const dismissed = localStorage.getItem(dismissKey)
@@ -117,6 +121,10 @@ export default function UpgradePrompt({
     setIsDismissed(true)
     onDismiss?.()
   }
+
+  // Non mostrare per utenti già premium
+  const isPro = user?.plan && !['free'].includes(user.plan)
+  if (isPro) return null
 
   if (isDismissed) return null
 
@@ -229,7 +237,7 @@ export default function UpgradePrompt({
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
             className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full overflow-hidden"
           >
             <div className={`bg-gradient-to-r ${colors.bg} p-6 text-white text-center`}>

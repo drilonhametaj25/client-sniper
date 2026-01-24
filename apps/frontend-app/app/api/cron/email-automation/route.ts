@@ -1,26 +1,76 @@
 /**
  * CRON JOB: Email Automation & Retention
- * Eseguito giornalmente per tracciare eventi su Klaviyo
+ * Eseguito giornalmente per inviare email automatiche via SMTP
  *
- * EVENTI TRACCIATI:
- * 1. Utenti inattivi (3+ giorni) → Inactive User
- * 2. Utenti con crediti bassi (≤3) → Credits Low
- * 3. Utenti con crediti esauriti (0) → Credits Depleted
- * 4. Nuovi lead per saved searches → New Leads Available
+ * EMAIL INVIATE:
+ * 1. Utenti inattivi (3, 7, 14, 30 giorni) → Email "Ci manchi"
+ * 2. Utenti con crediti bassi (≤3) → Email alert crediti
+ * 3. Utenti con crediti esauriti (0) → Email upgrade
+ * 4. Nuovi lead per saved searches → Email alert nuovi lead
  *
- * Klaviyo gestisce poi l'invio delle email tramite i Flow configurati
+ * Configurazione SMTP richiesta:
+ * - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
  */
+
+export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { klaviyoServer } from '@/lib/services/klaviyo-server'
+import { smtpEmail } from '@/lib/services/smtp-email'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// POST handler per GitHub Actions
 export async function POST(request: NextRequest) {
+  return runEmailAutomation(request)
+}
+
+/**
+ * Verifica se è il momento di inviare un alert in base alla frequenza
+ */
+function shouldSendSearchAlert(frequency: string, lastSentAt: string | null): boolean {
+  if (!lastSentAt) return true
+
+  const lastSent = new Date(lastSentAt)
+  const now = new Date()
+  const hoursSinceLastSent = (now.getTime() - lastSent.getTime()) / (1000 * 60 * 60)
+
+  switch (frequency) {
+    case 'realtime':
+      return hoursSinceLastSent >= 1 // Max 1 email/ora
+    case 'daily':
+      return hoursSinceLastSent >= 24
+    case 'weekly':
+      return hoursSinceLastSent >= 168 // 7 giorni
+    default:
+      return hoursSinceLastSent >= 24
+  }
+}
+
+// GET handler - supporta sia Vercel cron che status check
+export async function GET(request: NextRequest) {
+  // Se è una chiamata Vercel cron, esegui l'automazione
+  const isVercelCron = request.headers.get('user-agent')?.includes('vercel-cron')
+
+  if (isVercelCron) {
+    // Esegui la stessa logica del POST
+    return runEmailAutomation(request)
+  }
+
+  // Altrimenti restituisci solo lo status
+  return NextResponse.json({
+    service: 'email-automation',
+    status: 'ready',
+    smtpConfigured: !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS),
+    timestamp: new Date().toISOString()
+  })
+}
+
+// Funzione condivisa per l'automazione email
+async function runEmailAutomation(request: NextRequest) {
   try {
     // Verifica autorizzazione
     const authHeader = request.headers.get('authorization')
@@ -73,19 +123,16 @@ export async function POST(request: NextRequest) {
           (Date.now() - new Date(user.last_login_at).getTime()) / (1000 * 60 * 60 * 24)
         )
 
-        // Evita di inviare troppi eventi allo stesso utente
-        // Invia solo se sono passati esattamente 3, 7, 14 o 30 giorni
         if ([3, 7, 14, 30].includes(daysSinceLogin)) {
-          const success = await klaviyoServer.trackInactiveUser(user.email, {
-            daysSinceLastLogin: daysSinceLogin,
-            lastLoginDate: user.last_login_at,
-            creditsRemaining: user.credits_remaining || 0,
-            plan: user.plan || 'free'
-          })
+          const success = await smtpEmail.sendInactiveUserEmail(
+            user.email,
+            daysSinceLogin,
+            user.credits_remaining || 0
+          )
 
           if (success) {
             results.inactiveUsers++
-            console.log(`✅ Evento inattivo inviato per ${user.email} (${daysSinceLogin} giorni)`)
+            console.log(`✅ Email inattività inviata a ${user.email} (${daysSinceLogin} giorni)`)
           }
         }
       }
@@ -101,7 +148,7 @@ export async function POST(request: NextRequest) {
       .select('id, email, plan, credits_remaining')
       .gt('credits_remaining', 0)
       .lte('credits_remaining', 3)
-      .not('plan', 'eq', 'free') // Solo utenti a pagamento
+      .not('plan', 'eq', 'free')
       .not('email', 'is', null)
 
     if (lowCreditError) {
@@ -110,18 +157,17 @@ export async function POST(request: NextRequest) {
     } else if (lowCreditUsers && lowCreditUsers.length > 0) {
       console.log(`📋 Trovati ${lowCreditUsers.length} utenti con crediti bassi`)
 
-      // Controlla se abbiamo già inviato questo evento di recente
       for (const user of lowCreditUsers) {
         const { data: recentNotification } = await supabase
           .from('notification_logs')
           .select('id')
           .eq('user_id', user.id)
           .eq('notification_type', 'credits_low')
-          .gte('sent_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // Ultimi 7 giorni
+          .gte('sent_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
           .single()
 
         if (!recentNotification) {
-          const success = await klaviyoServer.trackCreditsLow(
+          const success = await smtpEmail.sendCreditsLowEmail(
             user.email,
             user.credits_remaining,
             user.plan
@@ -130,16 +176,15 @@ export async function POST(request: NextRequest) {
           if (success) {
             results.creditsLowUsers++
 
-            // Log della notifica
             await supabase.from('notification_logs').insert({
               user_id: user.id,
               notification_type: 'credits_low',
-              channel: 'klaviyo',
+              channel: 'smtp',
               subject: 'Credits Low Alert',
               metadata: { credits_remaining: user.credits_remaining }
             })
 
-            console.log(`✅ Evento crediti bassi inviato per ${user.email}`)
+            console.log(`✅ Email crediti bassi inviata a ${user.email}`)
           }
         }
       }
@@ -164,17 +209,16 @@ export async function POST(request: NextRequest) {
       console.log(`📋 Trovati ${depletedUsers.length} utenti con crediti esauriti`)
 
       for (const user of depletedUsers) {
-        // Controlla notifica recente
         const { data: recentNotification } = await supabase
           .from('notification_logs')
           .select('id')
           .eq('user_id', user.id)
           .eq('notification_type', 'credits_depleted')
-          .gte('sent_at', new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()) // Ultimi 3 giorni
+          .gte('sent_at', new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString())
           .single()
 
         if (!recentNotification) {
-          const success = await klaviyoServer.trackCreditsDepleted(user.email, user.plan)
+          const success = await smtpEmail.sendCreditsDepletedEmail(user.email, user.plan)
 
           if (success) {
             results.creditsDepletedUsers++
@@ -182,11 +226,11 @@ export async function POST(request: NextRequest) {
             await supabase.from('notification_logs').insert({
               user_id: user.id,
               notification_type: 'credits_depleted',
-              channel: 'klaviyo',
+              channel: 'smtp',
               subject: 'Credits Depleted Alert'
             })
 
-            console.log(`✅ Evento crediti esauriti inviato per ${user.email}`)
+            console.log(`✅ Email crediti esauriti inviata a ${user.email}`)
           }
         }
       }
@@ -222,7 +266,6 @@ export async function POST(request: NextRequest) {
       console.log(`📋 Trovate ${savedSearches.length} saved searches attive`)
 
       for (const search of savedSearches) {
-        // Verifica frequenza alert
         const shouldSendAlert = shouldSendSearchAlert(
           search.alert_frequency,
           search.last_alert_sent_at
@@ -230,24 +273,20 @@ export async function POST(request: NextRequest) {
 
         if (!shouldSendAlert) continue
 
-        // Trova nuovi lead che matchano i criteri
         let leadQuery = supabase
           .from('leads')
           .select('id, business_name, category, city, score, created_at')
           .gte('score', search.score_min || 0)
           .lte('score', search.score_max || 100)
 
-        // Filtra per data (lead degli ultimi 7 giorni)
         const sevenDaysAgo = new Date()
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
         leadQuery = leadQuery.gte('created_at', sevenDaysAgo.toISOString())
 
-        // Filtra per categorie se specificate
         if (search.categories && search.categories.length > 0) {
           leadQuery = leadQuery.in('category', search.categories)
         }
 
-        // Filtra per città se specificate
         if (search.cities && search.cities.length > 0) {
           leadQuery = leadQuery.in('city', search.cities)
         }
@@ -264,22 +303,27 @@ export async function POST(request: NextRequest) {
         if (matchingLeads && matchingLeads.length > 0) {
           const user = search.users as any
 
+<<<<<<< HEAD
           // Calcola statistiche
           const categories = Array.from(new Set(matchingLeads.map(l => l.category))).slice(0, 3)
           const cities = Array.from(new Set(matchingLeads.map(l => l.city).filter(Boolean))).slice(0, 3)
+=======
+          const categories = [...new Set(matchingLeads.map(l => l.category))].slice(0, 3)
+          const cities = [...new Set(matchingLeads.map(l => l.city).filter(Boolean))].slice(0, 3)
+>>>>>>> c732b54f8c1b7a8ea7ab495e3e4f65c3088c9bdb
           const bestScore = Math.min(...matchingLeads.map(l => l.score))
 
-          const success = await klaviyoServer.trackNewLeadsAvailable(user.email, {
-            count: matchingLeads.length,
-            topCategories: categories,
-            cities: cities as string[],
+          const success = await smtpEmail.sendNewLeadsEmail(
+            user.email,
+            matchingLeads.length,
+            categories,
+            cities as string[],
             bestScore
-          })
+          )
 
           if (success) {
             results.savedSearchAlerts++
 
-            // Aggiorna last_alert_sent_at
             await supabase
               .from('saved_searches')
               .update({
@@ -288,7 +332,7 @@ export async function POST(request: NextRequest) {
               })
               .eq('id', search.id)
 
-            console.log(`✅ Alert saved search inviato per ${user.email} (${matchingLeads.length} lead)`)
+            console.log(`✅ Email nuovi lead inviata a ${user.email} (${matchingLeads.length} lead)`)
           }
         }
       }
@@ -318,36 +362,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
-
-/**
- * Verifica se è il momento di inviare un alert in base alla frequenza
- */
-function shouldSendSearchAlert(frequency: string, lastSentAt: string | null): boolean {
-  if (!lastSentAt) return true
-
-  const lastSent = new Date(lastSentAt)
-  const now = new Date()
-  const hoursSinceLastSent = (now.getTime() - lastSent.getTime()) / (1000 * 60 * 60)
-
-  switch (frequency) {
-    case 'realtime':
-      return hoursSinceLastSent >= 1 // Max 1 email/ora
-    case 'daily':
-      return hoursSinceLastSent >= 24
-    case 'weekly':
-      return hoursSinceLastSent >= 168 // 7 giorni
-    default:
-      return hoursSinceLastSent >= 24
-  }
-}
-
-// GET per verificare stato
-export async function GET() {
-  return NextResponse.json({
-    service: 'email-automation',
-    status: 'ready',
-    klaviyoConfigured: !!process.env.KLAVIYO_PRIVATE_KEY,
-    timestamp: new Date().toISOString()
-  })
 }

@@ -127,14 +127,9 @@ export async function GET(request: NextRequest) {
       )
     }
     
-    // ⚡ OTTIMIZZAZIONE: Query principale ottimizzata con meno campi se non necessari
-    const isAdmin = userProfile.role === 'admin'
-    const userBasePlan = getBasePlanType(userProfile.plan)
-    const selectFields = isAdmin || isProOrHigher(userProfile.plan) 
-      ? `id, business_name, website_url, phone, email, address, city, category, score, analysis, created_at, last_seen_at`
-      : userBasePlan === 'starter'
-      ? `id, business_name, website_url, city, category, score, created_at`
-      : `id, business_name, city, category, score, created_at`
+    // Tutti i piani vedono tutti i dati - i piani differiscono solo per crediti e funzionalità (CRM per PRO)
+    // Questo permette di mostrare informazioni REALI nelle card bloccate (contatti disponibili, problemi tecnici)
+    const selectFields = `id, business_name, website_url, phone, email, address, city, category, score, analysis, created_at, last_seen_at`
     
     let query = supabaseAdmin
       .from('leads')

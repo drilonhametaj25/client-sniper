@@ -38,11 +38,17 @@ import {
 import AdvancedFilters, { AdvancedFiltersState } from '@/components/AdvancedFilters'
 import { TourTarget } from '@/components/onboarding/TourTarget'
 import UpgradeUrgencyBanner from '@/components/UpgradeUrgencyBanner'
+<<<<<<< HEAD
 import BulkActionsBar from '@/components/BulkActionsBar'
 import ExportDropdown from '@/components/ExportDropdown'
 import ViewSwitcher, { ViewType } from '@/components/ViewSwitcher'
 import LeadGridView from '@/components/LeadGridView'
 import { CheckSquare, Square, LayoutGrid, List } from 'lucide-react'
+=======
+import FirstTimeUserModal from '@/components/FirstTimeUserModal'
+import { useOnboarding } from '@/contexts/OnboardingContext'
+import EmailTemplatePreview from '@/components/EmailTemplatePreview'
+>>>>>>> c732b54f8c1b7a8ea7ab495e3e4f65c3088c9bdb
 
 interface Lead extends LeadWithCRM {
   phone?: string
@@ -63,6 +69,7 @@ interface Settings {
 export default function ClientDashboard() {
   const { user, loading, refreshProfile } = useAuth()
   const router = useRouter()
+  const { startTour } = useOnboarding()
   const [leads, setLeads] = useState<Lead[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [settings, setSettings] = useState<Settings>({ free_limit: 2, starter_limit: 50, pro_limit: 200, agency_limit: 500 })
@@ -126,9 +133,14 @@ export default function ClientDashboard() {
   const cityInputRef = useRef<HTMLInputElement>(null)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 })
 
+<<<<<<< HEAD
   // Stato per bulk selection e view
   const [selectedLeads, setSelectedLeads] = useState<string[]>([])
   const [currentView, setCurrentView] = useState<ViewType>('list')
+=======
+  // Stato per FirstTimeUserModal (onboarding nuovi utenti)
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false)
+>>>>>>> c732b54f8c1b7a8ea7ab495e3e4f65c3088c9bdb
 
   // Calcola posizione del dropdown
   const calculateDropdownPosition = () => {
@@ -291,63 +303,72 @@ export default function ClientDashboard() {
   }
 
   // Funzione per applicare filtri avanzati lato client (fallback)
+  // NOTA: Non applica filtri per campi che non esistono nei dati (per utenti FREE/STARTER)
   const applyAdvancedFilters = (leadsToFilter: Lead[]) => {
+    // Determina se l'utente ha accesso ai campi avanzati
+    const hasAdvancedAccess = isProOrHigher(userProfile?.plan || 'free')
+
     return leadsToFilter.filter(lead => {
-      // Range punteggio
+      // Range punteggio - sempre disponibile
       if (lead.score < advancedFilters.scoreRange.min || lead.score > advancedFilters.scoreRange.max) {
         return false
       }
-      
-      // Filtri contatti
-      if (advancedFilters.hasEmail && (!lead.email || lead.email.trim() === '')) {
-        return false
+
+      // Filtri contatti - solo se utente ha accesso E il campo esiste nei dati
+      // (l'API gestisce il filtro server-side, qui è solo un fallback di sicurezza)
+      if (hasAdvancedAccess) {
+        if (advancedFilters.hasEmail && 'email' in lead && (!lead.email || lead.email.trim() === '')) {
+          return false
+        }
+        if (advancedFilters.hasPhone && 'phone' in lead && (!lead.phone || lead.phone.trim() === '')) {
+          return false
+        }
       }
-      if (advancedFilters.hasPhone && (!lead.phone || lead.phone.trim() === '')) {
-        return false
+
+      // Problemi tecnici - solo se utente ha accesso E analysis esiste
+      if (hasAdvancedAccess && lead.analysis) {
+        if (advancedFilters.technicalIssues.noGoogleAds) {
+          const hasGoogleAds = lead.analysis?.tracking?.hasGoogleAds === true
+          if (hasGoogleAds) return false
+        }
+
+        if (advancedFilters.technicalIssues.noFacebookPixel) {
+          const hasFacebookPixel = lead.analysis?.tracking?.hasFacebookPixel === true
+          if (hasFacebookPixel) return false
+        }
+
+        if (advancedFilters.technicalIssues.slowLoading) {
+          const loadTime = lead.analysis?.performance?.loadTime
+          if (!loadTime || loadTime < 3.0) return false
+        }
+
+        if (advancedFilters.technicalIssues.noSSL) {
+          const hasSSL = lead.analysis?.security?.hasSSL === true
+          if (hasSSL) return false
+        }
       }
-      
-      // Problemi tecnici - controlli sull'analysis
-      if (advancedFilters.technicalIssues.noGoogleAds) {
-        const hasGoogleAds = lead.analysis?.tracking?.hasGoogleAds === true
-        if (hasGoogleAds) return false
-      }
-      
-      if (advancedFilters.technicalIssues.noFacebookPixel) {
-        const hasFacebookPixel = lead.analysis?.tracking?.hasFacebookPixel === true
-        if (hasFacebookPixel) return false
-      }
-      
-      if (advancedFilters.technicalIssues.slowLoading) {
-        const loadTime = lead.analysis?.performance?.loadTime
-        if (!loadTime || loadTime < 3.0) return false
-      }
-      
-      if (advancedFilters.technicalIssues.noSSL) {
-        const hasSSL = lead.analysis?.security?.hasSSL === true
-        if (hasSSL) return false
-      }
-      
+
       // Filtri CRM (solo per utenti PRO)
-      if (isProOrHigher(userProfile?.plan || 'free')) {
+      if (hasAdvancedAccess) {
         if (advancedFilters.crmFilters.onlyUncontacted) {
           const crmStatus = (lead as LeadWithCRM).crm_status
           if (crmStatus && crmStatus !== 'new') return false
         }
-        
+
         if (advancedFilters.crmFilters.followUpOverdue) {
           const nextFollowUp = (lead as LeadWithCRM).next_follow_up
           if (!nextFollowUp) return false
-          
+
           const today = new Date().toISOString().split('T')[0]
           if (nextFollowUp >= today) return false
         }
-        
+
         if (advancedFilters.crmFilters.crmStatus !== 'all') {
           const crmStatus = (lead as LeadWithCRM).crm_status
           if (crmStatus !== advancedFilters.crmFilters.crmStatus) return false
         }
       }
-      
+
       return true
     })
   }
@@ -365,6 +386,48 @@ export default function ClientDashboard() {
       localStorage.removeItem('advancedFilters')
     }
   }, [])
+
+  // Pulisci filtri non disponibili per il piano utente
+  useEffect(() => {
+    if (!userProfile?.plan) return
+
+    const hasAdvancedAccess = isProOrHigher(userProfile.plan)
+
+    // Se l'utente non ha accesso ai filtri avanzati, resetta quelli che richiedono PRO
+    if (!hasAdvancedAccess) {
+      const needsReset =
+        advancedFilters.hasEmail ||
+        advancedFilters.hasPhone ||
+        advancedFilters.technicalIssues.noGoogleAds ||
+        advancedFilters.technicalIssues.noFacebookPixel ||
+        advancedFilters.technicalIssues.slowLoading ||
+        advancedFilters.technicalIssues.noSSL ||
+        advancedFilters.crmFilters.onlyUncontacted ||
+        advancedFilters.crmFilters.followUpOverdue ||
+        advancedFilters.crmFilters.crmStatus !== 'all'
+
+      if (needsReset) {
+        const cleanedFilters = {
+          ...advancedFilters,
+          hasEmail: false,
+          hasPhone: false,
+          technicalIssues: {
+            noGoogleAds: false,
+            noFacebookPixel: false,
+            slowLoading: false,
+            noSSL: false
+          },
+          crmFilters: {
+            onlyUncontacted: false,
+            followUpOverdue: false,
+            crmStatus: 'all'
+          }
+        }
+        setAdvancedFilters(cleanedFilters)
+        localStorage.setItem('advancedFilters', JSON.stringify(cleanedFilters))
+      }
+    }
+  }, [userProfile?.plan])
 
   // ⚡ ULTRA-OTTIMIZZATO: Redirect ottimizzato per performance
   useEffect(() => {
@@ -489,6 +552,23 @@ export default function ClientDashboard() {
       loadAllLeadsCount()
     }
   }, [user])
+
+  // Mostra FirstTimeUserModal per nuovi utenti
+  useEffect(() => {
+    if (!user || !userProfile) return
+
+    // Verifica se l'utente è nuovo (ha tutti i 5 crediti gratuiti e non ha mai visto il welcome)
+    const hasSeenWelcome = localStorage.getItem('trovami_welcome_seen') === 'true'
+    const isNewUser = userProfile.credits_remaining === 5 && userProfile.plan === 'free'
+
+    if (isNewUser && !hasSeenWelcome) {
+      // Mostra il modal dopo un breve delay per permettere alla pagina di caricarsi
+      const timer = setTimeout(() => {
+        setShowWelcomeModal(true)
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [user, userProfile])
 
   // Funzione per eseguire ricerca immediata
   const executeSearch = () => {
@@ -1137,6 +1217,7 @@ export default function ClientDashboard() {
     return 'Basso Potenziale'
   }
 
+<<<<<<< HEAD
   // === BULK SELECTION HELPERS ===
   const toggleLeadSelection = (leadId: string) => {
     setSelectedLeads(prev =>
@@ -1215,6 +1296,47 @@ export default function ClientDashboard() {
     }
   }
   // === END BULK SELECTION HELPERS ===
+=======
+  // Icone per categoria lead
+  const getCategoryIcon = (category: string): string => {
+    const icons: Record<string, string> = {
+      'ristorante': '🍽️', 'ristoranti': '🍽️', 'pizzeria': '🍕', 'bar': '🍺',
+      'hotel': '🏨', 'albergo': '🏨', 'b&b': '🏠',
+      'dentista': '🦷', 'dentisti': '🦷', 'odontoiatra': '🦷',
+      'avvocato': '⚖️', 'avvocati': '⚖️', 'studio legale': '⚖️',
+      'parrucchiere': '💇', 'parrucchieri': '💇', 'barbiere': '💈',
+      'meccanico': '🔧', 'officina': '🔧', 'autofficina': '🚗',
+      'medico': '⚕️', 'dottore': '⚕️', 'clinica': '🏥',
+      'palestra': '💪', 'fitness': '💪', 'gym': '💪',
+      'negozio': '🛍️', 'shop': '🛍️', 'abbigliamento': '👔',
+      'immobiliare': '🏠', 'agenzia immobiliare': '🏠',
+      'commercialista': '📊', 'consulente': '💼',
+      'fotografo': '📷', 'studio fotografico': '📷',
+      'estetista': '💅', 'centro estetico': '💅', 'spa': '🧖',
+      'fiorista': '💐', 'fiori': '💐',
+      'farmacia': '💊', 'ottico': '👓',
+      'veterinario': '🐾', 'pet shop': '🐾',
+      'architetto': '📐', 'geometra': '📐',
+      'elettricista': '⚡', 'idraulico': '🔧',
+      'assicurazione': '🛡️', 'agenzia': '🏢'
+    }
+    const lowerCategory = category.toLowerCase()
+    for (const [key, icon] of Object.entries(icons)) {
+      if (lowerCategory.includes(key)) return icon
+    }
+    return '🏢'
+  }
+
+  // Badge freshness (quando è stato aggiunto il lead)
+  const getFreshnessBadge = (created_at: string) => {
+    const days = Math.floor((Date.now() - new Date(created_at).getTime()) / 86400000)
+    if (days === 0) return { label: 'Oggi', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' }
+    if (days === 1) return { label: 'Ieri', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' }
+    if (days <= 7) return { label: `${days}g fa`, color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' }
+    if (days <= 30) return { label: `${days}g fa`, color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' }
+    return { label: '30+ giorni', color: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500' }
+  }
+>>>>>>> c732b54f8c1b7a8ea7ab495e3e4f65c3088c9bdb
 
   const getPlanBadge = () => {
     const badges = {
@@ -1269,6 +1391,12 @@ export default function ClientDashboard() {
   const planBadge = getPlanBadge()
   const currentLimit = getPlanLimit()
   const remainingCredits = getAvailableCredits()
+
+  // Check se utente è nuovo (ha tutti i 5 crediti gratuiti = non ha mai usato il tool)
+  const isNewUser = userProfile?.credits_remaining === 5 && userProfile?.plan === 'free'
+
+  // Lead consigliati per nuovi utenti (primi 3 lead con score alto)
+  const recommendedLeads = isNewUser ? leads.filter(l => l.score >= 50).slice(0, 3) : []
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 pt-24">
@@ -1436,6 +1564,95 @@ export default function ClientDashboard() {
           {getBasePlanType(user?.plan || '') === 'free' && (
             <div className="mb-8">
               <UpgradeUrgencyBanner variant="compact" />
+            </div>
+          )}
+
+          {/* Sezione Lead Consigliati per Nuovi Utenti */}
+          {isNewUser && recommendedLeads.length > 0 && (
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-700 rounded-2xl p-6 mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
+                    <span className="mr-2">🎯</span>
+                    Lead Consigliati per Te
+                  </h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Abbiamo selezionato questi lead con alta opportunità per iniziare
+                  </p>
+                </div>
+                <div className="bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100 px-3 py-1 rounded-full text-sm font-medium">
+                  {recommendedLeads.length} lead
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {recommendedLeads.map((lead) => (
+                  <div
+                    key={lead.id}
+                    className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-green-100 dark:border-green-700 hover:shadow-lg transition-shadow"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                          {lead.business_name}
+                        </h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {lead.category} • {lead.city}
+                        </p>
+                      </div>
+                      <div className={`flex-shrink-0 ml-2 px-2 py-1 rounded-full text-xs font-bold ${
+                        lead.score >= 70
+                          ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300'
+                          : lead.score >= 50
+                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300'
+                            : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300'
+                      }`}>
+                        {lead.score}
+                      </div>
+                    </div>
+
+                    {/* Tooltip Perché questo lead */}
+                    <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-2 mb-3">
+                      <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">
+                        💡 Perché questo lead?
+                      </p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                        Score {lead.score} = sito con problemi tecnici risolvibili
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => unlockLead(lead.id)}
+                      disabled={unlockedLeads.has(lead.id) || remainingCredits === 0}
+                      className={`w-full py-2 rounded-lg text-sm font-medium transition-colors ${
+                        unlockedLeads.has(lead.id)
+                          ? 'bg-green-100 text-green-700 cursor-default'
+                          : remainingCredits === 0
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                      }`}
+                    >
+                      {unlockedLeads.has(lead.id)
+                        ? '✓ Sbloccato'
+                        : remainingCredits === 0
+                          ? 'Crediti esauriti'
+                          : '🔓 Sblocca (1 credito)'
+                      }
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Preview Template Email */}
+              <div className="mt-6">
+                <EmailTemplatePreview />
+              </div>
+
+              <div className="mt-4 text-center">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Scorri in basso per vedere tutti i {totalLeads} lead disponibili →
+                </p>
+              </div>
             </div>
           )}
 
@@ -1707,14 +1924,17 @@ export default function ClientDashboard() {
               </div>
             )}
 
-            {/* Nuovo Sistema Filtri Avanzati */}
-            <AdvancedFilters
-              isOpen={showAdvancedFilters}
-              onToggle={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              filters={advancedFilters}
-              onFiltersChange={(filters: AdvancedFiltersState) => setAdvancedFilters(filters)}
-              leadCount={leads.length}
-            />
+            {/* Nuovo Sistema Filtri Avanzati - Nascosto per nuovi utenti */}
+            {!isNewUser && (
+              <AdvancedFilters
+                isOpen={showAdvancedFilters}
+                onToggle={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                filters={advancedFilters}
+                onFiltersChange={(filters: AdvancedFiltersState) => setAdvancedFilters(filters)}
+                leadCount={leads.length}
+                userPlan={userProfile?.plan}
+              />
+            )}
           </TourTarget>
 
           {/* Lista Lead */}
@@ -1814,18 +2034,36 @@ export default function ClientDashboard() {
                                 {lead.business_name}
                               </h3>
                             ) : (
-                              <div className="flex items-center space-x-3">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                  🔒 {translateCategory(lead.category)} in {lead.city}
-                                </h3>
-                                <div className="px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-bold rounded-full animate-pulse">
-                                  LEAD QUALIFICATO
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-xl">
+                                  {getCategoryIcon(lead.category)}
                                 </div>
+                                <div>
+                                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                                    {translateCategory(lead.category)}
+                                  </h3>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    📍 {lead.city}
+                                  </p>
+                                </div>
+                                {/* Freshness badge */}
+                                {lead.created_at && (
+                                  <span className={`text-xs px-2 py-1 rounded-full ${getFreshnessBadge(lead.created_at).color}`}>
+                                    {getFreshnessBadge(lead.created_at).label}
+                                  </span>
+                                )}
                               </div>
                             )}
                             <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getScoreColor(lead.score)}`}>
                               {getScoreLabel(lead.score)} ({lead.score})
                             </div>
+                            {/* Badge Consigliato per lead ad alta opportunità */}
+                            {!isUnlocked && lead.score >= 60 && (
+                              <div className="px-2 py-1 bg-gradient-to-r from-amber-400 to-orange-500 text-white text-xs font-bold rounded-full shadow-sm flex items-center space-x-1">
+                                <span>⭐</span>
+                                <span>Consigliato</span>
+                              </div>
+                            )}
                             {isUnlocked && (
                               <div className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full border border-green-200">
                                 ✓ Sbloccato
@@ -1844,71 +2082,65 @@ export default function ClientDashboard() {
                             </div>
                           )}
                         
-                        {/* Informazioni strategiche per incentivare lo sblocco */}
+                        {/* Informazioni REALI del lead per incentivare lo sblocco */}
                         {!isUnlocked ? (
-                          <div className="space-y-3">
-                            {/* Problemi identificati */}
-                            <div className="flex items-center space-x-2">
-                              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                              <span className="text-sm font-medium text-red-600">
-                                {lead.score <= 20 ? 'Sito con gravi problemi tecnici critici' : 
-                                 lead.score <= 40 ? 'Problemi SEO e performance critici identificati' :
-                                 lead.score <= 60 ? 'Opportunità di miglioramento evidenti' :
-                                 'Potenziale cliente con margini di crescita'}
-                              </span>
-                            </div>
-                            
-                            {/* Valore stimato articolato */}
-                            <div className="flex items-center space-x-2">
-                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                              <span className="text-sm text-gray-700 dark:text-gray-300">
-                                💰 Valore progetto stimato: €{(() => {
-                                  const { min, max } = calculateProjectValue(lead.score, lead.category)
-                                  return `${min.toLocaleString()}-${max.toLocaleString()}`
-                                })()}
-                              </span>
-                            </div>
-                            
-                            {/* Urgenza con emoji dinamica */}
-                            <div className="flex items-center space-x-2">
-                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                              <span className="text-sm text-gray-700 dark:text-gray-300">
-                                {(() => {
-                                  const urgency = getUrgencyLevel(lead.score)
-                                  return `${urgency.icon} Priorità: ${urgency.level}`
-                                })()}
-                              </span>
-                            </div>
-                            
-                            {/* Servizi suggeriti più specifici */}
-                            <div className="flex items-center space-x-2">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                              <span className="text-sm text-gray-700 dark:text-gray-300">
-                                🎯 Servizi richiesti: {(() => {
-                                  const services = getServicesNeeded(lead.score, lead.category)
-                                  return services.slice(0, 2).join(', ')
-                                })()}
-                              </span>
-                            </div>
-
-                            {/* Suggerimenti per la conversione */}
-                            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50 rounded-lg p-3 mt-2">
-                              <div className="flex items-start space-x-2">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5"></div>
-                                <div className="flex-1">
-                                  <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-1">
-                                    📈 Analisi commerciale
-                                  </h4>
-                                  <div className="space-y-1">
-                                    {getConversionTips(lead.score).map((tip, i) => (
-                                      <div key={i} className="text-xs text-blue-700 dark:text-blue-300">
-                                        • {tip}
-                                      </div>
-                                    ))}
-                                  </div>
+                          <div className="space-y-4 mt-3">
+                            {/* Sezione Problemi Tecnici REALI (da analysis) */}
+                            {lead.analysis && (
+                              <div>
+                                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                                  <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                                  Problemi identificati:
+                                </h4>
+                                <div className="flex flex-wrap gap-2">
+                                  {/* No SSL */}
+                                  {lead.analysis?.security?.hasSSL === false && (
+                                    <span className="text-xs bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 px-2 py-1 rounded-lg">🔓 Senza HTTPS</span>
+                                  )}
+                                  {/* Sito lento */}
+                                  {lead.analysis?.performance?.loadTime && lead.analysis.performance.loadTime > 3 && (
+                                    <span className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 px-2 py-1 rounded-lg">🐢 Sito lento ({lead.analysis.performance.loadTime.toFixed(1)}s)</span>
+                                  )}
+                                  {/* No Google Analytics */}
+                                  {lead.analysis?.tracking?.hasGoogleAnalytics === false && (
+                                    <span className="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 px-2 py-1 rounded-lg">📊 No Analytics</span>
+                                  )}
+                                  {/* No Facebook Pixel */}
+                                  {lead.analysis?.tracking?.hasFacebookPixel === false && (
+                                    <span className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-1 rounded-lg">📱 No FB Pixel</span>
+                                  )}
+                                  {/* No Google Ads */}
+                                  {lead.analysis?.tracking?.hasGoogleAds === false && (
+                                    <span className="text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 px-2 py-1 rounded-lg">📣 No Google Ads</span>
+                                  )}
+                                  {/* Mobile non ottimizzato */}
+                                  {lead.analysis?.mobile?.isMobileOptimized === false && (
+                                    <span className="text-xs bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300 px-2 py-1 rounded-lg">📵 Non mobile-friendly</span>
+                                  )}
+                                  {/* SEO mancante */}
+                                  {(lead.analysis?.seo?.hasTitle === false || lead.analysis?.seo?.hasDescription === false) && (
+                                    <span className="text-xs bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300 px-2 py-1 rounded-lg">🔍 SEO carente</span>
+                                  )}
+                                  {/* Fallback se nessun problema specifico ma score basso */}
+                                  {!lead.analysis?.security?.hasSSL !== false &&
+                                   !(lead.analysis?.performance?.loadTime > 3) &&
+                                   lead.analysis?.tracking?.hasGoogleAnalytics !== false &&
+                                   lead.score <= 50 && (
+                                    <span className="text-xs bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded-lg">⚠️ Miglioramenti possibili</span>
+                                  )}
                                 </div>
                               </div>
-                            </div>
+                            )}
+
+                            {/* Fallback se no analysis ma score basso */}
+                            {!lead.analysis && lead.score <= 60 && (
+                              <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                                <span className="text-sm text-orange-600 dark:text-orange-400">
+                                  Score {lead.score}/100 - Opportunità di miglioramento
+                                </span>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
@@ -1947,98 +2179,66 @@ export default function ClientDashboard() {
                             )}
                           </div>
                         ) : (
-                          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border border-yellow-200 dark:border-yellow-700/50 rounded-xl p-4 mt-3">
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1">
-                                {/* Contiamo i dati disponibili SOLO se il piano li supporta */}
-                                {(() => {
-                                  const userPlan = userProfile?.plan || 'free'
-                                  const isProOrAdmin = isProOrHigher(userPlan) || userProfile?.role === 'admin'
-                                  
-                                  // Solo per piani Pro/Admin controlliamo i contatti (perché l'API li restituisce)
-                                  if (isProOrAdmin) {
-                                    // Verifica più rigorosa: controlla che i campi esistano e non siano vuoti
-                                    const hasPhone = lead.phone && typeof lead.phone === 'string' && lead.phone.trim() !== ''
-                                    const hasEmail = lead.email && typeof lead.email === 'string' && lead.email.trim() !== '' && lead.email !== 'null'
-                                    const hasAddress = lead.address && typeof lead.address === 'string' && lead.address.trim() !== ''
-                                    
-                                    const availableContacts = [
-                                      hasPhone && '📱 Numero di telefono diretto',
-                                      hasEmail && '✉️ Email aziendale verificata', 
-                                      hasAddress && '📍 Indirizzo completo ufficio'
-                                    ].filter(Boolean)
-                                    
-                                    const hasContactData = availableContacts.length > 0
-                                    
-                                    return hasContactData ? (
-                                      <>
-                                        <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
-                                          📞 {availableContacts.length} Contatt{availableContacts.length === 1 ? 'o' : 'i'} Disponibil{availableContacts.length === 1 ? 'e' : 'i'}
-                                        </h4>
-                                        <div className="space-y-2">
-                                          {hasPhone && (
-                                            <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
-                                              <Phone className="h-4 w-4" />
-                                              <span>📱 Numero di telefono diretto</span>
-                                            </div>
-                                          )}
-                                          {hasEmail && (
-                                            <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
-                                              <Mail className="h-4 w-4" />
-                                              <span>✉️ Email aziendale verificata</span>
-                                            </div>
-                                          )}
-                                          {hasAddress && (
-                                            <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
-                                              <MapPin className="h-4 w-4" />
-                                              <span>📍 Indirizzo completo ufficio</span>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
-                                          🏢 Dettagli Azienda Completi
-                                        </h4>
-                                        <div className="space-y-2">
-                                          <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
-                                            <span>📄 Nome e dettagli azienda completi</span>
-                                          </div>
-                                          <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
-                                            <span>🌐 Analisi tecnica dettagliata del sito</span>
-                                          </div>
-                                        </div>
-                                      </>
-                                    )
-                                  } else {
-                                    // Per piani Free/Starter: mostra benefici generici
-                                    return (
-                                      <>
-                                        <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
-                                          🔓 Dettagli Completi Disponibili
-                                        </h4>
-                                        <div className="space-y-2">
-                                          <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
-                                            <span>🏢 Nome e informazioni azienda</span>
-                                          </div>
-                                          <div className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
-                                            <span>🔗 Accesso diretto al sito web</span>
-                                          </div>
-                                          {getBasePlanType(userPlan) === 'free' && (
-                                            <div className="flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400">
-                                              <Crown className="h-4 w-4" />
-                                              <span>💎 Upgrade per contatti diretti</span>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </>
-                                    )
-                                  }
-                                })()}
-                              </div>
-                              <div className="text-2xl">🔓</div>
-                            </div>
+                          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 mt-3">
+                            {(() => {
+                              // Verifica REALE dei dati nel DB (ora l'API restituisce tutto a tutti)
+                              const hasPhone = lead.phone && typeof lead.phone === 'string' && lead.phone.trim() !== ''
+                              const hasEmail = lead.email && typeof lead.email === 'string' && lead.email.trim() !== '' && lead.email !== 'null'
+                              const hasAddress = lead.address && typeof lead.address === 'string' && lead.address.trim() !== ''
+                              const contactCount = [hasPhone, hasEmail, hasAddress].filter(Boolean).length
+
+                              if (contactCount > 0) {
+                                return (
+                                  <>
+                                    <h4 className="font-medium text-gray-900 dark:text-white mb-2">
+                                      📋 Disponibile allo sblocco:
+                                    </h4>
+                                    <div className="flex flex-wrap gap-2">
+                                      {hasPhone && (
+                                        <span className="text-sm bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 px-2 py-1 rounded-lg">
+                                          📱 Telefono
+                                        </span>
+                                      )}
+                                      {hasEmail && (
+                                        <span className="text-sm bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-1 rounded-lg">
+                                          ✉️ Email
+                                        </span>
+                                      )}
+                                      {hasAddress && (
+                                        <span className="text-sm bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 px-2 py-1 rounded-lg">
+                                          📍 Indirizzo
+                                        </span>
+                                      )}
+                                      <span className="text-sm bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded-lg">
+                                        🏢 Nome azienda
+                                      </span>
+                                      <span className="text-sm bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded-lg">
+                                        🌐 Sito web
+                                      </span>
+                                    </div>
+                                  </>
+                                )
+                              } else {
+                                return (
+                                  <>
+                                    <h4 className="font-medium text-gray-900 dark:text-white mb-2">
+                                      📋 Disponibile allo sblocco:
+                                    </h4>
+                                    <div className="flex flex-wrap gap-2">
+                                      <span className="text-sm bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded-lg">
+                                        🏢 Nome azienda
+                                      </span>
+                                      <span className="text-sm bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded-lg">
+                                        🌐 Sito web
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                      Contatti diretti non disponibili per questo lead
+                                    </p>
+                                  </>
+                                )
+                              }
+                            })()}
                           </div>
                         )}
 
@@ -2250,6 +2450,15 @@ export default function ClientDashboard() {
           )}
         </div>
       </div>
+
+      {/* FirstTimeUserModal per nuovi utenti */}
+      <FirstTimeUserModal
+        isOpen={showWelcomeModal}
+        onClose={() => setShowWelcomeModal(false)}
+        onStartTour={() => startTour('dashboard', true)}
+        userName={user?.email?.split('@')[0]}
+        creditsRemaining={userProfile?.credits_remaining || 5}
+      />
     </div>
   )
 }

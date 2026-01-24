@@ -92,7 +92,7 @@ export class EmailService {
                   🎁 Cosa ottieni con il piano gratuito:
                 </h3>
                 <ul style="color: #4a5568; margin: 0; padding-left: 20px; line-height: 1.8;">
-                  <li><strong>2 lead gratuiti</strong> per iniziare</li>
+                  <li><strong>5 lead gratuiti</strong> per iniziare</li>
                   <li><strong>Analisi tecnica completa</strong> dei siti web</li>
                   <li><strong>Punteggio di priorità</strong> per ogni lead</li>
                   <li><strong>Dashboard intuitiva</strong> per gestire i contatti</li>
@@ -135,7 +135,7 @@ Grazie per esserti registrato alla piattaforma che ti aiuta a trovare clienti po
 Per completare la registrazione, clicca qui: ${confirmationUrl}
 
 Cosa ottieni con il piano gratuito:
-• 2 lead gratuiti per iniziare
+• 5 lead gratuiti per iniziare
 • Analisi tecnica completa dei siti web  
 • Punteggio di priorità per ogni lead
 • Dashboard intuitiva per gestire i contatti
@@ -150,7 +150,7 @@ Hai domande? Rispondi a questa email!
   // Template email di benvenuto post-conferma
   static getWelcomeEmailTemplate(userEmail: string, dashboardUrl: string): EmailTemplate {
     return {
-      subject: '🎉 Account confermato! I tuoi 2 lead gratuiti ti aspettano',
+      subject: '🎉 Account confermato! I tuoi 5 lead gratuiti ti aspettano',
       html: `
         <!DOCTYPE html>
         <html>
@@ -202,7 +202,7 @@ Hai domande? Rispondi a questa email!
                 </h3>
                 <ol style="color: #4a5568; margin: 0; padding-left: 20px; line-height: 1.8;">
                   <li>Accedi alla dashboard</li>
-                  <li>Esplora i tuoi <strong>2 lead gratuiti</strong></li>
+                  <li>Esplora i tuoi <strong>5 lead gratuiti</strong></li>
                   <li>Studia l'analisi tecnica di ogni sito</li>
                   <li>Contatta i clienti potenziali più promettenti</li>
                 </ol>
@@ -235,7 +235,7 @@ Accedi alla dashboard: ${dashboardUrl}
 
 Come iniziare subito:
 1. Accedi alla dashboard
-2. Esplora i tuoi 2 lead gratuiti
+2. Esplora i tuoi 5 lead gratuiti
 3. Studia l'analisi tecnica di ogni sito
 4. Contatta i clienti potenziali più promettenti
 

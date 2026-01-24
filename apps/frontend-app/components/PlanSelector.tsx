@@ -31,9 +31,9 @@ const plans: Plan[] = [
     id: 'free',
     name: 'Free',
     price: 0,
-    credits: 2,
+    credits: 5,
     features: [
-      '2 lead totali (lifetime)',
+      '5 lead gratuiti',
       'Informazioni base',
       'Supporto community'
     ]
@@ -194,7 +194,7 @@ export default function PlanSelector({
                 )}
               </div>
               <p className="text-sm text-gray-600 mt-2">
-                {plan.id === 'free' ? '2 lead totali' : `${plan.credits} lead al mese`}
+                {plan.id === 'free' ? '5 lead gratuiti' : `${plan.credits} lead al mese`}
               </p>
               {plan.price > 0 && (
                 <div className="mt-2 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-medium">

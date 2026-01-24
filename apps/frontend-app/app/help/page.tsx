@@ -31,7 +31,7 @@ export default function HelpCenter() {
       question: 'Come iniziare con TrovaMi?',
       answer: `Iniziare è semplicissimo:
       
-      1. **Registrati** con la tua email - ricevi 2 lead gratuiti
+      1. **Registrati** con la tua email - ricevi 5 lead gratuiti
       2. **Conferma l'account** tramite email di verifica  
       3. **Accedi alla dashboard** e esplora i tuoi primi lead
       4. **Studia l'analisi tecnica** per capire i problemi dei siti
@@ -62,7 +62,7 @@ export default function HelpCenter() {
       category: 'plans',
       question: 'Qual è la differenza tra i piani?',
       answer: `**Piano FREE (Sempre gratuito)**
-      - 2 lead per sempre
+      - 5 lead gratuiti
       - Analisi tecnica completa
       - Dashboard base
       
@@ -121,7 +121,7 @@ export default function HelpCenter() {
       
       **Nessun rimborso** per periodi già utilizzati, ma mantieni l'accesso fino alla scadenza del periodo pagato.
       
-      **Downgrade a FREE:** Mantieni sempre i 2 lead gratuiti, anche dopo aver avuto piani premium.`
+      **Downgrade a FREE:** Mantieni sempre i 5 lead gratuiti, anche dopo aver avuto piani premium.`
     },
     {
       id: 5,

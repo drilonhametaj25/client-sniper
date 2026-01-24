@@ -6,6 +6,8 @@
 // - Credits Renewed: al rinnovo subscription
 // - Subscription Changed: cambio piano (upgrade/downgrade)
 
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
@@ -644,7 +646,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     .eq('name', 'free')
     .single()
 
-  const freeCredits = freePlanData?.max_credits || 2
+  const freeCredits = freePlanData?.max_credits || 5
 
   // Downgrade a piano gratuito
   const { error } = await supabase

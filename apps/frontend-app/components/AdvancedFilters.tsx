@@ -54,6 +54,14 @@ interface AdvancedFiltersProps {
   filters: AdvancedFiltersState
   onFiltersChange: (filters: AdvancedFiltersState) => void
   leadCount: number
+  userPlan?: string // 'free' | 'starter' | 'pro' | 'agency' etc.
+}
+
+// Helper per determinare se un piano ha accesso ai dettagli avanzati
+const hasAdvancedAccess = (plan?: string): boolean => {
+  if (!plan) return false
+  const basePlan = plan.replace('_annual', '').replace('_monthly', '')
+  return ['pro', 'agency', 'admin'].includes(basePlan)
 }
 
 const DEFAULT_FILTERS: AdvancedFiltersState = {
@@ -82,13 +90,17 @@ const CRM_STATUS_OPTIONS = [
   { value: 'lost', label: 'Perso' }
 ]
 
-export default function AdvancedFilters({ 
-  isOpen, 
-  onToggle, 
-  filters, 
-  onFiltersChange, 
-  leadCount 
+export default function AdvancedFilters({
+  isOpen,
+  onToggle,
+  filters,
+  onFiltersChange,
+  leadCount,
+  userPlan
 }: AdvancedFiltersProps) {
+
+  // Determina se l'utente ha accesso ai filtri avanzati (email, phone, technical)
+  const canUseAdvancedFilters = hasAdvancedAccess(userPlan)
   
   const handleFilterChange = (newFilters: Partial<AdvancedFiltersState>) => {
     const updatedFilters = { ...filters, ...newFilters }
@@ -136,24 +148,28 @@ export default function AdvancedFilters({
 
   const getActiveFiltersCount = () => {
     let count = 0
-    
+
     // Range punteggio (attivo se non è 0-100)
     if (filters.scoreRange.min > 0 || filters.scoreRange.max < 100) count++
-    
-    // Filtri booleani semplici
-    if (filters.hasEmail) count++
-    if (filters.hasPhone) count++
-    
-    // Problemi tecnici
-    Object.values(filters.technicalIssues).forEach(issue => {
-      if (issue) count++
-    })
-    
-    // Filtri CRM
-    if (filters.crmFilters.onlyUncontacted) count++
-    if (filters.crmFilters.followUpOverdue) count++
-    if (filters.crmFilters.crmStatus !== 'all') count++
-    
+
+    // Filtri booleani semplici (solo se utente ha accesso)
+    if (canUseAdvancedFilters) {
+      if (filters.hasEmail) count++
+      if (filters.hasPhone) count++
+
+      // Problemi tecnici
+      Object.values(filters.technicalIssues).forEach(issue => {
+        if (issue) count++
+      })
+    }
+
+    // Filtri CRM (disponibili per utenti PRO+)
+    if (canUseAdvancedFilters) {
+      if (filters.crmFilters.onlyUncontacted) count++
+      if (filters.crmFilters.followUpOverdue) count++
+      if (filters.crmFilters.crmStatus !== 'all') count++
+    }
+
     return count
   }
 
@@ -253,86 +269,111 @@ export default function AdvancedFilters({
             </div>
           </div>
 
-          {/* Filtri Contatti */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium text-gray-900 dark:text-white">Informazioni Contatto</h4>
-            <div className="space-y-2">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={filters.hasEmail}
-                  onChange={(e) => handleFilterChange({ hasEmail: e.target.checked })}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <Mail className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Solo con email</span>
-              </label>
-              
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={filters.hasPhone}
-                  onChange={(e) => handleFilterChange({ hasPhone: e.target.checked })}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <Phone className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Solo con telefono</span>
-              </label>
-            </div>
-          </div>
+          {/* Filtri Contatti - Solo per utenti PRO+ */}
+          {canUseAdvancedFilters ? (
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white">Informazioni Contatto</h4>
+              <div className="space-y-2">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={filters.hasEmail}
+                    onChange={(e) => handleFilterChange({ hasEmail: e.target.checked })}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <Mail className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Solo con email</span>
+                </label>
 
-          {/* Problemi Tecnici */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" />
-              Problemi Tecnici
-            </h4>
-            <div className="space-y-2">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={filters.technicalIssues.noGoogleAds}
-                  onChange={(e) => handleTechnicalIssueChange('noGoogleAds', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <Zap className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Senza Google Ads</span>
-              </label>
-              
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={filters.technicalIssues.noFacebookPixel}
-                  onChange={(e) => handleTechnicalIssueChange('noFacebookPixel', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <Eye className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Senza Facebook Pixel</span>
-              </label>
-              
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={filters.technicalIssues.slowLoading}
-                  onChange={(e) => handleTechnicalIssueChange('slowLoading', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <Gauge className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Caricamento lento (&gt;3s)</span>
-              </label>
-              
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={filters.technicalIssues.noSSL}
-                  onChange={(e) => handleTechnicalIssueChange('noSSL', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <Shield className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Senza SSL</span>
-              </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={filters.hasPhone}
+                    onChange={(e) => handleFilterChange({ hasPhone: e.target.checked })}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <Phone className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Solo con telefono</span>
+                </label>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-gray-400 dark:text-gray-500">Informazioni Contatto</h4>
+              <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-dashed border-gray-200 dark:border-gray-600">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Passa al piano <span className="font-semibold text-blue-600 dark:text-blue-400">Pro</span> per filtrare per email e telefono
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Problemi Tecnici - Solo per utenti PRO+ */}
+          {canUseAdvancedFilters ? (
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Problemi Tecnici
+              </h4>
+              <div className="space-y-2">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={filters.technicalIssues.noGoogleAds}
+                    onChange={(e) => handleTechnicalIssueChange('noGoogleAds', e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <Zap className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Senza Google Ads</span>
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={filters.technicalIssues.noFacebookPixel}
+                    onChange={(e) => handleTechnicalIssueChange('noFacebookPixel', e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <Eye className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Senza Facebook Pixel</span>
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={filters.technicalIssues.slowLoading}
+                    onChange={(e) => handleTechnicalIssueChange('slowLoading', e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <Gauge className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Caricamento lento (&gt;3s)</span>
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={filters.technicalIssues.noSSL}
+                    onChange={(e) => handleTechnicalIssueChange('noSSL', e.target.checked)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <Shield className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Senza SSL</span>
+                </label>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-gray-400 dark:text-gray-500 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Problemi Tecnici
+              </h4>
+              <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-dashed border-gray-200 dark:border-gray-600">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Passa al piano <span className="font-semibold text-blue-600 dark:text-blue-400">Pro</span> per filtrare per problemi tecnici
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Filtri CRM */}
 

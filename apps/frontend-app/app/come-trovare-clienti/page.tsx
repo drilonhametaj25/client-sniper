@@ -45,7 +45,7 @@ export default function ComeTrovareClientiPage() {
               href="/register" 
               className="inline-flex items-center px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl"
             >
-              Inizia con 2 Lead Gratuiti
+              Inizia con 5 Lead Gratuiti
               <ArrowRight className="ml-2 w-5 h-5" />
             </Link>
           </div>
@@ -170,7 +170,7 @@ export default function ComeTrovareClientiPage() {
             Pronto a Trovare i Tuoi Primi Lead Qualificati?
           </h2>
           <p className="text-xl text-blue-100 mb-8">
-            Registrati gratis e ricevi 2 lead qualificati per testare la piattaforma. 
+            Registrati gratis e ricevi 5 lead qualificati per testare la piattaforma. 
             Nessuna carta di credito richiesta.
           </p>
           <Link 

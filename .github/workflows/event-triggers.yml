@@ -1,0 +1,43 @@
+name: Event Triggers
+
+on:
+  schedule:
+    # Ogni 15 minuti
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    # Permette trigger manuale
+
+jobs:
+  process-event-triggers:
+    runs-on: ubuntu-latest
+    environment: Production
+    timeout-minutes: 10
+
+    steps:
+      - name: Process Event Triggers
+        run: |
+          echo "⚡ Starting event triggers processor..."
+          echo "Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.APP_URL }}/api/cron/event-triggers")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Response code: $http_code"
+          echo "Response body: $body"
+
+          if [ "$http_code" != "200" ]; then
+            echo "❌ Event triggers failed with status $http_code"
+            exit 1
+          fi
+
+          echo "✅ Event triggers processed successfully!"
+
+      - name: Log Results
+        if: always()
+        run: |
+          echo "📊 Event triggers job completed at $(date -u +"%Y-%m-%dT%H:%M:%SZ")"

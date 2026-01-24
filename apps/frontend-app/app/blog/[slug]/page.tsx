@@ -11,7 +11,7 @@ import ReactMarkdown from 'react-markdown'
 import { getPostBySlug, getRecentPosts } from '@/lib/blog-data'
 import { getPostContent } from '@/lib/content'
 import { BlogPost } from '@/lib/types/blog'
-import { Calendar, Clock, User, Tag, ArrowLeft, TrendingUp } from 'lucide-react'
+import { Calendar, Clock, Tag, ArrowLeft, TrendingUp } from 'lucide-react'
 
 interface BlogPostPageProps {
   params: {
@@ -37,7 +37,6 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
       description: post.excerpt,
       type: 'article',
       publishedTime: post.date,
-      authors: [post.author],
       tags: post.tags,
       url: `https://trovami.pro/blog/${post.slug}`
     },
@@ -105,10 +104,6 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
           <div className="flex items-center justify-between flex-wrap gap-4 pb-6 border-b border-gray-200">
             <div className="flex items-center space-x-6 text-sm text-gray-500">
               <div className="flex items-center">
-                <User className="h-4 w-4 mr-2" />
-                <span>{post.author}</span>
-              </div>
-              <div className="flex items-center">
                 <Calendar className="h-4 w-4 mr-2" />
                 <span>{post.date}</span>
               </div>
@@ -145,7 +140,7 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
               href="/register"
               className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 font-medium"
             >
-              Inizia Gratis - 2 Lead Inclusi
+              Inizia Gratis - 5 Lead Inclusi
               <TrendingUp className="ml-2 h-4 w-4" />
             </Link>
           </div>
@@ -201,7 +196,7 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
             <div className="bg-white rounded-lg p-4 shadow-sm">
               <h4 className="font-medium text-gray-900 mb-2">Come posso iniziare con TrovaMi?</h4>
               <p className="text-gray-600 text-sm">
-                Registrati gratuitamente e ricevi 2 lead qualificati per testare il servizio. 
+                Registrati gratuitamente e ricevi 5 lead qualificati per testare il servizio. 
                 Non serve carta di credito per iniziare.
               </p>
             </div>

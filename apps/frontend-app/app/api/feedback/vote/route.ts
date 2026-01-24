@@ -1,6 +1,8 @@
 // API per gestire voti up/down sui feedback pubblici
 // Richiede autenticazione e previene voti multipli
 
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
