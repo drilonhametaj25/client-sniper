@@ -38,17 +38,11 @@ import {
 import AdvancedFilters, { AdvancedFiltersState } from '@/components/AdvancedFilters'
 import { TourTarget } from '@/components/onboarding/TourTarget'
 import UpgradeUrgencyBanner from '@/components/UpgradeUrgencyBanner'
-<<<<<<< HEAD
 import BulkActionsBar from '@/components/BulkActionsBar'
 import ExportDropdown from '@/components/ExportDropdown'
 import ViewSwitcher, { ViewType } from '@/components/ViewSwitcher'
 import LeadGridView from '@/components/LeadGridView'
 import { CheckSquare, Square, LayoutGrid, List } from 'lucide-react'
-=======
-import FirstTimeUserModal from '@/components/FirstTimeUserModal'
-import { useOnboarding } from '@/contexts/OnboardingContext'
-import EmailTemplatePreview from '@/components/EmailTemplatePreview'
->>>>>>> c732b54f8c1b7a8ea7ab495e3e4f65c3088c9bdb
 
 interface Lead extends LeadWithCRM {
   phone?: string
@@ -133,14 +127,9 @@ export default function ClientDashboard() {
   const cityInputRef = useRef<HTMLInputElement>(null)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 })
 
-<<<<<<< HEAD
   // Stato per bulk selection e view
   const [selectedLeads, setSelectedLeads] = useState<string[]>([])
   const [currentView, setCurrentView] = useState<ViewType>('list')
-=======
-  // Stato per FirstTimeUserModal (onboarding nuovi utenti)
-  const [showWelcomeModal, setShowWelcomeModal] = useState(false)
->>>>>>> c732b54f8c1b7a8ea7ab495e3e4f65c3088c9bdb
 
   // Calcola posizione del dropdown
   const calculateDropdownPosition = () => {
@@ -1217,7 +1206,6 @@ export default function ClientDashboard() {
     return 'Basso Potenziale'
   }
 
-<<<<<<< HEAD
   // === BULK SELECTION HELPERS ===
   const toggleLeadSelection = (leadId: string) => {
     setSelectedLeads(prev =>
@@ -1296,47 +1284,6 @@ export default function ClientDashboard() {
     }
   }
   // === END BULK SELECTION HELPERS ===
-=======
-  // Icone per categoria lead
-  const getCategoryIcon = (category: string): string => {
-    const icons: Record<string, string> = {
-      'ristorante': '🍽️', 'ristoranti': '🍽️', 'pizzeria': '🍕', 'bar': '🍺',
-      'hotel': '🏨', 'albergo': '🏨', 'b&b': '🏠',
-      'dentista': '🦷', 'dentisti': '🦷', 'odontoiatra': '🦷',
-      'avvocato': '⚖️', 'avvocati': '⚖️', 'studio legale': '⚖️',
-      'parrucchiere': '💇', 'parrucchieri': '💇', 'barbiere': '💈',
-      'meccanico': '🔧', 'officina': '🔧', 'autofficina': '🚗',
-      'medico': '⚕️', 'dottore': '⚕️', 'clinica': '🏥',
-      'palestra': '💪', 'fitness': '💪', 'gym': '💪',
-      'negozio': '🛍️', 'shop': '🛍️', 'abbigliamento': '👔',
-      'immobiliare': '🏠', 'agenzia immobiliare': '🏠',
-      'commercialista': '📊', 'consulente': '💼',
-      'fotografo': '📷', 'studio fotografico': '📷',
-      'estetista': '💅', 'centro estetico': '💅', 'spa': '🧖',
-      'fiorista': '💐', 'fiori': '💐',
-      'farmacia': '💊', 'ottico': '👓',
-      'veterinario': '🐾', 'pet shop': '🐾',
-      'architetto': '📐', 'geometra': '📐',
-      'elettricista': '⚡', 'idraulico': '🔧',
-      'assicurazione': '🛡️', 'agenzia': '🏢'
-    }
-    const lowerCategory = category.toLowerCase()
-    for (const [key, icon] of Object.entries(icons)) {
-      if (lowerCategory.includes(key)) return icon
-    }
-    return '🏢'
-  }
-
-  // Badge freshness (quando è stato aggiunto il lead)
-  const getFreshnessBadge = (created_at: string) => {
-    const days = Math.floor((Date.now() - new Date(created_at).getTime()) / 86400000)
-    if (days === 0) return { label: 'Oggi', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' }
-    if (days === 1) return { label: 'Ieri', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' }
-    if (days <= 7) return { label: `${days}g fa`, color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' }
-    if (days <= 30) return { label: `${days}g fa`, color: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' }
-    return { label: '30+ giorni', color: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500' }
-  }
->>>>>>> c732b54f8c1b7a8ea7ab495e3e4f65c3088c9bdb
 
   const getPlanBadge = () => {
     const badges = {

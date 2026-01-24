@@ -93,15 +93,11 @@ export default function UpgradePrompt({
   const { user } = useAuth()
   const [isDismissed, setIsDismissed] = useState(false)
 
-<<<<<<< HEAD
   // Non mostrare per utenti già premium
   const isPro = user?.plan && !['free'].includes(user.plan)
   if (isPro) return null
 
   // Check se già dismissato oggi
-=======
-  // Check se già dismissato oggi - DEVE essere prima di qualsiasi return condizionale
->>>>>>> c732b54f8c1b7a8ea7ab495e3e4f65c3088c9bdb
   useEffect(() => {
     const dismissKey = `upgrade_prompt_${trigger}_dismissed`
     const dismissed = localStorage.getItem(dismissKey)

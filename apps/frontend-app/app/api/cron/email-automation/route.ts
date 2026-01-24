@@ -303,14 +303,9 @@ async function runEmailAutomation(request: NextRequest) {
         if (matchingLeads && matchingLeads.length > 0) {
           const user = search.users as any
 
-<<<<<<< HEAD
           // Calcola statistiche
           const categories = Array.from(new Set(matchingLeads.map(l => l.category))).slice(0, 3)
           const cities = Array.from(new Set(matchingLeads.map(l => l.city).filter(Boolean))).slice(0, 3)
-=======
-          const categories = [...new Set(matchingLeads.map(l => l.category))].slice(0, 3)
-          const cities = [...new Set(matchingLeads.map(l => l.city).filter(Boolean))].slice(0, 3)
->>>>>>> c732b54f8c1b7a8ea7ab495e3e4f65c3088c9bdb
           const bestScore = Math.min(...matchingLeads.map(l => l.score))
 
           const success = await smtpEmail.sendNewLeadsEmail(
