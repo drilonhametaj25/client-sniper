@@ -42,7 +42,42 @@ import BulkActionsBar from '@/components/BulkActionsBar'
 import ExportDropdown from '@/components/ExportDropdown'
 import ViewSwitcher, { ViewType } from '@/components/ViewSwitcher'
 import LeadGridView from '@/components/LeadGridView'
-import { CheckSquare, Square, LayoutGrid, List } from 'lucide-react'
+import FirstTimeUserModal from '@/components/FirstTimeUserModal'
+import EmailTemplatePreview from '@/components/EmailTemplatePreview'
+import { useOnboarding } from '@/contexts/OnboardingContext'
+import { CheckSquare, Square, LayoutGrid, List, Utensils, Building2, Stethoscope, ShoppingCart, Briefcase, GraduationCap as Education, Dumbbell, Car, Scissors, HelpCircle } from 'lucide-react'
+
+// Helper: Get category icon
+const getCategoryIcon = (category: string) => {
+  const icons: Record<string, React.ReactNode> = {
+    'ristoranti': <Utensils className="w-4 h-4" />,
+    'hotel': <Building2 className="w-4 h-4" />,
+    'medici': <Stethoscope className="w-4 h-4" />,
+    'negozi': <ShoppingCart className="w-4 h-4" />,
+    'servizi': <Briefcase className="w-4 h-4" />,
+    'formazione': <Education className="w-4 h-4" />,
+    'fitness': <Dumbbell className="w-4 h-4" />,
+    'automotive': <Car className="w-4 h-4" />,
+    'bellezza': <Scissors className="w-4 h-4" />,
+  }
+  return icons[category?.toLowerCase()] || <HelpCircle className="w-4 h-4" />
+}
+
+// Helper: Get freshness badge based on creation date
+const getFreshnessBadge = (createdAt: string) => {
+  const now = new Date()
+  const created = new Date(createdAt)
+  const diffHours = (now.getTime() - created.getTime()) / (1000 * 60 * 60)
+
+  if (diffHours < 24) {
+    return { label: 'Nuovo', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' }
+  } else if (diffHours < 72) {
+    return { label: 'Recente', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' }
+  } else if (diffHours < 168) {
+    return { label: 'Questa settimana', color: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' }
+  }
+  return { label: '', color: '' }
+}
 
 interface Lead extends LeadWithCRM {
   phone?: string
@@ -86,6 +121,7 @@ export default function ClientDashboard() {
   const [searchInput, setSearchInput] = useState<string>('') // Input separato per digitazione
   const [showFilters, setShowFilters] = useState(false)
   const [showOnlyUnlocked, setShowOnlyUnlocked] = useState(false) // Nuovo filtro per lead sbloccati
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false) // Modal per nuovi utenti
 
   // Filtri avanzati - sostituiti con sistema unificato
   const [advancedFilters, setAdvancedFilters] = useState({

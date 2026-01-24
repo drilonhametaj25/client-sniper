@@ -118,10 +118,6 @@ export default function UpgradePrompt({
     onDismiss?.()
   }
 
-  // Non mostrare per utenti già premium
-  const isPro = user?.plan && !['free'].includes(user.plan)
-  if (isPro) return null
-
   if (isDismissed) return null
 
   const config = PROMPT_CONFIGS[trigger]

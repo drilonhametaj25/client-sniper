@@ -347,8 +347,8 @@ export async function POST(request: NextRequest) {
       // Tabella potrebbe non esistere
     }
 
-    // Restituisci il PDF
-    return new NextResponse(pdfBuffer, {
+    // Restituisci il PDF (converti Buffer in Uint8Array per compatibilità)
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',

@@ -299,7 +299,7 @@ export class AnalyticsService {
 
   async trackEvent(eventType: string, metadata?: any): Promise<void> {
     try {
-      const { error } = await this.supabase
+      const { error } = await (this.supabase as any)
         .from('analytics_events')
         .insert({
           event_type: eventType,
