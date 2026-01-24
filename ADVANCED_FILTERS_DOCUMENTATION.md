@@ -20,6 +20,7 @@
   - Solo con email verificata
   - Solo con numero telefono
 - **Problemi Tecnici**:
+
   - Senza Google Ads  
   - Senza Facebook Pixel
   - Caricamento lento (>3 secondi)
