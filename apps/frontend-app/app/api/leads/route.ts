@@ -10,17 +10,19 @@ import { getBasePlanType, isProOrHigher, isStarterOrHigher } from '@/lib/utils/p
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
 
-// Client per verificare il token (usa anon key)
-const supabaseClient = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
 
-// Client per operazioni amministrative (usa service role)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function GET(request: NextRequest) {
   
@@ -70,7 +72,7 @@ export async function GET(request: NextRequest) {
     const token = authHeader.replace('Bearer ', '')
     
     // ⚡ OTTIMIZZAZIONE: Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
     
     if (authError || !user) {
       return NextResponse.json(
@@ -81,7 +83,7 @@ export async function GET(request: NextRequest) {
     
 
     // Ottieni il profilo utente con fallback creation (usa service role per scrivere)
-    let { data: userProfile, error: profileError } = await supabaseAdmin
+    let { data: userProfile, error: profileError } = await getSupabaseAdmin()
       .from('users')
       .select('id, role, plan, credits_remaining')
       .eq('id', user.id)
@@ -90,7 +92,7 @@ export async function GET(request: NextRequest) {
     // Se l'utente non esiste, crealo con dati di default
     if (profileError && profileError.code === 'PGRST116') {
       
-      const { data: newUser, error: createError } = await supabaseAdmin
+      const { data: newUser, error: createError } = await getSupabaseAdmin()
         .from('users')
         .insert({
           id: user.id,
@@ -131,14 +133,14 @@ export async function GET(request: NextRequest) {
     // Questo permette di mostrare informazioni REALI nelle card bloccate (contatti disponibili, problemi tecnici)
     const selectFields = `id, business_name, website_url, phone, email, address, city, category, score, analysis, created_at, last_seen_at`
     
-    let query = supabaseAdmin
+    let query = getSupabaseAdmin()
       .from('leads')
       .select(selectFields, { count: 'exact' })
     
     // Filtro per lead sbloccati dall'utente
     if (showOnlyUnlocked) {
       // Recupera i lead sbloccati dall'utente dalla tabella user_unlocked_leads
-      const { data: unlockedLeads, error: unlockedError } = await supabaseAdmin
+      const { data: unlockedLeads, error: unlockedError } = await getSupabaseAdmin()
         .from('user_unlocked_leads')
         .select('lead_id')
         .eq('user_id', user.id)
@@ -231,7 +233,7 @@ export async function GET(request: NextRequest) {
     // 🔥 FILTRI CRM - solo per utenti PRO
     if (isProOrHigher(userProfile.plan) && (onlyUncontacted || followUpOverdue || (crmStatus && crmStatus !== 'all'))) {
       // Ottieni tutti i lead con stati CRM per questo utente
-      const { data: crmData, error: crmError } = await supabaseAdmin
+      const { data: crmData, error: crmError } = await getSupabaseAdmin()
         .from('crm_entries')
         .select('lead_id, status, follow_up_date')
         .eq('user_id', user.id)
@@ -244,7 +246,7 @@ export async function GET(request: NextRequest) {
         
         if (onlyUncontacted) {
           // Lead senza entry CRM o con status 'to_contact'/'new'  
-          const allLeadIds = await supabaseAdmin
+          const allLeadIds = await getSupabaseAdmin()
             .from('leads')
             .select('id')
             .then(({ data }) => data?.map(l => l.id) || [])
@@ -380,7 +382,7 @@ export async function GET(request: NextRequest) {
         const leadIds = leads.map((lead: any) => lead.id)
         
         // Query stato CRM per tutti i lead
-        const { data: crmActivities, error: crmError } = await supabaseAdmin
+        const { data: crmActivities, error: crmError } = await getSupabaseAdmin()
           .from('crm_entries')
           .select(`
             lead_id,

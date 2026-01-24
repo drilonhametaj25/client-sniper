@@ -9,10 +9,12 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,14 +24,14 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Token non valido' }, { status: 401 })
     }
 
     // Recupera o crea gamification data
-    let { data: gamification, error } = await supabaseAdmin
+    let { data: gamification, error } = await getSupabaseAdmin()
       .from('user_gamification')
       .select('*')
       .eq('user_id', user.id)
@@ -37,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     if (error && error.code === 'PGRST116') {
       // Non esiste, crea
-      const { data: newData, error: insertError } = await supabaseAdmin
+      const { data: newData, error: insertError } = await getSupabaseAdmin()
         .from('user_gamification')
         .insert({ user_id: user.id })
         .select()
@@ -54,7 +56,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Recupera achievements sbloccati
-    const { data: userAchievements } = await supabaseAdmin
+    const { data: userAchievements } = await getSupabaseAdmin()
       .from('user_achievements')
       .select(`
         id,
@@ -73,7 +75,7 @@ export async function GET(request: NextRequest) {
       .order('unlocked_at', { ascending: false })
 
     // Recupera tutti gli achievements disponibili
-    const { data: allAchievements } = await supabaseAdmin
+    const { data: allAchievements } = await getSupabaseAdmin()
       .from('achievements')
       .select('*')
       .eq('is_active', true)
@@ -133,7 +135,7 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Token non valido' }, { status: 401 })
@@ -151,7 +153,7 @@ export async function POST(request: NextRequest) {
     // Aggiorna streak
     const today = new Date().toISOString().split('T')[0]
 
-    const { data: gamification } = await supabaseAdmin
+    const { data: gamification } = await getSupabaseAdmin()
       .from('user_gamification')
       .select('*')
       .eq('user_id', user.id)
@@ -159,7 +161,7 @@ export async function POST(request: NextRequest) {
 
     if (!gamification) {
       // Crea se non esiste
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from('user_gamification')
         .insert({ user_id: user.id, last_activity_date: today, current_streak: 1, longest_streak: 1 })
 
@@ -239,7 +241,7 @@ export async function POST(request: NextRequest) {
       if (newTotal >= 5) await awardAchievement(user.id, 'deal_5', newAchievements)
     }
 
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from('user_gamification')
       .update(updateData)
       .eq('user_id', user.id)
@@ -259,7 +261,7 @@ export async function POST(request: NextRequest) {
 
 async function awardAchievement(userId: string, achievementId: string, newAchievements: string[]) {
   try {
-    const { data: existing } = await supabaseAdmin
+    const { data: existing } = await getSupabaseAdmin()
       .from('user_achievements')
       .select('id')
       .eq('user_id', userId)
@@ -268,22 +270,22 @@ async function awardAchievement(userId: string, achievementId: string, newAchiev
 
     if (existing) return
 
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from('user_achievements')
       .insert({ user_id: userId, achievement_id: achievementId })
 
     // Aggiungi XP
-    const { data: achievement } = await supabaseAdmin
+    const { data: achievement } = await getSupabaseAdmin()
       .from('achievements')
       .select('xp_reward')
       .eq('id', achievementId)
       .single()
 
     if (achievement?.xp_reward) {
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from('user_gamification')
         .update({
-          xp_points: supabaseAdmin.rpc('add_xp', { amount: achievement.xp_reward })
+          xp_points: getSupabaseAdmin().rpc('add_xp', { amount: achievement.xp_reward })
         })
         .eq('user_id', userId)
     }

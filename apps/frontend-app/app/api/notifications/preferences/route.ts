@@ -9,10 +9,12 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,14 +24,14 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Token non valido' }, { status: 401 })
     }
 
     // Recupera preferenze esistenti o crea default
-    let { data: preferences, error } = await supabaseAdmin
+    let { data: preferences, error } = await getSupabaseAdmin()
       .from('notification_preferences')
       .select('*')
       .eq('user_id', user.id)
@@ -37,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     if (error && error.code === 'PGRST116') {
       // Non esiste, crea default
-      const { data: newPrefs, error: insertError } = await supabaseAdmin
+      const { data: newPrefs, error: insertError } = await getSupabaseAdmin()
         .from('notification_preferences')
         .insert({
           user_id: user.id,
@@ -69,7 +71,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Recupera anche newsletter_subscribed dalla tabella users
-    const { data: userData } = await supabaseAdmin
+    const { data: userData } = await getSupabaseAdmin()
       .from('users')
       .select('newsletter_subscribed')
       .eq('id', user.id)
@@ -112,7 +114,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Token non valido' }, { status: 401 })
@@ -136,7 +138,7 @@ export async function PUT(request: NextRequest) {
     if (body.preferredSendHour !== undefined) updateData.preferred_send_hour = body.preferredSendHour
     if (body.timezone !== undefined) updateData.timezone = body.timezone
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
       .from('notification_preferences')
       .update(updateData)
       .eq('user_id', user.id)
@@ -150,7 +152,7 @@ export async function PUT(request: NextRequest) {
 
     // Aggiorna newsletter_subscribed nella tabella users (campo separato)
     if (body.newsletterSubscribed !== undefined) {
-      const { error: userError } = await supabaseAdmin
+      const { error: userError } = await getSupabaseAdmin()
         .from('users')
         .update({
           newsletter_subscribed: body.newsletterSubscribed,

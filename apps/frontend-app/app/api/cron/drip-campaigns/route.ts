@@ -22,10 +22,12 @@ import {
 } from '@/lib/services/email-sequences'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 interface CronResults {
   sequences: {
@@ -215,7 +217,7 @@ async function startReengagementSequences(): Promise<number> {
   threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
 
   // Trova utenti che hanno sbloccato lead ma sono inattivi da 3+ giorni
-  const { data: inactiveUsers, error } = await supabase
+  const { data: inactiveUsers, error } = await getSupabase()
     .from('users')
     .select(`
       id,
@@ -250,7 +252,7 @@ async function startReengagementSequences(): Promise<number> {
     // Se inattivo da più di 3 giorni
     if (lastUnlockDate < threeDaysAgo) {
       // Verifica che non abbia già una sequenza reengagement attiva
-      const { data: existingSeq } = await supabase
+      const { data: existingSeq } = await getSupabase()
         .from('email_sequences')
         .select('id')
         .eq('user_id', user.id)

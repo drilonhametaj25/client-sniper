@@ -5,10 +5,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function POST(request: NextRequest) {
   // 🚨 SOLO PER DEVELOPMENT
@@ -33,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Salva l'evento di test
-    await supabase
+    await getSupabase()
       .from('stripe_webhook_events')
       .insert({
         stripe_event_id: mockEvent.id,
@@ -56,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Marca come processato
-    await supabase
+    await getSupabase()
       .from('stripe_webhook_events')
       .update({ 
         processed: true, 
@@ -92,7 +94,7 @@ async function testCheckoutSessionCompleted(session: any) {
   }
 
   // Cerca l'utente
-  const { data: user, error } = await supabase
+  const { data: user, error } = await getSupabase()
     .from('users')
     .select('id, email, plan, credits_remaining')
     .eq('email', userEmail)
@@ -103,7 +105,7 @@ async function testCheckoutSessionCompleted(session: any) {
   }
 
   // Ottieni i crediti del piano
-  const { data: planData, error: planError } = await supabase
+  const { data: planData, error: planError } = await getSupabase()
     .from('plans')
     .select('max_credits')
     .eq('name', planId)
@@ -116,7 +118,7 @@ async function testCheckoutSessionCompleted(session: any) {
   const credits = planData.max_credits
 
   // Simula l'aggiornamento dell'utente
-  const { error: updateError } = await supabase
+  const { error: updateError } = await getSupabase()
     .from('users')
     .update({
       plan: planId,
@@ -131,7 +133,7 @@ async function testCheckoutSessionCompleted(session: any) {
   }
 
   // Crea log
-  await supabase
+  await getSupabase()
     .from('plan_status_logs')
     .insert({
       user_id: user.id,
@@ -162,7 +164,7 @@ async function testInvoicePaymentSucceeded(invoice: any) {
   const subscriptionId = invoice.subscription || 'sub_test'
   
   // Cerca l'utente per subscription
-  const { data: user, error } = await supabase
+  const { data: user, error } = await getSupabase()
     .from('users')
     .select('id, email, plan, credits_remaining')
     .eq('stripe_subscription_id', subscriptionId)
@@ -173,7 +175,7 @@ async function testInvoicePaymentSucceeded(invoice: any) {
   }
 
   // Ottieni i crediti del piano per il rinnovo
-  const { data: planData, error: planError } = await supabase
+  const { data: planData, error: planError } = await getSupabase()
     .from('plans')
     .select('max_credits')
     .eq('name', user.plan)
@@ -191,7 +193,7 @@ async function testInvoicePaymentSucceeded(invoice: any) {
   nextResetDate.setHours(0, 0, 0, 0)
 
   // Aggiorna i crediti
-  const { error: updateError } = await supabase
+  const { error: updateError } = await getSupabase()
     .from('users')
     .update({
       credits_remaining: credits,
@@ -204,7 +206,7 @@ async function testInvoicePaymentSucceeded(invoice: any) {
   }
 
   // Crea log
-  await supabase
+  await getSupabase()
     .from('plan_status_logs')
     .insert({
       user_id: user.id,

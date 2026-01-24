@@ -7,10 +7,12 @@
 
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 // =====================================================
 // TYPES
@@ -65,7 +67,7 @@ export interface GamificationData {
  */
 export async function getUserPreferences(userId: string): Promise<UserPreferences> {
   // 1. Recupera categorie/città dai lead sbloccati
-  const { data: unlockedLeads } = await supabase
+  const { data: unlockedLeads } = await getSupabase()
     .from('user_unlocked_leads')
     .select(`
       lead_id,
@@ -76,7 +78,7 @@ export async function getUserPreferences(userId: string): Promise<UserPreference
     .limit(50)
 
   // 2. Recupera preferenze dalle ricerche salvate (peso maggiore)
-  const { data: savedSearches } = await supabase
+  const { data: savedSearches } = await getSupabase()
     .from('saved_searches')
     .select('categories, cities')
     .eq('user_id', userId)
@@ -134,7 +136,7 @@ export async function getPersonalizedLeads(
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
   // 1. Recupera ID lead già sbloccati dall'utente
-  const { data: unlockedIds } = await supabase
+  const { data: unlockedIds } = await getSupabase()
     .from('user_unlocked_leads')
     .select('lead_id')
     .eq('user_id', userId)
@@ -142,7 +144,7 @@ export async function getPersonalizedLeads(
   const excludeIds = unlockedIds?.map(u => u.lead_id) || []
 
   // 2. Query leads matching preferenze
-  let query = supabase
+  let query = getSupabase()
     .from('leads')
     .select('id, business_name, city, category, score')
     .gte('created_at', sevenDaysAgo.toISOString())
@@ -164,7 +166,7 @@ export async function getPersonalizedLeads(
   const { data: leads } = await query.limit(limit)
 
   // 3. Conta totale nuovi lead matching
-  let countQuery = supabase
+  let countQuery = getSupabase()
     .from('leads')
     .select('*', { count: 'exact', head: true })
     .gte('created_at', sevenDaysAgo.toISOString())
@@ -192,13 +194,13 @@ export async function getCompetitionMetrics(): Promise<CompetitionMetrics> {
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
   // Lead sbloccati questa settimana (da tutti gli utenti)
-  const { count: unlockedByOthers } = await supabase
+  const { count: unlockedByOthers } = await getSupabase()
     .from('user_unlocked_leads')
     .select('*', { count: 'exact', head: true })
     .gte('unlocked_at', sevenDaysAgo.toISOString())
 
   // Utenti unici attivi questa settimana
-  const { data: activeUsers } = await supabase
+  const { data: activeUsers } = await getSupabase()
     .from('user_unlocked_leads')
     .select('user_id')
     .gte('unlocked_at', sevenDaysAgo.toISOString())
@@ -215,7 +217,7 @@ export async function getCompetitionMetrics(): Promise<CompetitionMetrics> {
  * Lead esempio per nuovi utenti (senza preferenze)
  */
 export async function getSampleLeads(limit: number = 3): Promise<PersonalizedLead[]> {
-  const { data: leads } = await supabase
+  const { data: leads } = await getSupabase()
     .from('leads')
     .select('business_name, city, category, score')
     .lte('score', 50) // Mostra lead con problemi evidenti
@@ -233,14 +235,14 @@ export async function getUserWeeklyStats(userId: string): Promise<WeeklyStats> {
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
   // Lead sbloccati questa settimana
-  const { count: leadsUnlocked } = await supabase
+  const { count: leadsUnlocked } = await getSupabase()
     .from('user_unlocked_leads')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
     .gte('unlocked_at', sevenDaysAgo.toISOString())
 
   // Lead contattati (CRM entries con status != to_contact)
-  const { count: leadsContacted } = await supabase
+  const { count: leadsContacted } = await getSupabase()
     .from('crm_entries')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
@@ -248,7 +250,7 @@ export async function getUserWeeklyStats(userId: string): Promise<WeeklyStats> {
     .gte('updated_at', sevenDaysAgo.toISOString())
 
   // Deal chiusi questa settimana
-  const { count: dealsWon } = await supabase
+  const { count: dealsWon } = await getSupabase()
     .from('crm_entries')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
@@ -256,7 +258,7 @@ export async function getUserWeeklyStats(userId: string): Promise<WeeklyStats> {
     .gte('updated_at', sevenDaysAgo.toISOString())
 
   // Streak dalla gamification
-  const { data: gamification } = await supabase
+  const { data: gamification } = await getSupabase()
     .from('user_gamification')
     .select('current_streak')
     .eq('user_id', userId)
@@ -275,14 +277,14 @@ export async function getUserWeeklyStats(userId: string): Promise<WeeklyStats> {
  */
 export async function getUserGamification(userId: string): Promise<GamificationData> {
   // Recupera dati gamification
-  const { data: gamification } = await supabase
+  const { data: gamification } = await getSupabase()
     .from('user_gamification')
     .select('level, xp_points, total_leads_unlocked')
     .eq('user_id', userId)
     .single()
 
   // Recupera achievement già ottenuti
-  const { data: earnedAchievements } = await supabase
+  const { data: earnedAchievements } = await getSupabase()
     .from('user_achievements')
     .select('achievement_id')
     .eq('user_id', userId)
@@ -330,7 +332,7 @@ export async function getUserGamification(userId: string): Promise<GamificationD
 export async function isNewUser(userId: string, creditsRemaining: number): Promise<boolean> {
   if (creditsRemaining !== 5) return false
 
-  const { count } = await supabase
+  const { count } = await getSupabase()
     .from('user_unlocked_leads')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
@@ -346,7 +348,7 @@ export async function isDormantUser(userId: string): Promise<boolean> {
   const sevenDaysAgo = new Date()
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-  const { data: lastUnlock } = await supabase
+  const { data: lastUnlock } = await getSupabase()
     .from('user_unlocked_leads')
     .select('unlocked_at')
     .eq('user_id', userId)
@@ -367,7 +369,7 @@ export async function isActiveUser(userId: string): Promise<boolean> {
   const sevenDaysAgo = new Date()
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-  const { data: lastUnlock } = await supabase
+  const { data: lastUnlock } = await getSupabase()
     .from('user_unlocked_leads')
     .select('unlocked_at')
     .eq('user_id', userId)

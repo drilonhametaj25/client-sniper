@@ -17,10 +17,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-08-16',
 })
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
@@ -41,7 +43,7 @@ async function findUserWithFallback(
   
   // Metodo 1: Cerca per subscription_id
   if (subscriptionId) {
-    const { data: userBySubscription } = await supabase
+    const { data: userBySubscription } = await getSupabase()
       .from('users')
       .select('id')
       .eq('stripe_subscription_id', subscriptionId)
@@ -55,7 +57,7 @@ async function findUserWithFallback(
   
   // Metodo 2: Cerca per customer_id
   if (customerId) {
-    const { data: userByCustomer } = await supabase
+    const { data: userByCustomer } = await getSupabase()
       .from('users')
       .select('id')
       .eq('stripe_customer_id', customerId)
@@ -69,7 +71,7 @@ async function findUserWithFallback(
   
   // Metodo 3: Cerca per email
   if (email) {
-    const { data: userByEmail } = await supabase
+    const { data: userByEmail } = await getSupabase()
       .from('users')
       .select('id')
       .eq('email', email)
@@ -95,7 +97,7 @@ async function updateUserStripeData(userId: string, customerId?: string, subscri
   
   if (Object.keys(updates).length > 0) {
     console.log(`🔧 Updating user ${userId} with Stripe data:`, updates)
-    await supabase
+    await getSupabase()
       .from('users')
       .update(updates)
       .eq('id', userId)
@@ -107,7 +109,7 @@ async function updateUserStripeData(userId: string, customerId?: string, subscri
  */
 async function saveWebhookEvent(event: Stripe.Event, processed: boolean = false, error?: string) {
   try {
-    await supabase
+    await getSupabase()
       .from('stripe_webhook_events')
       .insert({
         stripe_event_id: event.id,
@@ -127,7 +129,7 @@ async function saveWebhookEvent(event: Stripe.Event, processed: boolean = false,
  */
 async function markEventProcessed(eventId: string, success: boolean, error?: string) {
   try {
-    await supabase
+    await getSupabase()
       .from('stripe_webhook_events')
       .update({ 
         processed: success, 
@@ -157,7 +159,7 @@ export async function POST(request: NextRequest) {
   }
 
   // 🔒 IDEMPOTENCY CHECK: Verifica se l'evento è già stato processato
-  const { data: existingEvent } = await supabase
+  const { data: existingEvent } = await getSupabase()
     .from('stripe_webhook_events')
     .select('processed, processed_at')
     .eq('stripe_event_id', event.id)
@@ -254,7 +256,7 @@ export async function POST(request: NextRequest) {
     
     // 🔧 FALLBACK: Prova a salvare l'errore nei log di piano per debug
     try {
-      await supabase
+      await getSupabase()
         .from('plan_status_logs')
         .insert({
           user_id: 'webhook-error',
@@ -350,7 +352,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         userId = foundUser.id
       } else {
         // 2. Se non trovato nell'auth, cerca nella tabella users (possibile utente orfano)
-        const { data: dbUser, error: dbError } = await supabase
+        const { data: dbUser, error: dbError } = await getSupabase()
           .from('users')
           .select('id')
           .eq('email', userEmail)
@@ -396,7 +398,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   await updateUserStripeData(userId, session.customer as string, session.subscription as string)
 
   // Ottieni i crediti dal database invece che hardcoded
-  const { data: planData, error: planError } = await supabase
+  const { data: planData, error: planError } = await getSupabase()
     .from('plans')
     .select('max_credits')
     .eq('name', planId)
@@ -433,7 +435,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   // Aggiorna l'utente con il nuovo piano
   console.log(`\n🔄 Aggiornando utente ${userId} con piano ${planId} e ${credits} crediti`)
   
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('users')
     .update({
       plan: planId,
@@ -450,7 +452,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     console.log(`✅ Piano ${planId} attivato per utente ${userId}`)
     
     // Crea log dell'operazione
-    const { error: logError } = await supabase
+    const { error: logError } = await getSupabase()
       .from('plan_status_logs')
       .insert({
         user_id: userId,
@@ -522,7 +524,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     }
 
     // Ottieni i crediti dal database per il rinnovo
-    const { data: planData, error: planError } = await supabase
+    const { data: planData, error: planError } = await getSupabase()
       .from('plans')
       .select('max_credits')
       .eq('name', planId)
@@ -545,7 +547,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     // 🎯 AGGIORNA DATI STRIPE: Assicurati che i dati Stripe siano salvati
     await updateUserStripeData(userId, customerId, subscriptionId)
 
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from('users')
       .update({
         credits_remaining: credits,
@@ -560,7 +562,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
       
       // 🔄 RESET SOSTITUZIONI MENSILI: Resetta le sostituzioni quando si rinnova il piano
       try {
-        const { error: resetError } = await supabase
+        const { error: resetError } = await getSupabase()
           .rpc('reset_user_replacements', { p_user_id: userId })
         
         if (resetError) {
@@ -573,7 +575,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
       }
       
       // Crea log dell'operazione
-      const { error: logError } = await supabase
+      const { error: logError } = await getSupabase()
         .from('plan_status_logs')
         .insert({
           user_id: userId,
@@ -630,7 +632,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   }
 
   // Ottieni lo stato corrente dell'utente per il log
-  const { data: currentUser } = await supabase
+  const { data: currentUser } = await getSupabase()
     .from('users')
     .select('plan, status')
     .eq('id', userId)
@@ -640,7 +642,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   const previousStatus = currentUser?.status || 'unknown'
 
   // Ottieni i crediti del piano free dal database
-  const { data: freePlanData } = await supabase
+  const { data: freePlanData } = await getSupabase()
     .from('plans')
     .select('max_credits')
     .eq('name', 'free')
@@ -649,7 +651,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   const freeCredits = freePlanData?.max_credits || 5
 
   // Downgrade a piano gratuito
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('users')
     .update({
       plan: 'free',
@@ -668,7 +670,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     console.log(`✅ Piano downgraded a free per utente ${userId}`)
 
     // Log dell'operazione di cancellazione
-    const { error: logError } = await supabase
+    const { error: logError } = await getSupabase()
       .from('plan_status_logs')
       .insert({
         user_id: userId,
@@ -703,7 +705,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
     console.log(`Cercando piano per Price ID: ${priceId}`)
     
     // Cerca il piano nel database usando il price_id
-    const { data: planData, error: planError } = await supabase
+    const { data: planData, error: planError } = await getSupabase()
       .from('plans')
       .select('name, max_credits')
       .or(`stripe_price_id_monthly.eq.${priceId},stripe_price_id_annual.eq.${priceId}`)
@@ -728,7 +730,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       if (customer && !customer.deleted && customer.email) {
         console.log(`Cercando utente per email: ${customer.email}`)
         
-        const { data: user, error } = await supabase
+        const { data: user, error } = await getSupabase()
           .from('users')
           .select('id')
           .eq('email', customer.email)
@@ -750,7 +752,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
     console.log(`Assegnando ${credits} crediti per piano ${planName}`)
 
     // Aggiorna l'utente
-    const { error: updateError } = await supabase
+    const { error: updateError } = await getSupabase()
       .from('users')
       .update({
         plan: planName,
@@ -767,7 +769,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       console.log(`✅ Piano ${planName} attivato per utente ${userId}`)
       
       // Crea log
-      await supabase
+      await getSupabase()
         .from('plan_status_logs')
         .insert({
           user_id: userId,
@@ -796,7 +798,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
   try {
     // Trova l'utente dalla subscription
-    const { data: user, error } = await supabase
+    const { data: user, error } = await getSupabase()
       .from('users')
       .select('id, plan, email')
       .eq('stripe_subscription_id', subscription.id)
@@ -825,7 +827,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     let newCredits = 0
 
     if (priceId) {
-      const { data: planData } = await supabase
+      const { data: planData } = await getSupabase()
         .from('plans')
         .select('name, max_credits')
         .or(`stripe_price_id_monthly.eq.${priceId},stripe_price_id_annual.eq.${priceId}`)
@@ -850,7 +852,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       const isUpgrade = newIndex > previousIndex
 
       // Aggiorna il piano e i crediti
-      const { error: updateError } = await supabase
+      const { error: updateError } = await getSupabase()
         .from('users')
         .update({
           plan: newPlan,
@@ -865,7 +867,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
         console.log(`✅ Piano aggiornato a ${newPlan} con ${newCredits} crediti`)
 
         // Log del cambio piano
-        await supabase
+        await getSupabase()
           .from('plan_status_logs')
           .insert({
             user_id: userId,
@@ -893,7 +895,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       }
     } else if (newStatus !== 'active') {
       // Aggiorna solo lo status se necessario (senza cambio piano)
-      const { error: updateError } = await supabase
+      const { error: updateError } = await getSupabase()
         .from('users')
         .update({
           status: newStatus
@@ -951,7 +953,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
     }
 
     // Ottieni i dettagli dell'utente
-    const { data: user, error: userError } = await supabase
+    const { data: user, error: userError } = await getSupabase()
       .from('users')
       .select('id, email')
       .eq('id', userId)
@@ -968,7 +970,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
     await updateUserStripeData(userId, customerId, subscriptionId)
 
     // Log del pagamento fallito
-    await supabase
+    await getSupabase()
       .from('plan_status_logs')
       .insert({
         user_id: userId,
@@ -1011,7 +1013,7 @@ async function handleCreditPackPurchase(session: Stripe.Checkout.Session) {
 
   try {
     // Recupera i crediti attuali dell'utente
-    const { data: userData, error: userError } = await supabase
+    const { data: userData, error: userError } = await getSupabase()
       .from('users')
       .select('credits_remaining, email')
       .eq('id', userId)
@@ -1029,7 +1031,7 @@ async function handleCreditPackPurchase(session: Stripe.Checkout.Session) {
     console.log(`Nuovi crediti: ${newCredits}`)
 
     // Aggiorna i crediti dell'utente
-    const { error: updateError } = await supabase
+    const { error: updateError } = await getSupabase()
       .from('users')
       .update({
         credits_remaining: newCredits,
@@ -1046,7 +1048,7 @@ async function handleCreditPackPurchase(session: Stripe.Checkout.Session) {
     console.log(`✅ Crediti aggiornati: ${currentCredits} → ${newCredits}`)
 
     // Aggiorna lo stato dell'acquisto in credit_purchases
-    const { error: purchaseError } = await supabase
+    const { error: purchaseError } = await getSupabase()
       .from('credit_purchases')
       .update({
         status: 'completed',
@@ -1063,7 +1065,7 @@ async function handleCreditPackPurchase(session: Stripe.Checkout.Session) {
     }
 
     // Crea log dell'operazione
-    const { error: logError } = await supabase
+    const { error: logError } = await getSupabase()
       .from('plan_status_logs')
       .insert({
         user_id: userId,

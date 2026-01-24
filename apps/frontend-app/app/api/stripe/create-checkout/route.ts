@@ -15,10 +15,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-08-16',
 })
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -95,7 +97,7 @@ export async function POST(request: NextRequest) {
     // UPGRADE/DOWNGRADE: Verifica se l'utente ha già una subscription attiva
     // =====================================================
     if (dbUserId && !autoConfirm) {
-      const { data: userData, error: userError } = await supabaseAdmin
+      const { data: userData, error: userError } = await getSupabaseAdmin()
         .from('users')
         .select('stripe_subscription_id, stripe_customer_id, plan')
         .eq('id', dbUserId)
@@ -141,7 +143,7 @@ export async function POST(request: NextRequest) {
             console.log(`✅ Subscription aggiornata: ${updatedSubscription.id}`)
 
             // Ottieni i crediti del nuovo piano dal database
-            const { data: planData, error: planError } = await supabaseAdmin
+            const { data: planData, error: planError } = await getSupabaseAdmin()
               .from('plans')
               .select('max_credits, max_replacements_monthly')
               .eq('name', planId)
@@ -152,7 +154,7 @@ export async function POST(request: NextRequest) {
             }
 
             // Aggiorna l'utente nel database con il nuovo piano
-            const { error: updateError } = await supabaseAdmin
+            const { error: updateError } = await getSupabaseAdmin()
               .from('users')
               .update({
                 plan: planId,
@@ -168,14 +170,14 @@ export async function POST(request: NextRequest) {
 
             // Reset sostituzioni per il nuovo piano
             try {
-              await supabaseAdmin.rpc('reset_user_replacements', { p_user_id: dbUserId })
+              await getSupabaseAdmin().rpc('reset_user_replacements', { p_user_id: dbUserId })
               console.log('✅ Sostituzioni resettate per nuovo piano')
             } catch (resetError) {
               console.error('Errore reset sostituzioni:', resetError)
             }
 
             // Log dell'operazione
-            await supabaseAdmin
+            await getSupabaseAdmin()
               .from('plan_status_logs')
               .insert({
                 user_id: dbUserId,
@@ -215,7 +217,7 @@ export async function POST(request: NextRequest) {
     // Se l'utente ha già un customer_id, usalo
     let customerId: string | undefined
     if (dbUserId) {
-      const { data: userData } = await supabaseAdmin
+      const { data: userData } = await getSupabaseAdmin()
         .from('users')
         .select('stripe_customer_id')
         .eq('id', dbUserId)

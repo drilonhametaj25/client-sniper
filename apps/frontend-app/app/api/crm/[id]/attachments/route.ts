@@ -11,11 +11,12 @@ import { isProOrHigher } from '@/lib/utils/plan-helpers';
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
 
-// Client per operazioni amministrative (usa service role)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function POST(
   request: NextRequest,
@@ -36,7 +37,7 @@ export async function POST(
     const token = authHeader.replace('Bearer ', '');
     
     // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
     
     if (authError || !user) {
       return NextResponse.json(
@@ -46,7 +47,7 @@ export async function POST(
     }
 
     // Verifica che l'utente sia PRO o AGENCY
-    const { data: userData, error: userError } = await supabaseAdmin
+    const { data: userData, error: userError } = await getSupabaseAdmin()
       .from('users')
       .select('plan, role')
       .eq('id', user.id)
@@ -63,7 +64,7 @@ export async function POST(
     }
 
     // Verifica che il lead sia sbloccato dall'utente
-    const { data: unlockedLead, error: unlockError } = await supabaseAdmin
+    const { data: unlockedLead, error: unlockError } = await getSupabaseAdmin()
       .from('user_unlocked_leads')
       .select('lead_id')
       .eq('user_id', user.id)
@@ -89,7 +90,7 @@ export async function POST(
 
     // Upload file su Supabase Storage
     const fileName = `crm-attachments/${user.id}/${leadId}/${Date.now()}-${file.name}`;
-    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+    const { data: uploadData, error: uploadError } = await getSupabaseAdmin().storage
       .from('crm-files')
       .upload(fileName, file, {
         cacheControl: '3600',
@@ -102,7 +103,7 @@ export async function POST(
     }
 
     // Ottieni URL pubblico del file
-    const { data: urlData } = supabaseAdmin.storage
+    const { data: urlData } = getSupabaseAdmin().storage
       .from('crm-files')
       .getPublicUrl(fileName);
 
@@ -118,7 +119,7 @@ export async function POST(
     };
 
     // Recupera entry CRM corrente
-    const { data: crmEntry, error: crmError } = await supabaseAdmin
+    const { data: crmEntry, error: crmError } = await getSupabaseAdmin()
       .from('crm_entries')
       .select('attachments')
       .eq('user_id', user.id)
@@ -134,7 +135,7 @@ export async function POST(
     const updatedAttachments = [...currentAttachments, attachment];
 
     // Aggiorna entry CRM con nuovo attachment
-    const { error: updateError } = await supabaseAdmin
+    const { error: updateError } = await getSupabaseAdmin()
       .from('crm_entries')
       .update({
         attachments: updatedAttachments,
@@ -184,7 +185,7 @@ export async function DELETE(
     const token = authHeader.replace('Bearer ', '');
     
     // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
     
     if (authError || !user) {
       return NextResponse.json(
@@ -194,7 +195,7 @@ export async function DELETE(
     }
 
     // Verifica che l'utente sia PRO o AGENCY
-    const { data: userData, error: userError } = await supabaseAdmin
+    const { data: userData, error: userError } = await getSupabaseAdmin()
       .from('users')
       .select('plan, role')
       .eq('id', user.id)
@@ -211,7 +212,7 @@ export async function DELETE(
     }
 
     // Recupera entry CRM corrente
-    const { data: crmEntry, error: crmError } = await supabaseAdmin
+    const { data: crmEntry, error: crmError } = await getSupabaseAdmin()
       .from('crm_entries')
       .select('attachments')
       .eq('user_id', user.id)
@@ -231,7 +232,7 @@ export async function DELETE(
 
     // Elimina file da Supabase Storage
     if (attachmentToDelete.path) {
-      const { error: deleteError } = await supabaseAdmin.storage
+      const { error: deleteError } = await getSupabaseAdmin().storage
         .from('crm-files')
         .remove([attachmentToDelete.path]);
 
@@ -244,7 +245,7 @@ export async function DELETE(
     const updatedAttachments = currentAttachments.filter((att: any) => att.id !== attachmentId);
 
     // Aggiorna entry CRM
-    const { error: updateError } = await supabaseAdmin
+    const { error: updateError } = await getSupabaseAdmin()
       .from('crm_entries')
       .update({
         attachments: updatedAttachments,

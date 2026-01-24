@@ -12,11 +12,12 @@ import { renderToBuffer } from '@react-pdf/renderer'
 import { AuditReportDocument } from '@/lib/pdf/audit-report-template'
 import { AuditReportData, BrandingConfig, defaultBranding } from '@/lib/types/pdf'
 
-// Client admin per operazioni che richiedono privilegi elevati
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 // Genera issues in base ai dati dell'analisi
 function generateIssues(scores: any, details: any): AuditReportData['issues'] {
@@ -221,7 +222,7 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
 
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
     if (authError || !user) {
       return NextResponse.json(
         { error: 'Token non valido' },
@@ -230,7 +231,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verifica che l'utente abbia accesso al lead (deve averlo sbloccato)
-    const { data: unlockedLead } = await supabaseAdmin
+    const { data: unlockedLead } = await getSupabaseAdmin()
       .from('user_unlocked_leads')
       .select('id')
       .eq('user_id', user.id)
@@ -245,7 +246,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Recupera i dati del lead
-    const { data: lead, error: leadError } = await supabaseAdmin
+    const { data: lead, error: leadError } = await getSupabaseAdmin()
       .from('leads')
       .select('*')
       .eq('id', leadId)
@@ -335,7 +336,7 @@ export async function POST(request: NextRequest) {
 
     // Log della generazione (ignora errori se la tabella non esiste)
     try {
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from('report_generation_logs')
         .insert({
           user_id: user.id,
@@ -390,7 +391,7 @@ export async function GET(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
 
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
     if (authError || !user) {
       return NextResponse.json(
         { error: 'Token non valido' },
@@ -399,7 +400,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verifica accesso al lead
-    const { data: unlockedLead } = await supabaseAdmin
+    const { data: unlockedLead } = await getSupabaseAdmin()
       .from('user_unlocked_leads')
       .select('id')
       .eq('user_id', user.id)
@@ -414,7 +415,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Recupera i dati del lead
-    const { data: lead, error: leadError } = await supabaseAdmin
+    const { data: lead, error: leadError } = await getSupabaseAdmin()
       .from('leads')
       .select('*')
       .eq('id', leadId)

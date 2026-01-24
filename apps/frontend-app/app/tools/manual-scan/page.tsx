@@ -12,8 +12,12 @@ import { useRouter } from 'next/navigation'
 import { WebsiteAnalysis } from '../../../lib/types/analysis'
 import { TourTarget } from '../../../components/onboarding/TourTarget'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
 
 interface AnalysisResult {
   leadId: string | undefined
@@ -31,8 +35,6 @@ export default function ManualScanPage() {
   const [userCredits, setUserCredits] = useState<number | null>(null)
   const router = useRouter()
 
-  const supabase = createClient(supabaseUrl, supabaseKey)
-
   // Carica crediti utente all'inizio
   useEffect(() => {
     loadUserCredits()
@@ -40,6 +42,7 @@ export default function ManualScanPage() {
 
   async function loadUserCredits() {
     try {
+      const supabase = getSupabase()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         router.push('/login')
@@ -81,6 +84,7 @@ export default function ManualScanPage() {
     setResult(null)
 
     try {
+      const supabase = getSupabase()
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
         router.push('/login')

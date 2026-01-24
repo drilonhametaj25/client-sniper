@@ -21,10 +21,12 @@ import { createClient } from '@supabase/supabase-js'
 import { smtpEmail } from '@/lib/services/smtp-email'
 import { stopSequenceOnAction } from '@/lib/services/email-sequences'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 interface TriggerResults {
   firstUnlock: { sent: number; skipped: number }
@@ -199,7 +201,7 @@ async function hasEventBeenTriggered(
   userId: string,
   eventType: string
 ): Promise<boolean> {
-  const { data } = await supabase
+  const { data } = await getSupabase()
     .from('email_event_triggers')
     .select('id')
     .eq('user_id', userId)
@@ -215,7 +217,7 @@ async function markEventTriggered(
   eventType: string,
   entityId?: string
 ): Promise<void> {
-  await supabase.from('email_event_triggers').upsert({
+  await getSupabase().from('email_event_triggers').upsert({
     user_id: userId,
     event_type: eventType,
     entity_id: entityId,
@@ -231,7 +233,7 @@ async function getUserForEmail(userId: string): Promise<{
   unsubscribe_token: string
   newsletter_subscribed: boolean
 } | null> {
-  const { data } = await supabase
+  const { data } = await getSupabase()
     .from('users')
     .select('email, unsubscribe_token, newsletter_subscribed')
     .eq('id', userId)
@@ -249,7 +251,7 @@ async function processFirstUnlocks(
   windowStart: Date
 ): Promise<void> {
   // Trova utenti con esattamente 1 unlock recente
-  const { data: recentUnlocks, error } = await supabase
+  const { data: recentUnlocks, error } = await getSupabase()
     .from('user_unlocked_leads')
     .select(`
       user_id,
@@ -275,7 +277,7 @@ async function processFirstUnlocks(
   for (const [userId, unlocks] of userUnlocks) {
     try {
       // Verifica se è davvero il primo unlock (conta totale)
-      const { count } = await supabase
+      const { count } = await getSupabase()
         .from('user_unlocked_leads')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
@@ -328,7 +330,7 @@ async function processFirstContacts(
   windowStart: Date
 ): Promise<void> {
   // Trova CRM entries con status "contacted" create di recente
-  const { data: recentContacts, error } = await supabase
+  const { data: recentContacts, error } = await getSupabase()
     .from('crm_entries')
     .select('user_id, id')
     .eq('status', 'contacted')
@@ -344,7 +346,7 @@ async function processFirstContacts(
 
     try {
       // Verifica se è il primo contatto
-      const { count } = await supabase
+      const { count } = await getSupabase()
         .from('crm_entries')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', contact.user_id)
@@ -390,7 +392,7 @@ async function processDealsWon(
   windowStart: Date
 ): Promise<void> {
   // Trova CRM entries chiuse positivamente di recente
-  const { data: recentDeals, error } = await supabase
+  const { data: recentDeals, error } = await getSupabase()
     .from('crm_entries')
     .select('user_id, id, deal_value')
     .eq('status', 'closed_won')
@@ -401,7 +403,7 @@ async function processDealsWon(
   for (const deal of recentDeals) {
     try {
       // Conta i deal totali dell'utente
-      const { count: totalDeals } = await supabase
+      const { count: totalDeals } = await getSupabase()
         .from('crm_entries')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', deal.user_id)
@@ -410,7 +412,7 @@ async function processDealsWon(
       const isFirstDeal = totalDeals === 1
 
       // Verifica se già inviato per questo deal specifico
-      const { data: existingTrigger } = await supabase
+      const { data: existingTrigger } = await getSupabase()
         .from('email_event_triggers')
         .select('id')
         .eq('user_id', deal.user_id)
@@ -469,7 +471,7 @@ async function processDealsWon(
 
 async function processMilestones(results: TriggerResults): Promise<void> {
   // Trova utenti con esattamente 5 o 10 leads sbloccati
-  const { data: users, error } = await supabase
+  const { data: users, error } = await getSupabase()
     .from('users')
     .select('id, email, unsubscribe_token, newsletter_subscribed')
     .eq('newsletter_subscribed', true)
@@ -479,7 +481,7 @@ async function processMilestones(results: TriggerResults): Promise<void> {
 
   for (const user of users) {
     try {
-      const { count } = await supabase
+      const { count } = await getSupabase()
         .from('user_unlocked_leads')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
@@ -527,7 +529,7 @@ async function processMilestones(results: TriggerResults): Promise<void> {
 
 async function processStreaks(results: TriggerResults): Promise<void> {
   // Trova utenti con streak di 7, 14, o 30 giorni
-  const { data: gamificationData, error } = await supabase
+  const { data: gamificationData, error } = await getSupabase()
     .from('user_gamification')
     .select(`
       user_id,
@@ -581,7 +583,7 @@ async function processLevelUps(
   windowStart: Date
 ): Promise<void> {
   // Trova utenti che hanno fatto level up di recente
-  const { data: levelUps, error } = await supabase
+  const { data: levelUps, error } = await getSupabase()
     .from('user_gamification')
     .select(`
       user_id,
@@ -634,7 +636,7 @@ async function processLevelUps(
 
 async function processEliteStatus(results: TriggerResults): Promise<void> {
   // Calcola top 10% degli utenti per XP
-  const { data: allUsers, error } = await supabase
+  const { data: allUsers, error } = await getSupabase()
     .from('user_gamification')
     .select(`
       user_id,
@@ -695,7 +697,7 @@ async function logNotification(
   subject: string
 ): Promise<void> {
   try {
-    await supabase.from('notification_logs').insert({
+    await getSupabase().from('notification_logs').insert({
       user_id: userId,
       notification_type: `trigger_${type}`,
       channel: 'email',

@@ -11,17 +11,19 @@ import { isProOrHigher } from '@/lib/utils/plan-helpers';
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
 
-// Client per verificare il token (usa anon key)
-const supabaseClient = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
 
-// Client per operazioni amministrative (usa service role)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -37,7 +39,7 @@ export async function GET(request: NextRequest) {
     const token = authHeader.replace('Bearer ', '');
     
     // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
     
     if (authError || !user) {
       return NextResponse.json(
@@ -47,7 +49,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verifica che l'utente sia PRO e attivo
-    const { data: userData, error: userError } = await supabaseAdmin
+    const { data: userData, error: userError } = await getSupabaseAdmin()
       .from('users')
       .select('plan, status, role')
       .eq('id', user.id)
@@ -86,7 +88,7 @@ export async function GET(request: NextRequest) {
 
 
     // Prima controlla se ci sono lead sbloccati dall'utente nella tabella user_unlocked_leads
-    const { data: unlockedLeads, error: unlockedError } = await supabaseAdmin
+    const { data: unlockedLeads, error: unlockedError } = await getSupabaseAdmin()
       .from('user_unlocked_leads')
       .select(`
         lead_id,
@@ -98,14 +100,14 @@ export async function GET(request: NextRequest) {
       .eq('user_id', user.id);
 
     // AGGIUNGE: Controlla anche i lead con assigned_to (sistema legacy)
-    const { data: assignedLeads, error: assignedError } = await supabaseAdmin
+    const { data: assignedLeads, error: assignedError } = await getSupabaseAdmin()
       .from('leads')
       .select('id, business_name, website_url, city, category, score, analysis, updated_at')
       .eq('assigned_to', user.id);
 
 
     // Controlla se esistono entry CRM per questo utente
-    const { data: existingEntries, error: entriesError } = await supabaseAdmin
+    const { data: existingEntries, error: entriesError } = await getSupabaseAdmin()
       .from('crm_entries')
       .select('id, lead_id, user_id')
       .eq('user_id', user.id);
@@ -117,13 +119,13 @@ export async function GET(request: NextRequest) {
 
     try {
       // Prova RPC per entry CRM
-      const { data: rpcEntries, error: rpcError } = await supabaseAdmin
+      const { data: rpcEntries, error: rpcError } = await getSupabaseAdmin()
         .rpc('get_user_crm_entries');
 
       if (rpcError) {
         
         // Fallback: query diretta con JOIN esplicito
-        let { data: directEntries, error: directError } = await supabaseAdmin
+        let { data: directEntries, error: directError } = await getSupabaseAdmin()
           .from('crm_entries')
           .select(`
             id, lead_id, status, note, follow_up_date, attachments, created_at, updated_at,
@@ -156,7 +158,7 @@ export async function GET(request: NextRequest) {
             attachments: []
           }));
 
-          const { data: createdEntries, error: createError } = await supabaseAdmin
+          const { data: createdEntries, error: createError } = await getSupabaseAdmin()
             .from('crm_entries')
             .insert(newEntries)
             .select(`
@@ -188,7 +190,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Prova RPC per statistiche
-      const { data: rpcStats, error: statsError } = await supabaseAdmin
+      const { data: rpcStats, error: statsError } = await getSupabaseAdmin()
         .rpc('get_user_crm_stats', { user_id: user.id });
 
       if (statsError) {
@@ -251,7 +253,7 @@ export async function POST(request: NextRequest) {
     const token = authHeader.replace('Bearer ', '');
     
     // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
     
     if (authError || !user) {
       return NextResponse.json(
@@ -262,7 +264,7 @@ export async function POST(request: NextRequest) {
 
     // Verifica che l'utente sia PRO
     // Verifica che l'utente sia PRO o superiore (POST)
-    const { data: userData, error: userError } = await supabaseAdmin
+    const { data: userData, error: userError } = await getSupabaseAdmin()
       .from('users')
       .select('plan')
       .eq('id', user.id)
@@ -287,7 +289,7 @@ export async function POST(request: NextRequest) {
     let entryId = null;
     
     try {
-      const { data: rpcResult, error: upsertError } = await supabaseAdmin
+      const { data: rpcResult, error: upsertError } = await getSupabaseAdmin()
         .rpc('upsert_crm_entry', {
           p_lead_id: lead_id,
           p_status: status,
@@ -299,7 +301,7 @@ export async function POST(request: NextRequest) {
       if (upsertError) {
         
         // Fallback: verifica se l'entry esiste già
-        const { data: existingEntry, error: checkError } = await supabaseAdmin
+        const { data: existingEntry, error: checkError } = await getSupabaseAdmin()
           .from('crm_entries')
           .select('id')
           .eq('user_id', user.id)
@@ -314,7 +316,7 @@ export async function POST(request: NextRequest) {
         let directResult;
         if (existingEntry) {
           // Update existing entry
-          const { data: updateResult, error: updateError } = await supabaseAdmin
+          const { data: updateResult, error: updateError } = await getSupabaseAdmin()
             .from('crm_entries')
             .update({
               status: status || 'to_contact',
@@ -335,7 +337,7 @@ export async function POST(request: NextRequest) {
           directResult = updateResult;
         } else {
           // Insert new entry
-          const { data: insertResult, error: insertError } = await supabaseAdmin
+          const { data: insertResult, error: insertError } = await getSupabaseAdmin()
             .from('crm_entries')
             .insert({
               user_id: user.id,

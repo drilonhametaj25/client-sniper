@@ -8,17 +8,19 @@ import { createClient } from '@supabase/supabase-js'
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
 
-// Client per verificare il token (usa anon key)
-const supabaseClient = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
 
-// Client per operazioni amministrative (usa service role)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,7 +36,7 @@ export async function GET(request: NextRequest) {
     const token = authHeader.replace('Bearer ', '')
     
     // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
     
     if (authError || !user) {
       console.error('Errore autenticazione:', authError)
@@ -45,7 +47,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Ottieni il profilo utente con fallback creation (usa service role)
-    let { data: userData, error: profileError } = await supabaseAdmin
+    let { data: userData, error: profileError } = await getSupabaseAdmin()
       .from('users')
       .select('*')
       .eq('id', user.id)
@@ -55,7 +57,7 @@ export async function GET(request: NextRequest) {
     if (profileError && profileError.code === 'PGRST116') {
       console.log('🔧 Utente non trovato, creazione automatica...')
       
-      const { data: newUser, error: createError } = await supabaseAdmin
+      const { data: newUser, error: createError } = await getSupabaseAdmin()
         .from('users')
         .insert({
           id: user.id,
@@ -86,7 +88,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Carica logs delle operazioni piano
-    const { data: planLogs, error: logsError } = await supabaseAdmin
+    const { data: planLogs, error: logsError } = await getSupabaseAdmin()
       .from('plan_status_logs')
       .select('action, previous_status, new_status, reason, triggered_by, created_at')
       .eq('user_id', user.id)

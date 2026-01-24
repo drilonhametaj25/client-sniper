@@ -11,10 +11,12 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,7 +32,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Trova utente per unsubscribe_token
-    const { data: user, error: findError } = await supabaseAdmin
+    const { data: user, error: findError } = await getSupabaseAdmin()
       .from('users')
       .select('id, email')
       .eq('unsubscribe_token', token)
@@ -44,7 +46,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Aggiorna utente: newsletter_subscribed = false
-    const { error: updateError } = await supabaseAdmin
+    const { error: updateError } = await getSupabaseAdmin()
       .from('users')
       .update({
         newsletter_subscribed: false,
@@ -60,7 +62,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Log dell'operazione per tracciamento
-    await supabaseAdmin.from('notification_logs').insert({
+    await getSupabaseAdmin().from('notification_logs').insert({
       user_id: user.id,
       notification_type: 'newsletter_unsubscribe',
       channel: 'email',

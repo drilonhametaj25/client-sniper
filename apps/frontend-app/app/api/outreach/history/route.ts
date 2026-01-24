@@ -3,6 +3,8 @@
  * Supporta filtro per lead_id o tutte le email dell'utente
  */
 
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 

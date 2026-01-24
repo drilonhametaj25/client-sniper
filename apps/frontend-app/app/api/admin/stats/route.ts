@@ -11,10 +11,12 @@ import { createClient } from '@supabase/supabase-js';
 export const dynamic = 'force-dynamic'
 
 // Client per operazioni amministrative (usa service role)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,13 +24,13 @@ export async function GET(request: NextRequest) {
     const headers = request.headers;
     
     // Ottieni statistiche generali
-    const { data: users, error: usersError } = await supabaseAdmin
+    const { data: users, error: usersError } = await getSupabaseAdmin()
       .from('users')
       .select('*');
 
     if (usersError) throw usersError;
 
-    const { data: leads, error: leadsError } = await supabaseAdmin
+    const { data: leads, error: leadsError } = await getSupabaseAdmin()
       .from('leads') 
       .select('*');
 

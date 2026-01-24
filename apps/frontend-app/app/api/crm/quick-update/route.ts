@@ -16,11 +16,12 @@ import { CRMQuickUpdateRequest, CRMStatusType } from '@/lib/types/crm';
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
 
-// Client per operazioni amministrative (usa service role)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
     const token = authHeader.replace('Bearer ', '');
     
     // Verifica il JWT
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
     
     if (authError || !user) {
       return NextResponse.json(
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verifica che l'utente abbia piano PRO
-    const { data: userProfile, error: profileError } = await supabaseAdmin
+    const { data: userProfile, error: profileError } = await getSupabaseAdmin()
       .from('users')
       .select('id, plan')
       .eq('id', user.id)
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verifica che il lead esista
-    const { data: lead, error: leadError } = await supabaseAdmin
+    const { data: lead, error: leadError } = await getSupabaseAdmin()
       .from('leads')
       .select('id, business_name')
       .eq('id', leadId)
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Prova prima ad aggiornare un record esistente
-    const { data: existingRecord, error: checkError } = await supabaseAdmin
+    const { data: existingRecord, error: checkError } = await getSupabaseAdmin()
       .from('crm_entries')
       .select('id')
       .eq('lead_id', leadId)
@@ -135,7 +136,7 @@ export async function POST(request: NextRequest) {
     
     if (existingRecord && !checkError) {
       // Aggiorna record esistente
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await getSupabaseAdmin()
         .from('crm_entries')
         .update(updateData)
         .eq('id', existingRecord.id)
@@ -145,7 +146,7 @@ export async function POST(request: NextRequest) {
       crmResult = { data, error };
     } else {
       // Crea nuovo record
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await getSupabaseAdmin()
         .from('crm_entries')
         .insert({
           ...updateData,

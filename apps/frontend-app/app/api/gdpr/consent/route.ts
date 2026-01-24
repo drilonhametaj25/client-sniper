@@ -9,10 +9,12 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 interface ConsentRequest {
   consents: {
@@ -60,7 +62,7 @@ export async function POST(request: NextRequest) {
     for (const consent of consentTypes) {
       try {
         // Inserisci nella tabella user_consents
-        const { error: consentError } = await supabase
+        const { error: consentError } = await getSupabase()
           .from('user_consents')
           .insert({
             user_id: userId,
@@ -81,7 +83,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Inserisci nella tabella cookie_consents per tracking specifico
-        const { error: cookieError } = await supabase
+        const { error: cookieError } = await getSupabase()
           .from('cookie_consents')
           .insert({
             session_id: sessionId,
@@ -107,7 +109,7 @@ export async function POST(request: NextRequest) {
 
     // Log attività GDPR generale
     try {
-      const { error: logError } = await supabase
+      const { error: logError } = await getSupabase()
         .from('gdpr_activity_log')
         .insert({
           user_id: userId,
@@ -156,19 +158,19 @@ export async function GET(request: NextRequest) {
 
     if (action === 'export' && (email || userId)) {
       // Richiesta export dati
-      const { data: consents, error: consentsError } = await supabase
+      const { data: consents, error: consentsError } = await getSupabase()
         .from('user_consents')
         .select('*')
         .or(userId ? `user_id.eq.${userId}` : `email.eq.${email}`)
         .order('created_at', { ascending: false })
 
-      const { data: activities, error: activitiesError } = await supabase
+      const { data: activities, error: activitiesError } = await getSupabase()
         .from('gdpr_activity_log')
         .select('*')
         .or(userId ? `user_id.eq.${userId}` : `email.eq.${email}`)
         .order('requested_at', { ascending: false })
 
-      const { data: cookies, error: cookiesError } = await supabase
+      const { data: cookies, error: cookiesError } = await getSupabase()
         .from('cookie_consents')
         .select('*')
         .or(userId ? `user_id.eq.${userId}` : `email.eq.${email}`)
@@ -182,7 +184,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Log richiesta export
-      await supabase
+      await getSupabase()
         .from('gdpr_activity_log')
         .insert({
           user_id: userId,
@@ -211,7 +213,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 })
       }
 
-      const { data: stats, error } = await supabase
+      const { data: stats, error } = await getSupabase()
         .from('gdpr_compliance_stats')
         .select('*')
         .limit(12)
@@ -249,7 +251,7 @@ export async function DELETE(request: NextRequest) {
     const verificationToken = crypto.randomUUID()
 
     // Crea richiesta di cancellazione
-    const { data: deleteRequest, error: requestError } = await supabase
+    const { data: deleteRequest, error: requestError } = await getSupabase()
       .from('data_deletion_requests')
       .insert({
         user_id: userId,
@@ -271,7 +273,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Log attività
-    await supabase
+    await getSupabase()
       .from('gdpr_activity_log')
       .insert({
         user_id: userId,

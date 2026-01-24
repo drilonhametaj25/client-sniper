@@ -10,10 +10,12 @@ import { isProOrHigher } from '@/lib/utils/plan-helpers'
 
 export const dynamic = 'force-dynamic'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 // Stati CRM validi
 const VALID_STATUSES = [
@@ -43,14 +45,14 @@ export async function PATCH(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
     // Verifica piano PRO
-    const { data: userData } = await supabaseAdmin
+    const { data: userData } = await getSupabaseAdmin()
       .from('users')
       .select('plan')
       .eq('id', user.id)
@@ -86,7 +88,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Verifica che le entry appartengano all'utente
-    const { data: userEntries, error: checkError } = await supabaseAdmin
+    const { data: userEntries, error: checkError } = await getSupabaseAdmin()
       .from('crm_entries')
       .select('id')
       .eq('user_id', user.id)
@@ -121,7 +123,7 @@ export async function PATCH(request: NextRequest) {
           }, { status: 400 })
         }
 
-        const { error: statusError, count: statusCount } = await supabaseAdmin
+        const { error: statusError, count: statusCount } = await getSupabaseAdmin()
           .from('crm_entries')
           .update({
             status: value,
@@ -139,7 +141,7 @@ export async function PATCH(request: NextRequest) {
         break
 
       case 'delete':
-        const { error: deleteError, count: deleteCount } = await supabaseAdmin
+        const { error: deleteError, count: deleteCount } = await getSupabaseAdmin()
           .from('crm_entries')
           .delete()
           .eq('user_id', user.id)
@@ -168,7 +170,7 @@ export async function PATCH(request: NextRequest) {
           }, { status: 400 })
         }
 
-        const { error: followUpError, count: followUpCount } = await supabaseAdmin
+        const { error: followUpError, count: followUpCount } = await getSupabaseAdmin()
           .from('crm_entries')
           .update({
             follow_up_date: value,
@@ -187,7 +189,7 @@ export async function PATCH(request: NextRequest) {
         break
 
       case 'clear_follow_up':
-        const { error: clearError, count: clearCount } = await supabaseAdmin
+        const { error: clearError, count: clearCount } = await getSupabaseAdmin()
           .from('crm_entries')
           .update({
             follow_up_date: null,
@@ -216,7 +218,7 @@ export async function PATCH(request: NextRequest) {
         const notePrefix = `[${noteTimestamp}] `
 
         // Recupera note esistenti e aggiungi
-        const { data: currentEntries } = await supabaseAdmin
+        const { data: currentEntries } = await getSupabaseAdmin()
           .from('crm_entries')
           .select('id, note')
           .eq('user_id', user.id)
@@ -229,7 +231,7 @@ export async function PATCH(request: NextRequest) {
             ? `${existingNote}\n${notePrefix}${value}`
             : `${notePrefix}${value}`
 
-          const { error: noteError } = await supabaseAdmin
+          const { error: noteError } = await getSupabaseAdmin()
             .from('crm_entries')
             .update({
               note: newNote,

@@ -10,10 +10,12 @@ import { isProOrHigher } from '@/lib/utils/plan-helpers'
 
 export const dynamic = 'force-dynamic'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 // Stati CRM disponibili
 const CRM_STATUSES = [
@@ -44,14 +46,14 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
     // Verifica piano PRO
-    const { data: userData } = await supabaseAdmin
+    const { data: userData } = await getSupabaseAdmin()
       .from('users')
       .select('plan, status')
       .eq('id', user.id)
@@ -71,7 +73,7 @@ export async function GET(request: NextRequest) {
     const to = searchParams.get('to') // data fine (ISO string)
 
     // Query CRM entries con dati lead
-    let query = supabaseAdmin
+    let query = getSupabaseAdmin()
       .from('crm_entries')
       .select(`
         id,

@@ -18,10 +18,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { smtpEmail } from '@/lib/services/smtp-email'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 // POST handler per GitHub Actions
 export async function POST(request: NextRequest) {
@@ -105,7 +107,7 @@ async function runEmailAutomation(request: NextRequest) {
     const threeDaysAgo = new Date()
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
 
-    const { data: inactiveUsers, error: inactiveError } = await supabase
+    const { data: inactiveUsers, error: inactiveError } = await getSupabase()
       .from('users')
       .select('id, email, plan, credits_remaining, last_login_at')
       .lt('last_login_at', threeDaysAgo.toISOString())
@@ -143,7 +145,7 @@ async function runEmailAutomation(request: NextRequest) {
     // =====================================================
     console.log('\n🔍 Cercando utenti con crediti bassi...')
 
-    const { data: lowCreditUsers, error: lowCreditError } = await supabase
+    const { data: lowCreditUsers, error: lowCreditError } = await getSupabase()
       .from('users')
       .select('id, email, plan, credits_remaining')
       .gt('credits_remaining', 0)
@@ -158,7 +160,7 @@ async function runEmailAutomation(request: NextRequest) {
       console.log(`📋 Trovati ${lowCreditUsers.length} utenti con crediti bassi`)
 
       for (const user of lowCreditUsers) {
-        const { data: recentNotification } = await supabase
+        const { data: recentNotification } = await getSupabase()
           .from('notification_logs')
           .select('id')
           .eq('user_id', user.id)
@@ -176,7 +178,7 @@ async function runEmailAutomation(request: NextRequest) {
           if (success) {
             results.creditsLowUsers++
 
-            await supabase.from('notification_logs').insert({
+            await getSupabase().from('notification_logs').insert({
               user_id: user.id,
               notification_type: 'credits_low',
               channel: 'smtp',
@@ -195,7 +197,7 @@ async function runEmailAutomation(request: NextRequest) {
     // =====================================================
     console.log('\n🔍 Cercando utenti con crediti esauriti...')
 
-    const { data: depletedUsers, error: depletedError } = await supabase
+    const { data: depletedUsers, error: depletedError } = await getSupabase()
       .from('users')
       .select('id, email, plan, credits_remaining')
       .eq('credits_remaining', 0)
@@ -209,7 +211,7 @@ async function runEmailAutomation(request: NextRequest) {
       console.log(`📋 Trovati ${depletedUsers.length} utenti con crediti esauriti`)
 
       for (const user of depletedUsers) {
-        const { data: recentNotification } = await supabase
+        const { data: recentNotification } = await getSupabase()
           .from('notification_logs')
           .select('id')
           .eq('user_id', user.id)
@@ -223,7 +225,7 @@ async function runEmailAutomation(request: NextRequest) {
           if (success) {
             results.creditsDepletedUsers++
 
-            await supabase.from('notification_logs').insert({
+            await getSupabase().from('notification_logs').insert({
               user_id: user.id,
               notification_type: 'credits_depleted',
               channel: 'smtp',
@@ -241,7 +243,7 @@ async function runEmailAutomation(request: NextRequest) {
     // =====================================================
     console.log('\n🔍 Controllando saved searches per nuovi lead...')
 
-    const { data: savedSearches, error: savedSearchError } = await supabase
+    const { data: savedSearches, error: savedSearchError } = await getSupabase()
       .from('saved_searches')
       .select(`
         id,
@@ -273,7 +275,7 @@ async function runEmailAutomation(request: NextRequest) {
 
         if (!shouldSendAlert) continue
 
-        let leadQuery = supabase
+        let leadQuery = getSupabase()
           .from('leads')
           .select('id, business_name, category, city, score, created_at')
           .gte('score', search.score_min || 0)
@@ -319,7 +321,7 @@ async function runEmailAutomation(request: NextRequest) {
           if (success) {
             results.savedSearchAlerts++
 
-            await supabase
+            await getSupabase()
               .from('saved_searches')
               .update({
                 last_alert_sent_at: new Date().toISOString(),

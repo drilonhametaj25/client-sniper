@@ -21,8 +21,12 @@ import { RealSiteAnalyzer } from '../../../../lib/analyzers/real-site-analyzer'
 import { SimplifiedSiteAnalyzer } from '../../../../lib/analyzers/simplified-site-analyzer'
 import { URLValidator } from '../../../../lib/utils/url-validator'
 import type { WebsiteAnalysis } from '../../../../lib/types/analysis'
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
 
 interface ManualScanRequest {
   url: string
@@ -210,15 +214,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<ManualSca
       )
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: {
-        headers: {
-          Authorization: authHeader
-        }
-      }
-    })
+    const supabase = getSupabase()
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await getSupabase().auth.getUser()
     
     if (authError || !user) {
       return NextResponse.json(
@@ -279,7 +277,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ManualSca
     console.log(`🔍 Cerco lead esistente per dominio: ${inputDomain}`)
     
     // Cerca tutti i lead che appartengono al dominio principale
-    const { data: potentialLeads, error: leadError } = await supabase
+    const { data: potentialLeads, error: leadError } = await getSupabase()
       .from('leads')
       .select('id, business_name, score, analysis, created_at, website_url, origin')
       .not('website_url', 'is', null)

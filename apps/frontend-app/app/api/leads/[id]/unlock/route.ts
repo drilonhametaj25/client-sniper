@@ -17,11 +17,12 @@ import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { klaviyoServer } from '@/lib/services/klaviyo-server'
 
-// Client admin per operazioni che richiedono privilegi elevati
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function POST(
   request: NextRequest,
@@ -42,7 +43,7 @@ export async function POST(
     const token = authHeader.replace('Bearer ', '')
     
     // Verifica il token e ottieni l'utente
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
     if (authError || !user) {
       console.error('Auth error:', authError)
       return NextResponse.json(
@@ -52,7 +53,7 @@ export async function POST(
     }
 
     // Verifica che il lead esista usando il client admin
-    const { data: lead, error: leadError } = await supabaseAdmin
+    const { data: lead, error: leadError } = await getSupabaseAdmin()
       .from('leads')
       .select('id')
       .eq('id', leadId)
@@ -67,7 +68,7 @@ export async function POST(
     }
 
     // Verifica i crediti dell'utente e lo stato del piano usando il client admin
-    const { data: userData, error: userError } = await supabaseAdmin
+    const { data: userData, error: userError } = await getSupabaseAdmin()
       .from('users')
       .select('credits_remaining, status, plan')
       .eq('id', user.id)
@@ -98,14 +99,14 @@ export async function POST(
     }
 
     // Verifica se il lead è già stato sbloccato (controlla entrambe le tabelle)
-    const { data: existingUnlock } = await supabaseAdmin
+    const { data: existingUnlock } = await getSupabaseAdmin()
       .from('user_unlocked_leads')
       .select('id')
       .eq('user_id', user.id)
       .eq('lead_id', leadId)
       .maybeSingle()
 
-    const { data: existingCrmEntry } = await supabaseAdmin
+    const { data: existingCrmEntry } = await getSupabaseAdmin()
       .from('crm_entries')
       .select('id')
       .eq('user_id', user.id)
@@ -120,7 +121,7 @@ export async function POST(
     }
 
     // Inizia transazione: sblocca il lead e decrementa i crediti
-    const { error: unlockError } = await supabaseAdmin
+    const { error: unlockError } = await getSupabaseAdmin()
       .from('user_unlocked_leads')
       .insert({
         user_id: user.id,
@@ -137,7 +138,7 @@ export async function POST(
     }
 
     // Inserisci l'entry CRM direttamente (con ON CONFLICT per evitare duplicati)
-    const { error: crmError } = await supabaseAdmin
+    const { error: crmError } = await getSupabaseAdmin()
       .from('crm_entries')
       .upsert({
         user_id: user.id,
@@ -155,7 +156,7 @@ export async function POST(
     }
 
     // Decrementa i crediti
-    const { error: creditError } = await supabaseAdmin
+    const { error: creditError } = await getSupabaseAdmin()
       .from('users')
       .update({ 
         credits_remaining: userData.credits_remaining - 1 
@@ -169,7 +170,7 @@ export async function POST(
     }
 
     // Log dell'operazione per audit
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from('credit_usage_logs')
       .insert({
         user_id: user.id,
@@ -186,14 +187,14 @@ export async function POST(
     const newCreditsRemaining = userData.credits_remaining - 1
 
     // Recupera dati lead per tracking
-    const { data: leadDetails } = await supabaseAdmin
+    const { data: leadDetails } = await getSupabaseAdmin()
       .from('leads')
       .select('business_name, category, city, score')
       .eq('id', leadId)
       .single()
 
     // Conta totale lead sbloccati dall'utente
-    const { count: totalUnlocked } = await supabaseAdmin
+    const { count: totalUnlocked } = await getSupabaseAdmin()
       .from('user_unlocked_leads')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)

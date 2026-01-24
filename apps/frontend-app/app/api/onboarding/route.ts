@@ -9,10 +9,12 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 const TOTAL_STEPS = 6
 
@@ -24,14 +26,14 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Token non valido' }, { status: 401 })
     }
 
     // Recupera o crea onboarding
-    let { data: onboarding, error } = await supabaseAdmin
+    let { data: onboarding, error } = await getSupabaseAdmin()
       .from('user_onboarding')
       .select('*')
       .eq('user_id', user.id)
@@ -39,7 +41,7 @@ export async function GET(request: NextRequest) {
 
     if (error && error.code === 'PGRST116') {
       // Non esiste, crea
-      const { data: newData, error: insertError } = await supabaseAdmin
+      const { data: newData, error: insertError } = await getSupabaseAdmin()
         .from('user_onboarding')
         .insert({ user_id: user.id })
         .select()
@@ -129,7 +131,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Token non valido' }, { status: 401 })
@@ -165,7 +167,7 @@ export async function PUT(request: NextRequest) {
       updateData[mapping.timestamp] = now
 
       // Verifica se onboarding completato
-      const { data: current } = await supabaseAdmin
+      const { data: current } = await getSupabaseAdmin()
         .from('user_onboarding')
         .select('*')
         .eq('user_id', user.id)
@@ -192,7 +194,7 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
       .from('user_onboarding')
       .update(updateData)
       .eq('user_id', user.id)
@@ -202,7 +204,7 @@ export async function PUT(request: NextRequest) {
     if (error) {
       // Se non esiste, crea
       if (error.code === 'PGRST116') {
-        const { data: newData, error: insertError } = await supabaseAdmin
+        const { data: newData, error: insertError } = await getSupabaseAdmin()
           .from('user_onboarding')
           .insert({ user_id: user.id, ...updateData })
           .select()

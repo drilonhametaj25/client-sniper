@@ -6,11 +6,13 @@
 
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-// Client con service role per operazioni sui crediti
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
+// Client con service role per operazioni sui crediti (lazy initialization)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export interface CreditTransaction {
   userId: string
@@ -36,7 +38,7 @@ export async function decrementUserCredits({
 }> {
   try {
     // 1. Ottieni crediti attuali dell'utente
-    const { data: user, error: userError } = await supabaseAdmin
+    const { data: user, error: userError } = await getSupabaseAdmin()
       .from('users')
       .select('credits_remaining')
       .eq('id', userId)
@@ -57,7 +59,7 @@ export async function decrementUserCredits({
     const newCreditsRemaining = user.credits_remaining - creditsConsumed
 
     // 3. Aggiorna crediti utente
-    const { error: updateError } = await supabaseAdmin
+    const { error: updateError } = await getSupabaseAdmin()
       .from('users')
       .update({ 
         credits_remaining: newCreditsRemaining,
@@ -70,7 +72,7 @@ export async function decrementUserCredits({
     }
 
     // 4. Logga la transazione
-    const { error: logError } = await supabaseAdmin
+    const { error: logError } = await getSupabaseAdmin()
       .from('credit_usage_log')
       .insert({
         user_id: userId,
@@ -109,7 +111,7 @@ export async function getUserCredits(userId: string): Promise<{
   error?: string
 }> {
   try {
-    const { data: user, error } = await supabaseAdmin
+    const { data: user, error } = await getSupabaseAdmin()
       .from('users')
       .select('credits_remaining')
       .eq('id', userId)
@@ -153,7 +155,7 @@ export async function addUserCredits({
 }> {
   try {
     // 1. Ottieni crediti attuali
-    const { data: user, error: userError } = await supabaseAdmin
+    const { data: user, error: userError } = await getSupabaseAdmin()
       .from('users')
       .select('credits_remaining')
       .eq('id', userId)
@@ -166,7 +168,7 @@ export async function addUserCredits({
     const newCreditsRemaining = user.credits_remaining + creditsToAdd
 
     // 2. Aggiorna crediti
-    const { error: updateError } = await supabaseAdmin
+    const { error: updateError } = await getSupabaseAdmin()
       .from('users')
       .update({ 
         credits_remaining: newCreditsRemaining,
@@ -179,7 +181,7 @@ export async function addUserCredits({
     }
 
     // 3. Logga la transazione (crediti negativi = aggiunta)
-    const { error: logError } = await supabaseAdmin
+    const { error: logError } = await getSupabaseAdmin()
       .from('credit_usage_log')
       .insert({
         user_id: userId,

@@ -8,10 +8,12 @@ import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 // Pesi scoring
 const SCORING_WEIGHTS = {
@@ -47,7 +49,7 @@ export async function GET(
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
@@ -56,7 +58,7 @@ export async function GET(
     const leadId = params.id
 
     // Recupera lead con analisi
-    const { data: lead, error: leadError } = await supabaseAdmin
+    const { data: lead, error: leadError } = await getSupabaseAdmin()
       .from('leads')
       .select('id, business_name, category, city, score, analysis, website_url')
       .eq('id', leadId)
@@ -67,14 +69,14 @@ export async function GET(
     }
 
     // Verifica che l'utente abbia accesso (sbloccato o admin)
-    const { data: unlocked } = await supabaseAdmin
+    const { data: unlocked } = await getSupabaseAdmin()
       .from('user_unlocked_leads')
       .select('id')
       .eq('user_id', user.id)
       .eq('lead_id', leadId)
       .single()
 
-    const { data: userData } = await supabaseAdmin
+    const { data: userData } = await getSupabaseAdmin()
       .from('users')
       .select('role')
       .eq('id', user.id)

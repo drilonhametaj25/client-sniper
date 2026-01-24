@@ -9,11 +9,13 @@ import { WebsiteAnalysis } from '../../../../services/scraping-engine/src/types/
 import { UnifiedLeadManager } from '../../../../services/scraping-engine/src/utils/unified-lead-manager'
 import crypto from 'crypto'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-// Client con service role per operazioni sui lead
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
+// Client con service role per operazioni sui lead (lazy initialization)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export interface ManualLeadData {
   url: string
@@ -196,7 +198,7 @@ export async function saveManualLead({
     }
 
     // Usa il sistema unificato di deduplicazione
-    const leadManager = new UnifiedLeadManager(supabaseAdmin)
+    const leadManager = new UnifiedLeadManager(getSupabaseAdmin())
     const result = await leadManager.saveOrEnrichLead(leadData)
 
     if (!result.success) {
@@ -234,7 +236,7 @@ export async function getLeads({
   offset?: number
 } = {}) {
   try {
-    let query = supabaseAdmin
+    let query = getSupabaseAdmin()
       .from('leads')
       .select(`
         *,

@@ -13,8 +13,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import smtpEmail from '@/lib/services/smtp-email'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,10 +42,10 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.substring(7)
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const supabase = getSupabase()
 
     // Verifica utente
-    const { data: { user } } = await supabase.auth.getUser(token)
+    const { data: { user } } = await getSupabase().auth.getUser(token)
     if (!user) {
       return NextResponse.json(
         { error: 'Non autorizzato' },
@@ -50,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verifica ruolo admin
-    const { data: userData } = await supabase
+    const { data: userData } = await getSupabase()
       .from('users')
       .select('role')
       .eq('id', user.id)
@@ -64,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Recupera dettagli feedback
-    const { data: feedback, error } = await supabase
+    const { data: feedback, error } = await getSupabase()
       .from('feedback_reports')
       .select('id, title, type, user_id, email')
       .eq('id', feedbackId)
@@ -82,7 +86,7 @@ export async function POST(request: NextRequest) {
 
     // Se non c'è email nel feedback, prova a recuperarla dall'utente
     if (!recipientEmail && feedback.user_id) {
-      const { data: feedbackUser } = await supabase
+      const { data: feedbackUser } = await getSupabase()
         .from('users')
         .select('email')
         .eq('id', feedback.user_id)

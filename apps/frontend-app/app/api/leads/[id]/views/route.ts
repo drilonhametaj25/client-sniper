@@ -9,10 +9,12 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function GET(
   request: NextRequest,
@@ -26,14 +28,14 @@ export async function GET(
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Token non valido' }, { status: 401 })
     }
 
     // Recupera stats del lead
-    const { data: lead, error } = await supabaseAdmin
+    const { data: lead, error } = await getSupabaseAdmin()
       .from('leads')
       .select('view_count, unlock_count, first_seen_at, last_unlocked_at')
       .eq('id', id)
@@ -48,7 +50,7 @@ export async function GET(
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-    const { count: recentUnlocks } = await supabaseAdmin
+    const { count: recentUnlocks } = await getSupabaseAdmin()
       .from('lead_views')
       .select('id', { count: 'exact', head: true })
       .eq('lead_id', id)
@@ -90,7 +92,7 @@ export async function POST(
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Token non valido' }, { status: 401 })
@@ -104,7 +106,7 @@ export async function POST(
     }
 
     // Inserisci o ignora se già esistente (UNIQUE constraint)
-    const { error } = await supabaseAdmin
+    const { error } = await getSupabaseAdmin()
       .from('lead_views')
       .upsert(
         {

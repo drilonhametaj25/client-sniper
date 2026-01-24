@@ -12,10 +12,12 @@
 
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 // =====================================================
 // DEFINIZIONE SEQUENZE
@@ -98,7 +100,7 @@ export async function startSequence(
     }
 
     // Verifica utente esiste e ha newsletter abilitata
-    const { data: user, error: userError } = await supabase
+    const { data: user, error: userError } = await getSupabase()
       .from('users')
       .select('id, email, newsletter_subscribed, status')
       .eq('id', userId)
@@ -117,7 +119,7 @@ export async function startSequence(
     }
 
     // Verifica se esiste già una sequenza attiva dello stesso tipo
-    const { data: existingSequence } = await supabase
+    const { data: existingSequence } = await getSupabase()
       .from('email_sequences')
       .select('id')
       .eq('user_id', userId)
@@ -135,7 +137,7 @@ export async function startSequence(
     nextEmailDate.setDate(nextEmailDate.getDate() + firstStep.day)
 
     // Crea la sequenza
-    const { data: newSequence, error: insertError } = await supabase
+    const { data: newSequence, error: insertError } = await getSupabase()
       .from('email_sequences')
       .insert({
         user_id: userId,
@@ -177,7 +179,7 @@ export async function stopSequence(
   reason: string
 ): Promise<boolean> {
   try {
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from('email_sequences')
       .update({
         completed_at: new Date().toISOString(),
@@ -216,7 +218,7 @@ export async function stopSequenceOnAction(
 
   // Se unsubscribed, ferma TUTTE le sequenze
   if (action === 'unsubscribed') {
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from('email_sequences')
       .update({
         completed_at: new Date().toISOString(),
@@ -239,7 +241,7 @@ export async function stopSequenceOnAction(
  * Ottieni le sequenze che hanno email da inviare ora
  */
 export async function getPendingSequences(): Promise<EmailSequence[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('email_sequences')
     .select('*')
     .is('completed_at', null)
@@ -278,7 +280,7 @@ export async function processSequenceStep(
     }
 
     // Verifica utente ancora subscribed
-    const { data: user } = await supabase
+    const { data: user } = await getSupabase()
       .from('users')
       .select('email, newsletter_subscribed, unsubscribe_token')
       .eq('id', sequence.user_id)
@@ -293,7 +295,7 @@ export async function processSequenceStep(
     const currentStep = definition.steps[sequence.current_step]
     if (!currentStep) {
       // Sequenza completata
-      await supabase
+      await getSupabase()
         .from('email_sequences')
         .update({
           completed_at: new Date().toISOString(),
@@ -326,7 +328,7 @@ export async function processSequenceStep(
       const nextEmailDate = new Date(sequence.started_at)
       nextEmailDate.setDate(nextEmailDate.getDate() + nextStep.day)
 
-      await supabase
+      await getSupabase()
         .from('email_sequences')
         .update({
           current_step: nextStepIndex,
@@ -340,7 +342,7 @@ export async function processSequenceStep(
         .eq('id', sequence.id)
     } else {
       // Era l'ultimo step
-      await supabase
+      await getSupabase()
         .from('email_sequences')
         .update({
           current_step: nextStepIndex,
@@ -378,7 +380,7 @@ async function checkStopCondition(
   switch (condition) {
     case 'first_unlock': {
       // Controlla se l'utente ha sbloccato almeno un lead
-      const { count } = await supabase
+      const { count } = await getSupabase()
         .from('user_unlocked_leads')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
@@ -391,7 +393,7 @@ async function checkStopCondition(
       const threeDaysAgo = new Date()
       threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
 
-      const { data: lastUnlock } = await supabase
+      const { data: lastUnlock } = await getSupabase()
         .from('user_unlocked_leads')
         .select('unlocked_at')
         .eq('user_id', userId)
@@ -404,7 +406,7 @@ async function checkStopCondition(
       }
 
       // Controlla anche last_login_at
-      const { data: user } = await supabase
+      const { data: user } = await getSupabase()
         .from('users')
         .select('last_login_at')
         .eq('id', userId)
@@ -486,7 +488,7 @@ async function sendSequenceEmail(
 
     // Log invio in notification_logs
     if (success) {
-      await supabase.from('notification_logs').insert({
+      await getSupabase().from('notification_logs').insert({
         user_id: userId,
         notification_type: `sequence_${template}`,
         channel: 'email',
@@ -515,7 +517,7 @@ export async function checkAndStartReengagement(userId: string): Promise<void> {
   const threeDaysAgo = new Date()
   threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
 
-  const { data: lastUnlock } = await supabase
+  const { data: lastUnlock } = await getSupabase()
     .from('user_unlocked_leads')
     .select('unlocked_at')
     .eq('user_id', userId)
@@ -537,7 +539,7 @@ export async function startWelcomeForNewUsers(): Promise<number> {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const { data: newUsers, error } = await supabase
+  const { data: newUsers, error } = await getSupabase()
     .from('users')
     .select('id')
     .gte('created_at', today.toISOString())
@@ -549,7 +551,7 @@ export async function startWelcomeForNewUsers(): Promise<number> {
   let started = 0
   for (const user of newUsers) {
     // Verifica che non abbia già una sequenza
-    const { data: existingSeq } = await supabase
+    const { data: existingSeq } = await getSupabase()
       .from('email_sequences')
       .select('id')
       .eq('user_id', user.id)
@@ -573,7 +575,7 @@ export async function getSequenceStats(): Promise<{
   completed: { welcome: number; reengagement: number }
   stopped: { welcome: number; reengagement: number }
 }> {
-  const { data } = await supabase
+  const { data } = await getSupabase()
     .from('email_sequences')
     .select('sequence_type, completed_at, stopped_reason')
 

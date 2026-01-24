@@ -11,11 +11,12 @@ import { isProOrHigher } from '@/lib/utils/plan-helpers';
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
 
-// Client per operazioni amministrative (usa service role)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function GET(
   request: NextRequest,
@@ -36,7 +37,7 @@ export async function GET(
     const token = authHeader.replace('Bearer ', '');
     
     // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
     
     if (authError || !user) {
       return NextResponse.json(
@@ -46,7 +47,7 @@ export async function GET(
     }
 
     // Verifica che l'utente sia PRO o AGENCY
-    const { data: userData, error: userError } = await supabaseAdmin
+    const { data: userData, error: userError } = await getSupabaseAdmin()
       .from('users')
       .select('plan, role')
       .eq('id', user.id)
@@ -63,7 +64,7 @@ export async function GET(
     }
 
     // Verifica che il lead sia sbloccato dall'utente
-    const { data: unlockedLead, error: unlockError } = await supabaseAdmin
+    const { data: unlockedLead, error: unlockError } = await getSupabaseAdmin()
       .from('user_unlocked_leads')
       .select('lead_id')
       .eq('user_id', user.id)
@@ -75,7 +76,7 @@ export async function GET(
     }
 
     // Recupera commenti dalla tabella crm_comments
-    const { data: comments, error: commentsError } = await supabaseAdmin
+    const { data: comments, error: commentsError } = await getSupabaseAdmin()
       .from('crm_comments')
       .select('*')
       .eq('user_id', user.id)
@@ -118,7 +119,7 @@ export async function POST(
     const token = authHeader.replace('Bearer ', '');
     
     // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
     
     if (authError || !user) {
       return NextResponse.json(
@@ -128,7 +129,7 @@ export async function POST(
     }
 
     // Verifica che l'utente sia PRO o AGENCY
-    const { data: userData, error: userError } = await supabaseAdmin
+    const { data: userData, error: userError } = await getSupabaseAdmin()
       .from('users')
       .select('plan, role')
       .eq('id', user.id)
@@ -145,7 +146,7 @@ export async function POST(
     }
 
     // Verifica che il lead sia sbloccato dall'utente
-    const { data: unlockedLead, error: unlockError } = await supabaseAdmin
+    const { data: unlockedLead, error: unlockError } = await getSupabaseAdmin()
       .from('user_unlocked_leads')
       .select('lead_id')
       .eq('user_id', user.id)
@@ -162,7 +163,7 @@ export async function POST(
     }
 
     // Crea nuovo commento
-    const { data: newComment, error: commentError } = await supabaseAdmin
+    const { data: newComment, error: commentError } = await getSupabaseAdmin()
       .from('crm_comments')
       .insert({
         user_id: user.id,
@@ -181,7 +182,7 @@ export async function POST(
     }
 
     // Aggiorna timestamp entry CRM
-    const { error: updateError } = await supabaseAdmin
+    const { error: updateError } = await getSupabaseAdmin()
       .from('crm_entries')
       .update({
         updated_at: new Date().toISOString()
@@ -229,7 +230,7 @@ export async function DELETE(
     const token = authHeader.replace('Bearer ', '');
     
     // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
     
     if (authError || !user) {
       return NextResponse.json(
@@ -239,7 +240,7 @@ export async function DELETE(
     }
 
     // Verifica che l'utente sia PRO o AGENCY
-    const { data: userData, error: userError } = await supabaseAdmin
+    const { data: userData, error: userError } = await getSupabaseAdmin()
       .from('users')
       .select('plan, role')
       .eq('id', user.id)
@@ -256,7 +257,7 @@ export async function DELETE(
     }
 
     // Elimina commento (solo se appartiene all'utente)
-    const { error: deleteError } = await supabaseAdmin
+    const { error: deleteError } = await getSupabaseAdmin()
       .from('crm_comments')
       .delete()
       .eq('id', commentId)

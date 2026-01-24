@@ -5,10 +5,17 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
+
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,14 +26,14 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    const { data: { user }, error: authError } = await getSupabase().auth.getUser(token)
     
     if (authError || !user) {
       return NextResponse.json({ error: 'Token non valido' }, { status: 401 })
     }
 
     // Verifica ruolo admin
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await getSupabase()
       .from('users')
       .select('role')
       .eq('id', user.id)
@@ -41,19 +48,19 @@ export async function GET(request: NextRequest) {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
     // Analisi oggi
-    const { data: todayStats, error: todayError } = await supabase
+    const { data: todayStats, error: todayError } = await getSupabase()
       .from('public_analysis_usage')
       .select('*')
       .eq('analysis_date', today)
 
     // Analisi ultimi 7 giorni
-    const { data: weekStats, error: weekError } = await supabase
+    const { data: weekStats, error: weekError } = await getSupabase()
       .from('public_analysis_usage')
       .select('*')
       .gte('analysis_date', sevenDaysAgo)
 
     // Top IP per utilizzo
-    const { data: topIPs, error: topIPsError } = await supabase
+    const { data: topIPs, error: topIPsError } = await getSupabase()
       .from('public_analysis_usage')
       .select('ip_address')
       .gte('analysis_date', sevenDaysAgo)

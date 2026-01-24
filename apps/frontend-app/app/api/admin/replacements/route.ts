@@ -9,10 +9,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { authenticateUser } from '@/lib/auth-middleware'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 interface ProcessRequest {
   requestId: string
@@ -33,7 +35,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verifica ruolo admin
-    const { data: userData, error: userError } = await supabaseAdmin
+    const { data: userData, error: userError } = await getSupabaseAdmin()
       .from('users')
       .select('role')
       .eq('id', user.id)
@@ -53,7 +55,7 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(url.searchParams.get('offset') || '0')
 
     // Query richieste con dati utente (disambigua le foreign key)
-    const { data: requests, error: requestsError } = await supabaseAdmin
+    const { data: requests, error: requestsError } = await getSupabaseAdmin()
       .from('lead_replacement_requests')
       .select(`
         *,
@@ -73,7 +75,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Conta totale richieste per paginazione
-    const { count, error: countError } = await supabaseAdmin
+    const { count, error: countError } = await getSupabaseAdmin()
       .from('lead_replacement_requests')
       .select('*', { count: 'exact', head: true })
       .eq('status', status)
@@ -83,7 +85,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Statistiche generali
-    const { data: stats, error: statsError } = await supabaseAdmin
+    const { data: stats, error: statsError } = await getSupabaseAdmin()
       .from('lead_replacement_requests')
       .select('status')
 
@@ -129,7 +131,7 @@ export async function POST(request: NextRequest) {
     const adminUserId = user.id
 
     // Verifica ruolo admin
-    const { data: userData, error: userError } = await supabaseAdmin
+    const { data: userData, error: userError } = await getSupabaseAdmin()
       .from('users')
       .select('role')
       .eq('id', adminUserId)
@@ -160,7 +162,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Ottieni dettagli richiesta
-    const { data: requestData, error: requestError } = await supabaseAdmin
+    const { data: requestData, error: requestError } = await getSupabaseAdmin()
       .from('lead_replacement_requests')
       .select('*')
       .eq('id', requestId)
@@ -183,7 +185,7 @@ export async function POST(request: NextRequest) {
     const newStatus = action === 'approve' ? 'approved' : 'rejected'
 
     // Aggiorna richiesta
-    const { error: updateError } = await supabaseAdmin
+    const { error: updateError } = await getSupabaseAdmin()
       .from('lead_replacement_requests')
       .update({
         status: newStatus,
@@ -204,14 +206,14 @@ export async function POST(request: NextRequest) {
     // Se approvata, aggiungi credito sostitutivo all'utente
     if (action === 'approve') {
       // Ottieni crediti attuali e incrementa
-      const { data: currentUser, error: getUserError } = await supabaseAdmin
+      const { data: currentUser, error: getUserError } = await getSupabaseAdmin()
         .from('users')
         .select('credits_remaining')
         .eq('id', requestData.user_id)
         .single()
 
       if (!getUserError && currentUser) {
-        const { error: creditError } = await supabaseAdmin
+        const { error: creditError } = await getSupabaseAdmin()
           .from('users')
           .update({
             credits_remaining: currentUser.credits_remaining + 1,
@@ -226,14 +228,14 @@ export async function POST(request: NextRequest) {
       }
 
       // Segna come credito dato
-      await supabaseAdmin
+      await getSupabaseAdmin()
         .from('lead_replacement_requests')
         .update({ replacement_credit_given: true })
         .eq('id', requestId)
     }
 
     // Log dell'operazione per audit
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from('plan_status_logs')
       .insert({
         user_id: requestData.user_id,

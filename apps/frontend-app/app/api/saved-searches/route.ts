@@ -9,10 +9,12 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 const MAX_SAVED_SEARCHES_FREE = 1
 const MAX_SAVED_SEARCHES_PRO = 5
@@ -26,13 +28,13 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Token non valido' }, { status: 401 })
     }
 
-    const { data: searches, error } = await supabaseAdmin
+    const { data: searches, error } = await getSupabaseAdmin()
       .from('saved_searches')
       .select('*')
       .eq('user_id', user.id)
@@ -84,14 +86,14 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Token non valido' }, { status: 401 })
     }
 
     // Verifica limiti in base al piano
-    const { data: profile } = await supabaseAdmin
+    const { data: profile } = await getSupabaseAdmin()
       .from('profiles')
       .select('subscription_tier')
       .eq('id', user.id)
@@ -103,7 +105,7 @@ export async function POST(request: NextRequest) {
     if (tier === 'business' || tier === 'agency') maxSearches = MAX_SAVED_SEARCHES_BUSINESS
 
     // Conta ricerche esistenti
-    const { count } = await supabaseAdmin
+    const { count } = await getSupabaseAdmin()
       .from('saved_searches')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
@@ -139,7 +141,7 @@ export async function POST(request: NextRequest) {
       alert_frequency: body.alertFrequency || 'daily'
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
       .from('saved_searches')
       .insert(insertData)
       .select()
@@ -151,7 +153,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Aggiorna onboarding se primo alert
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from('user_onboarding')
       .update({
         completed_saved_search: true,
@@ -175,7 +177,7 @@ export async function POST(request: NextRequest) {
 async function checkAndAwardAchievement(userId: string, achievementId: string) {
   try {
     // Verifica se già sbloccato
-    const { data: existing } = await supabaseAdmin
+    const { data: existing } = await getSupabaseAdmin()
       .from('user_achievements')
       .select('id')
       .eq('user_id', userId)
@@ -185,7 +187,7 @@ async function checkAndAwardAchievement(userId: string, achievementId: string) {
     if (existing) return
 
     // Sblocca achievement
-    await supabaseAdmin
+    await getSupabaseAdmin()
       .from('user_achievements')
       .insert({
         user_id: userId,
@@ -193,14 +195,14 @@ async function checkAndAwardAchievement(userId: string, achievementId: string) {
       })
 
     // Aggiungi XP
-    const { data: achievement } = await supabaseAdmin
+    const { data: achievement } = await getSupabaseAdmin()
       .from('achievements')
       .select('xp_reward')
       .eq('id', achievementId)
       .single()
 
     if (achievement?.xp_reward) {
-      await supabaseAdmin.rpc('increment_user_xp', {
+      await getSupabaseAdmin().rpc('increment_user_xp', {
         p_user_id: userId,
         p_xp_amount: achievement.xp_reward
       })

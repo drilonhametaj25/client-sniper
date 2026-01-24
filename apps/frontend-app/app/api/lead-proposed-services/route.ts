@@ -9,11 +9,12 @@ import { authenticateUser } from '@/lib/auth-middleware'
 import { createClient } from '@supabase/supabase-js'
 import { isProOrHigher } from '@/lib/utils/plan-helpers'
 
-// Client per operazioni amministrative (usa service role)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verifica che l'utente abbia un piano PRO
-    const { data: userData, error: userError } = await supabaseAdmin
+    const { data: userData, error: userError } = await getSupabaseAdmin()
       .from('users')
       .select('plan, status')
       .eq('id', user.id)
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
 
     // Costruisci la query
-    let query = supabaseAdmin
+    let query = getSupabaseAdmin()
       .from('lead_proposed_services')
       .select(`
         *,
@@ -146,7 +147,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verifica che l'utente abbia un piano PRO
-    const { data: userData, error: userError } = await supabaseAdmin
+    const { data: userData, error: userError } = await getSupabaseAdmin()
       .from('users')
       .select('plan, status')
       .eq('id', user.id)
@@ -184,7 +185,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verifica che il lead sia sbloccato dall'utente
-    const { data: unlockedLead, error: unlockedError } = await supabaseAdmin
+    const { data: unlockedLead, error: unlockedError } = await getSupabaseAdmin()
       .from('user_unlocked_leads')
       .select('lead_id')
       .eq('user_id', user.id)
@@ -199,7 +200,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verifica che il servizio esista
-    const { data: service, error: serviceError } = await supabaseAdmin
+    const { data: service, error: serviceError } = await getSupabaseAdmin()
       .from('digital_services')
       .select('id, name, price_freelance_eur')
       .eq('id', service_id)
@@ -214,7 +215,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Inserisci servizio proposto (upsert per gestire duplicati)
-    const { data: proposedService, error: insertError } = await supabaseAdmin
+    const { data: proposedService, error: insertError } = await getSupabaseAdmin()
       .from('lead_proposed_services')
       .upsert({
         user_id: user.id,
@@ -254,7 +255,7 @@ export async function POST(request: NextRequest) {
     // Aggiorna o crea entry CRM per tracciare la proposta
     const proposalNote = `Proposto servizio: ${service.name} - €${custom_price_eur || service.price_freelance_eur}${notes ? `\nNote: ${notes}` : ''}`
     
-    const { error: crmError } = await supabaseAdmin.rpc('upsert_crm_entry', {
+    const { error: crmError } = await getSupabaseAdmin().rpc('upsert_crm_entry', {
       p_user_id: user.id,
       p_lead_id: lead_id,
       p_status: null, // Non cambiamo lo status esistente
@@ -305,7 +306,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Aggiorna servizio proposto (solo se appartiene all'utente)
-    const { data: updatedService, error: updateError } = await supabaseAdmin
+    const { data: updatedService, error: updateError } = await getSupabaseAdmin()
       .from('lead_proposed_services')
       .update(updateData)
       .eq('id', id)
@@ -373,7 +374,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Elimina servizio proposto (solo se appartiene all'utente)
-    const { error: deleteError } = await supabaseAdmin
+    const { error: deleteError } = await getSupabaseAdmin()
       .from('lead_proposed_services')
       .delete()
       .eq('id', id)

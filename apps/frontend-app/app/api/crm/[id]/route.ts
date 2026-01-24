@@ -11,11 +11,12 @@ import { isProOrHigher } from '@/lib/utils/plan-helpers';
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
 
-// Client per operazioni amministrative (usa service role)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function GET(
   request: NextRequest,
@@ -36,7 +37,7 @@ export async function GET(
     const token = authHeader.replace('Bearer ', '');
     
     // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
     
     if (authError || !user) {
       return NextResponse.json(
@@ -46,7 +47,7 @@ export async function GET(
     }
 
     // Verifica che l'utente sia PRO e attivo
-    const { data: userData, error: userError } = await supabaseAdmin
+    const { data: userData, error: userError } = await getSupabaseAdmin()
       .from('users')
       .select('plan, status, role')
       .eq('id', user.id)
@@ -84,7 +85,7 @@ export async function GET(
     }
 
     // Recupera il lead con dettagli completi
-    const { data: leadData, error: leadError } = await supabaseAdmin
+    const { data: leadData, error: leadError } = await getSupabaseAdmin()
       .from('user_unlocked_leads')
       .select(`
         lead_id,
@@ -119,7 +120,7 @@ export async function GET(
     }
 
     // Recupera entry CRM per questo lead
-    const { data: crmEntry, error: crmError } = await supabaseAdmin
+    const { data: crmEntry, error: crmError } = await getSupabaseAdmin()
       .from('crm_entries')
       .select('*')
       .eq('user_id', user.id)
@@ -128,7 +129,7 @@ export async function GET(
 
     if (crmError) {
       // Se non esiste entry CRM, creala
-      const { data: newEntry, error: createError } = await supabaseAdmin
+      const { data: newEntry, error: createError } = await getSupabaseAdmin()
         .from('crm_entries')
         .insert({
           user_id: user.id,
@@ -219,7 +220,7 @@ export async function POST(
     const token = authHeader.replace('Bearer ', '');
     
     // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
     
     if (authError || !user) {
       return NextResponse.json(
@@ -229,7 +230,7 @@ export async function POST(
     }
 
     // Verifica che l'utente sia PRO
-    const { data: userData, error: userError } = await supabaseAdmin
+    const { data: userData, error: userError } = await getSupabaseAdmin()
       .from('users')
       .select('plan, role')
       .eq('id', user.id)
@@ -244,7 +245,7 @@ export async function POST(
     }
 
     // Verifica che il lead sia sbloccato dall'utente
-    const { data: unlockedLead, error: unlockError } = await supabaseAdmin
+    const { data: unlockedLead, error: unlockError } = await getSupabaseAdmin()
       .from('user_unlocked_leads')
       .select('lead_id')
       .eq('user_id', user.id)
@@ -265,7 +266,7 @@ export async function POST(
     if (body.follow_up_date !== undefined) updateData.follow_up_date = body.follow_up_date;
     if (body.attachments !== undefined) updateData.attachments = body.attachments;
 
-    const { data: updatedEntry, error: updateError } = await supabaseAdmin
+    const { data: updatedEntry, error: updateError } = await getSupabaseAdmin()
       .from('crm_entries')
       .update(updateData)
       .eq('user_id', user.id)

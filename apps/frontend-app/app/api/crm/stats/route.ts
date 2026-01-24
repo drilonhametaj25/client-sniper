@@ -11,11 +11,12 @@ import { isProOrHigher } from '@/lib/utils/plan-helpers';
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
 
-// Client per operazioni amministrative (usa service role)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
     const token = authHeader.replace('Bearer ', '');
     
     // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
     
     if (authError || !user) {
       return NextResponse.json(
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Verifica piano PRO o superiore
-    const { data: userData } = await supabaseAdmin
+    const { data: userData } = await getSupabaseAdmin()
       .from('users')
       .select('plan, status')
       .eq('id', user.id)
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Recupera statistiche CRM usando la funzione RPC
-    const { data: stats, error } = await supabaseAdmin
+    const { data: stats, error } = await getSupabaseAdmin()
       .rpc('get_user_crm_stats');
 
     if (error) {

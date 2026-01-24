@@ -9,10 +9,12 @@ import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,7 +25,7 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
@@ -39,7 +41,7 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit
 
     // Query zone
-    let query = supabaseAdmin
+    let query = getSupabaseAdmin()
       .from('zones_to_scrape')
       .select('*', { count: 'exact' })
       .order('priority_score', { ascending: false })
@@ -86,14 +88,14 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
     // Verifica che sia admin
-    const { data: userData } = await supabaseAdmin
+    const { data: userData } = await getSupabaseAdmin()
       .from('users')
       .select('role')
       .eq('id', user.id)
@@ -122,7 +124,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verifica se zona esiste gia
-    const { data: existingZone } = await supabaseAdmin
+    const { data: existingZone } = await getSupabaseAdmin()
       .from('zones_to_scrape')
       .select('id')
       .eq('source', source)
@@ -138,7 +140,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Inserisci nuova zona
-    const { data: newZone, error: insertError } = await supabaseAdmin
+    const { data: newZone, error: insertError } = await getSupabaseAdmin()
       .from('zones_to_scrape')
       .insert({
         source,

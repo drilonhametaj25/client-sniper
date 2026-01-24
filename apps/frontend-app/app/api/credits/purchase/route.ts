@@ -14,10 +14,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-08-16',
 })
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -72,7 +74,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Recupera il credit pack dal database
-    const { data: pack, error: packError } = await supabaseAdmin
+    const { data: pack, error: packError } = await getSupabaseAdmin()
       .from('credit_packs')
       .select('*')
       .eq('id', packId)
@@ -95,7 +97,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Recupera l'eventuale customer_id dell'utente
-    const { data: userData } = await supabaseAdmin
+    const { data: userData } = await getSupabaseAdmin()
       .from('users')
       .select('stripe_customer_id')
       .eq('id', dbUserId)
@@ -129,7 +131,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Crea record di acquisto pending
-    const { error: purchaseError } = await supabaseAdmin
+    const { error: purchaseError } = await getSupabaseAdmin()
       .from('credit_purchases')
       .insert({
         user_id: dbUserId,
@@ -159,7 +161,7 @@ export async function POST(request: NextRequest) {
 // GET endpoint per recuperare i credit packs disponibili
 export async function GET() {
   try {
-    const { data: packs, error } = await supabaseAdmin
+    const { data: packs, error } = await getSupabaseAdmin()
       .from('credit_packs')
       .select('id, name, credits, price_cents, currency, discount_percentage')
       .eq('is_active', true)

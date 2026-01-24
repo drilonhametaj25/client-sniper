@@ -7,10 +7,12 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,7 +47,7 @@ export async function POST(request: NextRequest) {
 
     // 🎯 FIND USERS TO RESET: Trova utenti che necessitano reset crediti
     const now = new Date()
-    const { data: usersToReset, error: queryError } = await supabase
+    const { data: usersToReset, error: queryError } = await getSupabase()
       .from('users')
       .select(`
         id, 
@@ -98,7 +100,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 📊 GET PLAN CREDITS: Ottieni i crediti del piano dal database
-        const { data: planData, error: planError } = await supabase
+        const { data: planData, error: planError } = await getSupabase()
           .from('plans')
           .select('max_credits')
           .eq('name', user.plan)
@@ -119,7 +121,7 @@ export async function POST(request: NextRequest) {
         nextResetDate.setHours(0, 0, 0, 0)
 
         // 💾 UPDATE USER: Aggiorna crediti e data di reset
-        const { error: updateError } = await supabase
+        const { error: updateError } = await getSupabase()
           .from('users')
           .update({
             credits_remaining: newCredits,
@@ -135,7 +137,7 @@ export async function POST(request: NextRequest) {
 
         // 🔄 RESET USER REPLACEMENTS: Reset sostituzioni per l'utente
         console.log(`🔄 Resetting replacements for user ${user.id}`)
-        const { error: replacementError } = await supabase
+        const { error: replacementError } = await getSupabase()
           .rpc('reset_user_replacements', { p_user_id: user.id })
 
         if (replacementError) {
@@ -146,7 +148,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 📝 LOG OPERATION: Crea log dell'operazione
-        const { error: logError } = await supabase
+        const { error: logError } = await getSupabase()
           .from('plan_status_logs')
           .insert({
             user_id: user.id,
@@ -211,7 +213,7 @@ export async function GET(request: NextRequest) {
   try {
     // 📊 PREVIEW: Mostra utenti che necessiterebbero reset
     const now = new Date()
-    const { data: usersToReset, error } = await supabase
+    const { data: usersToReset, error } = await getSupabase()
       .from('users')
       .select(`
         id, 

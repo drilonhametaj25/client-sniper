@@ -5,14 +5,18 @@
  * Chiamato da: Pannello admin piani
  */
 
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { authenticateUser } from '@/lib/auth-middleware'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 interface PlanData {
   name: string
@@ -38,7 +42,7 @@ interface PlanData {
 
 // Verifica ruolo admin
 async function verifyAdminAccess(userId: string) {
-  const { data: userData, error } = await supabaseAdmin
+  const { data: userData, error } = await getSupabaseAdmin()
     .from('users')
     .select('role')
     .eq('id', userId)
@@ -73,7 +77,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Carica tutti i piani (inclusi nascosti per admin)
-    const { data: plans, error: plansError } = await supabaseAdmin
+    const { data: plans, error: plansError } = await getSupabaseAdmin()
       .from('plans')
       .select('*')
       .order('sort_order')
@@ -138,7 +142,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verifica se il nome esiste già
-    const { data: existingPlan } = await supabaseAdmin
+    const { data: existingPlan } = await getSupabaseAdmin()
       .from('plans')
       .select('name')
       .eq('name', planData.name.trim())
@@ -152,7 +156,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Crea nuovo piano
-    const { data: newPlan, error: insertError } = await supabaseAdmin
+    const { data: newPlan, error: insertError } = await getSupabaseAdmin()
       .from('plans')
       .insert({
         name: planData.name.trim(),
@@ -240,7 +244,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Verifica che il piano esista
-    const { data: existingPlan, error: checkError } = await supabaseAdmin
+    const { data: existingPlan, error: checkError } = await getSupabaseAdmin()
       .from('plans')
       .select('name')
       .eq('name', planData.name.trim())
@@ -254,7 +258,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Aggiorna piano
-    const { data: updatedPlan, error: updateError } = await supabaseAdmin
+    const { data: updatedPlan, error: updateError } = await getSupabaseAdmin()
       .from('plans')
       .update({
         price_monthly: planData.price_monthly || 0,
@@ -343,7 +347,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Verifica se ci sono utenti che usano questo piano
-    const { data: usersWithPlan, error: usersError } = await supabaseAdmin
+    const { data: usersWithPlan, error: usersError } = await getSupabaseAdmin()
       .from('users')
       .select('id, email')
       .eq('plan', name)
@@ -365,7 +369,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Elimina piano
-    const { error: deleteError } = await supabaseAdmin
+    const { error: deleteError } = await getSupabaseAdmin()
       .from('plans')
       .delete()
       .eq('name', name)

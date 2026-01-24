@@ -6,8 +6,12 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,21 +45,11 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.substring(7)
     
-    // Crea client Supabase con il token dell'utente
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    })
+    // Usa getSupabase() per ottenere il client
+    const supabase = getSupabase()
 
     // Verifica che l'utente sia autenticato
-    const { data: { user } } = await supabase.auth.getUser(token)
+    const { data: { user } } = await getSupabase().auth.getUser(token)
     
     if (!user) {
       return NextResponse.json(
@@ -67,7 +61,7 @@ export async function POST(request: NextRequest) {
     console.log('User authenticated:', user.id)
 
     // Chiama la funzione RPC per gestire il voto
-    const { data, error } = await supabase.rpc('vote_feedback', {
+    const { data, error } = await getSupabase().rpc('vote_feedback', {
       p_feedback_id: feedbackId,
       p_vote_type: voteType
     })

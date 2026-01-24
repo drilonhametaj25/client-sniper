@@ -24,10 +24,12 @@ import {
   getUserGamification
 } from '@/lib/services/newsletter-personalization'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 // Tipo per i risultati
 interface NewsletterResults {
@@ -104,7 +106,7 @@ async function runNewsletterCron(request: NextRequest): Promise<NextResponse> {
     // =====================================================
     console.log('\n📧 [NUOVI] Processing segment...')
 
-    const { data: allUsers, error: usersError } = await supabase
+    const { data: allUsers, error: usersError } = await getSupabase()
       .from('users')
       .select('id, email, unsubscribe_token, credits_remaining')
       .eq('newsletter_subscribed', true)
@@ -119,7 +121,7 @@ async function runNewsletterCron(request: NextRequest): Promise<NextResponse> {
       for (const user of allUsers || []) {
         if (user.credits_remaining !== 5) continue
 
-        const { count } = await supabase
+        const { count } = await getSupabase()
           .from('user_unlocked_leads')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', user.id)
@@ -159,7 +161,7 @@ async function runNewsletterCron(request: NextRequest): Promise<NextResponse> {
     for (const user of allUsers || []) {
       // Salta se già processato come NUOVI
       if (user.credits_remaining === 5) {
-        const { count } = await supabase
+        const { count } = await getSupabase()
           .from('user_unlocked_leads')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', user.id)
@@ -167,7 +169,7 @@ async function runNewsletterCron(request: NextRequest): Promise<NextResponse> {
       }
 
       // Verifica ultimo unlock
-      const { data: lastUnlock } = await supabase
+      const { data: lastUnlock } = await getSupabase()
         .from('user_unlocked_leads')
         .select('unlocked_at')
         .eq('user_id', user.id)
@@ -216,7 +218,7 @@ async function runNewsletterCron(request: NextRequest): Promise<NextResponse> {
     for (const user of allUsers || []) {
       // Salta NUOVI
       if (user.credits_remaining === 5) {
-        const { count } = await supabase
+        const { count } = await getSupabase()
           .from('user_unlocked_leads')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', user.id)
@@ -224,7 +226,7 @@ async function runNewsletterCron(request: NextRequest): Promise<NextResponse> {
       }
 
       // Verifica ultimo unlock
-      const { data: lastUnlock } = await supabase
+      const { data: lastUnlock } = await getSupabase()
         .from('user_unlocked_leads')
         .select('unlocked_at')
         .eq('user_id', user.id)
@@ -311,7 +313,7 @@ async function runNewsletterCron(request: NextRequest): Promise<NextResponse> {
 async function logNewsletter(userId: string, type: string): Promise<void> {
   try {
     // Log in notification_logs
-    await supabase.from('notification_logs').insert({
+    await getSupabase().from('notification_logs').insert({
       user_id: userId,
       notification_type: type,
       channel: 'email',
@@ -320,7 +322,7 @@ async function logNewsletter(userId: string, type: string): Promise<void> {
     })
 
     // Aggiorna timestamp ultimo invio
-    await supabase
+    await getSupabase()
       .from('users')
       .update({ newsletter_last_sent_at: new Date().toISOString() })
       .eq('id', userId)

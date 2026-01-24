@@ -9,11 +9,12 @@ import { authenticateUser } from '@/lib/auth-middleware'
 import { createClient } from '@supabase/supabase-js'
 import { isProOrHigher } from '@/lib/utils/plan-helpers'
 
-// Client per operazioni amministrative (usa service role)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
     const priceType = searchParams.get('priceType') || 'freelance' // 'freelance' o 'agency'
 
     // Costruisci la query
-    let query = supabaseAdmin
+    let query = getSupabaseAdmin()
       .from('digital_services')
       .select('*')
       .eq('is_active', true)
@@ -141,7 +142,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verifica che l'utente sia admin
-    const { data: userData, error: userError } = await supabaseAdmin
+    const { data: userData, error: userError } = await getSupabaseAdmin()
       .from('users')
       .select('role')
       .eq('id', user.id)
@@ -179,7 +180,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Inserisci nuovo servizio
-    const { data: newService, error: insertError } = await supabaseAdmin
+    const { data: newService, error: insertError } = await getSupabaseAdmin()
       .from('digital_services')
       .insert([{
         name,
@@ -232,7 +233,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Verifica che l'utente sia admin
-    const { data: userData, error: userError } = await supabaseAdmin
+    const { data: userData, error: userError } = await getSupabaseAdmin()
       .from('users')
       .select('role')
       .eq('id', user.id)
@@ -256,7 +257,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Aggiorna servizio esistente
-    const { data: updatedService, error: updateError } = await supabaseAdmin
+    const { data: updatedService, error: updateError } = await getSupabaseAdmin()
       .from('digital_services')
       .update(updateData)
       .eq('id', id)

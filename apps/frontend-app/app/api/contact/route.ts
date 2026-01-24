@@ -10,10 +10,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { emailService } from '@/lib/email-service'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 interface ContactRequest {
   name: string
@@ -46,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     // Salva nel database (opzionale - per tracking supporto)
     try {
-      const { error: dbError } = await supabase
+      const { error: dbError } = await getSupabase()
         .from('contact_messages')
         .insert({
           name: name.trim(),
@@ -187,7 +189,7 @@ export async function GET(request: NextRequest) {
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-    const { data: stats, error } = await supabase
+    const { data: stats, error } = await getSupabase()
       .from('contact_messages')
       .select('type, status, created_at')
       .gte('created_at', thirtyDaysAgo.toISOString())

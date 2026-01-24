@@ -10,10 +10,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { emailService } from '@/lib/email-service'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 interface SupabaseAuthEvent {
   type: 'INSERT' | 'UPDATE' | 'DELETE'
@@ -65,6 +67,7 @@ export async function POST(request: NextRequest) {
       
       try {
         // Crea record utente nella tabella custom users
+        const supabase = getSupabaseAdmin()
         const { data: userData, error: userError } = await supabase
           .from('users')
           .upsert({

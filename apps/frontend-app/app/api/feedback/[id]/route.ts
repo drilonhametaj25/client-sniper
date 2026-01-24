@@ -1,11 +1,17 @@
 // API per ottenere dettagli di un singolo feedback pubblico
 // Include risposta admin se presente e voto dell'utente corrente
 
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
 
 export async function GET(
   request: NextRequest,
@@ -21,8 +27,8 @@ export async function GET(
       )
     }
 
-    // Crea client Supabase 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    // Crea client Supabase
+    const supabase = getSupabase()
 
 
     // Chiama la funzione RPC per ottenere dettagli feedback
