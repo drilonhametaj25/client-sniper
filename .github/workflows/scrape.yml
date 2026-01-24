@@ -49,10 +49,10 @@ jobs:
       - name: Install root dependencies
         run: |
           cd ../../
-          npm ci
+          npm install
 
       - name: Install scraping engine dependencies
-        run: npm ci
+        run: npm install
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
