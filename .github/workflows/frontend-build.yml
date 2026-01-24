@@ -25,10 +25,6 @@ on:
 jobs:
   frontend-build:
     runs-on: ubuntu-latest
-    
-    defaults:
-      run:
-        working-directory: apps/frontend-app
 
     steps:
       - name: Checkout repository
@@ -36,31 +32,31 @@ jobs:
 
       - name: Check package files
         run: |
-          ls -la package.json || echo "⚠️ Frontend package.json not found"
-          ls -la ../../package.json || echo "⚠️ Root package.json not found"
+          ls -la package.json || echo "⚠️ Root package.json not found"
+          ls -la package-lock.json || echo "⚠️ Root package-lock.json not found"
+          ls -la apps/frontend-app/package.json || echo "⚠️ Frontend package.json not found"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
 
-      - name: Install root dependencies
-        run: |
-          cd ../../
-          npm ci
-
-      - name: Install frontend dependencies
+      - name: Install all dependencies
         run: npm ci
 
       - name: Run type checking
         run: npm run type-check
+        working-directory: apps/frontend-app
 
       - name: Run linting
         run: npm run lint
+        working-directory: apps/frontend-app
 
       - name: Build application
         run: npm run build
+        working-directory: apps/frontend-app
         env:
           # Dummy environment variables per build test
           NEXT_PUBLIC_SUPABASE_URL: https://dummy.supabase.co
@@ -72,5 +68,5 @@ jobs:
 
       - name: Check build output
         run: |
-          ls -la .next/
+          ls -la apps/frontend-app/.next/
           echo "✅ Frontend build completato con successo"
