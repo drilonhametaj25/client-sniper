@@ -8,19 +8,26 @@ name: Frontend Build & Test
 on:
   push:
     branches: [ main, develop ]
-    paths: 
+    paths:
       - 'apps/frontend-app/**'
       - 'libs/**'
       - 'package.json'
+      - 'package-lock.json'
       - 'turbo.json'
-  
+      - '.github/workflows/frontend-build.yml'
+
   pull_request:
     branches: [ main ]
     paths:
       - 'apps/frontend-app/**'
       - 'libs/**'
       - 'package.json'
+      - 'package-lock.json'
       - 'turbo.json'
+      - '.github/workflows/frontend-build.yml'
+
+  # Allow manual trigger
+  workflow_dispatch:
 
 jobs:
   frontend-build:
