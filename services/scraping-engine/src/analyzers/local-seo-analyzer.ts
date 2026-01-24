@@ -316,7 +316,7 @@ export class LocalSEOAnalyzer {
   }> {
     try {
       return await page.evaluate(() => {
-        const scripts = document.querySelectorAll('script[type="application/ld+json"]')
+        const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'))
 
         for (const script of scripts) {
           try {

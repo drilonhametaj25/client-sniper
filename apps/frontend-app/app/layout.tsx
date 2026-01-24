@@ -12,6 +12,7 @@ import { ToastProvider } from '@/components/ToastProvider'
 import Navbar from '@/components/Navbar'
 import CookieConsent from '@/components/CookieConsent'
 import FeedbackWidget from '@/components/FeedbackWidget'
+import { MobileBottomNav } from '@/components/mobile'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -154,9 +155,10 @@ export default function RootLayout({
               <OnboardingProvider>
                 <div id="root" className="min-h-full">
                   <Navbar />
-                  <main className="min-h-screen">
+                  <main className="min-h-screen pb-16 md:pb-0">
                     {children}
                   </main>
+                  <MobileBottomNav />
                   <CookieConsent />
                   <FeedbackWidget />
                 </div>

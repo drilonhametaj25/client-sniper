@@ -397,6 +397,7 @@ export class ScrapingJobRunner {
       sslValid: false,
       performance: {
         lcp: null,
+        inp: null,
         fid: null,
         cls: null,
         ttfb: null,
@@ -449,6 +450,10 @@ export class ScrapingJobRunner {
         googleAdsConversion: false,
         hotjar: false,
         clarity: false,
+        tiktokPixel: false,
+        linkedInInsightTag: false,
+        snapchatPixel: false,
+        pinterestTag: false,
         customPixels: [],
         trackingScore: 0
       },

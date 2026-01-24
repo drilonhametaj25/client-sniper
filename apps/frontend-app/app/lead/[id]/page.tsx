@@ -37,9 +37,27 @@ import {
   Calendar,
   Star,
   Hash,
+  Euro,
+  Send,
 } from "lucide-react";
 import LeadDigitalServices from "@/components/LeadDigitalServices";
 import ContactTemplates from "@/components/ContactTemplates";
+import QuotationTab from "@/components/QuotationTab";
+import EmailComposerModal from "@/components/EmailComposerModal";
+import {
+  normalizeAnalysis,
+  calculateSEOScore,
+  calculatePerformanceScore,
+  calculateTrackingScore,
+  calculateGDPRScore,
+  calculateMobileScore,
+  getScoreColor as utilGetScoreColor,
+  getScoreBgColor as utilGetScoreBgColor,
+  generateRecommendations,
+  isEnhancedAnalysis,
+  isLegacyAnalysis,
+  NormalizedAnalysis,
+} from "@/lib/utils/analysis-utils";
 
 interface Lead {
   id: string;
@@ -71,9 +89,11 @@ export default function LeadDetailPage() {
 
   const [lead, setLead] = useState<Lead | null>(null);
   const [analysis, setAnalysis] = useState<EnhancedWebsiteAnalysis | WebsiteAnalysis | null>(null);
+  const [normalizedData, setNormalizedData] = useState<NormalizedAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [creditConsumed, setCreditConsumed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showEmailModal, setShowEmailModal] = useState(false);
 
   useEffect(() => {
     if (user && leadId) {
@@ -131,11 +151,12 @@ export default function LeadDetailPage() {
       setLead(leadData);
 
       // Carica l'analisi se disponibile - priorità alla struttura moderna
-      if (leadData.website_analysis) {
-        setAnalysis(leadData.website_analysis);
-      } else if (leadData.analysis) {
-        // Fallback alla struttura legacy
-        setAnalysis(leadData.analysis);
+      const analysisData = leadData.website_analysis || leadData.analysis;
+      if (analysisData) {
+        setAnalysis(analysisData);
+        // Normalize the analysis for consistent access
+        const normalized = normalizeAnalysis(analysisData);
+        setNormalizedData(normalized);
       }
 
       // Consuma 1 credito solo se non già sbloccato
@@ -188,529 +209,99 @@ export default function LeadDetailPage() {
     }
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return "text-green-600";
-    if (score >= 60) return "text-yellow-600";
-    if (score >= 40) return "text-orange-600";
-    return "text-red-600";
-  };
+  // Use centralized utility functions for score colors
+  const getScoreColor = (score: number) => utilGetScoreColor(score);
+  const getScoreBgColor = (score: number) => utilGetScoreBgColor(score);
 
-  const getScoreBgColor = (score: number) => {
-    if (score >= 80) return "bg-green-100 dark:bg-green-900/20";
-    if (score >= 60) return "bg-yellow-100 dark:bg-yellow-900/20";
-    if (score >= 40) return "bg-orange-100 dark:bg-orange-900/20";
-    return "bg-red-100 dark:bg-red-900/20";
-  };
-
-  // Type guard per distinguere tra le due strutture
-  const isEnhancedAnalysis = (analysis: any): analysis is EnhancedWebsiteAnalysis => {
-    return analysis && 
-           typeof analysis.seo === 'object' && 
-           analysis.seo.hasTitle !== undefined &&
-           analysis.performance && 
-           typeof analysis.performance.overallScore === 'number';
-  };
-
-  const isLegacyAnalysis = (analysis: any): analysis is WebsiteAnalysis => {
-    return analysis && 
-           typeof analysis.seo === 'object' && 
-           analysis.seo.hasTitle !== undefined &&
-           analysis.performance && 
-           typeof analysis.performance.isResponsive === 'boolean';
-  };
-
-  // Funzioni helper per compatibilità con vecchio e nuovo formato
+  // Simplified score getters using normalized data
   const getSEOScore = (): number => {
-    if (!analysis) return 0;
-
-    // Struttura Enhanced - controlla prima se è la nuova struttura con seo object
-    if (isEnhancedAnalysis(analysis) && analysis.seo) {
-      const seo = analysis.seo;
-      
-      // Se abbiamo score precalcolato, usalo
-      if ((seo as any).score !== undefined) {
-        return (seo as any).score;
-      }
-
-      // Calcola score basato sui dati disponibili
-      let score = 100;
-      if (seo.hasTitle === false) score -= 20;
-      if (seo.hasMetaDescription === false) score -= 20;
-      if (seo.hasH1 === false) score -= 15;
-      if (seo.titleLength && (seo.titleLength < 30 || seo.titleLength > 60)) score -= 10;
-      if (seo.metaDescriptionLength && (seo.metaDescriptionLength < 120 || seo.metaDescriptionLength > 160)) score -= 10;
-      if (seo.hasStructuredData === false) score -= 5;
-      
-      return Math.max(0, score);
+    if (normalizedData) {
+      return normalizedData.seo.score;
     }
-
-    // Struttura Legacy
-    if (isLegacyAnalysis(analysis) && analysis.seo) {
-      const seo = analysis.seo;
-      let score = 100;
-      
-      if (seo.hasTitle === false) score -= 20;
-      if (seo.hasMetaDescription === false) score -= 20;
-      if (seo.hasH1 === false) score -= 15;
-      if (seo.titleLength < 30 || seo.titleLength > 60) score -= 10;
-      if (seo.metaDescriptionLength < 120 || seo.metaDescriptionLength > 160) score -= 10;
-      if (seo.hasStructuredData === false) score -= 5;
-      
-      return Math.max(0, score);
-    }
-
-    // Controlla se c'è almeno un oggetto seo nella struttura analysis
-    if ((analysis as any).seo) {
-      const seo = (analysis as any).seo;
-      let score = 100;
-      
-      if (seo.hasTitle === false) score -= 20;
-      if (seo.hasMetaDescription === false) score -= 20;
-      if (seo.hasH1 === false) score -= 15;
-      if (seo.titleLength && (seo.titleLength < 30 || seo.titleLength > 60)) score -= 10;
-      if (seo.metaDescriptionLength && (seo.metaDescriptionLength < 120 || seo.metaDescriptionLength > 160)) score -= 10;
-      if (seo.hasStructuredData === false) score -= 5;
-      
-      return Math.max(0, score);
-    }
-
-    // Fallback per strutture molto vecchie
-    if (analysis && typeof analysis === 'object' && 'seo_score' in analysis) {
-      return (analysis as any).seo_score || 0;
-    }
-
-    return 0;
+    return analysis ? calculateSEOScore(analysis) : 0;
   };
 
   const getPerformanceScore = (): number => {
-    if (!analysis) return 0;
-
-    // Struttura Enhanced - controlla prima se c'è performance object
-    if (isEnhancedAnalysis(analysis) && analysis.performance) {
-      const perf = analysis.performance;
-      
-      // Usa il punteggio precalcolato se disponibile
-      if (perf.overallScore !== undefined) {
-        return perf.overallScore;
-      }
-
-      // Controlla se c'è speedScore nella nuova struttura
-      if ((perf as any).speedScore !== undefined) {
-        return (perf as any).speedScore;
-      }
-
-      // Calcola score basato sui dati disponibili
-      let score = 100;
-      if (perf.loadTime > 5000) score -= 40;
-      else if (perf.loadTime > 3000) score -= 30;
-      else if (perf.loadTime > 2000) score -= 15;
-      else if (perf.loadTime > 1000) score -= 5;
-      
-      // Usa images.broken invece di performance.brokenImages
-      if (analysis.images && analysis.images.broken > 0) {
-        if (analysis.images.broken > 5) score -= 30;
-        else score -= 20;
-      }
-      
-      // Usa mobile.isMobileFriendly invece di performance.isResponsive
-      if (analysis.mobile && analysis.mobile.isMobileFriendly === false) {
-        score -= 25;
-      }
-      
-      // Considera Core Web Vitals se disponibili
-      if (perf.coreWebVitals) {
-        const cwv = perf.coreWebVitals;
-        if (cwv.lcp > 2500) score -= 15;
-        if (cwv.fid > 100) score -= 10;
-        if (cwv.cls > 0.1) score -= 10;
-      }
-      
-      return Math.max(0, score);
+    if (normalizedData) {
+      return normalizedData.performance.score;
     }
-
-    // Struttura Legacy
-    if (isLegacyAnalysis(analysis) && analysis.performance) {
-      const perf = analysis.performance;
-      let score = 100;
-      
-      if (perf.loadTime > 5000) score -= 40;
-      else if (perf.loadTime > 3000) score -= 30;
-      else if (perf.loadTime > 2000) score -= 15;
-      else if (perf.loadTime > 1000) score -= 5;
-      
-      if (perf.brokenImages > 5) score -= 30;
-      else if (perf.brokenImages > 0) score -= 20;
-      
-      if (perf.isResponsive === false) score -= 25;
-      
-      return Math.max(0, score);
-    }
-
-    // Controlla se c'è almeno un oggetto performance nella struttura analysis
-    if ((analysis as any).performance) {
-      const perf = (analysis as any).performance;
-      
-      // Controlla se c'è speedScore nella nuova struttura
-      if (perf.speedScore !== undefined) {
-        return perf.speedScore;
-      }
-
-      // Calcola basato su loadComplete o altri campi disponibili
-      let score = 100;
-      const loadTime = perf.loadComplete || perf.loadTime;
-      if (loadTime) {
-        if (loadTime > 5000) score -= 40;
-        else if (loadTime > 3000) score -= 30;
-        else if (loadTime > 2000) score -= 15;
-        else if (loadTime > 1000) score -= 5;
-      }
-      
-      // Considera altri metriche se disponibili
-      if (perf.lcp && perf.lcp > 2500) score -= 15;
-      if (perf.cls && perf.cls > 0.1) score -= 10;
-      if (perf.ttfb && perf.ttfb > 600) score -= 10;
-      
-      return Math.max(0, score);
-    }
-
-    // Fallback per strutture molto vecchie
-    if (analysis && typeof analysis === 'object' && 'page_speed_score' in analysis) {
-      return (analysis as any).page_speed_score || 0;
-    }
-
-    return 0;
+    return analysis ? calculatePerformanceScore(analysis) : 0;
   };
 
   const getOverallScore = (): number => {
+    if (normalizedData) {
+      return normalizedData.overallScore;
+    }
     if (!analysis) return lead?.score || 0;
-    
-    // Struttura Enhanced
-    if (isEnhancedAnalysis(analysis)) {
-      return analysis.overallScore || lead?.score || 0;
-    }
-    
-    // Struttura Legacy
-    if (isLegacyAnalysis(analysis)) {
-      return analysis.overallScore || lead?.score || 0;
-    }
-    
-    // Controlla se c'è overallScore direttamente nell'analysis
-    if ((analysis as any).overallScore !== undefined) {
-      return (analysis as any).overallScore;
-    }
-    
-    // Fallback per strutture molto vecchie
-    if (analysis && typeof analysis === 'object' && 'overall_score' in analysis) {
-      return (analysis as any).overall_score || lead?.score || 0;
-    }
-    
-    return lead?.score || 0;
+    // Fallback: calculate average of available scores
+    const seo = calculateSEOScore(analysis);
+    const perf = calculatePerformanceScore(analysis);
+    return Math.round((seo + perf) / 2) || lead?.score || 0;
   };
 
-  // Funzione helper per compatibilità con il vecchio codice
+  const getTrackingScore = (): number => {
+    if (normalizedData) {
+      return normalizedData.tracking.score;
+    }
+    return analysis ? calculateTrackingScore(analysis) : 0;
+  };
+
+  const getGDPRScore = (): number => {
+    if (normalizedData) {
+      return normalizedData.gdpr.score;
+    }
+    return analysis ? calculateGDPRScore(analysis) : 0;
+  };
+
+  const getMobileScore = (): number => {
+    if (normalizedData) {
+      return normalizedData.mobile.score;
+    }
+    return analysis ? calculateMobileScore(analysis) : 0;
+  };
+
+  // Check if we have enhanced analysis format
   const isNewFormat = (): boolean => {
-    return isEnhancedAnalysis(analysis);
+    return analysis ? isEnhancedAnalysis(analysis) : false;
   };
 
-  // Funzioni helper per generare raccomandazioni intelligenti
-  const generateRecommendations = () => {
-    const recommendations: {
-      category: string;
-      title: string;
-      description: string;
-      priority: "high" | "medium" | "low";
-    }[] = [];
-
-    if (!analysis) return recommendations;
-
-    // Struttura Enhanced
-    if (isEnhancedAnalysis(analysis)) {
-      // SEO Raccomandazioni
-      if (!analysis.seo.hasTitle) {
-        recommendations.push({
-          category: "SEO",
-          title: "Aggiungi un Tag Title",
-          description:
-            "Il sito non ha un tag title. Aggiungi un titolo descrittivo (50-60 caratteri) per migliorare la visibilità sui motori di ricerca.",
-          priority: "high",
-        });
-      }
-
-      if (!analysis.seo.hasMetaDescription) {
-        recommendations.push({
-          category: "SEO",
-          title: "Aggiungi Meta Description",
-          description:
-            "Manca la meta description. Scrivi una descrizione accattivante (150-160 caratteri) per migliorare il click-through rate.",
-          priority: "high",
-        });
-      }
-
-      if (!analysis.seo.hasH1) {
-        recommendations.push({
-          category: "SEO",
-          title: "Aggiungi Tag H1",
-          description:
-            "Il sito non ha un tag H1. Aggiungi un titolo principale che descriva chiaramente il contenuto della pagina.",
-          priority: "medium",
-        });
-      }
-
-      if (!analysis.seo.hasStructuredData) {
-        recommendations.push({
-          category: "SEO",
-          title: "Implementa Dati Strutturati",
-          description:
-            "Aggiungi markup schema.org per aiutare i motori di ricerca a comprendere meglio il contenuto del sito.",
-          priority: "medium",
-        });
-      }
-
-      // Performance Raccomandazioni
-      if (analysis.performance.loadTime > 3000) {
-        recommendations.push({
-          category: "Performance",
-          title: "Ottimizza Velocità di Caricamento",
-          description: `Il sito impiega ${Math.round(
-            analysis.performance.loadTime / 1000
-          )}s per caricarsi. Ottimizza immagini, CSS e JavaScript per migliorare l\'esperienza utente.`,
-          priority: "high",
-        });
-      }
-
-      // Usa images.broken invece di performance.brokenImages
-      if (analysis.images && analysis.images.broken > 0) {
-        recommendations.push({
-          category: "Performance",
-          title: "Correggi Immagini Rotte",
-          description: `Trovate ${analysis.images.broken} immagini non funzionanti. Sostituiscile o rimuovile per migliorare l\'esperienza utente.`,
-          priority: "medium",
-        });
-      }
-
-      // Usa mobile.isMobileFriendly invece di performance.isResponsive
-      if (analysis.mobile && !analysis.mobile.isMobileFriendly) {
-        recommendations.push({
-          category: "Performance",
-          title: "Rendi il Sito Responsive",
-          description:
-            "Il sito non è ottimizzato per dispositivi mobili. Implementa un design responsive per raggiungere più utenti.",
-          priority: "high",
-        });
-      }
-
-      // Tracking Raccomandazioni
-      if (!analysis.tracking.googleAnalytics && !analysis.tracking.hasGoogleAnalytics) {
-        recommendations.push({
-          category: "Analytics",
-          title: "Installa Google Analytics",
-          description:
-            "Aggiungi Google Analytics per monitorare il traffico del sito e comprendere meglio i visitatori.",
-          priority: "medium",
-        });
-      }
-
-      if (!analysis.tracking.facebookPixel && !analysis.tracking.hasFacebookPixel) {
-        recommendations.push({
-          category: "Marketing",
-          title: "Installa Facebook Pixel",
-          description:
-            "Aggiungi il Facebook Pixel per tracciare conversioni e creare campagne pubblicitarie più efficaci su Facebook e Instagram.",
-          priority: "medium",
-        });
-      }
-
-      if (!analysis.tracking.googleTagManager && !analysis.tracking.hasGoogleTagManager) {
-        recommendations.push({
-          category: "Analytics",
-          title: "Implementa Google Tag Manager",
-          description:
-            "GTM semplifica la gestione di tutti i tag di tracking senza modificare il codice del sito.",
-          priority: "low",
-        });
-      }
-
-      // GDPR Raccomandazioni
-      if (!analysis.gdpr.hasCookieBanner) {
-        recommendations.push({
-          category: "Legale",
-          title: "Aggiungi Cookie Banner",
-          description:
-            "Per rispettare il GDPR, aggiungi un banner per chiedere il consenso ai cookie prima di tracciare gli utenti.",
-          priority: "high",
-        });
-      }
-
-      if (!analysis.gdpr.hasPrivacyPolicy) {
-        recommendations.push({
-          category: "Legale",
-          title: "Crea Privacy Policy",
-          description:
-            "Obbligatoria per legge, la privacy policy deve spiegare come vengono trattati i dati personali degli utenti.",
-          priority: "high",
-        });
-      }
-
-      if (!analysis.gdpr.hasTermsOfService) {
-        recommendations.push({
-          category: "Legale",
-          title: "Aggiungi Termini di Servizio",
-          description:
-            "I termini di servizio proteggono legalmente la tua attività e definiscono le regole di utilizzo del sito.",
-          priority: "medium",
-        });
-      }
-
-      // Social Raccomandazioni
-      if (analysis.social && (!analysis.social.hasAnySocial || analysis.social.socialCount === 0)) {
-        recommendations.push({
-          category: "Social Media",
-          title: "Aggiungi Presenza Social",
-          description:
-            "Crea profili social (Facebook, Instagram, LinkedIn) e collegali al sito per aumentare la credibilità e raggiungere più clienti.",
-          priority: "medium",
-        });
-      }
-
-      // GDPR compliance includes business data requirements
-      if (!analysis.gdpr.hasVatNumber) {
-        recommendations.push({
-          category: "Legale",
-          title: "Mostra Partita IVA",
-          description:
-            "Per legge, i siti aziendali devono mostrare chiaramente la Partita IVA e i dati della società.",
-          priority: "high",
-        });
-      }
-
-    } else if (isLegacyAnalysis(analysis)) {
-      // Struttura Legacy - Raccomandazioni basate sui campi disponibili
-      if (!analysis.seo.hasTitle) {
-        recommendations.push({
-          category: "SEO",
-          title: "Aggiungi un Tag Title",
-          description:
-            "Il sito non ha un tag title. Aggiungi un titolo descrittivo (50-60 caratteri) per migliorare la visibilità sui motori di ricerca.",
-          priority: "high",
-        });
-      }
-
-      if (!analysis.seo.hasMetaDescription) {
-        recommendations.push({
-          category: "SEO",
-          title: "Aggiungi Meta Description",
-          description:
-            "Manca la meta description. Scrivi una descrizione accattivante (150-160 caratteri) per migliorare il click-through rate.",
-          priority: "high",
-        });
-      }
-
-      if (!analysis.tracking.hasGoogleAnalytics) {
-        recommendations.push({
-          category: "Analytics",
-          title: "Installa Google Analytics",
-          description:
-            "Aggiungi Google Analytics per monitorare il traffico del sito e comprendere meglio i visitatori.",
-          priority: "medium",
-        });
-      }
-
-      if (analysis.performance.brokenImages > 0) {
-        recommendations.push({
-          category: "Performance",
-          title: "Correggi Immagini Rotte",
-          description:
-            "Trovate immagini non funzionanti. Sostituiscile o rimuovile per migliorare l'esperienza utente.",
-          priority: "medium",
-        });
-      }
-
-      if (analysis.performance.loadTime > 3000) {
-        recommendations.push({
-          category: "Performance",
-          title: "Ottimizza Velocità di Caricamento",
-          description: `Il sito impiega ${Math.round(
-            analysis.performance.loadTime / 1000
-          )}s per caricarsi. Ottimizza per migliorare l\'esperienza utente.`,
-          priority: "high",
-        });
-      }
-
-    } else {
-      // Fallback per strutture molto vecchie con proprietà flat
-      const analysisAny = analysis as any;
-      
-      if (analysisAny.missing_meta_tags && analysisAny.missing_meta_tags.length > 0) {
-        recommendations.push({
-          category: "SEO",
-          title: "Aggiungi Meta Tag Mancanti",
-          description: `Mancano ${
-            analysisAny.missing_meta_tags.length
-          } meta tag importanti: ${analysisAny.missing_meta_tags.join(
-            ", "
-          )}. Aggiungili per migliorare la SEO.`,
-          priority: "high",
-        });
-      }
-
-      if (!analysisAny.has_tracking_pixel) {
-        recommendations.push({
-          category: "Marketing",
-          title: "Installa Pixel di Tracking",
-          description:
-            "Aggiungi pixel di tracking (Facebook, Google) per monitorare conversioni e migliorare le campagne pubblicitarie.",
-          priority: "medium",
-        });
-      }
-
-      if (analysisAny.broken_images) {
-        recommendations.push({
-          category: "Performance",
-          title: "Correggi Immagini Rotte",
-          description:
-            "Trovate immagini non funzionanti. Sostituiscile o rimuovile per migliorare l'esperienza utente.",
-          priority: "medium",
-        });
-      }
-
-      if (analysisAny.website_load_time && analysisAny.website_load_time > 3000) {
-        recommendations.push({
-          category: "Performance",
-          title: "Ottimizza Velocità di Caricamento",
-          description: `Il sito impiega ${Math.round(
-            analysisAny.website_load_time / 1000
-          )}s per caricarsi. Ottimizza per migliorare l\'esperienza utente.`,
-          priority: "high",
-        });
-      }
+  // Use centralized utility for generating recommendations
+  const getRecommendations = () => {
+    if (normalizedData) {
+      return generateRecommendations(normalizedData);
     }
-
-    // Ordina per priorità
-    const priorityOrder = { high: 3, medium: 2, low: 1 };
-    return recommendations.sort(
-      (a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
-    );
+    if (!analysis) return [];
+    const normalized = normalizeAnalysis(analysis);
+    return generateRecommendations(normalized);
   };
 
-  const getPriorityColor = (priority: "high" | "medium" | "low") => {
+  const getPriorityColor = (priority: "critical" | "high" | "medium" | "low") => {
     switch (priority) {
+      case "critical":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300";
       case "high":
         return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300";
       case "medium":
         return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300";
       case "low":
         return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300";
     }
   };
 
-  const getPriorityIcon = (priority: "high" | "medium" | "low") => {
+  const getPriorityIcon = (priority: "critical" | "high" | "medium" | "low") => {
     switch (priority) {
+      case "critical":
+        return <XCircle className="h-4 w-4" />;
       case "high":
         return <AlertTriangle className="h-4 w-4" />;
       case "medium":
         return <Clock className="h-4 w-4" />;
       case "low":
         return <TrendingDown className="h-4 w-4" />;
+      default:
+        return <Clock className="h-4 w-4" />;
     }
   };
 
@@ -847,14 +438,23 @@ export default function LeadDetailPage() {
                 )}
 
                 {lead.email && (
-                  <div className="flex items-center">
-                    <Mail className="h-4 w-4 text-gray-400 mr-3" />
-                    <a
-                      href={`mailto:${lead.email}`}
-                      className="text-blue-600 hover:text-blue-700 hover:underline"
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Mail className="h-4 w-4 text-gray-400 mr-3" />
+                      <a
+                        href={`mailto:${lead.email}`}
+                        className="text-blue-600 hover:text-blue-700 hover:underline"
+                      >
+                        {lead.email}
+                      </a>
+                    </div>
+                    <button
+                      onClick={() => setShowEmailModal(true)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >
-                      {lead.email}
-                    </a>
+                      <Send className="h-3.5 w-3.5" />
+                      <span>Invia Email</span>
+                    </button>
                   </div>
                 )}
 
@@ -898,7 +498,7 @@ export default function LeadDetailPage() {
                 </h2>
 
                 <div className="space-y-4">
-                  {generateRecommendations().map((rec, index) => (
+                  {getRecommendations().map((rec, index) => (
                     <div
                       key={index}
                       className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
@@ -936,7 +536,7 @@ export default function LeadDetailPage() {
                     </div>
                   ))}
 
-                  {generateRecommendations().length === 0 && (
+                  {getRecommendations().length === 0 && (
                     <div className="text-center py-8">
                       <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
                       <p className="text-gray-600 dark:text-gray-400">
@@ -1071,7 +671,7 @@ export default function LeadDetailPage() {
                     Riepilogo Opportunità
                   </h3>
                   {(() => {
-                    const recommendations = generateRecommendations();
+                    const recommendations = getRecommendations();
                     const groupedByCategory = recommendations.reduce((acc, rec) => {
                       if (!acc[rec.category]) acc[rec.category] = [];
                       acc[rec.category].push(rec);
@@ -2352,13 +1952,13 @@ export default function LeadDetailPage() {
                       <div className="text-center">
                         <div className="text-2xl font-bold text-red-600 mb-2">
                           {(() => {
-                            const recs = generateRecommendations();
+                            const recs = getRecommendations();
                             return recs.filter(r => r.priority === 'high').length;
                           })()}
                         </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">Priorità Alta</div>
                         <div className="space-y-1">
-                          {generateRecommendations()
+                          {getRecommendations()
                             .filter(r => r.priority === 'high')
                             .slice(0, 3)
                             .map((rec, idx) => (
@@ -2373,13 +1973,13 @@ export default function LeadDetailPage() {
                       <div className="text-center">
                         <div className="text-2xl font-bold text-yellow-600 mb-2">
                           {(() => {
-                            const recs = generateRecommendations();
+                            const recs = getRecommendations();
                             return recs.filter(r => r.priority === 'medium').length;
                           })()}
                         </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">Priorità Media</div>
                         <div className="space-y-1">
-                          {generateRecommendations()
+                          {getRecommendations()
                             .filter(r => r.priority === 'medium')
                             .slice(0, 3)
                             .map((rec, idx) => (
@@ -2430,8 +2030,8 @@ export default function LeadDetailPage() {
                         <span className="text-sm font-medium text-gray-900 dark:text-white">Potenziale di Vendita</span>
                         <span className="text-sm font-bold text-purple-600">
                           {(() => {
-                            const totalRecs = generateRecommendations().length;
-                            const highPriority = generateRecommendations().filter(r => r.priority === 'high').length;
+                            const totalRecs = getRecommendations().length;
+                            const highPriority = getRecommendations().filter(r => r.priority === 'high').length;
                             const score = Math.min(100, (totalRecs * 10) + (highPriority * 15));
                             return `${score}%`;
                           })()}
@@ -2441,12 +2041,12 @@ export default function LeadDetailPage() {
                         <div
                           className="h-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500"
                           style={{ 
-                            width: `${Math.min(100, (generateRecommendations().length * 10) + (generateRecommendations().filter(r => r.priority === 'high').length * 15))}%` 
+                            width: `${Math.min(100, (getRecommendations().length * 10) + (getRecommendations().filter(r => r.priority === 'high').length * 15))}%` 
                           }}
                         ></div>
                       </div>
                       <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                        Basato su {generateRecommendations().length} opportunità identificate
+                        Basato su {getRecommendations().length} opportunità identificate
                       </div>
                     </div>
                   </div>
@@ -2546,6 +2146,15 @@ export default function LeadDetailPage() {
             {/* Sezione Servizi Digitali per utenti PRO */}
             <LeadDigitalServices lead={lead} />
 
+            {/* Preventivo Automatico */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                <Euro className="h-5 w-5 mr-2 text-green-600" />
+                Preventivo Automatico
+              </h2>
+              <QuotationTab leadId={leadId} businessName={lead.business_name} />
+            </div>
+
             {/* Template per primo contatto */}
             <ContactTemplates 
               lead={lead} 
@@ -2635,6 +2244,25 @@ export default function LeadDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Email Composer Modal */}
+      {lead && (
+        <EmailComposerModal
+          isOpen={showEmailModal}
+          lead={{
+            id: lead.id,
+            business_name: lead.business_name,
+            email: lead.email || '',
+            website_url: lead.website_url,
+            city: lead.city,
+            category: lead.category,
+            score: lead.score,
+            website_analysis: lead.website_analysis,
+            analysis: lead.analysis,
+          }}
+          onClose={() => setShowEmailModal(false)}
+        />
+      )}
     </div>
   );
 }

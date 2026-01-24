@@ -232,9 +232,9 @@ export class MasterAnalyzer {
       // Enhanced analysis (main)
       if (opts.includeEnhanced) {
         promises.push(
-          this.enhancedAnalyzer.analyze(url)
-            .then(analysis => { result.enhanced = analysis })
-            .catch(e => errors.push(`Enhanced: ${e.message}`))
+          this.enhancedAnalyzer.analyzeWebsite(url)
+            .then((analysis: any) => { result.enhanced = analysis })
+            .catch((e: any) => errors.push(`Enhanced: ${e.message}`))
         )
       }
 
@@ -300,7 +300,7 @@ export class MasterAnalyzer {
       // Run sequentially
       if (opts.includeEnhanced) {
         try {
-          result.enhanced = await this.enhancedAnalyzer.analyze(url)
+          result.enhanced = await this.enhancedAnalyzer.analyzeWebsite(url)
         } catch (e) {
           errors.push(`Enhanced: ${e instanceof Error ? e.message : 'Unknown error'}`)
         }

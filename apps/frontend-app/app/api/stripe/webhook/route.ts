@@ -280,8 +280,15 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   console.log(`Customer: ${session.customer}`)
   console.log(`Customer Email: ${session.customer_email || session.customer_details?.email}`)
   console.log(`Subscription: ${session.subscription}`)
+  console.log(`Mode: ${session.mode}`)
   console.log(`Amount: ${session.amount_total ? session.amount_total / 100 : 'N/A'} ${session.currency}`)
-  
+
+  // 🎯 CREDIT PACK PURCHASE: Handle one-time credit pack purchases
+  if (session.metadata?.type === 'credit_pack') {
+    await handleCreditPackPurchase(session)
+    return
+  }
+
   let userId = session.client_reference_id
   const userEmail = session.metadata?.user_email
   const planId = session.metadata?.plan_id
@@ -975,5 +982,126 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
 
   } catch (error) {
     console.error('🚨 Errore handleInvoicePaymentFailed:', error)
+  }
+}
+
+// 🎯 NUOVO: Gestione acquisto Credit Pack (one-time payment)
+async function handleCreditPackPurchase(session: Stripe.Checkout.Session) {
+  console.log('\n💰 PROCESSING CREDIT PACK PURCHASE:')
+  console.log(`Session ID: ${session.id}`)
+  console.log(`Metadata:`, session.metadata)
+
+  const userId = session.metadata?.user_id || session.client_reference_id
+  const packId = session.metadata?.pack_id
+  const packName = session.metadata?.pack_name
+  const credits = parseInt(session.metadata?.credits || '0', 10)
+  const userEmail = session.metadata?.user_email
+
+  if (!userId || !packId || !credits) {
+    console.error('❌ Missing required metadata for credit pack purchase')
+    console.error(`userId: ${userId}, packId: ${packId}, credits: ${credits}`)
+    return
+  }
+
+  console.log(`User ID: ${userId}`)
+  console.log(`Pack: ${packName} (${packId})`)
+  console.log(`Credits: ${credits}`)
+
+  try {
+    // Recupera i crediti attuali dell'utente
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('credits_remaining, email')
+      .eq('id', userId)
+      .single()
+
+    if (userError || !userData) {
+      console.error('❌ Utente non trovato:', userError)
+      return
+    }
+
+    const currentCredits = userData.credits_remaining || 0
+    const newCredits = currentCredits + credits
+
+    console.log(`Crediti attuali: ${currentCredits}`)
+    console.log(`Nuovi crediti: ${newCredits}`)
+
+    // Aggiorna i crediti dell'utente
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        credits_remaining: newCredits,
+        // Aggiorna anche il customer_id se presente
+        ...(session.customer ? { stripe_customer_id: session.customer as string } : {})
+      })
+      .eq('id', userId)
+
+    if (updateError) {
+      console.error('❌ Errore aggiornamento crediti:', updateError)
+      return
+    }
+
+    console.log(`✅ Crediti aggiornati: ${currentCredits} → ${newCredits}`)
+
+    // Aggiorna lo stato dell'acquisto in credit_purchases
+    const { error: purchaseError } = await supabase
+      .from('credit_purchases')
+      .update({
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        stripe_payment_intent_id: session.payment_intent as string
+      })
+      .eq('stripe_checkout_session_id', session.id)
+
+    if (purchaseError) {
+      console.error('❌ Errore aggiornamento record acquisto:', purchaseError)
+      // Non blocchiamo, il credito è già stato aggiunto
+    } else {
+      console.log('✅ Record acquisto aggiornato a completed')
+    }
+
+    // Crea log dell'operazione
+    const { error: logError } = await supabase
+      .from('plan_status_logs')
+      .insert({
+        user_id: userId,
+        action: 'credit_pack_purchased',
+        previous_status: 'active',
+        new_status: 'active',
+        reason: `Credit pack purchased: ${packName} (+${credits} credits) - Session: ${session.id}`,
+        triggered_by: 'stripe_webhook',
+        stripe_event_id: session.id
+      })
+
+    if (logError) {
+      console.error('❌ Errore creazione log:', logError)
+    } else {
+      console.log('✅ Log operazione creato')
+    }
+
+    // Tracking Klaviyo (se email presente)
+    const email = userEmail || userData.email
+    if (email) {
+      try {
+        klaviyoServer.trackEvent({
+          event: 'Credit Pack Purchased',
+          email,
+          properties: {
+            pack_name: packName,
+            credits_purchased: credits,
+            new_credit_balance: newCredits,
+            amount: session.amount_total ? session.amount_total / 100 : 0,
+            currency: session.currency
+          }
+        }).catch(err => console.error('Klaviyo track error:', err))
+
+        console.log(`📧 Klaviyo: Credit Pack Purchased event inviato per ${email}`)
+      } catch (klaviyoError) {
+        console.error('Klaviyo error:', klaviyoError)
+      }
+    }
+
+  } catch (error) {
+    console.error('🚨 Errore handleCreditPackPurchase:', error)
   }
 }

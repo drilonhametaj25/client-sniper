@@ -10,34 +10,37 @@
 import { Page } from 'playwright'
 
 export interface PerformanceMetrics {
-  // Core Web Vitals
+  // Core Web Vitals (2024)
   lcp: number | null // Largest Contentful Paint (ms)
-  fid: number | null // First Input Delay (ms)  
+  inp: number | null // Interaction to Next Paint (ms) - SOSTITUISCE FID
   cls: number | null // Cumulative Layout Shift (score)
-  
+
+  // Legacy (deprecato, mantenuto per retrocompatibilità)
+  fid: number | null // First Input Delay (ms) - DEPRECATO da Google marzo 2024
+
   // Timing Metrics
   ttfb: number | null // Time to First Byte (ms)
   fcp: number | null // First Contentful Paint (ms)
   domContentLoaded: number | null // DOMContentLoaded (ms)
   loadComplete: number | null // Window Load (ms)
-  
+
   // Resource Metrics
   totalResources: number
   totalSize: number // bytes
   imageSize: number // bytes
   jsSize: number // bytes
   cssSize: number // bytes
-  
+
   // Network Metrics
   requestCount: number
   failedRequests: number
   cachedRequests: number
-  
+
   // Performance Scores
   speedScore: number // 0-100
   optimizationScore: number // 0-100
   mobileScore: number // 0-100
-  
+
   // Issues
   performanceIssues: string[]
   recommendations: string[]
@@ -139,7 +142,8 @@ export class PerformanceAnalyzer {
         ...scores,
         // Garantisce che tutti i campi siano definiti
         lcp: coreWebVitals.lcp || null,
-        fid: coreWebVitals.fid || null,
+        inp: coreWebVitals.inp || null,
+        fid: coreWebVitals.fid || null, // Deprecato, mantenuto per retrocompatibilità
         cls: coreWebVitals.cls || null,
         ttfb: timingMetrics.ttfb || null,
         fcp: timingMetrics.fcp || null,
@@ -217,64 +221,162 @@ export class PerformanceAnalyzer {
 
   /**
    * Raccoglie Core Web Vitals usando API del browser
+   * INP (Interaction to Next Paint) sostituisce FID dal marzo 2024
+   * Timeout migliorato con early resolution quando possibile
    */
   private async collectCoreWebVitals(page: Page): Promise<Partial<PerformanceMetrics>> {
     const webVitals = await page.evaluate(() => {
       return new Promise((resolve) => {
         const vitals = {
           lcp: null as number | null,
-          fid: null as number | null,
+          inp: null as number | null,  // Nuovo: sostituisce FID
+          fid: null as number | null,  // Deprecato, mantenuto per retrocompatibilità
           cls: null as number | null
         }
-        
-        // LCP - Largest Contentful Paint
+
+        let metricsCollected = 0
+        const expectedMetrics = 3 // LCP, INP/FID, CLS
+        let resolved = false
+
+        const checkAndResolve = () => {
+          metricsCollected++
+          // Risolvi quando abbiamo raccolto sufficienti metriche
+          if (!resolved && (metricsCollected >= expectedMetrics || vitals.lcp !== null)) {
+            // Dai un po' più di tempo per CLS che si accumula
+            setTimeout(() => {
+              if (!resolved) {
+                resolved = true
+                resolve(vitals)
+              }
+            }, 1000)
+          }
+        }
+
         if ('PerformanceObserver' in window) {
+          // LCP - Largest Contentful Paint
           try {
-            new PerformanceObserver((entryList) => {
+            const lcpObserver = new PerformanceObserver((entryList) => {
               const entries = entryList.getEntries()
               const lastEntry = entries[entries.length - 1]
-              vitals.lcp = lastEntry.startTime
-            }).observe({ entryTypes: ['largest-contentful-paint'] })
+              vitals.lcp = Math.round(lastEntry.startTime)
+              lcpObserver.disconnect()
+              checkAndResolve()
+            })
+            lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true })
+
+            // Timeout per LCP se non si attiva
+            setTimeout(() => {
+              if (vitals.lcp === null) {
+                lcpObserver.disconnect()
+                checkAndResolve()
+              }
+            }, 5000)
           } catch (e) {
-            console.warn('LCP non supportato')
+            checkAndResolve()
           }
-          
-          // FID - First Input Delay
+
+          // INP - Interaction to Next Paint (sostituisce FID)
           try {
-            new PerformanceObserver((entryList) => {
+            let maxInp = 0
+            const inpObserver = new PerformanceObserver((entryList) => {
               const entries = entryList.getEntries()
               entries.forEach((entry: any) => {
-                if (entry.processingStart) {
-                  vitals.fid = entry.processingStart - entry.startTime
+                // INP considera la durata totale dell'interazione
+                const duration = entry.duration || 0
+                if (duration > maxInp) {
+                  maxInp = duration
+                  vitals.inp = Math.round(maxInp)
                 }
               })
-            }).observe({ entryTypes: ['first-input'] })
+            })
+            // Osserva eventi per INP
+            inpObserver.observe({ type: 'event', buffered: true, durationThreshold: 16 })
+
+            setTimeout(() => {
+              inpObserver.disconnect()
+              // Fallback: prova FID se INP non disponibile
+              if (vitals.inp === null) {
+                try {
+                  const fidObserver = new PerformanceObserver((entryList) => {
+                    const entries = entryList.getEntries()
+                    entries.forEach((entry: any) => {
+                      if (entry.processingStart) {
+                        vitals.fid = Math.round(entry.processingStart - entry.startTime)
+                        // Usa FID come fallback per INP
+                        if (vitals.inp === null) {
+                          vitals.inp = vitals.fid
+                        }
+                      }
+                    })
+                    fidObserver.disconnect()
+                  })
+                  fidObserver.observe({ type: 'first-input', buffered: true })
+                } catch {
+                  // FID non supportato
+                }
+              }
+              checkAndResolve()
+            }, 4000)
           } catch (e) {
-            console.warn('FID non supportato')
+            checkAndResolve()
           }
-          
+
           // CLS - Cumulative Layout Shift
           try {
             let clsValue = 0
-            new PerformanceObserver((entryList) => {
+            let sessionValue = 0
+            let sessionEntries: any[] = []
+            const clsObserver = new PerformanceObserver((entryList) => {
               const entries = entryList.getEntries()
               entries.forEach((entry: any) => {
+                // Solo shift senza input utente recente
                 if (!entry.hadRecentInput) {
-                  clsValue += entry.value
+                  // Sessione-based CLS (metodo moderno)
+                  const firstEntry = sessionEntries[0]
+                  const lastEntry = sessionEntries[sessionEntries.length - 1]
+
+                  if (sessionEntries.length > 0 &&
+                      entry.startTime - lastEntry.startTime < 1000 &&
+                      entry.startTime - firstEntry.startTime < 5000) {
+                    sessionValue += entry.value
+                    sessionEntries.push(entry)
+                  } else {
+                    sessionValue = entry.value
+                    sessionEntries = [entry]
+                  }
+
+                  if (sessionValue > clsValue) {
+                    clsValue = sessionValue
+                  }
                 }
               })
-              vitals.cls = clsValue
-            }).observe({ entryTypes: ['layout-shift'] })
+              vitals.cls = Math.round(clsValue * 1000) / 1000
+            })
+            clsObserver.observe({ type: 'layout-shift', buffered: true })
+
+            setTimeout(() => {
+              clsObserver.disconnect()
+              vitals.cls = vitals.cls !== null ? vitals.cls : Math.round(clsValue * 1000) / 1000
+              checkAndResolve()
+            }, 5000)
           } catch (e) {
-            console.warn('CLS non supportato')
+            checkAndResolve()
           }
+        } else {
+          // Browser non supporta PerformanceObserver
+          resolve(vitals)
         }
-        
-        // Fallback timeout
-        setTimeout(() => resolve(vitals), 3000)
+
+        // Timeout finale di sicurezza (8s invece di 3s per dare più tempo)
+        setTimeout(() => {
+          if (!resolved) {
+            resolved = true
+            resolve(vitals)
+          }
+        }, 8000)
       })
     })
-    
+
     return webVitals as Partial<PerformanceMetrics>
   }
 
@@ -325,10 +427,14 @@ export class PerformanceAnalyzer {
     if (resources.totalResources && resources.totalResources > 100) optimizationScore -= 15
     if (resources.totalSize && resources.totalSize > 2000000) optimizationScore -= 25 // 2MB
     
-    // Mobile Score basato su Core Web Vitals
+    // Mobile Score basato su Core Web Vitals (aggiornato per INP)
     let mobileScore = 100
     if (vitals.lcp && vitals.lcp > 2500) mobileScore -= 30
-    if (vitals.fid && vitals.fid > 100) mobileScore -= 25
+    // INP soglie: buono <200ms, da migliorare 200-500ms, scarso >500ms
+    if (vitals.inp && vitals.inp > 200) mobileScore -= 15
+    if (vitals.inp && vitals.inp > 500) mobileScore -= 15
+    // Fallback a FID se INP non disponibile
+    if (!vitals.inp && vitals.fid && vitals.fid > 100) mobileScore -= 25
     if (vitals.cls && vitals.cls > 0.1) mobileScore -= 25
     
     return {
@@ -388,8 +494,18 @@ export class PerformanceAnalyzer {
       recommendations.push('Specificare dimensioni per immagini e contenuti dinamici')
     }
     
-    if (vitals.fid && vitals.fid > 100) {
-      issues.push('Interattività ritardata')
+    // INP (sostituisce FID) - soglie: buono <200ms, da migliorare 200-500ms, scarso >500ms
+    if (vitals.inp && vitals.inp > 200) {
+      issues.push('Interaction to Next Paint (INP) lento')
+      recommendations.push('Ridurre JavaScript bloccante e ottimizzare gestori eventi')
+    }
+    if (vitals.inp && vitals.inp > 500) {
+      issues.push('Interattività molto lenta (INP critico)')
+      recommendations.push('Suddividere task JavaScript lunghi, usare Web Workers, ridurre complessità DOM')
+    }
+    // Fallback FID (deprecato)
+    if (!vitals.inp && vitals.fid && vitals.fid > 100) {
+      issues.push('First Input Delay elevato (metrica deprecata)')
       recommendations.push('Ridurre JavaScript non necessario e ottimizzare il thread principale')
     }
     
@@ -431,7 +547,8 @@ export class PerformanceAnalyzer {
   private getDefaultMetrics(): PerformanceMetrics {
     return {
       lcp: null,
-      fid: null,
+      inp: null,
+      fid: null, // Deprecato
       cls: null,
       ttfb: null,
       fcp: null,

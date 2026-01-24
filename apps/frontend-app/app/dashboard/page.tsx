@@ -38,6 +38,11 @@ import {
 import AdvancedFilters, { AdvancedFiltersState } from '@/components/AdvancedFilters'
 import { TourTarget } from '@/components/onboarding/TourTarget'
 import UpgradeUrgencyBanner from '@/components/UpgradeUrgencyBanner'
+import BulkActionsBar from '@/components/BulkActionsBar'
+import ExportDropdown from '@/components/ExportDropdown'
+import ViewSwitcher, { ViewType } from '@/components/ViewSwitcher'
+import LeadGridView from '@/components/LeadGridView'
+import { CheckSquare, Square, LayoutGrid, List } from 'lucide-react'
 
 interface Lead extends LeadWithCRM {
   phone?: string
@@ -120,6 +125,10 @@ export default function ClientDashboard() {
   const [updatingCRM, setUpdatingCRM] = useState<string | null>(null)
   const cityInputRef = useRef<HTMLInputElement>(null)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 })
+
+  // Stato per bulk selection e view
+  const [selectedLeads, setSelectedLeads] = useState<string[]>([])
+  const [currentView, setCurrentView] = useState<ViewType>('list')
 
   // Calcola posizione del dropdown
   const calculateDropdownPosition = () => {
@@ -1128,6 +1137,85 @@ export default function ClientDashboard() {
     return 'Basso Potenziale'
   }
 
+  // === BULK SELECTION HELPERS ===
+  const toggleLeadSelection = (leadId: string) => {
+    setSelectedLeads(prev =>
+      prev.includes(leadId)
+        ? prev.filter(id => id !== leadId)
+        : [...prev, leadId]
+    )
+  }
+
+  const selectAllLeads = () => {
+    const unlockedLeadIds = leads
+      .filter(lead => unlockedLeads.has(lead.id))
+      .map(lead => lead.id)
+    setSelectedLeads(unlockedLeadIds)
+  }
+
+  const clearSelection = () => {
+    setSelectedLeads([])
+  }
+
+  const handleExportCSV = (leadIds: string[]) => {
+    const leadsToExport = leads.filter(lead => leadIds.includes(lead.id))
+    const headers = ['business_name', 'website_url', 'email', 'phone', 'city', 'category', 'score']
+    const rows = leadsToExport.map(lead =>
+      headers.map(h => {
+        const value = lead[h as keyof Lead]
+        if (value === null || value === undefined) return ''
+        return String(value).replace(/"/g, '""')
+      })
+    )
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'leads_export.csv'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    // Clear selection after export
+    setSelectedLeads([])
+  }
+
+  const handleBulkStatusChange = async (leadIds: string[], newStatus: string) => {
+    try {
+      const session = await supabase.auth.getSession()
+      if (!session.data.session) return
+
+      // Update each lead's status
+      for (const leadId of leadIds) {
+        await fetch('/api/crm/quick-update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.data.session.access_token}`
+          },
+          body: JSON.stringify({
+            leadId,
+            status: newStatus
+          })
+        })
+      }
+
+      // Refresh leads
+      loadLeadsFromAPI(currentPage, false)
+      setSelectedLeads([])
+    } catch (error) {
+      console.error('Error updating status:', error)
+    }
+  }
+  // === END BULK SELECTION HELPERS ===
+
   const getPlanBadge = () => {
     const badges = {
       free: { label: 'Free', color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200', icon: null },
@@ -1184,7 +1272,19 @@ export default function ClientDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 pt-24">
-      
+
+      {/* Bulk Actions Bar - appare quando ci sono lead selezionati */}
+      <BulkActionsBar
+        selectedLeads={selectedLeads}
+        leads={leads}
+        onClearSelection={clearSelection}
+        onSelectAll={selectAllLeads}
+        totalLeads={leads.filter(l => unlockedLeads.has(l.id)).length}
+        allSelected={selectedLeads.length === leads.filter(l => unlockedLeads.has(l.id)).length && selectedLeads.length > 0}
+        onExportCSV={handleExportCSV}
+        onBulkStatusChange={isProOrHigher(userProfile?.plan || 'free') ? handleBulkStatusChange : undefined}
+      />
+
       {/* Hero Section */}
       <div className="pb-12">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
@@ -1477,6 +1577,21 @@ export default function ClientDashboard() {
                   <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                 </div>
 
+                {/* View Switcher */}
+                <ViewSwitcher
+                  currentView={currentView}
+                  onViewChange={setCurrentView}
+                  availableViews={['list', 'grid']}
+                  showLabels={false}
+                  size="md"
+                />
+
+                {/* Export Dropdown */}
+                <ExportDropdown
+                  leads={leads.filter(l => unlockedLeads.has(l.id))}
+                  selectedLeadIds={selectedLeads.length > 0 ? selectedLeads : undefined}
+                />
+
                 <TourTarget tourId="dashboard-refresh" className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors">
                   <button
                     onClick={() => loadLeadsFromAPI(currentPage, false)}
@@ -1606,7 +1721,7 @@ export default function ClientDashboard() {
           <TourTarget tourId="dashboard-lead-list" className="space-y-4">
             {(() => {
               // Applica filtro per lead sbloccati se attivo
-              let filteredLeads = showOnlyUnlocked 
+              let filteredLeads = showOnlyUnlocked
                 ? leads.filter(lead => unlockedLeads.has(lead.id))
                 : leads
 
@@ -1625,36 +1740,72 @@ export default function ClientDashboard() {
                       {showOnlyUnlocked ? 'Nessun lead sbloccato trovato' : 'Nessun lead trovato'}
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400">
-                      {showOnlyUnlocked 
-                        ? 'Sblocca alcuni lead per vederli qui, oppure disattiva il filtro' 
+                      {showOnlyUnlocked
+                        ? 'Sblocca alcuni lead per vederli qui, oppure disattiva il filtro'
                         : 'Prova a modificare i filtri o aggiorna i dati'}
                     </p>
                   </div>
                 )
               }
 
+              // === GRID VIEW ===
+              if (currentView === 'grid') {
+                return (
+                  <LeadGridView
+                    leads={filteredLeads}
+                    unlockedLeadIds={Array.from(unlockedLeads)}
+                    selectedLeads={selectedLeads}
+                    onSelectLead={toggleLeadSelection}
+                    onUnlockLead={(lead) => unlockLead(lead.id)}
+                    onViewLead={(lead) => router.push(`/lead/${lead.id}`)}
+                    isProUser={isProOrHigher(userProfile?.plan || 'free')}
+                  />
+                )
+              }
+
+              // === LIST VIEW ===
               return filteredLeads.map((lead, index) => {
                 const isUnlocked = unlockedLeads.has(lead.id)
                 const isLastUnlocked = lastUnlockedLeadId === lead.id
-                
+                const isSelected = selectedLeads.includes(lead.id)
+
                 // Gestisce l'id in base al caso (primo lead ha attributo tour per onboarding)
                 const cardProps = index === 0
                   ? { id: 'dashboard-first-lead', 'data-tour': 'lead-card' }
                   : { id: `lead-${lead.id}` }
-                
+
                 return (
                   <div
                     key={lead.id}
                     {...cardProps}
-                    className={`bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border transition-all duration-300 ${
-                      isLastUnlocked 
+                    className={`relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border transition-all duration-300 ${
+                      isSelected
+                        ? 'ring-2 ring-blue-500 ring-offset-2 border-blue-300 dark:border-blue-600'
+                        : isLastUnlocked
                         ? 'ring-2 ring-green-500 ring-offset-2 border-green-200 dark:border-green-700 shadow-lg shadow-green-100 dark:shadow-green-900/20'
-                        : isUnlocked 
+                        : isUnlocked
                         ? 'border-green-200 dark:border-green-700 shadow-lg shadow-green-100 dark:shadow-green-900/20'
                         : 'border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg'
                     }`}
                   >
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+                        {/* Checkbox per selezione (solo lead sbloccati) */}
+                        {isUnlocked && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleLeadSelection(lead.id)
+                            }}
+                            className="absolute top-4 left-4 p-1 rounded-lg bg-white/80 dark:bg-gray-800/80 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors z-10 hidden lg:flex"
+                          >
+                            {isSelected ? (
+                              <CheckSquare className="w-5 h-5 text-blue-600" />
+                            ) : (
+                              <Square className="w-5 h-5 text-gray-400" />
+                            )}
+                          </button>
+                        )}
+
                         {/* Info Principale */}
                         <div className="flex-1">
                           <div className="flex items-center space-x-3 mb-2">
@@ -1681,12 +1832,12 @@ export default function ClientDashboard() {
                               </div>
                             )}
                           </div>
-                          
+
                           {/* Badge CRM Status per utenti PRO - Solo per lead sbloccati */}
                           {isUnlocked && isProOrHigher(userProfile?.plan || 'free') && (
                             <div className="mb-3">
-                              <LeadStatusBadge 
-                                status={lead.crm_status} 
+                              <LeadStatusBadge
+                                status={lead.crm_status}
                                 nextFollowUp={lead.next_follow_up}
                                 size="sm"
                               />

@@ -26,6 +26,11 @@ import { WebsiteStatusChecker } from '../utils/website-status-checker'
 import { RobustWebsiteAnalyzer } from '../utils/robust-website-analyzer'
 import { getScrapingConfig, ScrapingConfig } from '../config/scraping-config'
 import { scrapingMonitor, ScrapingMetrics } from '../utils/scraping-monitor'
+// New utilities for enhanced scraping
+import { AntiBanManager } from '../utils/anti-ban-manager'
+import { DomainClassifier } from '../utils/domain-classifier'
+import { GMBDetector, GMBStatus } from '../utils/gmb-detector'
+import { EmailScraper, EmailScrapingResult } from '../utils/email-scraper'
 
 export interface GoogleMapsScrapingOptions {
   query: string
@@ -44,11 +49,17 @@ export class GoogleMapsScraper {
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15'
   ]
-  
+
   private enhancedAnalyzer: EnhancedWebsiteAnalyzer
   private contactParser: BusinessContactParser
   private statusChecker: WebsiteStatusChecker
   private robustAnalyzer: RobustWebsiteAnalyzer
+
+  // New enhanced utilities
+  private antiBanManager: AntiBanManager
+  private domainClassifier: DomainClassifier
+  private gmbDetector: GMBDetector
+  private emailScraper: EmailScraper
 
   constructor() {
     this.config = getScrapingConfig()
@@ -56,6 +67,12 @@ export class GoogleMapsScraper {
     this.contactParser = new BusinessContactParser()
     this.statusChecker = new WebsiteStatusChecker()
     this.robustAnalyzer = new RobustWebsiteAnalyzer()
+
+    // Initialize enhanced utilities
+    this.antiBanManager = new AntiBanManager()
+    this.domainClassifier = new DomainClassifier()
+    this.gmbDetector = new GMBDetector()
+    this.emailScraper = new EmailScraper()
   }
 
   /**
@@ -275,8 +292,15 @@ export class GoogleMapsScraper {
     // Verifica salute del browser prima di procedere
     await this.ensureBrowserHealth()
 
+    // Check anti-ban status before proceeding
+    const antiBanStatus = this.antiBanManager.shouldWait()
+    if (antiBanStatus.wait) {
+      console.log(`⏳ Anti-ban: Attesa ${antiBanStatus.delayMs}ms - ${antiBanStatus.reason}`)
+      await this.randomDelay(antiBanStatus.delayMs * 0.9, antiBanStatus.delayMs * 1.1)
+    }
+
     const page = await this.browser.newPage()
-    
+
     try {
       // Configura user agent casuale e viewport
       await page.setExtraHTTPHeaders({
@@ -287,15 +311,26 @@ export class GoogleMapsScraper {
       // Costruisci l'URL di ricerca Google Maps
       const searchQuery = `${options.query} ${options.location}`
       const searchUrl = `${this.config.googleMaps.baseUrl}${encodeURIComponent(searchQuery)}`
-      
+
       console.log(`🌐 Navigazione a: ${searchUrl}`)
-      
+
       // Usa il nuovo metodo robusto per il caricamento
+      const loadStartTime = Date.now()
       await this.robustPageLoad(page, searchUrl)
-      await this.randomDelay(
-        this.config.pageLoad.contentWaitMin, 
-        this.config.pageLoad.contentWaitMax
-      )
+      const loadTime = Date.now() - loadStartTime
+
+      // Calculate dynamic delay based on response time
+      const dynamicDelay = this.antiBanManager.calculateDynamicDelay(loadTime)
+      console.log(`⏱️ Tempo caricamento: ${loadTime}ms, delay dinamico: ${dynamicDelay}ms`)
+      await this.randomDelay(dynamicDelay * 0.8, dynamicDelay * 1.2)
+
+      // Check for blocking signals after page load
+      const blockingSignal = await this.antiBanManager.detectBlockingSignals(page)
+      if (blockingSignal.blocked) {
+        console.log(`🚫 Rilevato blocco: ${blockingSignal.reason} - attesa suggerita: ${blockingSignal.waitMs}ms`)
+        this.antiBanManager.onFailure()
+        throw new Error(`Blocked by Google: ${blockingSignal.reason}`)
+      }
 
       // Accetta i cookie se richiesto
       await this.handleCookieConsent(page)
@@ -711,6 +746,15 @@ export class GoogleMapsScraper {
         } catch {}
       }
 
+      // Detect Google My Business status
+      let gmbStatus: GMBStatus | undefined
+      try {
+        gmbStatus = await this.gmbDetector.detectGMBStatus(page)
+        console.log(`🏢 GMB Status: claimed=${gmbStatus.isClaimed}, owner=${gmbStatus.hasOwnerBadge}, completeness=${gmbStatus.profileCompleteness}%`)
+      } catch (gmbError) {
+        console.log('⚠️ Errore rilevamento GMB:', gmbError)
+      }
+
       console.log(`📊 Dati estratti: ${name}, phone: ${phone || 'N/A'}, website: ${website || 'N/A'}, address: ${address || 'N/A'}`)
 
       return {
@@ -720,7 +764,8 @@ export class GoogleMapsScraper {
         website,
         rating,
         reviewsCount,
-        category
+        category,
+        gmbStatus
       }
 
     } catch (error) {
@@ -733,7 +778,7 @@ export class GoogleMapsScraper {
    * Processa i dati grezzi in lead strutturati
    */
   private async processBusinessData(
-    rawData: RawBusinessData[], 
+    rawData: RawBusinessData[],
     options: GoogleMapsScrapingOptions
   ): Promise<BusinessLead[]> {
     const leads: BusinessLead[] = []
@@ -741,19 +786,33 @@ export class GoogleMapsScraper {
     for (const [index, business] of rawData.entries()) {
       console.log(`🔄 Processando business ${index + 1}/${rawData.length}: ${business.name}`)
 
+      // Check anti-ban status before each business analysis
+      const antiBanStatus = this.antiBanManager.shouldWait()
+      if (antiBanStatus.wait) {
+        console.log(`⏳ Anti-ban delay: ${antiBanStatus.delayMs}ms - ${antiBanStatus.reason}`)
+        await this.randomDelay(antiBanStatus.delayMs * 0.9, antiBanStatus.delayMs * 1.1)
+      }
+
       try {
         const lead = await this.createBusinessLead(business, options)
         if (lead) {
           leads.push(lead)
+          // Record success for anti-ban manager
+          this.antiBanManager.onSuccess()
         }
-        
-        // Delay tra le analisi per evitare rate limiting
-        if (options.delayBetweenRequests && index < rawData.length - 1) {
-          await this.randomDelay(options.delayBetweenRequests, options.delayBetweenRequests * 1.5)
+
+        // Dynamic delay between analyses based on anti-ban manager
+        if (index < rawData.length - 1) {
+          const baseDelay = options.delayBetweenRequests || 2000
+          const dynamicDelay = this.antiBanManager.calculateDynamicDelay()
+          const finalDelay = Math.max(baseDelay, dynamicDelay)
+          await this.randomDelay(finalDelay * 0.8, finalDelay * 1.2)
         }
 
       } catch (error) {
         console.error(`❌ Errore processando ${business.name}:`, error)
+        // Record error for anti-ban manager
+        this.antiBanManager.onFailure()
       }
     }
 
@@ -764,19 +823,32 @@ export class GoogleMapsScraper {
    * Crea un lead strutturato da dati grezzi
    */
   private async createBusinessLead(
-    business: RawBusinessData, 
+    business: RawBusinessData,
     options: GoogleMapsScrapingOptions
   ): Promise<BusinessLead | null> {
-    
+
     // Estrai e normalizza i contatti con il nuovo parser avanzato
     const allText = `${business.name} ${business.address} ${business.phone}`
     const contactParser = new BusinessContactParser()
     const parsedContacts = contactParser.parseContacts(allText)
-    
+
+    // Classify website URL to filter directories/listings
+    let proprietaryWebsite = business.website
+    let websiteClassification: ReturnType<typeof this.domainClassifier.classify> | null = null
+    if (business.website) {
+      websiteClassification = this.domainClassifier.classify(business.website)
+      if (!websiteClassification.isAcceptable) {
+        console.log(`🚫 URL filtrato (${websiteClassification.type}): ${business.website} -> ${websiteClassification.listingName || websiteClassification.domain}`)
+        proprietaryWebsite = undefined // Exclude directory/listing URLs
+      } else {
+        console.log(`✅ URL proprietario confermato: ${business.website}`)
+      }
+    }
+
     const contacts: ContactInfo = {
       phone: parsedContacts.phones[0] || business.phone,
       email: parsedContacts.emails[0],
-      website: business.website,
+      website: proprietaryWebsite,
       address: business.address,
       partitaIva: parsedContacts.vatNumbers[0] // Usa vatNumbers invece di partiteIva
     }
@@ -787,22 +859,46 @@ export class GoogleMapsScraper {
     let websiteAnalysis
     let opportunities: string[] = []
     let suggestedRoles: string[] = []
+    let scrapedEmails: EmailScrapingResult | undefined
+
+    // If we have a proprietary website but no email, try to scrape emails
+    if (proprietaryWebsite && !contacts.email && this.browser) {
+      try {
+        console.log(`📧 Tentativo estrazione email da: ${proprietaryWebsite}`)
+        scrapedEmails = await this.emailScraper.scrapeEmails(proprietaryWebsite, this.browser)
+        if (scrapedEmails.primaryEmail) {
+          contacts.email = scrapedEmails.primaryEmail
+          const primaryEmail = scrapedEmails.primaryEmail
+          const primarySource = scrapedEmails.sources.find(s => s.email === primaryEmail)
+          console.log(`✅ Email trovata: ${contacts.email} (fonte: ${primarySource?.context || 'unknown'})`)
+        } else if (scrapedEmails.emails.length > 0) {
+          contacts.email = scrapedEmails.emails[0]
+          const firstEmail = scrapedEmails.emails[0]
+          const source = scrapedEmails.sources.find(s => s.email === firstEmail)
+          console.log(`✅ Email trovata: ${contacts.email} (fonte: ${source?.context || 'unknown'})`)
+        } else {
+          console.log(`⚠️ Nessuna email trovata su ${proprietaryWebsite}`)
+        }
+      } catch (emailError) {
+        console.log(`⚠️ Errore estrazione email:`, emailError)
+      }
+    }
 
     // Analizza il sito web se presente e richiesto
-    if (business.website && options.enableSiteAnalysis !== false) {
+    if (proprietaryWebsite && options.enableSiteAnalysis !== false) {
       try {
-        console.log(`🌐 Analizzando sito con analyzer enterprise: ${business.website}`)
-        
+        console.log(`🌐 Analizzando sito con analyzer enterprise: ${proprietaryWebsite}`)
+
         // Pre-check con WebsiteStatusChecker per verificare accessibilità
         const statusChecker = new WebsiteStatusChecker()
-        const statusCheck = await statusChecker.checkWebsiteStatus(business.website)
+        const statusCheck = await statusChecker.checkWebsiteStatus(proprietaryWebsite)
         
         if (statusCheck.isAccessible) {
-          websiteAnalysis = await this.analyzeEnhancedWebsitePrivate(business.website)
+          websiteAnalysis = await this.analyzeEnhancedWebsitePrivate(proprietaryWebsite)
         } else {
           console.log(`⚠️ Sito non accessibile: ${statusCheck.errorMessage}`)
           websiteAnalysis = {
-            url: business.website,
+            url: proprietaryWebsite,
             isAccessible: false,
             status: statusCheck.status,
             error: statusCheck.errorMessage,
@@ -821,9 +917,9 @@ export class GoogleMapsScraper {
         suggestedRoles = analysisResult.roles
         
       } catch (error) {
-        console.log(`⚠️ Errore analisi sito ${business.website}:`, error)
+        console.log(`⚠️ Errore analisi sito ${proprietaryWebsite}:`, error)
         websiteAnalysis = {
-          url: business.website,
+          url: proprietaryWebsite,
           isAccessible: false,
           overallScore: 10,
           issues: { analysisError: true },
@@ -836,16 +932,24 @@ export class GoogleMapsScraper {
         opportunities = fallbackResult.opportunities
         suggestedRoles = fallbackResult.roles
       }
-    } else if (!business.website) {
-      opportunities.push('Nessun sito web presente')
-      suggestedRoles.push('developer', 'designer')
+    } else if (!proprietaryWebsite) {
+      if (business.website && websiteClassification && !websiteClassification.isAcceptable) {
+        // URL was filtered as directory/listing
+        opportunities.push(`Solo profilo su ${websiteClassification.listingName || websiteClassification.domain || 'directory'} - manca sito web proprietario`)
+        suggestedRoles.push('developer', 'designer')
+      } else {
+        // No website at all
+        opportunities.push('Nessun sito web presente')
+        suggestedRoles.push('developer', 'designer')
+      }
     }
 
     // Calcola il punteggio del lead
     const score = this.calculateLeadScore(websiteAnalysis, contacts, business)
     const priority = score < 40 ? 'high' : score < 70 ? 'medium' : 'low'
 
-    return {
+    // Build the lead object with GMB status and additional metadata
+    const lead: BusinessLead = {
       businessName: business.name,
       category: business.category || options.category,
       city,
@@ -859,6 +963,52 @@ export class GoogleMapsScraper {
       scrapedAt: new Date(),
       lastAnalyzed: websiteAnalysis ? new Date() : undefined
     }
+
+    // Add GMB status to the lead if available
+    if (business.gmbStatus) {
+      ;(lead as any).gmbStatus = {
+        isClaimed: business.gmbStatus.isClaimed,
+        hasOwnerBadge: business.gmbStatus.hasOwnerBadge,
+        profileCompleteness: business.gmbStatus.profileCompleteness,
+        ownerResponseRate: business.gmbStatus.ownerResponseRate,
+        hasClaimButton: business.gmbStatus.hasClaimButton
+      }
+
+      // Add GMB-related opportunities
+      if (!business.gmbStatus.isClaimed && business.gmbStatus.hasClaimButton) {
+        opportunities.push('Profilo Google My Business non rivendicato')
+        if (!suggestedRoles.includes('social')) {
+          suggestedRoles.push('social')
+        }
+      }
+      if (business.gmbStatus.profileCompleteness < 70) {
+        opportunities.push(`Profilo GMB incompleto (${business.gmbStatus.profileCompleteness}%)`)
+      }
+      if (business.gmbStatus.ownerResponseRate != null && business.gmbStatus.ownerResponseRate < 50) {
+        opportunities.push('Basso tasso di risposta alle recensioni')
+      }
+    }
+
+    // Add email scraping metadata if available
+    if (scrapedEmails) {
+      ;(lead as any).emailScrapingResult = {
+        totalFound: scrapedEmails.emails.length,
+        sources: scrapedEmails.sources.map(s => s.context),
+        pagesScraped: scrapedEmails.scrapedPages
+      }
+    }
+
+    // Add domain classification metadata if URL was analyzed
+    if (websiteClassification) {
+      ;(lead as any).domainClassification = {
+        isAcceptable: websiteClassification.isAcceptable,
+        type: websiteClassification.type,
+        originalUrl: business.website,
+        reason: websiteClassification.reason
+      }
+    }
+
+    return lead
   }
 
   /**
@@ -1479,4 +1629,5 @@ interface RawBusinessData {
   rating?: number
   reviewsCount?: number
   category?: string
+  gmbStatus?: GMBStatus
 }

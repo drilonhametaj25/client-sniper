@@ -17,6 +17,11 @@ import { BusinessContactParser } from '../utils/business-contact-parser'
 import { BrowserManager } from '../utils/browser-manager'
 import type { SocialAnalysisResult } from './social-analyzer'
 
+// Nuovi analyzer integrati
+import { SecurityAnalyzer, SecurityAnalysis } from './security-analyzer'
+import { ContentQualityAnalyzer, ContentQualityAnalysis } from './content-quality-analyzer'
+import { AccessibilityAnalyzer, AccessibilityAnalysis } from './accessibility-analyzer'
+
 export interface EnhancedWebsiteAnalysis {
   // Basic Info
   url: string
@@ -77,6 +82,11 @@ export interface EnhancedWebsiteAnalysis {
     googleAdsConversion: boolean
     hotjar: boolean
     clarity: boolean
+    // Nuovi pixel aggiunti
+    tiktokPixel: boolean
+    linkedInInsightTag: boolean
+    snapchatPixel: boolean
+    pinterestTag: boolean
     customPixels: string[]
     trackingScore: number // 0-100
   }
@@ -141,6 +151,12 @@ export interface EnhancedWebsiteAnalysis {
   }
   
   social?: SocialAnalysisResult
+
+  // Nuove analisi avanzate
+  security?: SecurityAnalysis
+  contentQuality?: ContentQualityAnalysis
+  accessibility?: AccessibilityAnalysis
+
   // Overall Scores
   overallScore: number // 0-100
   businessValue: number // 0-100
@@ -158,13 +174,21 @@ export class EnhancedWebsiteAnalyzer {
   private techDetector: TechStackDetector
   private performanceAnalyzer: PerformanceAnalyzer
   private contactParser: BusinessContactParser
-  
+  // Nuovi analyzer
+  private securityAnalyzer: SecurityAnalyzer
+  private contentQualityAnalyzer: ContentQualityAnalyzer
+  private accessibilityAnalyzer: AccessibilityAnalyzer
+
   constructor() {
     this.browserManager = BrowserManager.getInstance()
     this.statusChecker = new WebsiteStatusChecker()
     this.techDetector = new TechStackDetector()
     this.performanceAnalyzer = new PerformanceAnalyzer()
     this.contactParser = new BusinessContactParser()
+    // Nuovi analyzer
+    this.securityAnalyzer = new SecurityAnalyzer()
+    this.contentQualityAnalyzer = new ContentQualityAnalyzer()
+    this.accessibilityAnalyzer = new AccessibilityAnalyzer()
   }
 
   /**
@@ -228,9 +252,13 @@ export class EnhancedWebsiteAnalyzer {
         ...scores,
         opportunities,
         social,
+        // Nuove analisi avanzate
+        security: browserAnalysis.security,
+        contentQuality: browserAnalysis.contentQuality,
+        accessibility: browserAnalysis.accessibility,
         analysisDate: new Date(),
         analysisTime: Date.now() - startTime,
-        version: '2.0.0'
+        version: '2.1.0'
       }
       
     } catch (error) {
@@ -282,7 +310,11 @@ export class EnhancedWebsiteAnalyzer {
         mobileAnalysis,
         contentAnalysis,
         performanceMetrics,
-        techStackInfo
+        techStackInfo,
+        // Nuove analisi
+        securityAnalysis,
+        contentQualityAnalysis,
+        accessibilityAnalysis
       ] = await Promise.all([
         this.analyzeSEO(page, htmlContent).catch(() => this.getDefaultSEO()),
         this.analyzeImages(page).catch(() => this.getDefaultImages()),
@@ -291,7 +323,11 @@ export class EnhancedWebsiteAnalyzer {
         this.analyzeMobileCompatibility(page).catch(() => this.getDefaultMobile()),
         this.analyzeContent(page, htmlContent).catch(() => this.getDefaultContent()),
         this.performanceAnalyzer.analyzePerformance(page, url).catch(() => this.performanceAnalyzer['getDefaultMetrics']()),
-        this.techDetector.detectTechStack(htmlContent, response.headers() as Record<string, string>).catch(() => this.getDefaultTechStack())
+        this.techDetector.detectTechStack(htmlContent, response.headers() as Record<string, string>).catch(() => this.getDefaultTechStack()),
+        // Nuove analisi
+        this.securityAnalyzer.analyzeSecurityFromHtml(url, htmlContent, response.headers() as Record<string, string>).catch(() => null),
+        this.contentQualityAnalyzer.analyzeContentQuality(page, url, htmlContent).catch(() => null),
+        this.accessibilityAnalyzer.analyzeAccessibility(page, url).catch(() => null)
       ])
       
       // Identifica problemi
@@ -302,7 +338,11 @@ export class EnhancedWebsiteAnalyzer {
         gdpr: gdprAnalysis,
         mobile: mobileAnalysis,
         performance: performanceMetrics,
-        techStack: techStackInfo
+        techStack: techStackInfo,
+        // Nuove analisi
+        security: securityAnalysis,
+        contentQuality: contentQualityAnalysis,
+        accessibility: accessibilityAnalysis
       })
       
       return {
@@ -314,7 +354,11 @@ export class EnhancedWebsiteAnalyzer {
         content: contentAnalysis,
         performance: performanceMetrics || this.performanceAnalyzer['getDefaultMetrics'](),
         techStack: techStackInfo,
-        issues
+        issues,
+        // Nuove analisi
+        security: securityAnalysis || undefined,
+        contentQuality: contentQualityAnalysis || undefined,
+        accessibility: accessibilityAnalysis || undefined
       }
       
     } finally {
@@ -367,10 +411,10 @@ export class EnhancedWebsiteAnalyzer {
       this.checkSitemap(page),
       this.checkRobotsTxt(page)
     ])
-    
-    // Verifica structured data
-    const hasStructuredData = /application\/ld\+json|microdata|rdfa/i.test(html)
-    
+
+    // Verifica structured data con parsing JSON-LD MIGLIORATO
+    const structuredDataResult = await this.analyzeStructuredData(page, html)
+
     return {
       hasTitle: seoData.titleLength > 0,
       titleLength: seoData.titleLength,
@@ -385,11 +429,142 @@ export class EnhancedWebsiteAnalyzer {
       h2Count: seoData.h2Count,
       hasRobotsTag: seoData.hasRobotsTag,
       hasCanonical: seoData.hasCanonical,
-      hasStructuredData,
+      hasStructuredData: structuredDataResult.hasStructuredData,
       hasOpenGraph: seoData.hasOpenGraph,
       hasTwitterCard: seoData.hasTwitterCard,
       hasSitemap,
       hasRobotsTxt
+    }
+  }
+
+  /**
+   * Analisi dettagliata Structured Data (JSON-LD, microdata)
+   */
+  private async analyzeStructuredData(page: Page, html: string): Promise<{
+    hasStructuredData: boolean
+    schemaCount: number
+    schemaTypes: string[]
+    hasLocalBusiness: boolean
+    hasOrganization: boolean
+    isValid: boolean
+  }> {
+    try {
+      const result = await page.evaluate(() => {
+        const details = {
+          hasStructuredData: false,
+          schemaCount: 0,
+          schemaTypes: [] as string[],
+          hasLocalBusiness: false,
+          hasOrganization: false,
+          isValid: true
+        }
+
+        // Cerca script JSON-LD
+        const jsonLdScripts = document.querySelectorAll('script[type="application/ld+json"]')
+
+        if (jsonLdScripts.length === 0) {
+          // Fallback: cerca microdata
+          const microdataElements = document.querySelectorAll('[itemscope]')
+          if (microdataElements.length > 0) {
+            details.hasStructuredData = true
+            details.schemaCount = microdataElements.length
+            microdataElements.forEach(el => {
+              const itemtype = el.getAttribute('itemtype')
+              if (itemtype) {
+                const type = itemtype.split('/').pop() || ''
+                if (type && !details.schemaTypes.includes(type)) {
+                  details.schemaTypes.push(type)
+                }
+              }
+            })
+          }
+          return details
+        }
+
+        details.hasStructuredData = true
+        details.schemaCount = jsonLdScripts.length
+
+        // Lista di tipi LocalBusiness e sottotipi
+        const localBusinessTypes = [
+          'LocalBusiness', 'Restaurant', 'Store', 'ProfessionalService',
+          'HealthAndBeautyBusiness', 'LegalService', 'RealEstateAgent',
+          'Dentist', 'Physician', 'Attorney', 'Hotel', 'Pharmacy',
+          'BarOrPub', 'CafeOrCoffeeShop', 'FastFoodRestaurant',
+          'Bakery', 'FoodEstablishment', 'AutoRepair', 'HairSalon',
+          'BeautySalon', 'DaySpa', 'TattooParlor', 'NightClub'
+        ]
+
+        const organizationTypes = [
+          'Organization', 'Corporation', 'NGO', 'EducationalOrganization',
+          'GovernmentOrganization', 'MedicalOrganization', 'NewsMediaOrganization'
+        ]
+
+        jsonLdScripts.forEach((script) => {
+          try {
+            const content = script.textContent || ''
+            const data = JSON.parse(content)
+
+            // Funzione ricorsiva per estrarre @type
+            const extractTypes = (obj: any): string[] => {
+              const types: string[] = []
+
+              if (!obj || typeof obj !== 'object') return types
+
+              if (obj['@type']) {
+                const typeValue = obj['@type']
+                if (Array.isArray(typeValue)) {
+                  types.push(...typeValue)
+                } else {
+                  types.push(typeValue)
+                }
+              }
+
+              // Gestisci @graph (array di oggetti)
+              if (obj['@graph'] && Array.isArray(obj['@graph'])) {
+                obj['@graph'].forEach((item: any) => {
+                  types.push(...extractTypes(item))
+                })
+              }
+
+              return types
+            }
+
+            const types = extractTypes(data)
+            types.forEach(type => {
+              if (type && !details.schemaTypes.includes(type)) {
+                details.schemaTypes.push(type)
+              }
+
+              // Verifica tipi specifici
+              if (localBusinessTypes.includes(type)) {
+                details.hasLocalBusiness = true
+              }
+              if (organizationTypes.includes(type)) {
+                details.hasOrganization = true
+              }
+            })
+
+          } catch (e) {
+            // JSON non valido
+            details.isValid = false
+          }
+        })
+
+        return details
+      })
+
+      return result
+    } catch (error) {
+      // Fallback a regex semplice
+      const hasStructuredData = /application\/ld\+json|itemscope/i.test(html)
+      return {
+        hasStructuredData,
+        schemaCount: 0,
+        schemaTypes: [],
+        hasLocalBusiness: false,
+        hasOrganization: false,
+        isValid: false
+      }
     }
   }
 
@@ -442,6 +617,7 @@ export class EnhancedWebsiteAnalyzer {
 
   /**
    * Analisi tracking migliorata con rilevamento robusto
+   * Include: GA, GTM, Facebook, TikTok, LinkedIn, Snapchat, Pinterest
    */
   private async analyzeTracking(page: Page, html: string): Promise<EnhancedWebsiteAnalysis['tracking']> {
     // Pattern più robusti per rilevamento
@@ -462,7 +638,9 @@ export class EnhancedWebsiteAnalyzer {
         /connect\.facebook\.net/i,
         /fbq\(/i,
         /facebook\.com\/tr/i,
-        /_fbp/i
+        /_fbp/i,
+        /pixel\.facebook\.com/i,
+        /_fbc/i
       ],
       googleAds: [
         /googleadservices\.com/i,
@@ -476,9 +654,35 @@ export class EnhancedWebsiteAnalyzer {
       clarity: [
         /clarity\.ms/i,
         /clarity\(/i
+      ],
+      // NUOVI PIXEL AGGIUNTI
+      tiktokPixel: [
+        /ttq\(/i,
+        /analytics\.tiktok\.com/i,
+        /tiktok\.com\/i18n\/pixel/i,
+        /TiktokAnalyticsObject/i
+      ],
+      linkedInInsightTag: [
+        /snap\.licdn\.com/i,
+        /linkedin\.com\/px/i,
+        /linkedin\.com\/insight/i,
+        /_linkedin_data_partner_id/i,
+        /lintrk\(/i
+      ],
+      snapchatPixel: [
+        /sc-static\.net/i,
+        /snaptr\(/i,
+        /tr\.snapchat\.com/i,
+        /SnapchatPixel/i
+      ],
+      pinterestTag: [
+        /pintrk\(/i,
+        /pinterest\.com\/tag/i,
+        /ct\.pinterest\.com/i,
+        /PinterestTag/i
       ]
     }
-    
+
     const results = {
       googleAnalytics: false,
       googleTagManager: false,
@@ -486,10 +690,14 @@ export class EnhancedWebsiteAnalyzer {
       googleAdsConversion: false,
       hotjar: false,
       clarity: false,
+      tiktokPixel: false,
+      linkedInInsightTag: false,
+      snapchatPixel: false,
+      pinterestTag: false,
       customPixels: [] as string[],
       trackingScore: 0
     }
-    
+
     // Controlla ogni pattern
     for (const [key, patternList] of Object.entries(patterns)) {
       const found = patternList.some(pattern => pattern.test(html))
@@ -497,55 +705,142 @@ export class EnhancedWebsiteAnalyzer {
         (results as any)[key] = true
       }
     }
-    
-    // Cerca script personalizzati
+
+    // Cerca script personalizzati - BUG FIX: parentesi corrette per operatore OR
     const scriptMatches = html.match(/<script[^>]*src=["'][^"']*["'][^>]*>/gi) || []
     const customScripts = scriptMatches
       .filter(script => {
         const src = script.match(/src=["']([^"']+)["']/)?.[1] || ''
-        return src && 
-               !src.includes('google') && 
-               !src.includes('facebook') && 
+        return src &&
+               !src.includes('google') &&
+               !src.includes('facebook') &&
                !src.includes('hotjar') &&
-               src.includes('track') || src.includes('analytic')
+               !src.includes('clarity') &&
+               !src.includes('tiktok') &&
+               !src.includes('linkedin') &&
+               !src.includes('snapchat') &&
+               !src.includes('pinterest') &&
+               (src.includes('track') || src.includes('analytic') || src.includes('pixel'))
       })
       .map(script => script.match(/src=["']([^"']+)["']/)?.[1] || '')
       .filter(Boolean)
-    
+
     results.customPixels = customScripts
-    
-    // Calcola punteggio tracking
+
+    // Calcola punteggio tracking (aggiornato con nuovi pixel)
     let score = 0
-    if (results.googleAnalytics) score += 30
-    if (results.googleTagManager) score += 25
-    if (results.facebookPixel) score += 20
-    if (results.googleAdsConversion) score += 15
+    if (results.googleAnalytics) score += 25
+    if (results.googleTagManager) score += 20
+    if (results.facebookPixel) score += 15
+    if (results.googleAdsConversion) score += 10
     if (results.hotjar || results.clarity) score += 10
-    
+    // Nuovi pixel
+    if (results.tiktokPixel) score += 5
+    if (results.linkedInInsightTag) score += 5
+    if (results.snapchatPixel) score += 5
+    if (results.pinterestTag) score += 5
+
     results.trackingScore = Math.min(score, 100)
-    
+
     return results
   }
 
   /**
-   * Analisi GDPR e privacy
+   * Analisi GDPR e privacy - MIGLIORATA con selettori DOM specifici
    */
   private async analyzeGDPR(page: Page, html: string): Promise<EnhancedWebsiteAnalysis['gdpr']> {
     const gdprData = await page.evaluate(() => {
-      // Cookie banner detection
-      const cookiePatterns = [
-        'cookie', 'privacy', 'consent', 'gdpr', 'policy',
-        'accetto', 'accetta', 'accept', 'continue'
+      // Cookie banner detection MIGLIORATA - cerca elementi DOM specifici
+      const cookieBannerSelectors = [
+        // ID comuni
+        '#cookie-banner', '#cookie-notice', '#cookie-consent',
+        '#cookiebanner', '#cookie-law-info-bar', '#cookie-policy-banner',
+        '#gdpr-banner', '#privacy-banner', '#consent-banner',
+        '#CybotCookiebotDialog', '#onetrust-banner-sdk', '#onetrust-consent-sdk',
+        '#cookieConsent', '#cookie_notice', '#cookie-popup',
+        '#tarteaucitronRoot', '#cc-main', '#cc_div',
+        // Classi comuni
+        '.cookie-banner', '.cookie-notice', '.cookie-consent',
+        '.cookieconsent', '.cookie-law-info-bar', '.cc-banner',
+        '.gdpr-banner', '.privacy-banner', '.consent-banner',
+        '.cookie-popup', '.cookie-modal', '.cookie-overlay',
+        '.cc-window', '.cc-revoke', '.cc-compliance',
+        // CMP comuni (Consent Management Platforms)
+        '.iubenda-cs-container', '.iubenda-cs-visible',
+        '.termly-cookie-banner', '.termly-consent-banner',
+        '.cookiebot', '.CookieConsent',
+        '.osano-cm-window', '.osano-cm-widget',
+        '.quantcast-consent-banner', '.qc-cmp2-container',
+        '.truste-consent-track', '.evidon-consent-button',
+        // Data attributes
+        '[data-cookie-banner]', '[data-consent-banner]',
+        '[data-cookieconsent]', '[data-gdpr]',
+        '[data-cc-banner]', '[data-cookie-notice]',
+        '[role="dialog"][aria-label*="cookie"]',
+        '[role="banner"][aria-label*="privacy"]'
       ]
-      
-      const allText = document.body.textContent?.toLowerCase() || ''
-      const hasCookieBanner = cookiePatterns.some(pattern => 
-        allText.includes(pattern) && (
-          allText.includes('cookie') || 
-          allText.includes('privacy') ||
-          allText.includes('consent')
-        )
-      )
+
+      let hasCookieBannerElement = false
+      let cookieBannerMethod: 'banner' | 'popup' | 'interstitial' | 'none' = 'none'
+
+      // 1. Prima cerca elementi con selettori specifici
+      for (const selector of cookieBannerSelectors) {
+        try {
+          const element = document.querySelector(selector)
+          if (element) {
+            // Verifica che l'elemento sia visibile
+            const style = window.getComputedStyle(element)
+            const rect = element.getBoundingClientRect()
+            const isVisible = style.display !== 'none' &&
+                             style.visibility !== 'hidden' &&
+                             style.opacity !== '0' &&
+                             rect.height > 0
+
+            if (isVisible) {
+              hasCookieBannerElement = true
+              // Determina il tipo
+              if (style.position === 'fixed') {
+                if (rect.top <= 50) cookieBannerMethod = 'banner' // Top banner
+                else if (rect.bottom >= window.innerHeight - 50) cookieBannerMethod = 'banner' // Bottom banner
+                else cookieBannerMethod = 'popup'
+              } else if (style.position === 'absolute' && rect.width > window.innerWidth * 0.8) {
+                cookieBannerMethod = 'interstitial'
+              } else {
+                cookieBannerMethod = 'banner'
+              }
+              break
+            }
+          }
+        } catch {
+          // Ignora errori di selettori non validi
+        }
+      }
+
+      // 2. Se non trovato con selettori, cerca elementi fixed con testo specifico
+      if (!hasCookieBannerElement) {
+        const fixedElements = Array.from(document.querySelectorAll('*'))
+        for (const el of fixedElements) {
+          const style = window.getComputedStyle(el)
+          if (style.position === 'fixed' || style.position === 'sticky') {
+            const text = el.textContent?.toLowerCase() || ''
+            // Richiede sia "cookie" E un'azione di consenso
+            if (
+              (text.includes('cookie') || text.includes('privacy')) &&
+              (text.includes('accett') || text.includes('accept') ||
+               text.includes('consent') || text.includes('rifiut') ||
+               text.includes('reject') || text.includes('preferenz') ||
+               text.includes('preference') || text.includes('agree'))
+            ) {
+              hasCookieBannerElement = true
+              const rect = el.getBoundingClientRect()
+              cookieBannerMethod = rect.height > 200 ? 'popup' : 'banner'
+              break
+            }
+          }
+        }
+      }
+
+      const hasCookieBanner = hasCookieBannerElement
       
       // Privacy policy link
       const privacyLinks = Array.from(document.querySelectorAll('a'))
@@ -567,7 +862,8 @@ export class EnhancedWebsiteAnalyzer {
         })
       
       // Contact info
-      const hasContactInfo = /contact|contatt|email|phone|telefono/i.test(allText)
+      const bodyText = document.body?.textContent || ''
+      const hasContactInfo = /contact|contatt|email|phone|telefono/i.test(bodyText)
       
       return {
         hasCookieBanner,
@@ -790,7 +1086,60 @@ export class EnhancedWebsiteAnalyzer {
     if (!analysisData.seo.hasStructuredData) {
       issues.low.push('Mancano i dati strutturati')
     }
-    
+
+    // Security issues (nuovi analyzer)
+    if (analysisData.security) {
+      if (analysisData.security.overallSecurityScore < 30) {
+        issues.critical.push('Gravi problemi di sicurezza')
+      } else if (analysisData.security.overallSecurityScore < 50) {
+        issues.high.push('Security headers mancanti o insufficienti')
+      }
+      if (analysisData.security.vulnerabilities?.hasOutdatedJquery) {
+        issues.high.push('jQuery obsoleta con vulnerabilità note')
+      }
+      if (analysisData.security.vulnerabilities?.hasExposedSensitiveFiles) {
+        issues.critical.push('File sensibili esposti (.git, .env, etc)')
+      }
+      if (analysisData.security.vulnerabilities?.hasMixedContent) {
+        issues.medium.push('Mixed content (HTTP/HTTPS)')
+      }
+      if (analysisData.security.ssl?.daysToExpiry < 30) {
+        issues.high.push(`Certificato SSL in scadenza (${analysisData.security.ssl.daysToExpiry} giorni)`)
+      }
+    }
+
+    // Content Quality issues (nuovi analyzer)
+    if (analysisData.contentQuality) {
+      if (analysisData.contentQuality.contentScore < 30) {
+        issues.high.push('Contenuti scarsi o non aggiornati')
+      }
+      if (analysisData.contentQuality.blog?.exists && analysisData.contentQuality.blog?.daysSinceUpdate > 180) {
+        issues.medium.push(`Blog non aggiornato da ${analysisData.contentQuality.blog.daysSinceUpdate} giorni`)
+      }
+      if (analysisData.contentQuality.freshness?.copyrightYear &&
+          analysisData.contentQuality.freshness.copyrightYear < new Date().getFullYear() - 1) {
+        issues.low.push('Copyright non aggiornato')
+      }
+    }
+
+    // Accessibility issues (nuovi analyzer)
+    if (analysisData.accessibility) {
+      if (analysisData.accessibility.wcagScore < 40) {
+        issues.high.push('Gravi problemi di accessibilità (WCAG)')
+      } else if (analysisData.accessibility.wcagScore < 60) {
+        issues.medium.push('Accessibilità da migliorare')
+      }
+      if (analysisData.accessibility.images?.withoutAlt > 5) {
+        issues.medium.push(`${analysisData.accessibility.images.withoutAlt} immagini senza alt text`)
+      }
+      if (analysisData.accessibility.structure?.headingHierarchyValid === false) {
+        issues.low.push('Struttura heading non corretta (H1-H6)')
+      }
+      if (analysisData.accessibility.forms?.withoutLabels > 0) {
+        issues.medium.push(`${analysisData.accessibility.forms.withoutLabels} campi form senza label`)
+      }
+    }
+
     return issues
   }
 
@@ -849,7 +1198,60 @@ export class EnhancedWebsiteAnalyzer {
       estimatedValue = Math.max(estimatedValue, 3)
       quickWins.push('Aggiungere alt text alle immagini')
     }
-    
+
+    // Security opportunities (nuovi analyzer)
+    if (analysisData.security) {
+      if (analysisData.security.overallSecurityScore < 60) {
+        neededServices.push('Audit sicurezza e hardening')
+        neededRoles.push('developer', 'security')
+        estimatedValue = Math.max(estimatedValue, 5)
+      }
+      if (analysisData.security.securityHeaders?.score < 50) {
+        quickWins.push('Configurare security headers (CSP, HSTS)')
+      }
+      if (analysisData.security.vulnerabilities?.hasOutdatedJquery) {
+        quickWins.push('Aggiornare jQuery alla versione più recente')
+      }
+    }
+
+    // Content Quality opportunities (nuovi analyzer)
+    if (analysisData.contentQuality) {
+      if (analysisData.contentQuality.contentScore < 50) {
+        neededServices.push('Content strategy e copywriting')
+        neededRoles.push('copywriter', 'content')
+        estimatedValue = Math.max(estimatedValue, 4)
+      }
+      if (!analysisData.contentQuality.blog?.exists) {
+        quickWins.push('Creare sezione blog/news')
+      } else if (analysisData.contentQuality.blog?.daysSinceUpdate > 90) {
+        quickWins.push('Aggiornare contenuti blog')
+      }
+      if (!analysisData.contentQuality.depth?.hasTestimonials) {
+        quickWins.push('Aggiungere testimonianze clienti')
+      }
+      if (!analysisData.contentQuality.depth?.hasCaseStudies) {
+        quickWins.push('Creare case studies')
+      }
+    }
+
+    // Accessibility opportunities (nuovi analyzer)
+    if (analysisData.accessibility) {
+      if (analysisData.accessibility.wcagScore < 70) {
+        neededServices.push('Miglioramento accessibilità (WCAG)')
+        neededRoles.push('developer', 'designer')
+        estimatedValue = Math.max(estimatedValue, 4)
+      }
+      if (analysisData.accessibility.images?.withoutAlt > 0) {
+        quickWins.push('Aggiungere alt text descrittivi alle immagini')
+      }
+      if (!analysisData.accessibility.structure?.hasSkipLink) {
+        quickWins.push('Aggiungere skip link per navigazione')
+      }
+      if (analysisData.accessibility.forms?.withoutLabels > 0) {
+        quickWins.push('Associare label ai campi form')
+      }
+    }
+
     // Determina priorità
     let priorityLevel: 'critical' | 'high' | 'medium' | 'low' = 'low'
     if (scores.overallScore < 30) priorityLevel = 'critical'
@@ -866,29 +1268,43 @@ export class EnhancedWebsiteAnalyzer {
   }
 
   /**
-   * Calcola punteggi finali
+   * Calcola punteggi finali (aggiornato con nuovi analyzer)
    */
   private calculateScores(analysisData: any): Pick<EnhancedWebsiteAnalysis, 'overallScore' | 'businessValue' | 'technicalHealth'> {
-    // Technical Health (media pesata di vari aspetti)
+    // Security score (fallback a 50 se non disponibile)
+    const securityScore = analysisData.security?.overallSecurityScore ?? 50
+
+    // Accessibility score (fallback a 50 se non disponibile)
+    const accessibilityScore = analysisData.accessibility?.wcagScore ?? 50
+
+    // Content quality score from new analyzer (fallback a content score originale)
+    const contentQualityScore = analysisData.contentQuality?.contentScore ??
+                                 analysisData.content?.contentQualityScore ?? 50
+
+    // Technical Health (media pesata di vari aspetti - aggiornata con security)
     const technicalHealth = Math.round(
-      (analysisData.performance.speedScore * 0.3) +
-      (analysisData.mobile.mobileScore * 0.25) +
-      ((analysisData.seo.hasTitle && analysisData.seo.hasMetaDescription ? 80 : 40) * 0.2) +
-      (analysisData.tracking.trackingScore * 0.15) +
-      (analysisData.gdpr.gdprScore * 0.1)
+      (analysisData.performance.speedScore * 0.25) +
+      (analysisData.mobile.mobileScore * 0.20) +
+      ((analysisData.seo.hasTitle && analysisData.seo.hasMetaDescription ? 80 : 40) * 0.15) +
+      (analysisData.tracking.trackingScore * 0.10) +
+      (analysisData.gdpr.gdprScore * 0.10) +
+      (securityScore * 0.10) +
+      (accessibilityScore * 0.10)
     )
-    
-    // Business Value (quanto il sito è efficace per il business)
+
+    // Business Value (quanto il sito è efficace per il business - aggiornato con content quality)
     const businessValue = Math.round(
-      (analysisData.content.contentQualityScore * 0.3) +
-      (analysisData.tracking.trackingScore * 0.25) +
-      (analysisData.gdpr.gdprScore * 0.2) +
-      (analysisData.mobile.mobileScore * 0.25)
+      (contentQualityScore * 0.25) +
+      (analysisData.tracking.trackingScore * 0.20) +
+      (analysisData.gdpr.gdprScore * 0.15) +
+      (analysisData.mobile.mobileScore * 0.20) +
+      (accessibilityScore * 0.10) +
+      (securityScore * 0.10)
     )
-    
-    // Overall Score (media dei due)
-    const overallScore = Math.round((technicalHealth + businessValue) / 2)
-    
+
+    // Overall Score (media pesata dei punteggi)
+    const overallScore = Math.round((technicalHealth * 0.6) + (businessValue * 0.4))
+
     return {
       technicalHealth,
       businessValue,
@@ -1029,6 +1445,10 @@ export class EnhancedWebsiteAnalyzer {
       googleAdsConversion: false,
       hotjar: false,
       clarity: false,
+      tiktokPixel: false,
+      linkedInInsightTag: false,
+      snapchatPixel: false,
+      pinterestTag: false,
       customPixels: [],
       trackingScore: 0
     }

@@ -265,8 +265,8 @@ export async function POST(request: NextRequest) {
           const user = search.users as any
 
           // Calcola statistiche
-          const categories = [...new Set(matchingLeads.map(l => l.category))].slice(0, 3)
-          const cities = [...new Set(matchingLeads.map(l => l.city).filter(Boolean))].slice(0, 3)
+          const categories = Array.from(new Set(matchingLeads.map(l => l.category))).slice(0, 3)
+          const cities = Array.from(new Set(matchingLeads.map(l => l.city).filter(Boolean))).slice(0, 3)
           const bestScore = Math.min(...matchingLeads.map(l => l.score))
 
           const success = await klaviyoServer.trackNewLeadsAvailable(user.email, {

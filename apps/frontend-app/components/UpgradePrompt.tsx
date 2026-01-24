@@ -90,11 +90,11 @@ export default function UpgradePrompt({
   onDismiss,
   variant = 'inline'
 }: UpgradePromptProps) {
-  const { profile } = useAuth()
+  const { user } = useAuth()
   const [isDismissed, setIsDismissed] = useState(false)
 
   // Non mostrare per utenti già premium
-  const isPro = profile?.subscription_tier && !['free'].includes(profile.subscription_tier)
+  const isPro = user?.plan && !['free'].includes(user.plan)
   if (isPro) return null
 
   // Check se già dismissato oggi
@@ -315,18 +315,18 @@ export default function UpgradePrompt({
 }
 
 // Hook per determinare quando mostrare prompt
-export function useUpgradePrompt(profile: any) {
+export function useUpgradePrompt(user: any) {
   const [shouldShowPrompt, setShouldShowPrompt] = useState<PromptTrigger | null>(null)
   const [promptContext, setPromptContext] = useState<any>({})
 
   useEffect(() => {
-    if (!profile || profile.subscription_tier !== 'free') {
+    if (!user || user.plan !== 'free') {
       setShouldShowPrompt(null)
       return
     }
 
-    const credits = profile.credits_remaining ?? 0
-    const usedCredits = profile.credits_used ?? 0
+    const credits = user.credits_remaining ?? 0
+    const usedCredits = user.credits_used ?? 0
 
     // Priorità prompt basata su urgenza
     if (credits <= 2 && credits > 0) {
@@ -338,7 +338,7 @@ export function useUpgradePrompt(profile: any) {
       setShouldShowPrompt('usage_milestone')
       setPromptContext({ leadsUnlocked: usedCredits })
     }
-  }, [profile])
+  }, [user])
 
   return { shouldShowPrompt, promptContext }
 }

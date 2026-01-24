@@ -9,11 +9,12 @@ import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Target, User, Settings, LogOut, Menu, X, Crown, Shield, Users, Home, MessageSquare, FolderOpen, GraduationCap, BarChart, BookOpen } from 'lucide-react'
+import { Target, User, Settings, LogOut, Menu, X, Crown, Shield, Users, Home, MessageSquare, FolderOpen, GraduationCap, BarChart, BookOpen, Coins, Plus } from 'lucide-react'
 import Button from './ui/Button'
 import Badge from './ui/Badge'
 import ThemeToggle from './theme/ThemeToggle'
 import TourControlMenu from './onboarding/TourControlMenu'
+import NotificationCenter from './NotificationCenter'
 import { isProOrHigher } from '@/lib/utils/plan-helpers'
 
 export default function Navbar() {
@@ -172,11 +173,22 @@ export default function Navbar() {
                   <Badge variant={getPlanBadgeVariant(user.plan)} size="sm">
                     {formatPlanName(user.plan)}
                   </Badge>
-                  <span className="text-sm text-gray-600 dark:text-gray-300">
-                    {user.credits_remaining} crediti
-                  </span>
+                  <Link
+                    href="/credits"
+                    className="flex items-center space-x-1 px-2 py-1 rounded-lg bg-yellow-50 dark:bg-yellow-900/30 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 transition-colors group"
+                    title="Acquista crediti"
+                  >
+                    <Coins className="h-4 w-4 text-yellow-500" />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {user.credits_remaining}
+                    </span>
+                    <Plus className="h-3 w-3 text-yellow-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </Link>
                 </div>
               </div>
+
+              {/* Notification Center */}
+              <NotificationCenter />
 
               {/* Tour Menu */}
               <div className="relative">
@@ -278,9 +290,17 @@ export default function Navbar() {
                     <Badge variant={getPlanBadgeVariant(user.plan)} size="sm">
                       {formatPlanName(user.plan)}
                     </Badge>
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      {user.credits_remaining} crediti
-                    </span>
+                    <Link
+                      href="/credits"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center space-x-1 px-2 py-1 rounded-lg bg-yellow-50 dark:bg-yellow-900/30"
+                    >
+                      <Coins className="h-4 w-4 text-yellow-500" />
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {user.credits_remaining}
+                      </span>
+                      <Plus className="h-3 w-3 text-yellow-500" />
+                    </Link>
                   </div>
                   <ThemeToggle variant="compact" />
                 </div>

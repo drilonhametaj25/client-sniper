@@ -48,7 +48,7 @@ export default function SavedSearchForm({
   initialFilters,
   onSaved
 }: SavedSearchFormProps) {
-  const { session, profile } = useAuth()
+  const { session, user } = useAuth()
   const [searches, setSearches] = useState<SavedSearch[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -56,17 +56,25 @@ export default function SavedSearchForm({
   const [showNewForm, setShowNewForm] = useState(false)
 
   // Form state per nuovo alert
-  const [newSearch, setNewSearch] = useState({
+  const [newSearch, setNewSearch] = useState<{
+    name: string
+    categories: string[]
+    cities: string[]
+    scoreMin: number
+    scoreMax: number
+    alertEnabled: boolean
+    alertFrequency: 'realtime' | 'daily' | 'weekly'
+  }>({
     name: '',
     categories: initialFilters?.categories || [],
     cities: initialFilters?.cities || [],
     scoreMin: initialFilters?.scoreMin || 0,
     scoreMax: initialFilters?.scoreMax || 100,
     alertEnabled: true,
-    alertFrequency: 'daily' as const
+    alertFrequency: 'daily'
   })
 
-  const tier = profile?.subscription_tier || 'free'
+  const tier = user?.plan || 'free'
   const maxAlerts = tier === 'free' ? 1 : tier === 'pro' || tier === 'starter' ? 5 : 20
 
   useEffect(() => {
