@@ -21,7 +21,8 @@
       "Bash(pkill:*)",
       "Bash(node /tmp/fix_supabase.js:*)",
       "Bash(head:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(wc:*)"
     ]
   }
 }

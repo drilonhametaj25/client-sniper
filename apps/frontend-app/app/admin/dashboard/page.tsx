@@ -168,7 +168,7 @@ export default function AdminDashboard() {
       let query = supabase
         .from('leads')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('updated_at', { ascending: false })
         .limit(100)
 
       if (filterRole) {

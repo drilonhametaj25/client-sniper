@@ -176,6 +176,7 @@ export default function QuotationTab({ leadId, businessName }: QuotationTabProps
   const [error, setError] = useState<string | null>(null)
   const [expandedServices, setExpandedServices] = useState<Set<number>>(new Set())
   const [selectedServices, setSelectedServices] = useState<Set<number>>(new Set())
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
 
   useEffect(() => {
     loadQuotation()
@@ -256,6 +257,45 @@ export default function QuotationTab({ leadId, businessName }: QuotationTabProps
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(amount)
+  }
+
+  const handleDownloadPDF = async () => {
+    try {
+      setDownloadingPdf(true)
+
+      const session = await supabase.auth.getSession()
+      if (!session.data.session) {
+        alert('Sessione scaduta. Effettua di nuovo il login.')
+        return
+      }
+
+      const response = await fetch(`/api/leads/${leadId}/quotation/pdf`, {
+        headers: {
+          'Authorization': `Bearer ${session.data.session.access_token}`
+        }
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Errore nel download del PDF')
+      }
+
+      // Download del file
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `preventivo-${businessName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (err) {
+      console.error('Error downloading PDF:', err)
+      alert(err instanceof Error ? err.message : 'Errore nel download del PDF')
+    } finally {
+      setDownloadingPdf(false)
+    }
   }
 
   if (loading) {
@@ -472,22 +512,22 @@ export default function QuotationTab({ leadId, businessName }: QuotationTabProps
       {/* Actions */}
       <div className="flex flex-wrap gap-3">
         <button
-          onClick={() => {
-            // TODO: Implementare download PDF
-            alert('Funzionalità PDF in arrivo!')
-          }}
-          className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+          onClick={handleDownloadPDF}
+          disabled={downloadingPdf}
+          className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Download className="w-4 h-4" />
-          <span>Scarica PDF</span>
+          {downloadingPdf ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Download className="w-4 h-4" />
+          )}
+          <span>{downloadingPdf ? 'Generazione...' : 'Scarica PDF'}</span>
         </button>
 
         <button
-          onClick={() => {
-            // TODO: Implementare invio email
-            alert('Funzionalità Email in arrivo!')
-          }}
-          className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          disabled
+          title="Coming soon"
+          className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 rounded-xl cursor-not-allowed opacity-50"
         >
           <Mail className="w-4 h-4" />
           <span>Invia via Email</span>
