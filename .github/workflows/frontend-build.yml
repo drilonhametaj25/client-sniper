@@ -32,19 +32,23 @@ jobs:
 
       - name: Check package files
         run: |
+          echo "Current directory: $(pwd)"
+          echo "--- Root files ---"
+          ls -la
+          echo "--- Package files ---"
           ls -la package.json || echo "⚠️ Root package.json not found"
           ls -la package-lock.json || echo "⚠️ Root package-lock.json not found"
           ls -la apps/frontend-app/package.json || echo "⚠️ Frontend package.json not found"
+          echo "--- package-lock.json head ---"
+          head -5 package-lock.json || echo "Cannot read package-lock.json"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
 
       - name: Install all dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run type checking
         run: npm run type-check
