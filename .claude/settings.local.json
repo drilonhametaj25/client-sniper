@@ -22,7 +22,8 @@
       "Bash(node /tmp/fix_supabase.js:*)",
       "Bash(head:*)",
       "Bash(node:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(npx tsx:*)"
     ]
   }
 }

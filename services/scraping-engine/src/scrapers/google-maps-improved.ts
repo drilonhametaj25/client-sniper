@@ -835,13 +835,38 @@ export class GoogleMapsScraper {
     // Classify website URL to filter directories/listings
     let proprietaryWebsite = business.website
     let websiteClassification: ReturnType<typeof this.domainClassifier.classify> | null = null
+    let socialProfileUrl: string | undefined = undefined
+    let websiteSource: 'gmb' | 'google_search' | undefined = undefined
+
+    // Estrai città in anticipo per la ricerca Google
+    const city = this.extractCityFromAddress(business.address || options.location)
+
     if (business.website) {
       websiteClassification = this.domainClassifier.classify(business.website)
       if (!websiteClassification.isAcceptable) {
         console.log(`🚫 URL filtrato (${websiteClassification.type}): ${business.website} -> ${websiteClassification.listingName || websiteClassification.domain}`)
-        proprietaryWebsite = undefined // Exclude directory/listing URLs
+
+        // Salva il profilo social per riferimento
+        if (websiteClassification.type === 'social') {
+          socialProfileUrl = business.website
+          console.log(`📱 Profilo social salvato: ${socialProfileUrl}`)
+        }
+
+        // Cerca il sito reale su Google
+        console.log(`🔍 Cerco sito web reale per: ${business.name}`)
+        const realWebsite = await this.searchRealWebsite(business.name, city)
+
+        if (realWebsite) {
+          console.log(`✅ Sito reale trovato via Google: ${realWebsite}`)
+          proprietaryWebsite = realWebsite
+          websiteSource = 'google_search'
+        } else {
+          console.log(`❌ Nessun sito reale trovato per: ${business.name}`)
+          proprietaryWebsite = undefined
+        }
       } else {
         console.log(`✅ URL proprietario confermato: ${business.website}`)
+        websiteSource = 'gmb'
       }
     }
 
@@ -852,9 +877,6 @@ export class GoogleMapsScraper {
       address: business.address,
       partitaIva: parsedContacts.vatNumbers[0] // Usa vatNumbers invece di partiteIva
     }
-
-    // Estrai città dall'indirizzo
-    const city = this.extractCityFromAddress(business.address || options.location)
 
     let websiteAnalysis
     let opportunities: string[] = []
@@ -934,12 +956,13 @@ export class GoogleMapsScraper {
       }
     } else if (!proprietaryWebsite) {
       if (business.website && websiteClassification && !websiteClassification.isAcceptable) {
-        // URL was filtered as directory/listing
-        opportunities.push(`Solo profilo su ${websiteClassification.listingName || websiteClassification.domain || 'directory'} - manca sito web proprietario`)
+        // URL was filtered as social/directory - key business opportunity
+        const platformName = websiteClassification.listingName || websiteClassification.domain || 'social'
+        opportunities.push(`Usa solo ${platformName} come presenza online - potenziale cliente per realizzazione sito web`)
         suggestedRoles.push('developer', 'designer')
       } else {
         // No website at all
-        opportunities.push('Nessun sito web presente')
+        opportunities.push('Nessuna presenza web - opportunità creazione sito da zero')
         suggestedRoles.push('developer', 'designer')
       }
     }
@@ -962,6 +985,19 @@ export class GoogleMapsScraper {
       suggestedRoles: suggestedRoles as any, // Cast per retrocompatibilità
       scrapedAt: new Date(),
       lastAnalyzed: websiteAnalysis ? new Date() : undefined
+    }
+
+    // Add website source tracking metadata
+    if (websiteSource) {
+      ;(lead as any).websiteSource = websiteSource
+    }
+    if (socialProfileUrl) {
+      ;(lead as any).socialProfileUrl = socialProfileUrl
+      // Note: opportunity already added above when no proprietary website found
+      // This just ensures social role is suggested for managing their social presence
+      if (!suggestedRoles.includes('social')) {
+        suggestedRoles.push('social')
+      }
     }
 
     // Add GMB status to the lead if available
@@ -1582,13 +1618,33 @@ export class GoogleMapsScraper {
    */
   private extractCityFromAddress(address: string): string {
     if (!address) return ''
-    
-    // Pattern per estrarre città da indirizzi italiani
+
+    // Indirizzi italiani: "Via X, numero, CAP Città PROVINCIA"
+    // Es: "Via Salvo d'Acquisto, 4, 81031 Aversa CE"
+
+    // Cerca pattern con CAP (5 cifre) seguito da città
+    const capCityMatch = address.match(/\b(\d{5})\s+([A-Za-zÀ-ÿ\s]+?)(?:\s+[A-Z]{2})?$/i)
+    if (capCityMatch) {
+      // Rimuovi eventuale sigla provincia (2 lettere maiuscole alla fine)
+      const city = capCityMatch[2].trim().replace(/\s+[A-Z]{2}$/, '')
+      if (city) return city
+    }
+
+    // Fallback: prova con l'ultima parte dopo la virgola (escludendo sigle provincia)
     const parts = address.split(',')
     if (parts.length >= 2) {
-      return parts[parts.length - 2].trim()
+      const lastPart = parts[parts.length - 1].trim()
+      // Se contiene un CAP, estrai la città dopo di esso
+      const capMatch = lastPart.match(/\d{5}\s+(.+?)(?:\s+[A-Z]{2})?$/)
+      if (capMatch) {
+        return capMatch[1].trim().replace(/\s+[A-Z]{2}$/, '')
+      }
+      // Altrimenti usa la parte come città se non è un numero
+      if (!/^\d+$/.test(lastPart)) {
+        return lastPart.replace(/\s+[A-Z]{2}$/, '').trim()
+      }
     }
-    
+
     return address.split(' ').pop() || ''
   }
 
@@ -1598,6 +1654,137 @@ export class GoogleMapsScraper {
   private async randomDelay(min: number, max: number): Promise<void> {
     const delay = Math.floor(Math.random() * (max - min + 1)) + min
     await new Promise(resolve => setTimeout(resolve, delay))
+  }
+
+  /**
+   * Cerca il sito web reale di un business tramite Google Search
+   * Usato quando il profilo GMB linka a social media invece del sito proprietario
+   * @param businessName - Nome del business
+   * @param city - Città del business
+   * @returns URL del sito web proprietario trovato, o null se non trovato
+   */
+  private async searchRealWebsite(businessName: string, city: string): Promise<string | null> {
+    if (!this.browser) {
+      console.log('⚠️ Browser non disponibile per ricerca sito web')
+      return null
+    }
+
+    const query = `"${businessName}" "${city}" sito`
+    console.log(`🔍 Ricerca Google per sito reale: ${query}`)
+
+    let page: Page | null = null
+
+    try {
+      // Rate limiting: attendi 2-3 secondi prima della ricerca
+      await this.randomDelay(2000, 3000)
+
+      page = await this.browser.newPage()
+      await page.setViewportSize({ width: 1280, height: 720 })
+
+      // Imposta user agent per sembrare un browser normale
+      await page.setExtraHTTPHeaders({
+        'Accept-Language': 'it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7'
+      })
+
+      const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&hl=it&gl=it`
+      await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 15000 })
+
+      // Gestisci cookie consent di Google
+      const consentSelectors = [
+        'button:has-text("Accetta tutto")',
+        'button:has-text("Accept all")',
+        '[aria-label*="Accept"]',
+        '#L2AGLb',
+        'button[id*="agree"]'
+      ]
+      for (const selector of consentSelectors) {
+        try {
+          const consentBtn = await page.$(selector)
+          if (consentBtn) {
+            await consentBtn.click()
+            console.log(`✓ Cookie consent Google gestito`)
+            await page.waitForTimeout(1000)
+            break
+          }
+        } catch {}
+      }
+
+      // Verifica se c'è un CAPTCHA
+      const hasCaptcha = await page.evaluate(() => {
+        return document.body.innerHTML.includes('recaptcha') ||
+               document.body.innerHTML.includes('captcha-form') ||
+               document.body.innerHTML.includes('unusual traffic')
+      })
+
+      if (hasCaptcha) {
+        console.log('⚠️ Google ha mostrato un CAPTCHA - ricerca bloccata')
+        return null
+      }
+
+      // Attendi che i risultati siano caricati
+      await page.waitForSelector('#search, #rso, .g', { timeout: 5000 }).catch(() => {})
+      await page.waitForTimeout(500)
+
+      // Estrai i link dei risultati di ricerca (primi 10)
+      const searchResults = await page.evaluate(() => {
+        const results: string[] = []
+
+        // Prova vari selettori per i risultati Google
+        const selectors = [
+          '#search a[href^="http"]',
+          '#rso a[href^="http"]',
+          '.g a[href^="http"]',
+          'a[jsname][href^="http"]',
+          '[data-ved] a[href^="http"]'
+        ]
+
+        for (const selector of selectors) {
+          const links = document.querySelectorAll(selector)
+          links.forEach((link, index) => {
+            if (results.length < 10) {
+              const href = link.getAttribute('href')
+              if (href &&
+                  !href.includes('google.com') &&
+                  !href.includes('webcache') &&
+                  !href.includes('translate.google') &&
+                  !results.includes(href)) {
+                results.push(href)
+              }
+            }
+          })
+          if (results.length > 0) break
+        }
+
+        return results
+      })
+
+      console.log(`📋 Trovati ${searchResults.length} risultati da Google`)
+
+      // Filtra i risultati usando il domain classifier per trovare siti proprietari
+      for (const url of searchResults) {
+        const classification = this.domainClassifier.classify(url)
+
+        if (classification.isAcceptable) {
+          console.log(`✅ Sito proprietario trovato via Google Search: ${url}`)
+          return url
+        } else {
+          console.log(`   - Scartato (${classification.type}): ${url}`)
+        }
+      }
+
+      console.log('❌ Nessun sito proprietario trovato nei risultati Google')
+      return null
+
+    } catch (error) {
+      console.log('⚠️ Errore durante ricerca Google:', error instanceof Error ? error.message : 'Errore sconosciuto')
+      return null
+    } finally {
+      if (page) {
+        try {
+          await page.close()
+        } catch {}
+      }
+    }
   }
 
   /**
