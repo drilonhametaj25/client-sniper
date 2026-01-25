@@ -186,10 +186,10 @@ export async function POST(
     // =====================================================
     const newCreditsRemaining = userData.credits_remaining - 1
 
-    // Recupera dati lead per tracking
+    // Recupera dati lead per tracking E per restituire i contatti
     const { data: leadDetails } = await getSupabaseAdmin()
       .from('leads')
-      .select('business_name, category, city, score')
+      .select('business_name, category, city, score, phone, email')
       .eq('id', leadId)
       .single()
 
@@ -236,7 +236,9 @@ export async function POST(
     return NextResponse.json({
       success: true,
       message: 'Lead sbloccato con successo',
-      credits_remaining: newCreditsRemaining
+      credits_remaining: newCreditsRemaining,
+      phone: leadDetails?.phone || null,
+      email: leadDetails?.email || null
     })
 
   } catch (error) {

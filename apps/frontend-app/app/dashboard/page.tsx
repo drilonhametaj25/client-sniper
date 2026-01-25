@@ -2020,7 +2020,7 @@ export default function ClientDashboard() {
                     <TinderStack
                       leads={tinderLeads}
                       userServices={userServicesOffered}
-                      creditsRemaining={userProfile?.credits_remaining || 0}
+                      creditsRemaining={user?.credits_remaining || 0}
                       onUnlock={async (leadId) => {
                         // Usa la logica di sblocco esistente
                         const remainingCredits = getAvailableCredits()
@@ -2034,13 +2034,12 @@ export default function ClientDashboard() {
                             return { success: false }
                           }
 
-                          const response = await fetch('/api/leads/unlock', {
+                          const response = await fetch(`/api/leads/${leadId}/unlock`, {
                             method: 'POST',
                             headers: {
                               'Content-Type': 'application/json',
                               'Authorization': `Bearer ${session.data.session.access_token}`
-                            },
-                            body: JSON.stringify({ leadId })
+                            }
                           })
 
                           if (!response.ok) {
@@ -2051,7 +2050,13 @@ export default function ClientDashboard() {
 
                           // Aggiorna stato locale
                           setUnlockedLeads(prev => new Set([...prev, leadId]))
+
+                          // Aggiorna entrambi i profili per mantenerli sincronizzati
                           await refreshProfile()
+                          setUserProfile(prev => prev ? {
+                            ...prev,
+                            credits_remaining: Math.max(0, prev.credits_remaining - 1)
+                          } : null)
 
                           return {
                             success: true,
@@ -2191,7 +2196,7 @@ export default function ClientDashboard() {
         onClose={() => setShowWelcomeModal(false)}
         onStartTour={() => startTour('dashboard', true)}
         userName={user?.email?.split('@')[0]}
-        creditsRemaining={userProfile?.credits_remaining || 5}
+        creditsRemaining={user?.credits_remaining || 5}
       />
     </div>
   )
