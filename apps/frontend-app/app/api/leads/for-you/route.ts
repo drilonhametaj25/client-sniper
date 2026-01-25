@@ -79,18 +79,22 @@ export async function GET(request: NextRequest) {
     ])
 
     // Prepara dati utente
-    const userData = userResult.data || {}
+    const userData = userResult.data as {
+      services_offered?: string[]
+      preferred_min_budget?: number
+      preferred_max_budget?: number
+    } | null
     const profileData = profileResult.data
     const behaviorData = behaviorResult
 
     // Check se profilo completo
     const profileComplete = !!(
       profileData?.onboarding_completed_at ||
-      (userData.services_offered && userData.services_offered.length > 0)
+      (userData?.services_offered && userData.services_offered.length > 0)
     )
 
     // Se nessun servizio configurato, mostra prompt
-    const showOnboardingPrompt = !userData.services_offered || userData.services_offered.length === 0
+    const showOnboardingPrompt = !userData?.services_offered || userData.services_offered.length === 0
 
     // Se non ci sono lead, ritorna vuoto
     const leads = leadsResult.data || []
@@ -115,9 +119,9 @@ export async function GET(request: NextRequest) {
 
     // Prepara input per relevance calculation
     const userForRelevance = {
-      services_offered: (userData.services_offered || []) as ServiceType[],
-      preferred_min_budget: userData.preferred_min_budget,
-      preferred_max_budget: userData.preferred_max_budget
+      services_offered: (userData?.services_offered || []) as ServiceType[],
+      preferred_min_budget: userData?.preferred_min_budget,
+      preferred_max_budget: userData?.preferred_max_budget
     }
 
     const profile: UserProfile | null = profileData ? {
@@ -193,7 +197,7 @@ export async function GET(request: NextRequest) {
       high_budget: leadsWithRelevance
         .filter(l => {
           const services = detectServices(l.lead.analysis)
-          const minBudget = userData.preferred_max_budget || 3000
+          const minBudget = userData?.preferred_max_budget || 3000
           return services.totalBudget.max >= minBudget * 1.2
         })
         .slice(0, 6),

@@ -536,7 +536,6 @@ export function filterLeadsByMinRelevance<T extends LeadForRelevance>(
 // =====================================================
 
 export {
-  getRegionFromCity,
   getReasonFromScore,
   getConfidence
 }

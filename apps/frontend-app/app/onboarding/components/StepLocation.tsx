@@ -209,12 +209,12 @@ export default function StepLocation({ data, onChange }: StepLocationProps) {
             {showRegions && (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto p-1">
                 {ITALIAN_REGIONS.map((region) => {
-                  const isSelected = data.regions.includes(region)
+                  const isSelected = data.regions.includes(region.name)
                   return (
                     <button
-                      key={region}
+                      key={region.code}
                       type="button"
-                      onClick={() => toggleRegion(region)}
+                      onClick={() => toggleRegion(region.name)}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
                         isSelected
                           ? 'bg-blue-500 text-white'
@@ -222,7 +222,7 @@ export default function StepLocation({ data, onChange }: StepLocationProps) {
                       }`}
                     >
                       {isSelected && <Check className="w-3.5 h-3.5" />}
-                      <span className="truncate">{region}</span>
+                      <span className="truncate">{region.name}</span>
                     </button>
                   )
                 })}

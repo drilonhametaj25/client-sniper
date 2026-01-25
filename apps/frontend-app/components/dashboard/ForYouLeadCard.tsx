@@ -68,7 +68,7 @@ export default function ForYouLeadCard({
   // Track view on hover
   const handleMouseEnter = () => {
     setIsHovered(true)
-    trackViewed(lead.id, { source: 'for_you_section' })
+    trackViewed(lead.id, 'for_you')
   }
 
   // Extract domain from URL

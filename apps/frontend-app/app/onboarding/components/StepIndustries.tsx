@@ -53,7 +53,7 @@ export default function StepIndustries({ data, onChange }: StepIndustriesProps) 
 
   // Filter categories based on search
   const filteredCategories = BUSINESS_CATEGORIES.filter((cat) =>
-    cat.toLowerCase().includes(search.toLowerCase())
+    cat.name.toLowerCase().includes(search.toLowerCase())
   )
 
   return (
@@ -158,8 +158,8 @@ export default function StepIndustries({ data, onChange }: StepIndustriesProps) 
       {/* Category Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto p-1">
         {filteredCategories.map((category) => {
-          const isPreferred = data.preferredIndustries.includes(category)
-          const isExcluded = data.excludedIndustries.includes(category)
+          const isPreferred = data.preferredIndustries.includes(category.name)
+          const isExcluded = data.excludedIndustries.includes(category.name)
           const isSelected =
             (activeTab === 'preferred' && isPreferred) ||
             (activeTab === 'excluded' && isExcluded)
@@ -183,21 +183,21 @@ export default function StepIndustries({ data, onChange }: StepIndustriesProps) 
 
           const handleClick = () => {
             if (activeTab === 'preferred') {
-              togglePreferred(category)
+              togglePreferred(category.name)
             } else {
-              toggleExcluded(category)
+              toggleExcluded(category.name)
             }
           }
 
           return (
             <button
-              key={category}
+              key={category.code}
               type="button"
               onClick={handleClick}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${buttonClass}`}
             >
               {isSelected && <Check className="w-3.5 h-3.5 flex-shrink-0" />}
-              <span className="truncate">{category}</span>
+              <span className="truncate">{category.name}</span>
             </button>
           )
         })}
