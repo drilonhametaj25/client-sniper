@@ -41,7 +41,7 @@ import UpgradeUrgencyBanner from '@/components/UpgradeUrgencyBanner'
 import BulkActionsBar from '@/components/BulkActionsBar'
 import ExportDropdown from '@/components/ExportDropdown'
 import ViewSwitcher, { ViewType } from '@/components/ViewSwitcher'
-import LeadGridView from '@/components/LeadGridView'
+import LeadCard, { LeadCardCompact } from '@/components/LeadCard'
 import FirstTimeUserModal from '@/components/FirstTimeUserModal'
 import EmailTemplatePreview from '@/components/EmailTemplatePreview'
 import { useOnboarding } from '@/contexts/OnboardingContext'
@@ -1954,433 +1954,51 @@ export default function ClientDashboard() {
               // === GRID VIEW ===
               if (currentView === 'grid') {
                 return (
-                  <LeadGridView
-                    leads={filteredLeads}
-                    unlockedLeadIds={Array.from(unlockedLeads)}
-                    selectedLeads={selectedLeads}
-                    onSelectLead={toggleLeadSelection}
-                    onUnlockLead={(lead) => unlockLead(lead.id)}
-                    onViewLead={(lead) => router.push(`/lead/${lead.id}`)}
-                    isProUser={isProOrHigher(userProfile?.plan || 'free')}
-                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {filteredLeads.map((lead, index) => (
+                      <div
+                        key={lead.id}
+                        {...(index === 0 ? { id: 'dashboard-first-lead', 'data-tour': 'lead-card' } : {})}
+                      >
+                        <LeadCard
+                          lead={lead}
+                          isUnlocked={unlockedLeads.has(lead.id)}
+                          isSelected={selectedLeads.includes(lead.id)}
+                          isProUser={isProOrHigher(userProfile?.plan || 'free')}
+                          onUnlock={(lead) => unlockLead(lead.id)}
+                          onView={(lead) => router.push(`/lead/${lead.id}`)}
+                          onSelect={toggleLeadSelection}
+                          onContact={(lead, method) => {
+                            if (method === 'email' && lead.email) {
+                              window.location.href = `mailto:${lead.email}`
+                            } else if (method === 'phone' && lead.phone) {
+                              window.location.href = `tel:${lead.phone}`
+                            }
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 )
               }
 
               // === LIST VIEW ===
-              return filteredLeads.map((lead, index) => {
-                const isUnlocked = unlockedLeads.has(lead.id)
-                const isLastUnlocked = lastUnlockedLeadId === lead.id
-                const isSelected = selectedLeads.includes(lead.id)
-
-                // Gestisce l'id in base al caso (primo lead ha attributo tour per onboarding)
-                const cardProps = index === 0
-                  ? { id: 'dashboard-first-lead', 'data-tour': 'lead-card' }
-                  : { id: `lead-${lead.id}` }
-
-                return (
-                  <div
-                    key={lead.id}
-                    {...cardProps}
-                    className={`relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border transition-all duration-300 ${
-                      isSelected
-                        ? 'ring-2 ring-blue-500 ring-offset-2 border-blue-300 dark:border-blue-600'
-                        : isLastUnlocked
-                        ? 'ring-2 ring-green-500 ring-offset-2 border-green-200 dark:border-green-700 shadow-lg shadow-green-100 dark:shadow-green-900/20'
-                        : isUnlocked
-                        ? 'border-green-200 dark:border-green-700 shadow-lg shadow-green-100 dark:shadow-green-900/20'
-                        : 'border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg'
-                    }`}
-                  >
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-                        {/* Checkbox per selezione (solo lead sbloccati) */}
-                        {isUnlocked && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              toggleLeadSelection(lead.id)
-                            }}
-                            className="absolute top-4 left-4 p-1 rounded-lg bg-white/80 dark:bg-gray-800/80 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors z-10 hidden lg:flex"
-                          >
-                            {isSelected ? (
-                              <CheckSquare className="w-5 h-5 text-blue-600" />
-                            ) : (
-                              <Square className="w-5 h-5 text-gray-400" />
-                            )}
-                          </button>
-                        )}
-
-                        {/* Info Principale */}
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-2">
-                            {isUnlocked ? (
-                              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                {lead.business_name}
-                              </h3>
-                            ) : (
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-xl">
-                                  {getCategoryIcon(lead.category)}
-                                </div>
-                                <div>
-                                  <h3 className="font-semibold text-gray-900 dark:text-white">
-                                    {translateCategory(lead.category)}
-                                  </h3>
-                                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    📍 {lead.city}
-                                  </p>
-                                </div>
-                                {/* Freshness badge */}
-                                {lead.created_at && (
-                                  <span className={`text-xs px-2 py-1 rounded-full ${getFreshnessBadge(lead.created_at).color}`}>
-                                    {getFreshnessBadge(lead.created_at).label}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                            <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getScoreColor(lead.score)}`}>
-                              {getScoreLabel(lead.score)} ({lead.score})
-                            </div>
-                            {/* Badge Consigliato per lead ad alta opportunità */}
-                            {!isUnlocked && lead.score >= 60 && (
-                              <div className="px-2 py-1 bg-gradient-to-r from-amber-400 to-orange-500 text-white text-xs font-bold rounded-full shadow-sm flex items-center space-x-1">
-                                <span>⭐</span>
-                                <span>Consigliato</span>
-                              </div>
-                            )}
-                            {isUnlocked && (
-                              <div className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full border border-green-200">
-                                ✓ Sbloccato
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Badge CRM Status per utenti PRO - Solo per lead sbloccati */}
-                          {isUnlocked && isProOrHigher(userProfile?.plan || 'free') && (
-                            <div className="mb-3">
-                              <LeadStatusBadge
-                                status={lead.crm_status}
-                                nextFollowUp={lead.next_follow_up}
-                                size="sm"
-                              />
-                            </div>
-                          )}
-                        
-                        {/* Informazioni REALI del lead per incentivare lo sblocco */}
-                        {!isUnlocked ? (
-                          <div className="space-y-4 mt-3">
-                            {/* Sezione Problemi Tecnici REALI (da analysis) */}
-                            {lead.analysis && (
-                              <div>
-                                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
-                                  <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                                  Problemi identificati:
-                                </h4>
-                                <div className="flex flex-wrap gap-2">
-                                  {/* No SSL */}
-                                  {lead.analysis?.security?.hasSSL === false && (
-                                    <span className="text-xs bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 px-2 py-1 rounded-lg">🔓 Senza HTTPS</span>
-                                  )}
-                                  {/* Sito lento */}
-                                  {lead.analysis?.performance?.loadTime && lead.analysis.performance.loadTime > 3 && (
-                                    <span className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 px-2 py-1 rounded-lg">🐢 Sito lento ({lead.analysis.performance.loadTime.toFixed(1)}s)</span>
-                                  )}
-                                  {/* No Google Analytics */}
-                                  {lead.analysis?.tracking?.hasGoogleAnalytics === false && (
-                                    <span className="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 px-2 py-1 rounded-lg">📊 No Analytics</span>
-                                  )}
-                                  {/* No Facebook Pixel */}
-                                  {lead.analysis?.tracking?.hasFacebookPixel === false && (
-                                    <span className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-1 rounded-lg">📱 No FB Pixel</span>
-                                  )}
-                                  {/* No Google Ads */}
-                                  {lead.analysis?.tracking?.hasGoogleAds === false && (
-                                    <span className="text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 px-2 py-1 rounded-lg">📣 No Google Ads</span>
-                                  )}
-                                  {/* Mobile non ottimizzato */}
-                                  {lead.analysis?.mobile?.isMobileOptimized === false && (
-                                    <span className="text-xs bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300 px-2 py-1 rounded-lg">📵 Non mobile-friendly</span>
-                                  )}
-                                  {/* SEO mancante */}
-                                  {(lead.analysis?.seo?.hasTitle === false || lead.analysis?.seo?.hasDescription === false) && (
-                                    <span className="text-xs bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300 px-2 py-1 rounded-lg">🔍 SEO carente</span>
-                                  )}
-                                  {/* Fallback se nessun problema specifico ma score basso */}
-                                  {!lead.analysis?.security?.hasSSL !== false &&
-                                   !(lead.analysis?.performance?.loadTime > 3) &&
-                                   lead.analysis?.tracking?.hasGoogleAnalytics !== false &&
-                                   lead.score <= 50 && (
-                                    <span className="text-xs bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded-lg">⚠️ Miglioramenti possibili</span>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Fallback se no analysis ma score basso */}
-                            {!lead.analysis && lead.score <= 60 && (
-                              <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                                <span className="text-sm text-orange-600 dark:text-orange-400">
-                                  Score {lead.score}/100 - Opportunità di miglioramento
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
-                            <div className="flex items-center space-x-1">
-                              <ExternalLink className="h-4 w-4" />
-                              <span className="hover:text-blue-600 transition-colors">
-                                {lead.website_url}
-                              </span>
-                            </div>
-                            
-                            <div className="flex items-center space-x-1">
-                              <MapPin className="h-4 w-4" />
-                              <span>{lead.city}</span>
-                            </div>
-                            
-                            <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full">
-                              {translateCategory(lead.category)}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Contatti - Solo se sbloccato */}
-                        {isUnlocked ? (
-                          <div className="flex flex-wrap gap-4 mb-3">
-                            {lead.phone && typeof lead.phone === 'string' && lead.phone.trim() !== '' && (
-                              <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-400">
-                                <Phone className="h-4 w-4" />
-                                <span>{lead.phone}</span>
-                              </div>
-                            )}
-                            {lead.email && typeof lead.email === 'string' && lead.email.trim() !== '' && lead.email !== 'null' && (
-                              <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-400">
-                                <Mail className="h-4 w-4" />
-                                <span>{lead.email}</span>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 mt-3">
-                            {(() => {
-                              // Verifica REALE dei dati nel DB (ora l'API restituisce tutto a tutti)
-                              const hasPhone = lead.phone && typeof lead.phone === 'string' && lead.phone.trim() !== ''
-                              const hasEmail = lead.email && typeof lead.email === 'string' && lead.email.trim() !== '' && lead.email !== 'null'
-                              const hasAddress = lead.address && typeof lead.address === 'string' && lead.address.trim() !== ''
-                              const contactCount = [hasPhone, hasEmail, hasAddress].filter(Boolean).length
-
-                              if (contactCount > 0) {
-                                return (
-                                  <>
-                                    <h4 className="font-medium text-gray-900 dark:text-white mb-2">
-                                      📋 Disponibile allo sblocco:
-                                    </h4>
-                                    <div className="flex flex-wrap gap-2">
-                                      {hasPhone && (
-                                        <span className="text-sm bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 px-2 py-1 rounded-lg">
-                                          📱 Telefono
-                                        </span>
-                                      )}
-                                      {hasEmail && (
-                                        <span className="text-sm bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-1 rounded-lg">
-                                          ✉️ Email
-                                        </span>
-                                      )}
-                                      {hasAddress && (
-                                        <span className="text-sm bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 px-2 py-1 rounded-lg">
-                                          📍 Indirizzo
-                                        </span>
-                                      )}
-                                      <span className="text-sm bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded-lg">
-                                        🏢 Nome azienda
-                                      </span>
-                                      <span className="text-sm bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded-lg">
-                                        🌐 Sito web
-                                      </span>
-                                    </div>
-                                  </>
-                                )
-                              } else {
-                                return (
-                                  <>
-                                    <h4 className="font-medium text-gray-900 dark:text-white mb-2">
-                                      📋 Disponibile allo sblocco:
-                                    </h4>
-                                    <div className="flex flex-wrap gap-2">
-                                      <span className="text-sm bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded-lg">
-                                        🏢 Nome azienda
-                                      </span>
-                                      <span className="text-sm bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded-lg">
-                                        🌐 Sito web
-                                      </span>
-                                    </div>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                                      Contatti diretti non disponibili per questo lead
-                                    </p>
-                                  </>
-                                )
-                              }
-                            })()}
-                          </div>
-                        )}
-
-                        {/* Ruoli Necessari - Solo se sbloccato */}
-                        {isUnlocked ? (
-                          <div className="flex flex-wrap gap-2">
-                            {(lead.needed_roles && Array.isArray(lead.needed_roles) && lead.needed_roles.length > 0) ? (
-                              <>
-                                {lead.needed_roles.slice(0, 3).map(role => (
-                                  <span 
-                                    key={role}
-                                    className={`px-2 py-1 text-xs font-medium rounded-lg ${getRoleColor(role)}`}
-                                  >
-                                    {translateRole(role)}
-                                  </span>
-                                ))}
-                                {lead.needed_roles.length > 3 && (
-                                  <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 rounded-lg">
-                                    +{lead.needed_roles.length - 3} altri
-                                  </span>
-                                )}
-                              </>
-                            ) : (
-                              <span className="px-2 py-1 text-xs bg-gray-100 text-gray-500 rounded-lg">
-                                Nessun ruolo specificato
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex flex-wrap gap-2">
-                            <span className="px-2 py-1 text-xs bg-gray-100 text-gray-500 rounded-lg blur-sm">
-                              ••••••••••
-                            </span>
-                            <span className="px-2 py-1 text-xs bg-gray-100 text-gray-500 rounded-lg blur-sm">
-                              ••••••••
-                            </span>
-                            <span className="text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-200">
-                              Ruoli nascosti - Sblocca per vedere
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Insights e suggerimenti personalizzati */}
-                      {isUnlocked && (
-                        <LeadInsights 
-                          lead={lead} 
-                          userPlan={getBasePlanType(userProfile?.plan || 'free')}
-                        />
-                      )}
-
-                      {/* Score e Actions */}
-                      <div className="flex items-center space-x-3">
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-                            {lead.score}
-                          </div>
-                          <div className="text-xs text-gray-500">Score</div>
-                        </div>
-                        
-                        {!isUnlocked ? (
-                          <div className="flex flex-col items-center space-y-2">
-                            <button
-                              onClick={() => unlockLead(lead.id)}
-                              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-3 rounded-xl transition-all duration-300 relative disabled:opacity-50 disabled:cursor-not-allowed font-bold text-sm shadow-lg hover:shadow-xl transform hover:scale-105"
-                              disabled={remainingCredits <= 0}
-                              title={remainingCredits <= 0 ? "Non hai crediti sufficienti" : "Costa 1 credito per sbloccare tutti i dettagli"}
-                              {...(index === 0 ? { id: 'dashboard-unlock-button', 'data-tour': 'unlock-button' } : {})}
-                            >
-                              <div className="flex items-center space-x-2">
-                                <Eye className="h-4 w-4" />
-                                <span>SBLOCCA LEAD</span>
-                              </div>
-                              <div className="text-xs opacity-90 mt-1">
-                                💳 1 credito
-                              </div>
-                              {remainingCredits > 0 && (
-                                <span className="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-bounce">
-                                  1
-                                </span>
-                              )}
-                            </button>
-                            
-                            <div className="text-xs text-center text-gray-500 max-w-[140px]">
-                              {(() => {
-                                // Verifica rigorosa dei contatti disponibili
-                                const hasPhone = lead.phone && typeof lead.phone === 'string' && lead.phone.trim() !== ''
-                                const hasEmail = lead.email && typeof lead.email === 'string' && lead.email.trim() !== '' && lead.email !== 'null'
-                                const hasAddress = lead.address && typeof lead.address === 'string' && lead.address.trim() !== ''
-                                
-                                const hasContacts = hasPhone || hasEmail || hasAddress
-                                const contactCount = [hasPhone, hasEmail, hasAddress].filter(Boolean).length
-                                
-                                if (hasContacts && contactCount > 1) {
-                                  return `Ottieni ${contactCount} contatti e dettagli completi`
-                                } else if (hasContacts) {
-                                  return 'Ottieni contatti e nome azienda'
-                                } else {
-                                  return 'Ottieni nome azienda e dettagli'
-                                }
-                              })()}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center space-y-2">
-                            <div className="bg-green-100 text-green-800 px-4 py-2 rounded-xl text-sm font-bold flex items-center space-x-2">
-                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                              <span>✅ SBLOCCATO</span>
-                            </div>
-                            
-                            {/* Azioni standard */}
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => window.open(lead.website_url, '_blank')}
-                                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg transition-colors text-xs"
-                              >
-                                <ExternalLink className="h-3 w-3 inline mr-1" />
-                                Visita
-                              </button>
-                              <button
-                                onClick={() => router.push(`/lead/${lead.id}`)}
-                                className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-lg transition-colors text-xs"
-                              >
-                                <Eye className="h-3 w-3 inline mr-1" />
-                                Analisi
-                              </button>
-                            </div>
-                            
-                            {/* Azioni rapide CRM per utenti PRO */}
-                            {isProOrHigher(userProfile?.plan || 'free') && (
-                              <div className="border-t border-gray-200 pt-2 mt-2 w-full">
-                                <div className="text-xs text-gray-500 text-center mb-2">🎯 Azioni rapide CRM</div>
-                                <div className="flex flex-col space-y-1 w-full">
-                                  {lead.crm_status === 'new' && (
-                                    <button
-                                      onClick={() => handleQuickStatusUpdate(lead.id, 'contacted')}
-                                      disabled={updatingCRM === lead.id}
-                                      className="w-full px-2 py-1 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                      {updatingCRM === lead.id ? '...' : '📞 Segna come contattato'}
-                                    </button>
-                                  )}
-                                  <button
-                                    onClick={() => router.push(`/crm/${lead.id}`)}
-                                    className="w-full px-2 py-1 text-xs bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded transition-colors inline-flex items-center justify-center gap-1"
-                                  >
-                                    <MessageCircle className="h-3 w-3" />
-                                    Gestisci nel CRM
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })
+              return (
+                <div className="space-y-3">
+                  {filteredLeads.map((lead, index) => (
+                    <LeadCardCompact
+                      key={lead.id}
+                      lead={lead}
+                      isUnlocked={unlockedLeads.has(lead.id)}
+                      isSelected={selectedLeads.includes(lead.id)}
+                      onUnlock={(lead) => unlockLead(lead.id)}
+                      onView={(lead) => router.push(`/lead/${lead.id}`)}
+                      onSelect={toggleLeadSelection}
+                      className={index === 0 ? 'dashboard-first-lead' : ''}
+                    />
+                  ))}
+                </div>
+              )
             })()}
           </TourTarget>
 
