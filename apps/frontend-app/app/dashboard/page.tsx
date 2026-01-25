@@ -127,6 +127,7 @@ export default function ClientDashboard() {
   const [searchInput, setSearchInput] = useState<string>('') // Input separato per digitazione
   const [showFilters, setShowFilters] = useState(false)
   const [showOnlyUnlocked, setShowOnlyUnlocked] = useState(false) // Nuovo filtro per lead sbloccati
+  const [showOnlyMatching, setShowOnlyMatching] = useState(false) // Filtro per lead compatibili con i servizi utente
   const [showWelcomeModal, setShowWelcomeModal] = useState(false) // Modal per nuovi utenti
 
   // Filtri avanzati - sostituiti con sistema unificato
@@ -435,18 +436,20 @@ export default function ClientDashboard() {
         }
       }
 
-      // FILTRO AUTOMATICO: Se utente ha configurato servizi, nascondi lead con 0 match
-      // Questo filtro si applica SEMPRE quando l'utente ha servizi configurati
-      const userServicesForAutoFilter = (user?.services_offered || []) as ServiceType[]
-      if (userServicesForAutoFilter.length > 0) {
-        const analysis = lead.website_analysis || lead.analysis
-        if (analysis) {
-          const detectedServicesResult = detectServices(analysis)
-          const matchResult = calculateMatch(detectedServicesResult, userServicesForAutoFilter)
+      // FILTRO OPZIONALE: Se utente ha configurato servizi E ha attivato il filtro, nascondi lead con 0 match
+      // Questo filtro si applica solo quando showOnlyMatching è true
+      if (showOnlyMatching) {
+        const userServicesForAutoFilter = (user?.services_offered || []) as ServiceType[]
+        if (userServicesForAutoFilter.length > 0) {
+          const analysis = lead.website_analysis || lead.analysis
+          if (analysis) {
+            const detectedServicesResult = detectServices(analysis)
+            const matchResult = calculateMatch(detectedServicesResult, userServicesForAutoFilter)
 
-          // Escludi lead che NON hanno NESSUN servizio in comune con l'utente
-          if (matchResult.matchedServices.length === 0) {
-            return false
+            // Escludi lead che NON hanno NESSUN servizio in comune con l'utente
+            if (matchResult.matchedServices.length === 0) {
+              return false
+            }
           }
         }
       }
@@ -1609,7 +1612,11 @@ export default function ClientDashboard() {
 
           {/* Sezione Per Te - Lead Personalizzati */}
           <div className="mb-8">
-            <ForYouSection onUnlockLead={unlockLead} />
+            <ForYouSection
+              onUnlockLead={unlockLead}
+              onViewLead={(leadId) => router.push(`/lead/${leadId}`)}
+              unlockedLeads={unlockedLeads}
+            />
           </div>
 
           {/* Sezione Lead Consigliati per Nuovi Utenti */}
@@ -1809,6 +1816,35 @@ export default function ClientDashboard() {
                     </div>
                   )}
                 </TourTarget>
+
+                {/* Toggle Solo Compatibili - solo se utente ha servizi configurati */}
+                {user?.services_offered && (user.services_offered as string[]).length > 0 && (
+                  <div className="flex items-center space-x-2">
+                    <label className="inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={showOnlyMatching}
+                        onChange={(e) => setShowOnlyMatching(e.target.checked)}
+                        className="sr-only"
+                      />
+                      <div className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out ${
+                        showOnlyMatching ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}>
+                        <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${
+                          showOnlyMatching ? 'translate-x-5' : 'translate-x-0'
+                        }`}></div>
+                      </div>
+                    </label>
+                    <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">
+                      Solo compatibili
+                    </span>
+                    {showOnlyMatching && (
+                      <div className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                        ✓ Attivo
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <button
                   onClick={() => setShowFilters(!showFilters)}

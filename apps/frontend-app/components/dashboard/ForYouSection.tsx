@@ -59,9 +59,11 @@ interface ForYouData {
 
 interface ForYouSectionProps {
   onUnlockLead?: (leadId: string) => void
+  onViewLead?: (leadId: string) => void
+  unlockedLeads?: Set<string>
 }
 
-export default function ForYouSection({ onUnlockLead }: ForYouSectionProps) {
+export default function ForYouSection({ onUnlockLead, onViewLead, unlockedLeads = new Set() }: ForYouSectionProps) {
   const { getAccessToken } = useAuth()
   const [data, setData] = useState<ForYouData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -212,6 +214,8 @@ export default function ForYouSection({ onUnlockLead }: ForYouSectionProps) {
           <LeadCarousel
             leads={sections.daily_top_5}
             onUnlock={onUnlockLead}
+            onViewLead={onViewLead}
+            unlockedLeads={unlockedLeads}
             showRelevance
           />
         </section>
@@ -230,6 +234,8 @@ export default function ForYouSection({ onUnlockLead }: ForYouSectionProps) {
           <LeadCarousel
             leads={sections.perfect_match}
             onUnlock={onUnlockLead}
+            onViewLead={onViewLead}
+            unlockedLeads={unlockedLeads}
             showRelevance
             cardSize="compact"
           />
@@ -249,6 +255,8 @@ export default function ForYouSection({ onUnlockLead }: ForYouSectionProps) {
           <LeadCarousel
             leads={sections.high_budget}
             onUnlock={onUnlockLead}
+            onViewLead={onViewLead}
+            unlockedLeads={unlockedLeads}
             showRelevance
             cardSize="compact"
           />
@@ -268,6 +276,8 @@ export default function ForYouSection({ onUnlockLead }: ForYouSectionProps) {
           <LeadCarousel
             leads={sections.near_you}
             onUnlock={onUnlockLead}
+            onViewLead={onViewLead}
+            unlockedLeads={unlockedLeads}
             showRelevance
             cardSize="compact"
           />
@@ -287,6 +297,8 @@ export default function ForYouSection({ onUnlockLead }: ForYouSectionProps) {
           <LeadCarousel
             leads={sections.new_today}
             onUnlock={onUnlockLead}
+            onViewLead={onViewLead}
+            unlockedLeads={unlockedLeads}
             showRelevance={false}
             cardSize="compact"
           />

@@ -32,6 +32,8 @@ interface LeadWithRelevance {
 interface LeadCarouselProps {
   leads: LeadWithRelevance[]
   onUnlock?: (leadId: string) => void
+  onViewLead?: (leadId: string) => void
+  unlockedLeads?: Set<string>
   showRelevance?: boolean
   cardSize?: 'normal' | 'compact'
   emptyMessage?: string
@@ -40,6 +42,8 @@ interface LeadCarouselProps {
 export default function LeadCarousel({
   leads,
   onUnlock,
+  onViewLead,
+  unlockedLeads = new Set(),
   showRelevance = true,
   cardSize = 'normal',
   emptyMessage = 'Nessun lead disponibile'
@@ -139,6 +143,8 @@ export default function LeadCarousel({
               lead={item.lead}
               relevance={showRelevance ? item.relevance : undefined}
               onUnlock={onUnlock}
+              onViewLead={onViewLead}
+              isUnlocked={unlockedLeads.has(item.lead.id)}
               rank={index + 1}
               compact={cardSize === 'compact'}
             />

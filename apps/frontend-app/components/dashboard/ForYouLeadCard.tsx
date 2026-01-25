@@ -9,7 +9,7 @@
 'use client'
 
 import { useState } from 'react'
-import { MapPin, Globe, Zap, Lock, ExternalLink, Star, TrendingUp } from 'lucide-react'
+import { MapPin, Globe, Zap, Lock, ExternalLink, Star, TrendingUp, Eye, CheckCircle } from 'lucide-react'
 import { LeadRelevance } from '@/lib/types/onboarding'
 import { useBehaviorTracking } from '@/hooks/useBehaviorTracking'
 
@@ -28,6 +28,8 @@ interface ForYouLeadCardProps {
   lead: Lead
   relevance?: LeadRelevance
   onUnlock?: (leadId: string) => void
+  onViewLead?: (leadId: string) => void
+  isUnlocked?: boolean
   rank?: number
   compact?: boolean
 }
@@ -59,10 +61,13 @@ export default function ForYouLeadCard({
   lead,
   relevance,
   onUnlock,
+  onViewLead,
+  isUnlocked = false,
   rank,
   compact = false
 }: ForYouLeadCardProps) {
   const [isHovered, setIsHovered] = useState(false)
+  const [isUnlocking, setIsUnlocking] = useState(false)
   const { trackViewed } = useBehaviorTracking()
 
   // Track view on hover
@@ -174,14 +179,42 @@ export default function ForYouLeadCard({
 
       {/* Actions */}
       <div className="flex items-center gap-2">
-        {/* Unlock Button */}
-        <button
-          onClick={() => onUnlock?.(lead.id)}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg text-sm font-medium hover:from-blue-600 hover:to-purple-700 transition-all"
-        >
-          <Lock className="w-4 h-4" />
-          Sblocca
-        </button>
+        {/* Unlock/View Button based on state */}
+        {isUnlocked ? (
+          <button
+            onClick={() => onViewLead?.(lead.id)}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg text-sm font-medium hover:from-green-600 hover:to-emerald-700 transition-all"
+          >
+            <Eye className="w-4 h-4" />
+            Vedi Analisi
+          </button>
+        ) : (
+          <button
+            onClick={async () => {
+              if (isUnlocking) return
+              setIsUnlocking(true)
+              try {
+                await onUnlock?.(lead.id)
+              } finally {
+                setIsUnlocking(false)
+              }
+            }}
+            disabled={isUnlocking}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg text-sm font-medium hover:from-blue-600 hover:to-purple-700 transition-all ${isUnlocking ? 'opacity-70 cursor-not-allowed' : ''}`}
+          >
+            {isUnlocking ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Sblocco...
+              </>
+            ) : (
+              <>
+                <Lock className="w-4 h-4" />
+                Sblocca
+              </>
+            )}
+          </button>
+        )}
 
         {/* Website Link (if domain available) */}
         {domain && (
@@ -196,6 +229,16 @@ export default function ForYouLeadCard({
           </a>
         )}
       </div>
+
+      {/* Unlocked Badge */}
+      {isUnlocked && (
+        <div className="absolute top-2 left-2">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">
+            <CheckCircle className="w-3 h-3" />
+            Sbloccato
+          </span>
+        </div>
+      )}
     </div>
   )
 }

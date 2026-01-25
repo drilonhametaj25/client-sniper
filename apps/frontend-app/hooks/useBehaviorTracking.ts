@@ -81,7 +81,7 @@ interface UseBehaviorTrackingReturn {
  * Hook per tracciare il comportamento utente con i lead
  */
 export function useBehaviorTracking(): UseBehaviorTrackingReturn {
-  const { user } = useAuth()
+  const { user, getAccessToken } = useAuth()
 
   // Debounce per evitare chiamate duplicate ravvicinate
   const recentTracked = useRef<Set<string>>(new Set())
@@ -115,10 +115,19 @@ export function useBehaviorTracking(): UseBehaviorTrackingReturn {
     }, 2000)
 
     try {
+      const token = getAccessToken()
+      if (!token) {
+        if (!options?.silent) {
+          console.warn('[BehaviorTracking] No access token available, skipping track')
+        }
+        return
+      }
+
       const response = await fetch('/api/behavior', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           leadId,
@@ -137,7 +146,7 @@ export function useBehaviorTracking(): UseBehaviorTrackingReturn {
         console.error('[BehaviorTracking] Network error:', error)
       }
     }
-  }, [user?.id])
+  }, [user?.id, getAccessToken])
 
   /**
    * Traccia azione generica
