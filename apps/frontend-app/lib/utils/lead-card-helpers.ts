@@ -1,58 +1,69 @@
 /**
  * Helper functions per i componenti LeadCard
- * Funzioni per calcolo criticità, formattazione date, colori
+ * Funzioni per calcolo criticità, formattazione date, problemi, budget stimato
  */
 
+import { AlertCircle, AlertTriangle, Info, CheckCircle } from 'lucide-react'
+
 /**
- * Ritorna il colore di criticità basato sullo score
+ * Configurazione criticità basata sullo score
  * Score basso = più critico (più opportunità per agenzie digitali)
- * 0-30: rosso (critico), 31-60: arancione (medio), 61-80: giallo (ok), 81-100: verde (ottimo)
  */
-export function getCriticityColor(score: number): {
-  bg: string
-  text: string
-  border: string
+export function getCriticalityConfig(score: number): {
+  variant: 'destructive' | 'warning' | 'default' | 'success'
   label: string
-  priority: 'critical' | 'medium' | 'low' | 'good'
+  color: string
+  bgColor: string
+  textColor: string
+  borderColor: string
+  icon: typeof AlertCircle
 } {
   if (score <= 30) {
     return {
-      bg: 'bg-red-100 dark:bg-red-900/30',
-      text: 'text-red-700 dark:text-red-400',
-      border: 'border-red-200 dark:border-red-800',
+      variant: 'destructive',
       label: 'Critico',
-      priority: 'critical'
+      color: 'red',
+      bgColor: 'bg-red-100 dark:bg-red-900/30',
+      textColor: 'text-red-700 dark:text-red-400',
+      borderColor: 'border-red-200 dark:border-red-800',
+      icon: AlertCircle
     }
   }
   if (score <= 60) {
     return {
-      bg: 'bg-orange-100 dark:bg-orange-900/30',
-      text: 'text-orange-700 dark:text-orange-400',
-      border: 'border-orange-200 dark:border-orange-800',
-      label: 'Migliorabile',
-      priority: 'medium'
+      variant: 'warning',
+      label: 'Attenzione',
+      color: 'orange',
+      bgColor: 'bg-orange-100 dark:bg-orange-900/30',
+      textColor: 'text-orange-700 dark:text-orange-400',
+      borderColor: 'border-orange-200 dark:border-orange-800',
+      icon: AlertTriangle
     }
   }
   if (score <= 80) {
     return {
-      bg: 'bg-yellow-100 dark:bg-yellow-900/30',
-      text: 'text-yellow-700 dark:text-yellow-400',
-      border: 'border-yellow-200 dark:border-yellow-800',
-      label: 'Discreto',
-      priority: 'low'
+      variant: 'default',
+      label: 'Migliorabile',
+      color: 'yellow',
+      bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
+      textColor: 'text-yellow-700 dark:text-yellow-400',
+      borderColor: 'border-yellow-200 dark:border-yellow-800',
+      icon: Info
     }
   }
   return {
-    bg: 'bg-green-100 dark:bg-green-900/30',
-    text: 'text-green-700 dark:text-green-400',
-    border: 'border-green-200 dark:border-green-800',
-    label: 'Ottimo',
-    priority: 'good'
+    variant: 'success',
+    label: 'Buono',
+    color: 'green',
+    bgColor: 'bg-green-100 dark:bg-green-900/30',
+    textColor: 'text-green-700 dark:text-green-400',
+    borderColor: 'border-green-200 dark:border-green-800',
+    icon: CheckCircle
   }
 }
 
 /**
- * Ritorna il colore per la progress bar dello score
+ * Colore progress bar basato su score
  */
 export function getScoreBarColor(score: number): string {
   if (score <= 30) return 'bg-red-500'
@@ -62,68 +73,49 @@ export function getScoreBarColor(score: number): string {
 }
 
 /**
- * Formatta la data di scansione in modo leggibile
+ * Formatta la data in modo leggibile
  */
-export function formatScanDate(dateString: string | Date): string {
+export function formatDate(dateString: string | Date): string {
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffHours = diffMs / (1000 * 60 * 60)
-  const diffDays = diffMs / (1000 * 60 * 60 * 24)
-
-  // Meno di 24 ore fa
-  if (diffHours < 24) {
-    if (diffHours < 1) {
-      const minutes = Math.floor(diffMs / (1000 * 60))
-      return `${minutes} min fa`
-    }
-    return `${Math.floor(diffHours)} ore fa`
-  }
-
-  // Meno di 7 giorni
-  if (diffDays < 7) {
-    return `${Math.floor(diffDays)} giorni fa`
-  }
-
-  // Altrimenti mostra data completa
   return date.toLocaleDateString('it-IT', {
-    day: 'numeric',
-    month: 'short',
-    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
   })
 }
 
 /**
- * Ritorna badge di freschezza
+ * Ritorna tempo relativo (es. "3 ore fa")
  */
-export function getFreshnessBadge(dateString: string | Date): {
-  label: string
-  color: string
-  show: boolean
-} {
+export function getTimeAgo(dateString: string | Date): string {
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString
   const now = new Date()
-  const diffHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+  const diffMs = now.getTime() - date.getTime()
+  const diffMinutes = Math.floor(diffMs / (1000 * 60))
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
 
-  if (diffHours < 24) {
-    return {
-      label: 'Nuovo',
-      color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-      show: true
-    }
-  }
-  if (diffHours < 72) {
-    return {
-      label: 'Recente',
-      color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-      show: true
-    }
-  }
-  return { label: '', color: '', show: false }
+  if (diffMinutes < 60) return `${diffMinutes} min fa`
+  if (diffHours < 24) return `${diffHours} ore fa`
+  if (diffDays < 7) return `${diffDays} giorni fa`
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} settimane fa`
+  return `${Math.floor(diffDays / 30)} mesi fa`
 }
 
 /**
- * Estrae i dati disponibili da un lead per la preview
+ * Verifica se il lead è "nuovo" (< 7 giorni)
+ */
+export function isNewLead(dateString: string | Date): boolean {
+  const date = typeof dateString === 'string' ? new Date(dateString) : dateString
+  const now = new Date()
+  const diffDays = (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
+  return diffDays < 7
+}
+
+/**
+ * Estrae i dati disponibili da un lead
  */
 export interface LeadAvailableData {
   hasPhone: boolean
@@ -145,84 +137,201 @@ export function extractAvailableData(lead: {
 }): LeadAvailableData {
   const analysis = lead.website_analysis || lead.analysis
 
-  // Estrai social platforms
-  const socialPlatforms: string[] = []
+  // Check social presence
   const social = analysis?.social || analysis?.content
+  const hasSocial = social?.hasAnySocial ||
+    (social?.socialLinks && social.socialLinks.length > 0) ||
+    (social?.platforms && Object.values(social.platforms).some(Boolean))
 
-  if (social) {
-    const platforms = social.platforms || social
-    if (platforms?.facebook || social?.socialLinks?.some((l: string) => l.includes('facebook'))) socialPlatforms.push('facebook')
-    if (platforms?.instagram || social?.socialLinks?.some((l: string) => l.includes('instagram'))) socialPlatforms.push('instagram')
-    if (platforms?.linkedin || social?.socialLinks?.some((l: string) => l.includes('linkedin'))) socialPlatforms.push('linkedin')
-    if (platforms?.twitter || social?.socialLinks?.some((l: string) => l.includes('twitter'))) socialPlatforms.push('twitter')
-    if (platforms?.youtube || social?.socialLinks?.some((l: string) => l.includes('youtube'))) socialPlatforms.push('youtube')
-    if (platforms?.tiktok || social?.socialLinks?.some((l: string) => l.includes('tiktok'))) socialPlatforms.push('tiktok')
+  // Extract social platforms
+  const socialPlatforms: string[] = []
+  if (social?.platforms) {
+    const platformNames = ['facebook', 'instagram', 'linkedin', 'twitter', 'youtube', 'tiktok']
+    for (const name of platformNames) {
+      if (social.platforms[name]) {
+        socialPlatforms.push(name)
+      }
+    }
+  } else if (social?.socialLinks) {
+    for (const link of social.socialLinks) {
+      const url = typeof link === 'string' ? link : link?.url || ''
+      if (url.includes('facebook')) socialPlatforms.push('facebook')
+      else if (url.includes('instagram')) socialPlatforms.push('instagram')
+      else if (url.includes('linkedin')) socialPlatforms.push('linkedin')
+      else if (url.includes('twitter') || url.includes('x.com')) socialPlatforms.push('twitter')
+      else if (url.includes('youtube')) socialPlatforms.push('youtube')
+      else if (url.includes('tiktok')) socialPlatforms.push('tiktok')
+    }
   }
 
   return {
-    hasPhone: !!lead.phone,
-    hasEmail: !!lead.email,
-    hasAddress: !!lead.address,
-    hasWebsite: !!lead.website_url,
-    hasSocial: socialPlatforms.length > 0 || (social?.hasAnySocial === true),
-    socialCount: socialPlatforms.length || (social?.socialCount ?? 0),
+    hasPhone: !!(lead.phone && lead.phone.trim() !== ''),
+    hasEmail: !!(lead.email && lead.email.trim() !== '' && lead.email !== 'null'),
+    hasAddress: !!(lead.address && lead.address.trim() !== ''),
+    hasWebsite: !!(lead.website_url && lead.website_url.trim() !== ''),
+    hasSocial: !!hasSocial,
+    socialCount: socialPlatforms.length,
     socialPlatforms
   }
 }
 
 /**
- * Genera i badge da mostrare (max 3)
+ * Conta dati disponibili
  */
-export interface LeadBadge {
-  label: string
-  color: string
-  icon?: string
-}
-
-export function generateLeadBadges(lead: {
-  city?: string
-  category?: string
-  created_at?: string
-  score?: number
-}, maxBadges: number = 3): LeadBadge[] {
-  const badges: LeadBadge[] = []
-
-  // 1. Badge criticità (priorità alta)
-  if (lead.score !== undefined) {
-    const criticality = getCriticityColor(lead.score)
-    badges.push({
-      label: criticality.label,
-      color: `${criticality.bg} ${criticality.text}`,
-      icon: 'alert'
-    })
-  }
-
-  // 2. Badge freschezza (se nuovo/recente)
-  if (lead.created_at) {
-    const freshness = getFreshnessBadge(lead.created_at)
-    if (freshness.show) {
-      badges.push({
-        label: freshness.label,
-        color: freshness.color,
-        icon: 'clock'
-      })
-    }
-  }
-
-  // 3. Categoria
-  if (lead.category && badges.length < maxBadges) {
-    badges.push({
-      label: lead.category,
-      color: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
-      icon: 'tag'
-    })
-  }
-
-  return badges.slice(0, maxBadges)
+export function getAvailableDataCount(data: LeadAvailableData): number {
+  return [data.hasPhone, data.hasEmail, data.hasAddress, data.hasWebsite, data.hasSocial]
+    .filter(Boolean).length
 }
 
 /**
- * Costanti CRM status
+ * Chiavi boolean dei dati disponibili (escluse socialCount e socialPlatforms)
+ */
+export type LeadDataKey = 'hasPhone' | 'hasEmail' | 'hasAddress' | 'hasWebsite' | 'hasSocial'
+
+/**
+ * Etichette per i dati disponibili
+ */
+export const DATA_LABELS: Record<LeadDataKey, string> = {
+  hasPhone: 'Telefono',
+  hasEmail: 'Email',
+  hasAddress: 'Indirizzo',
+  hasWebsite: 'Sito Web',
+  hasSocial: 'Social'
+}
+
+/**
+ * Icone per i dati disponibili (emoji per semplicità)
+ */
+export const DATA_ICONS: Record<LeadDataKey, string> = {
+  hasPhone: '📞',
+  hasEmail: '📧',
+  hasAddress: '📍',
+  hasWebsite: '🌐',
+  hasSocial: '👥'
+}
+
+/**
+ * Estrae i problemi dall'analisi
+ */
+export interface LeadProblems {
+  high: number
+  medium: number
+  low: number
+  total: number
+  topIssues: string[]
+}
+
+export function extractProblems(analysis: any): LeadProblems {
+  if (!analysis) {
+    return { high: 0, medium: 0, low: 0, total: 0, topIssues: [] }
+  }
+
+  const issues = analysis.issues || {}
+  const topIssues: string[] = []
+
+  // Count by severity
+  const critical = issues.critical || []
+  const high = issues.high || []
+  const medium = issues.medium || []
+  const low = issues.low || []
+
+  // Collect top issues from various sources
+  if (!analysis.seo?.hasTitle) topIssues.push('Tag Title mancante')
+  if (!analysis.seo?.hasMetaDescription) topIssues.push('Meta description mancante')
+  if (!analysis.seo?.hasH1) topIssues.push('Tag H1 mancante')
+  if (!analysis.tracking?.googleAnalytics && !analysis.tracking?.hasGoogleAnalytics) {
+    topIssues.push('Google Analytics non installato')
+  }
+  if (!analysis.tracking?.facebookPixel && !analysis.tracking?.hasFacebookPixel) {
+    topIssues.push('Facebook Pixel mancante')
+  }
+  if (!analysis.gdpr?.hasPrivacyPolicy) topIssues.push('Privacy Policy assente')
+  if (!analysis.gdpr?.hasCookieBanner) topIssues.push('Cookie Banner mancante')
+  if (!analysis.hasSSL && analysis.hasSSL !== undefined) topIssues.push('HTTPS non attivo')
+  if (analysis.performance?.loadTime > 3000) topIssues.push('Sito lento (>3s)')
+  if (!analysis.mobile?.isMobileFriendly) topIssues.push('Non mobile-friendly')
+
+  // Add issues from arrays
+  topIssues.push(...critical.slice(0, 2), ...high.slice(0, 2))
+
+  const highCount = critical.length + high.length
+  const mediumCount = medium.length
+  const lowCount = low.length
+
+  // If no structured issues, estimate from score and checks
+  if (highCount === 0 && mediumCount === 0 && lowCount === 0) {
+    const estimatedHigh = topIssues.filter(i =>
+      i.includes('mancante') || i.includes('assente') || i.includes('non attivo')
+    ).length
+    const estimatedMedium = topIssues.filter(i =>
+      i.includes('lento') || i.includes('mobile')
+    ).length
+
+    return {
+      high: Math.max(estimatedHigh, Math.min(topIssues.length, 3)),
+      medium: estimatedMedium,
+      low: Math.max(0, topIssues.length - estimatedHigh - estimatedMedium),
+      total: topIssues.length,
+      topIssues: topIssues.slice(0, 5)
+    }
+  }
+
+  return {
+    high: highCount,
+    medium: mediumCount,
+    low: lowCount,
+    total: highCount + mediumCount + lowCount,
+    topIssues: topIssues.slice(0, 5)
+  }
+}
+
+/**
+ * Stima budget potenziale basato su score e problemi
+ */
+export function estimateBudget(score: number, problems: LeadProblems): string | null {
+  if (score > 80) return null // Sito già buono
+
+  const baseMin = 500
+  const baseMax = 800
+
+  // Più problemi = budget più alto
+  const multiplier = 1 + (problems.high * 0.3) + (problems.medium * 0.15) + (problems.low * 0.05)
+
+  // Score basso = budget più alto
+  const scoreMultiplier = score <= 30 ? 1.5 : score <= 60 ? 1.2 : 1
+
+  const min = Math.round((baseMin * multiplier * scoreMultiplier) / 100) * 100
+  const max = Math.round((baseMax * multiplier * scoreMultiplier) / 100) * 100
+
+  return `€${min.toLocaleString('it-IT')}-${max.toLocaleString('it-IT')}`
+}
+
+/**
+ * Estrae dominio da URL
+ */
+export function getDomain(url: string): string {
+  try {
+    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`)
+    return parsed.hostname.replace('www.', '')
+  } catch {
+    return url.replace(/^https?:\/\//, '').replace('www.', '').split('/')[0]
+  }
+}
+
+/**
+ * Formatta location completa
+ */
+export function formatLocation(lead: {
+  city?: string
+  address?: string
+}): string {
+  const parts: string[] = []
+  if (lead.city) parts.push(lead.city)
+  return parts.join(', ') || 'Posizione non disponibile'
+}
+
+/**
+ * CRM Status config
  */
 export const CRM_STATUS_CONFIG = {
   new: { label: 'Nuovo', color: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' },

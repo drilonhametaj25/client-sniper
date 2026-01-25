@@ -1,11 +1,18 @@
 /**
  * LeadCard - Componente principale per visualizzare un lead
- * Design pulito e scannable con:
- * - Dati disponibili visibili PRIMA dello sblocco
- * - Max 3 badge, max 3 CTA
- * - Disclaimer fisso sempre visibile
- * - Data scansione visibile
- * - Progress bar per lo score
+ *
+ * Due versioni:
+ * - LeadCard (expanded): Card completa con tutte le info
+ * - LeadCardCompact: Versione compressa per scan veloce
+ *
+ * Include TUTTE le info essenziali organizzate bene:
+ * - Header con criticità, location, status
+ * - Business info con score prominente
+ * - Dati disponibili PRIMA dello sblocco
+ * - Problemi identificati
+ * - Data scansione + potenziale budget
+ * - Disclaimer sempre visibile
+ * - Actions
  */
 
 'use client'
@@ -19,25 +26,35 @@ import {
   Mail,
   MapPin,
   Globe,
-  MoreHorizontal,
+  MoreVertical,
   Calendar,
-  AlertCircle,
+  AlertTriangle,
   CheckSquare,
   Square,
   Eye,
   Copy,
-  MessageSquare,
-  Send
+  Flag,
+  Archive,
+  CheckCircle,
+  Clock,
+  Zap
 } from 'lucide-react'
-import DataAvailability, { DataAvailabilityCompact } from './DataAvailability'
 import {
-  getCriticityColor,
+  getCriticalityConfig,
   getScoreBarColor,
-  formatScanDate,
-  getFreshnessBadge,
+  formatDate,
+  getTimeAgo,
+  isNewLead,
   extractAvailableData,
-  generateLeadBadges,
+  getAvailableDataCount,
+  extractProblems,
+  estimateBudget,
+  getDomain,
+  formatLocation,
+  DATA_LABELS,
+  DATA_ICONS,
   CRM_STATUS_CONFIG,
+  type LeadAvailableData,
   type CrmStatus
 } from '@/lib/utils/lead-card-helpers'
 
@@ -64,9 +81,13 @@ export interface LeadCardProps {
   onView?: (lead: LeadCardProps['lead']) => void
   onSelect?: (id: string) => void
   onContact?: (lead: LeadCardProps['lead'], method: 'email' | 'phone') => void
+  onMarkContacted?: (lead: LeadCardProps['lead']) => void
   className?: string
 }
 
+/**
+ * EXPANDED CARD - Vista completa con tutte le informazioni
+ */
 export default function LeadCard({
   lead,
   isUnlocked,
@@ -76,284 +97,374 @@ export default function LeadCard({
   onView,
   onSelect,
   onContact,
+  onMarkContacted,
   className = ''
 }: LeadCardProps) {
   const [showMenu, setShowMenu] = useState(false)
 
+  const analysis = lead.website_analysis || lead.analysis
   const availableData = extractAvailableData(lead)
-  const badges = generateLeadBadges(lead, 3)
-  const criticality = getCriticityColor(lead.score)
-  const freshness = lead.created_at ? getFreshnessBadge(lead.created_at) : null
+  const availableCount = getAvailableDataCount(availableData)
+  const problems = extractProblems(analysis)
+  const criticality = getCriticalityConfig(lead.score)
+  const CriticalityIcon = criticality.icon
+  const isNew = lead.created_at ? isNewLead(lead.created_at) : false
+  const budget = estimateBudget(lead.score, problems)
 
   return (
     <div
       className={`
-        relative bg-white dark:bg-gray-800 rounded-2xl border-2 transition-all duration-200
+        relative bg-white dark:bg-gray-800 rounded-2xl border-2 transition-all duration-200 overflow-hidden
         ${isSelected
           ? 'border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800'
-          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-lg'
         }
         ${className}
       `}
     >
-      {/* Header: Selection + Badges */}
-      <div className="flex items-start justify-between p-4 pb-2">
-        {/* Selection checkbox (solo se sbloccato) */}
-        <div className="flex items-center gap-2">
-          {isUnlocked && onSelect && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onSelect(lead.id)
-              }}
-              className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              title={isSelected ? 'Deseleziona' : 'Seleziona'}
-            >
-              {isSelected ? (
-                <CheckSquare className="w-5 h-5 text-blue-600" />
-              ) : (
-                <Square className="w-5 h-5 text-gray-400" />
-              )}
-            </button>
-          )}
+      {/* ===== HEADER ROW ===== */}
+      <div className="flex flex-wrap items-center gap-2 p-4 pb-3 border-b border-gray-100 dark:border-gray-700">
+        {/* Selection checkbox */}
+        {isUnlocked && onSelect && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onSelect(lead.id)
+            }}
+            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
+            {isSelected ? (
+              <CheckSquare className="w-5 h-5 text-blue-600" />
+            ) : (
+              <Square className="w-5 h-5 text-gray-400" />
+            )}
+          </button>
+        )}
 
-          {/* Badges (max 3) */}
-          <div className="flex flex-wrap gap-1.5">
-            {badges.map((badge, index) => (
-              <span
-                key={index}
-                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${badge.color}`}
-              >
-                {badge.label}
-              </span>
-            ))}
-          </div>
+        {/* Criticality badge */}
+        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${criticality.bgColor} ${criticality.textColor}`}>
+          <CriticalityIcon className="w-3 h-3" />
+          {criticality.label} ({lead.score})
+        </span>
+
+        {/* Location */}
+        {lead.city && (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+            <MapPin className="w-3 h-3" />
+            {lead.city}
+          </span>
+        )}
+
+        {/* New badge */}
+        {isNew && (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 animate-pulse">
+            ✨ Nuovo
+          </span>
+        )}
+
+        {/* Unlock status - pushed to right */}
+        <span className={`ml-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
+          isUnlocked
+            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+        }`}>
+          {isUnlocked ? (
+            <><Unlock className="w-3 h-3" /> Sbloccato</>
+          ) : (
+            <><Lock className="w-3 h-3" /> Bloccato</>
+          )}
+        </span>
+      </div>
+
+      {/* ===== BUSINESS INFO ROW ===== */}
+      <div className="flex justify-between items-start p-4 pb-3">
+        <div className="flex-1 min-w-0 pr-4">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white truncate">
+            {isUnlocked ? (lead.business_name || 'Nome non disponibile') : (lead.category || 'Azienda')}
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            {lead.category || 'Categoria non specificata'}
+          </p>
         </div>
 
-        {/* Menu azioni extra */}
-        {isUnlocked && (
-          <div className="relative">
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            >
-              <MoreHorizontal className="w-4 h-4 text-gray-500" />
-            </button>
+        {/* Score prominente */}
+        <div className="text-right flex-shrink-0">
+          <div className={`text-3xl font-bold ${criticality.textColor}`}>
+            {lead.score}
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">/100</div>
+          {/* Progress bar */}
+          <div className="w-20 h-2 bg-gray-200 dark:bg-gray-700 rounded-full mt-1 overflow-hidden">
+            <div
+              className={`h-full ${getScoreBarColor(lead.score)} transition-all duration-300`}
+              style={{ width: `${lead.score}%` }}
+            />
+          </div>
+        </div>
+      </div>
 
-            {showMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowMenu(false)}
-                />
-                <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-20">
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(lead.email || '')
-                      setShowMenu(false)
-                    }}
-                    disabled={!lead.email}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50"
-                  >
-                    <Copy className="w-4 h-4" />
-                    Copia email
-                  </button>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(lead.phone || '')
-                      setShowMenu(false)
-                    }}
-                    disabled={!lead.phone}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50"
-                  >
-                    <Copy className="w-4 h-4" />
-                    Copia telefono
-                  </button>
+      {/* ===== CONTACT INFO (se sbloccato) ===== */}
+      {isUnlocked && (lead.website_url || lead.phone || lead.email) && (
+        <div className="mx-4 mb-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+          <div className="flex flex-wrap gap-4 text-sm">
+            {lead.website_url && (
+              <a
+                href={lead.website_url.startsWith('http') ? lead.website_url : `https://${lead.website_url}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                <Globe className="w-4 h-4" />
+                {getDomain(lead.website_url)}
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+            {lead.phone && (
+              <a
+                href={`tel:${lead.phone}`}
+                className="inline-flex items-center gap-1.5 text-green-600 dark:text-green-400 hover:underline"
+              >
+                <Phone className="w-4 h-4" />
+                {lead.phone}
+              </a>
+            )}
+            {lead.email && (
+              <a
+                href={`mailto:${lead.email}`}
+                className="inline-flex items-center gap-1.5 text-purple-600 dark:text-purple-400 hover:underline truncate"
+              >
+                <Mail className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">{lead.email}</span>
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ===== DATA AVAILABILITY (CRUCIALE - sempre visibile) ===== */}
+      <div className="mx-4 mb-3 p-3 border border-blue-200 dark:border-blue-800 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+        <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+          📋 Dati disponibili {isUnlocked ? '' : 'dopo sblocco'}:
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {(['hasPhone', 'hasEmail', 'hasAddress', 'hasWebsite', 'hasSocial'] as const).map((key) => (
+            <div
+              key={key}
+              className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded ${
+                availableData[key]
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500'
+              }`}
+            >
+              <span>{DATA_ICONS[key]}</span>
+              <span>{DATA_LABELS[key]}</span>
+              <span>{availableData[key] ? '✓' : '✗'}</span>
+            </div>
+          ))}
+        </div>
+        <div className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+          {availableCount}/5 informazioni disponibili
+        </div>
+      </div>
+
+      {/* ===== PROBLEMS SUMMARY ===== */}
+      {(problems.total > 0 || problems.topIssues.length > 0) && (
+        <div className="mx-4 mb-3">
+          <div className="flex items-center gap-2 text-sm mb-2">
+            <AlertTriangle className="w-4 h-4 text-orange-500" />
+            <span className="font-semibold text-gray-900 dark:text-white">
+              {problems.high} problemi alta priorità
+            </span>
+            {problems.medium > 0 && (
+              <span className="text-gray-600 dark:text-gray-400">• {problems.medium} media</span>
+            )}
+            {problems.low > 0 && (
+              <span className="text-gray-600 dark:text-gray-400">• {problems.low} bassa</span>
+            )}
+          </div>
+
+          {problems.topIssues.length > 0 && (
+            <div className="text-xs text-gray-600 dark:text-gray-400">
+              Top issues: {problems.topIssues.slice(0, 3).join(', ')}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ===== METADATA ROW ===== */}
+      <div className="flex flex-wrap items-center gap-4 mx-4 mb-3 pb-3 border-b border-gray-100 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
+        {lead.created_at && (
+          <div className="inline-flex items-center gap-1">
+            <Calendar className="w-3 h-3" />
+            Scansione: {formatDate(lead.created_at)}
+          </div>
+        )}
+
+        {budget && (
+          <div className="inline-flex items-center gap-1">
+            <Zap className="w-3 h-3 text-yellow-500" />
+            Potenziale: {budget}
+          </div>
+        )}
+
+        {lead.created_at && (
+          <div className="inline-flex items-center gap-1 ml-auto">
+            <Clock className="w-3 h-3" />
+            {getTimeAgo(lead.created_at)}
+          </div>
+        )}
+      </div>
+
+      {/* ===== DISCLAIMER (sempre visibile) ===== */}
+      <div className="mx-4 mb-3 p-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+        <div className="flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+          <div className="text-xs text-amber-800 dark:text-amber-300">
+            <span className="font-semibold">Analisi automatica</span> - verifica sempre manualmente prima di contattare.
+            {lead.created_at && (
+              <span className="block text-amber-600 dark:text-amber-400 mt-0.5">
+                Ultimo aggiornamento: {formatDate(lead.created_at)}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ===== ACTIONS ===== */}
+      <div className="flex gap-2 p-4 pt-0">
+        {/* Primary CTA */}
+        <button
+          onClick={() => onView?.(lead)}
+          className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors"
+        >
+          <Eye className="w-4 h-4" />
+          Analisi Completa
+        </button>
+
+        {isUnlocked ? (
+          <>
+            {/* Call CTA */}
+            {lead.phone && (
+              <a
+                href={`tel:${lead.phone}`}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl transition-colors"
+              >
+                <Phone className="w-4 h-4" />
+                Chiama
+              </a>
+            )}
+
+            {/* Email CTA */}
+            {lead.email && (
+              <a
+                href={`mailto:${lead.email}`}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl transition-colors"
+              >
+                <Mail className="w-4 h-4" />
+                Email
+              </a>
+            )}
+          </>
+        ) : (
+          /* Unlock CTA */
+          <button
+            onClick={() => onUnlock?.(lead)}
+            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl transition-colors"
+          >
+            <Unlock className="w-4 h-4" />
+            Sblocca (1 ⚡)
+          </button>
+        )}
+
+        {/* More menu */}
+        <div className="relative">
+          <button
+            onClick={() => setShowMenu(!showMenu)}
+            className="inline-flex items-center justify-center p-2.5 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-500 rounded-xl transition-colors"
+          >
+            <MoreVertical className="w-4 h-4" />
+          </button>
+
+          {showMenu && (
+            <>
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setShowMenu(false)}
+              />
+              <div className="absolute right-0 bottom-full mb-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-20">
+                {lead.website_url && (
                   <button
                     onClick={() => {
                       window.open(lead.website_url?.startsWith('http') ? lead.website_url : `https://${lead.website_url}`, '_blank')
                       setShowMenu(false)
                     }}
-                    disabled={!lead.website_url}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50"
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                   >
                     <ExternalLink className="w-4 h-4" />
-                    Apri sito web
+                    Visita sito web
                   </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Main Content */}
-      <div className="px-4 pb-2">
-        {isUnlocked ? (
-          // --- STATO SBLOCCATO ---
-          <>
-            {/* Business Name */}
-            <h3 className="font-semibold text-gray-900 dark:text-white text-lg truncate mb-1">
-              {lead.business_name || 'Nome azienda'}
-            </h3>
-
-            {/* Location */}
-            {lead.city && (
-              <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-3">
-                <MapPin className="w-3.5 h-3.5 mr-1" />
-                <span>{lead.city}</span>
-              </div>
-            )}
-
-            {/* Contact Info */}
-            <div className="space-y-2 mb-3">
-              {lead.phone && (
-                <a
-                  href={`tel:${lead.phone}`}
-                  className="flex items-center text-sm text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors"
+                )}
+                {isUnlocked && lead.phone && (
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(lead.phone || '')
+                      setShowMenu(false)
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                  >
+                    <Copy className="w-4 h-4" />
+                    Copia telefono
+                  </button>
+                )}
+                {isUnlocked && lead.email && (
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(lead.email || '')
+                      setShowMenu(false)
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                  >
+                    <Copy className="w-4 h-4" />
+                    Copia email
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowMenu(false)}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                 >
-                  <Phone className="w-4 h-4 mr-2 text-green-500" />
-                  <span>{lead.phone}</span>
-                </a>
-              )}
-              {lead.email && (
-                <a
-                  href={`mailto:${lead.email}`}
-                  className="flex items-center text-sm text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate"
+                  <Flag className="w-4 h-4" />
+                  Segnala errore
+                </button>
+                <button
+                  onClick={() => setShowMenu(false)}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                 >
-                  <Mail className="w-4 h-4 mr-2 text-blue-500 flex-shrink-0" />
-                  <span className="truncate">{lead.email}</span>
-                </a>
-              )}
-              {lead.website_url && (
-                <a
-                  href={lead.website_url.startsWith('http') ? lead.website_url : `https://${lead.website_url}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center text-sm text-blue-600 dark:text-blue-400 hover:underline truncate"
-                >
-                  <Globe className="w-4 h-4 mr-2 flex-shrink-0" />
-                  <span className="truncate">{lead.website_url.replace(/^https?:\/\//, '')}</span>
-                  <ExternalLink className="w-3 h-3 ml-1 flex-shrink-0" />
-                </a>
-              )}
-            </div>
-
-            {/* CRM Status (solo Pro) */}
-            {isProUser && lead.crm_status && lead.crm_status !== 'new' && (
-              <div className="mb-3">
-                <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${CRM_STATUS_CONFIG[lead.crm_status as CrmStatus]?.color || CRM_STATUS_CONFIG.new.color}`}>
-                  {CRM_STATUS_CONFIG[lead.crm_status as CrmStatus]?.label || 'Nuovo'}
-                </span>
+                  <Archive className="w-4 h-4" />
+                  Archivia
+                </button>
+                {isUnlocked && onMarkContacted && (
+                  <button
+                    onClick={() => {
+                      onMarkContacted(lead)
+                      setShowMenu(false)
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    Segna contattato
+                  </button>
+                )}
               </div>
-            )}
-          </>
-        ) : (
-          // --- STATO BLOCCATO ---
-          <>
-            {/* Lock icon + location preview */}
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                <Lock className="w-5 h-5 text-gray-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {lead.city || 'Azienda'}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-500">
-                  {lead.category || 'Lead disponibile'}
-                </p>
-              </div>
-            </div>
-
-            {/* Dati disponibili preview */}
-            <div className="mb-3">
-              <p className="text-xs text-gray-500 dark:text-gray-500 mb-1.5">Dati disponibili:</p>
-              <DataAvailabilityCompact data={availableData} />
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Score Section */}
-      <div className="px-4 pb-3">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-            Score sito web
-          </span>
-          <span className={`text-sm font-bold ${criticality.text}`}>
-            {lead.score}/100
-          </span>
+            </>
+          )}
         </div>
-        {/* Progress bar */}
-        <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-          <div
-            className={`h-full ${getScoreBarColor(lead.score)} transition-all duration-300`}
-            style={{ width: `${lead.score}%` }}
-          />
-        </div>
-      </div>
-
-      {/* Scan Date */}
-      {lead.created_at && (
-        <div className="px-4 pb-2">
-          <div className="flex items-center text-xs text-gray-400 dark:text-gray-500">
-            <Calendar className="w-3 h-3 mr-1" />
-            <span>Scansionato {formatScanDate(lead.created_at)}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Disclaimer */}
-      <div className="px-4 pb-3">
-        <div className="flex items-start gap-1.5 text-xs text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900/50 rounded-lg px-2 py-1.5">
-          <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-          <span>Analisi automatica - verifica prima di contattare</span>
-        </div>
-      </div>
-
-      {/* CTAs (max 3) */}
-      <div className="px-4 pb-4">
-        {isUnlocked ? (
-          // CTA per lead sbloccato
-          <div className="flex gap-2">
-            {/* CTA primario: Dettagli */}
-            <button
-              onClick={() => onView?.(lead)}
-              className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-1.5"
-            >
-              <Eye className="w-4 h-4" />
-              Dettagli
-            </button>
-
-            {/* CTA secondario: Contatta (se ha email o telefono) */}
-            {(lead.email || lead.phone) && (
-              <button
-                onClick={() => onContact?.(lead, lead.email ? 'email' : 'phone')}
-                className="py-2 px-3 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-1.5"
-                title={lead.email ? 'Invia email' : 'Chiama'}
-              >
-                {lead.email ? <Send className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
-              </button>
-            )}
-          </div>
-        ) : (
-          // CTA per lead bloccato
-          <button
-            onClick={() => onUnlock?.(lead)}
-            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
-          >
-            <Unlock className="w-4 h-4" />
-            Sblocca (1 credito)
-          </button>
-        )}
       </div>
     </div>
   )
 }
 
 /**
- * Variante compatta per liste
+ * COMPACT CARD - Vista compressa per scan veloce
  */
 export function LeadCardCompact({
   lead,
@@ -363,90 +474,127 @@ export function LeadCardCompact({
   onView,
   onSelect,
   className = ''
-}: Omit<LeadCardProps, 'isProUser' | 'onContact'>) {
+}: Omit<LeadCardProps, 'isProUser' | 'onContact' | 'onMarkContacted'>) {
+  const analysis = lead.website_analysis || lead.analysis
   const availableData = extractAvailableData(lead)
-  const criticality = getCriticityColor(lead.score)
+  const availableCount = getAvailableDataCount(availableData)
+  const problems = extractProblems(analysis)
+  const criticality = getCriticalityConfig(lead.score)
+  const CriticalityIcon = criticality.icon
+  const isNew = lead.created_at ? isNewLead(lead.created_at) : false
 
   return (
     <div
       className={`
-        flex items-center gap-4 p-3 bg-white dark:bg-gray-800 rounded-xl border
+        flex flex-col p-4 bg-white dark:bg-gray-800 rounded-xl border-2 transition-all duration-200
         ${isSelected
           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md'
         }
-        transition-all duration-200 ${className}
+        ${className}
       `}
     >
-      {/* Selection */}
-      {isUnlocked && onSelect && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onSelect(lead.id)
-          }}
-          className="flex-shrink-0"
-        >
-          {isSelected ? (
-            <CheckSquare className="w-5 h-5 text-blue-600" />
-          ) : (
-            <Square className="w-5 h-5 text-gray-400" />
-          )}
-        </button>
-      )}
+      {/* Row 1: Main info */}
+      <div className="flex items-center gap-3">
+        {/* Selection */}
+        {isUnlocked && onSelect && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onSelect(lead.id)
+            }}
+            className="flex-shrink-0"
+          >
+            {isSelected ? (
+              <CheckSquare className="w-5 h-5 text-blue-600" />
+            ) : (
+              <Square className="w-5 h-5 text-gray-400" />
+            )}
+          </button>
+        )}
 
-      {/* Lock/Info */}
-      <div className="flex-shrink-0">
+        {/* Avatar/Initial */}
+        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold flex-shrink-0 ${criticality.bgColor} ${criticality.textColor}`}>
+          {isUnlocked ? (lead.business_name?.charAt(0) || '?') : lead.score}
+        </div>
+
+        {/* Name & Category */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+              {isUnlocked ? (lead.business_name || 'Azienda') : (lead.category || 'Lead')}
+            </h3>
+            {isNew && (
+              <span className="text-xs px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded">
+                🆕
+              </span>
+            )}
+          </div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+            {lead.city && <span>📍 {lead.city}</span>}
+            {lead.city && lead.category && <span> • </span>}
+            {lead.category && <span>{lead.category}</span>}
+          </div>
+        </div>
+
+        {/* Score badge */}
+        <span className={`px-2 py-1 rounded-lg text-sm font-bold flex-shrink-0 ${criticality.bgColor} ${criticality.textColor}`}>
+          {lead.score}
+        </span>
+
+        {/* Action */}
         {isUnlocked ? (
-          <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-lg font-bold text-gray-700 dark:text-gray-300">
-            {lead.business_name?.charAt(0) || '?'}
-          </div>
+          <button
+            onClick={() => onView?.(lead)}
+            className="flex-shrink-0 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors font-medium"
+          >
+            Dettagli →
+          </button>
         ) : (
-          <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-            <Lock className="w-5 h-5 text-gray-400" />
-          </div>
+          <button
+            onClick={() => onUnlock?.(lead)}
+            className="flex-shrink-0 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors inline-flex items-center gap-1"
+          >
+            <Unlock className="w-3.5 h-3.5" />
+            Sblocca
+          </button>
         )}
       </div>
 
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
-          <h3 className="font-medium text-gray-900 dark:text-white truncate">
-            {isUnlocked ? (lead.business_name || 'Azienda') : (lead.city || 'Lead')}
-          </h3>
-          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${criticality.bg} ${criticality.text}`}>
-            {lead.score}
+      {/* Row 2: Data availability + Issues + Date */}
+      <div className="flex flex-wrap items-center gap-3 mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
+        {/* Data availability icons */}
+        <div className="inline-flex items-center gap-1">
+          {availableData.hasPhone && <span title="Telefono">📞</span>}
+          {availableData.hasWebsite && <span title="Sito Web">🌐</span>}
+          {availableData.hasEmail && <span title="Email">📧</span>}
+          {availableData.hasAddress && <span title="Indirizzo">📍</span>}
+          {availableData.hasSocial && <span title="Social">👥</span>}
+          <span className="ml-1">{availableCount}/5</span>
+        </div>
+
+        <span className="text-gray-300 dark:text-gray-600">•</span>
+
+        {/* Problems count */}
+        {problems.high > 0 && (
+          <span className="text-orange-600 dark:text-orange-400 font-medium">
+            ⚠️ {problems.high} problemi alta
           </span>
-        </div>
-        <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
-          {isUnlocked ? (
-            <>
-              {lead.city && <span className="truncate">{lead.city}</span>}
-              {lead.category && <span className="truncate">{lead.category}</span>}
-            </>
-          ) : (
-            <DataAvailabilityCompact data={availableData} />
-          )}
-        </div>
+        )}
+
+        {lead.created_at && (
+          <>
+            <span className="text-gray-300 dark:text-gray-600">•</span>
+            <span>{getTimeAgo(lead.created_at)}</span>
+          </>
+        )}
       </div>
 
-      {/* Action */}
-      {isUnlocked ? (
-        <button
-          onClick={() => onView?.(lead)}
-          className="flex-shrink-0 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-        >
-          Dettagli
-        </button>
-      ) : (
-        <button
-          onClick={() => onUnlock?.(lead)}
-          className="flex-shrink-0 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1"
-        >
-          <Unlock className="w-3.5 h-3.5" />
-          Sblocca
-        </button>
-      )}
+      {/* Row 3: Mini disclaimer */}
+      <div className="mt-2 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+        <AlertTriangle className="w-3 h-3" />
+        Verifica prima di contattare
+      </div>
     </div>
   )
 }
