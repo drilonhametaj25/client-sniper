@@ -1,7 +1,12 @@
 /**
  * API endpoint per l'analisi pubblica di siti web
- * Permette analisi limitate (2 al giorno) per IP senza registrazione
  * Mostra risultati parziali per invogliare la registrazione
+ *
+ * Limiti per piano (per giorno):
+ *   - Non registrato/Free: 2
+ *   - Starter: 10
+ *   - Pro: 25
+ *   - Agency: illimitato
  */
 
 export const dynamic = 'force-dynamic'
@@ -10,28 +15,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { RealSiteAnalyzer } from '@/lib/analyzers/real-site-analyzer'
 import { SimplifiedSiteAnalyzer } from '@/lib/analyzers/simplified-site-analyzer'
+import {
+  checkToolRateLimit,
+  logToolUsage,
+  rateLimitExceededResponse,
+  getRemainingInfo,
+  type ToolName
+} from '@/lib/utils/tools-rate-limit'
 
-// Limite giornaliero per IP non registrati
-const DAILY_IP_LIMIT = 2
-
-// Funzione per ottenere l'IP del client
-function getClientIP(request: NextRequest): string {
-  const forwarded = request.headers.get('x-forwarded-for')
-  const real = request.headers.get('x-real-ip')
-  const cfConnecting = request.headers.get('cf-connecting-ip')
-  
-  if (forwarded) {
-    return forwarded.split(',')[0].trim()
-  }
-  if (real) {
-    return real
-  }
-  if (cfConnecting) {
-    return cfConnecting
-  }
-  
-  return '127.0.0.1' // fallback per sviluppo
-}
+const TOOL_NAME: ToolName = 'public-scan'
 
 // Funzione per generare analisi limitata (stesso punteggio, meno dettagli)
 function generateLimitedAnalysis(fullAnalysis: any) {
@@ -244,7 +236,7 @@ async function analyzeSite(url: string) {
 export async function POST(request: NextRequest) {
   try {
     const { url } = await request.json()
-    
+
     if (!url) {
       return NextResponse.json(
         { error: 'URL richiesto' },
@@ -263,34 +255,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const clientIP = getClientIP(request)
-    const userAgent = request.headers.get('user-agent') || ''
+    // Check rate limit
+    const rateLimitResult = await checkToolRateLimit(request, TOOL_NAME)
 
-    // Verifica limite giornaliero per IP
-    const { data: usageCount, error: countError } = await supabase
-      .rpc('check_daily_ip_limit', { 
-        p_ip_address: clientIP,
-        p_daily_limit: DAILY_IP_LIMIT 
-      })
-
-    if (countError) {
-      console.error('Errore verifica limite IP:', countError)
+    if (!rateLimitResult.allowed) {
       return NextResponse.json(
-        { error: 'Errore interno del server' },
-        { status: 500 }
-      )
-    }
-
-    if (usageCount >= DAILY_IP_LIMIT) {
-      return NextResponse.json(
-        { 
-          error: 'Limite giornaliero raggiunto',
-          message: `Hai raggiunto il limite di ${DAILY_IP_LIMIT} analisi gratuite al giorno. Registrati per ottenere più analisi!`,
-          upgradeRequired: true
-        },
+        rateLimitExceededResponse(rateLimitResult, TOOL_NAME),
         { status: 429 }
       )
     }
+
+    const remainingInfo = getRemainingInfo(rateLimitResult)
 
     // Controlla se esiste già un lead per il dominio principale
     const inputDomain = extractMainDomain(validUrl.toString())
@@ -317,13 +292,13 @@ export async function POST(request: NextRequest) {
     // Se il lead esiste già, restituiamo l'analisi esistente limitata
     if (existingLead) {
       console.log(`✅ [Public Scan] Lead esistente trovato: ${existingLead.id} per dominio ${inputDomain}`)
-      
+
       // Aggiungiamo l'overallScore all'analisi se manca
       const analysisWithScore = existingLead.analysis ? {
         ...existingLead.analysis,
         overallScore: existingLead.analysis.overallScore || existingLead.score
       } : null
-      
+
       return NextResponse.json({
         success: true,
         existingLead: true,
@@ -335,7 +310,9 @@ export async function POST(request: NextRequest) {
           analyzedDate: existingLead.created_at
         },
         upgradeMessage: "Registrati per vedere tutti i lead della nostra database e accedere ai dettagli completi!",
-        remainingAnalyses: DAILY_IP_LIMIT - usageCount // Non consumiamo un'analisi se il lead esiste già
+        remainingAnalyses: remainingInfo.remaining, // Non consumiamo un'analisi se il lead esiste già
+        isAuthenticated: rateLimitResult.isAuthenticated,
+        plan: rateLimitResult.userPlan
       })
     }
     
@@ -351,27 +328,24 @@ export async function POST(request: NextRequest) {
         // Includi il tipo di analisi eseguita
         analysisType: fullAnalysis.analysisType || 'full'
       }
-      
-      // Registra l'uso dell'API
-      const { error: logError } = await supabase
-        .rpc('log_public_analysis', {
-          p_ip_address: clientIP,
-          p_website_url: validUrl.toString(),
-          p_user_agent: userAgent
-        })
 
-      if (logError) {
-        console.error('Errore logging analisi pubblica:', logError)
-        // Non blocchiamo l'analisi per questo errore
-      }
+      // Registra l'uso dell'API con la nuova utility
+      await logToolUsage(request, {
+        toolName: TOOL_NAME,
+        websiteUrl: validUrl.toString()
+      })
+
+      const afterUsageInfo = getRemainingInfo(rateLimitResult, true)
 
       return NextResponse.json({
         success: true,
         analysis: limitedAnalysis,
-        remainingAnalyses: DAILY_IP_LIMIT - (usageCount + 1),
-        message: usageCount === 0 ? 
-          `Prima analisi gratuita completata! Puoi farne ancora ${DAILY_IP_LIMIT - 1} oggi.` :
-          `Analisi completata! Puoi farne ancora ${DAILY_IP_LIMIT - (usageCount + 1)} oggi.`
+        remainingAnalyses: afterUsageInfo.remaining,
+        message: rateLimitResult.currentUsage === 0
+          ? `Prima analisi completata! Puoi farne ancora ${typeof afterUsageInfo.remaining === 'number' ? afterUsageInfo.remaining : 'illimitate'} oggi.`
+          : `Analisi completata! Puoi farne ancora ${typeof afterUsageInfo.remaining === 'number' ? afterUsageInfo.remaining : 'illimitate'} oggi.`,
+        isAuthenticated: rateLimitResult.isAuthenticated,
+        plan: rateLimitResult.userPlan
       })
 
     } catch (analysisError) {
@@ -393,36 +367,16 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  // Endpoint per verificare quante analisi rimangono per l'IP
-  const clientIP = getClientIP(request)
-  
-  try {
-    const { data: usageCount, error } = await supabase
-      .rpc('check_daily_ip_limit', { 
-        p_ip_address: clientIP,
-        p_daily_limit: DAILY_IP_LIMIT 
-      })
+  // Endpoint per verificare quante analisi rimangono
+  const result = await checkToolRateLimit(request, TOOL_NAME)
+  const info = getRemainingInfo(result)
 
-    if (error) {
-      console.error('Errore verifica limite IP:', error)
-      return NextResponse.json(
-        { error: 'Errore interno' },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json({
-      used: usageCount || 0,
-      limit: DAILY_IP_LIMIT,
-      remaining: Math.max(0, DAILY_IP_LIMIT - (usageCount || 0)),
-      canAnalyze: (usageCount || 0) < DAILY_IP_LIMIT
-    })
-
-  } catch (error) {
-    console.error('Errore controllo limite:', error)
-    return NextResponse.json(
-      { error: 'Errore interno' },
-      { status: 500 }
-    )
-  }
+  return NextResponse.json({
+    used: info.used,
+    limit: info.limit,
+    remaining: info.remaining,
+    canAnalyze: result.allowed,
+    isAuthenticated: result.isAuthenticated,
+    plan: result.userPlan
+  })
 }

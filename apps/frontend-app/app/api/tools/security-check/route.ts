@@ -1,15 +1,26 @@
 /**
  * API endpoint per Security Quick Check
  * Analizza gli aspetti di sicurezza fondamentali di un sito web
- * Tool gratuito - max 3 analisi al giorno per IP
+ *
+ * Limiti per piano (per giorno):
+ *   - Non registrato/Free: 2
+ *   - Starter: 10
+ *   - Pro: 25
+ *   - Agency: illimitato
  */
 
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
+import {
+  checkToolRateLimit,
+  logToolUsage,
+  rateLimitExceededResponse,
+  getRemainingInfo,
+  type ToolName
+} from '@/lib/utils/tools-rate-limit'
 
-const DAILY_IP_LIMIT = 3
-const ipUsageMap = new Map<string, { count: number; date: string }>()
+const TOOL_NAME: ToolName = 'security-check'
 
 interface SecurityCheck {
   name: string
@@ -34,46 +45,6 @@ interface SecurityResult {
   }
   analysisDate: string
   remaining: number
-}
-
-function getClientIP(request: NextRequest): string {
-  const forwarded = request.headers.get('x-forwarded-for')
-  const real = request.headers.get('x-real-ip')
-  const cfConnecting = request.headers.get('cf-connecting-ip')
-
-  if (forwarded) return forwarded.split(',')[0].trim()
-  if (real) return real
-  if (cfConnecting) return cfConnecting
-
-  return '127.0.0.1'
-}
-
-function checkRateLimit(ip: string): { allowed: boolean; remaining: number } {
-  const today = new Date().toISOString().split('T')[0]
-  const usage = ipUsageMap.get(ip)
-
-  if (!usage || usage.date !== today) {
-    return { allowed: true, remaining: DAILY_IP_LIMIT }
-  }
-
-  return {
-    allowed: usage.count < DAILY_IP_LIMIT,
-    remaining: Math.max(0, DAILY_IP_LIMIT - usage.count)
-  }
-}
-
-function updateRateLimit(ip: string): number {
-  const today = new Date().toISOString().split('T')[0]
-  const usage = ipUsageMap.get(ip)
-
-  if (!usage || usage.date !== today) {
-    ipUsageMap.set(ip, { count: 1, date: today })
-    return DAILY_IP_LIMIT - 1
-  }
-
-  usage.count++
-  ipUsageMap.set(ip, usage)
-  return Math.max(0, DAILY_IP_LIMIT - usage.count)
 }
 
 function normalizeUrl(url: string): string {
@@ -356,28 +327,29 @@ function getGrade(score: number): 'A' | 'B' | 'C' | 'D' | 'F' {
 }
 
 export async function GET(request: NextRequest) {
-  const ip = getClientIP(request)
-  const { allowed, remaining } = checkRateLimit(ip)
+  const result = await checkToolRateLimit(request, TOOL_NAME)
+  const info = getRemainingInfo(result)
 
   return NextResponse.json({
-    used: DAILY_IP_LIMIT - remaining,
-    limit: DAILY_IP_LIMIT,
-    remaining,
-    canAnalyze: allowed
+    used: info.used,
+    limit: info.limit,
+    remaining: info.remaining,
+    canAnalyze: result.allowed,
+    isAuthenticated: result.isAuthenticated,
+    plan: result.userPlan
   })
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = getClientIP(request)
-    const { allowed, remaining } = checkRateLimit(ip)
+    // Check rate limit
+    const rateLimitResult = await checkToolRateLimit(request, TOOL_NAME)
 
-    if (!allowed) {
-      return NextResponse.json({
-        success: false,
-        message: 'Hai raggiunto il limite di 3 analisi gratuite per oggi. Registrati per analisi illimitate!',
-        remaining: 0
-      }, { status: 429 })
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        rateLimitExceededResponse(rateLimitResult, TOOL_NAME),
+        { status: 429 }
+      )
     }
 
     const body = await request.json()
@@ -438,7 +410,13 @@ export async function POST(request: NextRequest) {
       critical: checks.filter(c => c.status === 'fail' && c.severity === 'critical').length
     }
 
-    const newRemaining = updateRateLimit(ip)
+    // Log utilizzo dopo analisi riuscita
+    await logToolUsage(request, {
+      toolName: TOOL_NAME,
+      websiteUrl: normalizedUrl
+    })
+
+    const remainingInfo = getRemainingInfo(rateLimitResult, true)
 
     const result: SecurityResult = {
       url: normalizedUrl,
@@ -449,7 +427,7 @@ export async function POST(request: NextRequest) {
       checks,
       summary,
       analysisDate: new Date().toISOString(),
-      remaining: newRemaining
+      remaining: typeof remainingInfo.remaining === 'number' ? remainingInfo.remaining : -1
     }
 
     return NextResponse.json({
@@ -459,7 +437,9 @@ export async function POST(request: NextRequest) {
                grade === 'B' ? 'Buono, ma ci sono alcuni miglioramenti possibili.' :
                grade === 'C' ? 'Sufficiente, ma sono necessari miglioramenti.' :
                'Il sito necessita di interventi di sicurezza urgenti.',
-      remaining: newRemaining
+      remaining: remainingInfo.remaining,
+      isAuthenticated: rateLimitResult.isAuthenticated,
+      plan: rateLimitResult.userPlan
     })
 
   } catch (error: any) {
