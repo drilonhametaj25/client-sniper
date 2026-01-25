@@ -146,12 +146,7 @@ export default function ForYouSection({ onUnlockLead }: ForYouSectionProps) {
     )
   }
 
-  // Show onboarding prompt if profile not complete
-  if (data?.showOnboardingPrompt) {
-    return <OnboardingPromptBanner />
-  }
-
-  // No data
+  // No data at all
   if (!data) return null
 
   const { sections, totalLeadsAnalyzed, calculatedAt } = data
