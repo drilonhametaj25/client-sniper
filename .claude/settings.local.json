@@ -23,7 +23,9 @@
       "Bash(head:*)",
       "Bash(node:*)",
       "Bash(wc:*)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "WebSearch",
+      "mcp__sequential-thinking__sequentialthinking"
     ]
   }
 }

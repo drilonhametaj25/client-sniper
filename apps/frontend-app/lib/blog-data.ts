@@ -59,6 +59,38 @@ export const blogPosts: BlogPost[] = [
 
   // LEAD GENERATION POSTS
   {
+    slug: 'ai-lead-generation-intelligenza-artificiale-trovare-clienti-2026',
+    title: 'AI Lead Generation: Come l\'Intelligenza Artificiale Ti Aiuta a Trovare Clienti nel 2026',
+    excerpt: 'Scopri come usare l\'intelligenza artificiale per trovare nuovi clienti. Tool AI, ChatGPT per cold email, automazione prospecting. Guida pratica per agency e freelancer.',
+    content: '',
+    date: '2026-01-25',
+    readTime: '14 min',
+    category: 'Lead Generation',
+    tags: ['ai', 'lead generation', 'automazione', 'chatgpt', 'prospecting'],
+    featured: false,
+    emoji: '🤖',
+    seoTitle: 'AI Lead Generation: Guida Completa per Trovare Clienti [2026]',
+    seoDescription: 'Scopri come usare l\'intelligenza artificiale per trovare nuovi clienti. Tool AI, ChatGPT per cold email, automazione prospecting. Guida pratica per agency.',
+    keywords: ['ai lead generation', 'intelligenza artificiale trovare clienti', 'chatgpt lead generation', 'automazione prospecting', 'tool ai marketing'],
+    published: true
+  },
+  {
+    slug: 'linkedin-sales-navigator-guida-completa-trovare-clienti-2026',
+    title: 'LinkedIn Sales Navigator: Guida Completa per Trovare Clienti B2B nel 2026',
+    excerpt: 'Impara a usare LinkedIn Sales Navigator per trovare clienti B2B. Filtri avanzati, liste prospect, InMail efficaci. Guida pratica per agency e freelancer.',
+    content: '',
+    date: '2026-01-25',
+    readTime: '15 min',
+    category: 'Lead Generation',
+    tags: ['linkedin', 'sales navigator', 'b2b', 'prospecting', 'social selling'],
+    featured: false,
+    emoji: '💼',
+    seoTitle: 'LinkedIn Sales Navigator: Guida per Trovare Clienti B2B [2026]',
+    seoDescription: 'Impara a usare LinkedIn Sales Navigator per trovare clienti B2B. Filtri avanzati, liste prospect, InMail efficaci. Guida pratica per agency e freelancer.',
+    keywords: ['linkedin sales navigator', 'trovare clienti linkedin', 'prospecting linkedin b2b', 'filtri sales navigator', 'inmail linkedin'],
+    published: true
+  },
+  {
     slug: '10-strategie-acquisizione-clienti-che-funzionano',
     title: '10 Strategie di Acquisizione Clienti che Funzionano Davvero',
     excerpt: 'Le strategie di acquisizione clienti più efficaci utilizzate da aziende di successo. Tecniche pratiche con esempi e template pronti all\'uso.',
