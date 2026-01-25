@@ -894,18 +894,47 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
         }
       }
     } else if (newStatus !== 'active') {
-      // Aggiorna solo lo status se necessario (senza cambio piano)
+      // 🔴 DOWNGRADE: Quando subscription non è più attiva, porta l'utente a piano free
+      console.log(`🔴 Subscription non attiva (${subscription.status}), downgrade a free per ${userId}`)
+
+      // Ottieni i crediti del piano free dal database
+      const { data: freePlanData } = await getSupabase()
+        .from('plans')
+        .select('max_credits')
+        .eq('name', 'free')
+        .single()
+
+      const freeCredits = freePlanData?.max_credits || 5
+
+      // Downgrade a piano free
       const { error: updateError } = await getSupabase()
         .from('users')
         .update({
-          status: newStatus
+          plan: 'free',
+          credits_remaining: freeCredits,
+          status: newStatus,
+          deactivated_at: new Date().toISOString(),
+          deactivation_reason: `Subscription status: ${subscription.status}`
         })
         .eq('id', userId)
 
       if (updateError) {
-        console.error('❌ Errore aggiornamento status:', updateError)
+        console.error('❌ Errore downgrade piano:', updateError)
       } else {
-        console.log(`✅ Status aggiornato a ${newStatus} per utente ${userId}`)
+        console.log(`✅ Piano downgraded a free, status: ${newStatus} per utente ${userId}`)
+
+        // Log del downgrade automatico
+        await getSupabase()
+          .from('plan_status_logs')
+          .insert({
+            user_id: userId,
+            action: 'auto_downgrade',
+            previous_status: previousPlan,
+            new_status: 'free',
+            reason: `Automatic downgrade - Subscription ${subscription.status}`,
+            triggered_by: 'stripe_webhook',
+            stripe_event_id: subscription.id
+          })
       }
     }
 
@@ -952,10 +981,10 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
       return
     }
 
-    // Ottieni i dettagli dell'utente
+    // Ottieni i dettagli dell'utente (incluso piano attuale)
     const { data: user, error: userError } = await getSupabase()
       .from('users')
-      .select('id, email')
+      .select('id, email, plan, credits_remaining')
       .eq('id', userId)
       .single()
 
@@ -964,10 +993,24 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
       return
     }
 
-    console.log(`⚠️ Pagamento fallito per utente: ${userId} (${user.email})`)
+    console.log(`⚠️ Pagamento fallito per utente: ${userId} (${user.email}) - Piano: ${user.plan}`)
 
     // 🎯 AGGIORNA DATI STRIPE: Assicurati che i dati Stripe siano salvati
     await updateUserStripeData(userId, customerId, subscriptionId)
+
+    // 📊 Conta i fallimenti recenti (ultimi 30 giorni)
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+    const { count: previousFailureCount } = await getSupabase()
+      .from('plan_status_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('action', 'payment_failed')
+      .gte('created_at', thirtyDaysAgo.toISOString())
+
+    const totalFailures = (previousFailureCount || 0) + 1 // +1 per il fallimento corrente
+    console.log(`📊 Totale fallimenti ultimi 30 giorni: ${totalFailures}`)
 
     // Log del pagamento fallito
     await getSupabase()
@@ -976,13 +1019,58 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
         user_id: userId,
         action: 'payment_failed',
         previous_status: 'active',
-        new_status: 'active', // Manteniamo attivo per ora, Stripe gestirà i retry
-        reason: `Payment failed for invoice ${invoice.id}`,
+        new_status: totalFailures >= 3 ? 'inactive' : 'active',
+        reason: `Payment failed for invoice ${invoice.id} (failure #${totalFailures})`,
         triggered_by: 'stripe_webhook',
         stripe_event_id: invoice.id
       })
 
     console.log('✅ Log pagamento fallito creato')
+
+    // 🔴 AUTO-DOWNGRADE: Dopo 3 fallimenti, downgrade automatico a free
+    if (totalFailures >= 3 && user.plan !== 'free') {
+      console.log(`🔴 3+ pagamenti falliti per ${user.email}, esecuzione auto-downgrade...`)
+
+      // Ottieni i crediti del piano free dal database
+      const { data: freePlanData } = await getSupabase()
+        .from('plans')
+        .select('max_credits')
+        .eq('name', 'free')
+        .single()
+
+      const freeCredits = freePlanData?.max_credits || 5
+
+      // Esegui downgrade
+      const { error: downgradeError } = await getSupabase()
+        .from('users')
+        .update({
+          plan: 'free',
+          credits_remaining: freeCredits,
+          status: 'inactive',
+          deactivated_at: new Date().toISOString(),
+          deactivation_reason: `Auto-downgrade: ${totalFailures} pagamenti falliti consecutivi`
+        })
+        .eq('id', userId)
+
+      if (downgradeError) {
+        console.error('❌ Errore auto-downgrade:', downgradeError)
+      } else {
+        console.log(`✅ Auto-downgrade eseguito per ${user.email}: ${user.plan} → free`)
+
+        // Log del downgrade automatico
+        await getSupabase()
+          .from('plan_status_logs')
+          .insert({
+            user_id: userId,
+            action: 'auto_downgrade',
+            previous_status: user.plan,
+            new_status: 'free',
+            reason: `Auto-downgrade after ${totalFailures} consecutive payment failures`,
+            triggered_by: 'stripe_webhook',
+            stripe_event_id: invoice.id
+          })
+      }
+    }
 
   } catch (error) {
     console.error('🚨 Errore handleInvoicePaymentFailed:', error)
