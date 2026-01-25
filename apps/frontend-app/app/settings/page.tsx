@@ -10,11 +10,11 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { 
-  CreditCard, 
-  User, 
-  AlertTriangle, 
-  CheckCircle, 
+import {
+  CreditCard,
+  User,
+  AlertTriangle,
+  CheckCircle,
   Settings as SettingsIcon,
   ArrowLeft,
   Crown,
@@ -22,7 +22,9 @@ import {
   Pause,
   Play,
   X,
-  RefreshCw
+  RefreshCw,
+  Building,
+  Save
 } from 'lucide-react'
 import Link from 'next/link'
 import InactivePlanBanner from '@/components/InactivePlanBanner'
@@ -42,6 +44,11 @@ interface UserData {
   reactivated_at?: string
   stripe_subscription_id?: string
   created_at: string
+  // Profilo aziendale
+  company_name?: string
+  company_phone?: string
+  company_website?: string
+  company_email?: string
 }
 
 interface PlanLog {
@@ -74,6 +81,13 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
 
+  // Stati per profilo aziendale
+  const [companyName, setCompanyName] = useState('')
+  const [companyPhone, setCompanyPhone] = useState('')
+  const [companyWebsite, setCompanyWebsite] = useState('')
+  const [companyEmail, setCompanyEmail] = useState('')
+  const [savingProfile, setSavingProfile] = useState(false)
+
   useEffect(() => {
     if (!user) {
       router.push('/login')
@@ -86,9 +100,15 @@ export default function SettingsPage() {
 
   const loadUserData = async () => {
     if (!user?.id) return
-    
+
     try {
-      
+      // Carica i dati completi dell'utente dal database, incluso il profilo aziendale
+      const { data: dbUser, error: userError } = await supabase
+        .from('users')
+        .select('company_name, company_phone, company_website, company_email')
+        .eq('id', user.id)
+        .single()
+
       // Usa i dati dell'AuthContext che sono aggiornati e completi
       const currentUserData: UserData = {
         id: user.id,
@@ -96,10 +116,21 @@ export default function SettingsPage() {
         plan: user.plan || 'free',
         status: 'active', // Default per compatibilità
         credits_remaining: user.credits_remaining || 0,
-        created_at: user.created_at || new Date().toISOString()
+        created_at: user.created_at || new Date().toISOString(),
+        // Profilo aziendale dal database
+        company_name: dbUser?.company_name || '',
+        company_phone: dbUser?.company_phone || '',
+        company_website: dbUser?.company_website || '',
+        company_email: dbUser?.company_email || ''
       }
-      
+
       setUserData(currentUserData)
+
+      // Aggiorna gli stati locali del profilo aziendale
+      setCompanyName(dbUser?.company_name || '')
+      setCompanyPhone(dbUser?.company_phone || '')
+      setCompanyWebsite(dbUser?.company_website || '')
+      setCompanyEmail(dbUser?.company_email || '')
 
       // Carica i log del piano se l'utente ha un piano attivo
       if (user.plan && user.plan !== 'free') {
@@ -256,6 +287,43 @@ export default function SettingsPage() {
       alert('Errore durante la riattivazione del piano')
     } finally {
       setReactivating(false)
+    }
+  }
+
+  // Funzione per salvare il profilo aziendale
+  const handleSaveBusinessProfile = async () => {
+    if (!user?.id) return
+
+    setSavingProfile(true)
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          company_name: companyName.trim() || null,
+          company_phone: companyPhone.trim() || null,
+          company_website: companyWebsite.trim() || null,
+          company_email: companyEmail.trim() || null
+        })
+        .eq('id', user.id)
+
+      if (error) throw error
+
+      alert('Profilo aziendale salvato con successo!')
+
+      // Aggiorna i dati locali
+      setUserData(prev => prev ? {
+        ...prev,
+        company_name: companyName.trim(),
+        company_phone: companyPhone.trim(),
+        company_website: companyWebsite.trim(),
+        company_email: companyEmail.trim()
+      } : null)
+    } catch (error: any) {
+      console.error('Errore salvataggio profilo:', error)
+      alert('Errore: ' + error.message)
+    } finally {
+      setSavingProfile(false)
     }
   }
 
@@ -447,6 +515,91 @@ export default function SettingsPage() {
                   {new Date(userData.created_at).toLocaleDateString('it-IT')}
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Profilo Aziendale */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center mb-4">
+              <Building className="w-5 h-5 text-gray-400 mr-2" />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Profilo Aziendale</h2>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Questi dati verranno usati nei preventivi PDF che generi per i tuoi clienti.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Nome Azienda / Freelancer
+                </label>
+                <input
+                  type="text"
+                  placeholder="Es: Digital Agency Srl"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Telefono
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="Es: +39 02 1234567"
+                    value={companyPhone}
+                    onChange={(e) => setCompanyPhone(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Email Contatto
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="Es: info@tuaagenzia.it"
+                    value={companyEmail}
+                    onChange={(e) => setCompanyEmail(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Sito Web
+                </label>
+                <input
+                  type="url"
+                  placeholder="Es: https://www.tuaagenzia.it"
+                  value={companyWebsite}
+                  onChange={(e) => setCompanyWebsite(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                />
+              </div>
+
+              <button
+                onClick={handleSaveBusinessProfile}
+                disabled={savingProfile}
+                className="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              >
+                {savingProfile ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Salvataggio...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Salva Profilo Aziendale
+                  </>
+                )}
+              </button>
             </div>
           </div>
 

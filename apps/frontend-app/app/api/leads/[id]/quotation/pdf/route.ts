@@ -9,7 +9,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { renderToBuffer } from '@react-pdf/renderer'
 import { QuotationDocument, QuotationData } from '@/lib/pdf/quotation-template'
-import { defaultBranding } from '@/lib/types/pdf'
 
 function getSupabaseAdmin() {
   return createClient(
@@ -380,6 +379,25 @@ export async function GET(
       )
     }
 
+    // Recupera il profilo aziendale dell'utente per il branding del PDF
+    const { data: userProfile } = await supabaseAdmin
+      .from('users')
+      .select('company_name, company_phone, company_website, company_email, email')
+      .eq('id', user.id)
+      .single()
+
+    // Crea il branding personalizzato basato sul profilo utente
+    const userBranding = {
+      companyName: userProfile?.company_name || 'La Tua Agenzia',
+      primaryColor: '#2563EB',
+      secondaryColor: '#1E40AF',
+      accentColor: '#F59E0B',
+      contactEmail: userProfile?.company_email || userProfile?.email || '',
+      contactPhone: userProfile?.company_phone || '',
+      website: userProfile?.company_website || '',
+      footerText: 'Analisi generata con TrovaMi - trovami.pro'
+    }
+
     // Recupera i dati del lead
     const { data: lead, error: leadError } = await supabaseAdmin
       .from('leads')
@@ -462,9 +480,9 @@ export async function GET(
       roiSummary: generateRoiSummary(analysis, services)
     }
 
-    // Genera il PDF
+    // Genera il PDF con il branding dell'utente
     const pdfBuffer = await renderToBuffer(
-      QuotationDocument({ data: quotationData, branding: defaultBranding })
+      QuotationDocument({ data: quotationData, branding: userBranding })
     )
 
     // Log della generazione (ignora errori se la tabella non esiste)
