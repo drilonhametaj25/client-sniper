@@ -82,7 +82,8 @@ export default function LeadCarousel({
     const container = scrollContainerRef.current
     if (!container) return
 
-    const cardWidth = cardSize === 'compact' ? 280 : 320
+    // Tutte le card hanno la stessa larghezza ora
+    const cardWidth = 300
     const scrollAmount = cardWidth * 2
 
     container.scrollBy({
@@ -135,7 +136,7 @@ export default function LeadCarousel({
             key={item.lead.id}
             className="flex-shrink-0"
             style={{
-              width: cardSize === 'compact' ? '280px' : '320px',
+              width: '300px',
               scrollSnapAlign: 'start'
             }}
           >
@@ -146,7 +147,6 @@ export default function LeadCarousel({
               onViewLead={onViewLead}
               isUnlocked={unlockedLeads.has(item.lead.id)}
               rank={index + 1}
-              compact={cardSize === 'compact'}
             />
           </div>
         ))}
