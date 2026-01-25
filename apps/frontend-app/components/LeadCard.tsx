@@ -393,17 +393,17 @@ export default function LeadCard({
 
       {/* ===== ACTIONS ===== */}
       <div className="flex gap-2 p-4 pt-0">
-        {/* Primary CTA */}
-        <button
-          onClick={() => onView?.(lead)}
-          className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors"
-        >
-          <Eye className="w-4 h-4" />
-          Analisi Completa
-        </button>
-
         {isUnlocked ? (
           <>
+            {/* Primary CTA - Solo se sbloccato */}
+            <button
+              onClick={() => onView?.(lead)}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors"
+            >
+              <Eye className="w-4 h-4" />
+              Analisi Completa
+            </button>
+
             {/* Call CTA */}
             {lead.phone && (
               <a
@@ -427,13 +427,13 @@ export default function LeadCard({
             )}
           </>
         ) : (
-          /* Unlock CTA */
+          /* Unlock CTA - Unico pulsante quando locked */
           <button
             onClick={() => onUnlock?.(lead)}
             className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl transition-colors"
           >
             <Unlock className="w-4 h-4" />
-            Sblocca (1 ⚡)
+            Sblocca per vedere analisi e contatti (1 ⚡)
           </button>
         )}
 
@@ -453,7 +453,8 @@ export default function LeadCard({
                 onClick={() => setShowMenu(false)}
               />
               <div className="absolute right-0 bottom-full mb-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-20">
-                {lead.website_url && (
+                {/* Visita sito web - Solo se sbloccato */}
+                {isUnlocked && lead.website_url && (
                   <button
                     onClick={() => {
                       window.open(lead.website_url?.startsWith('http') ? lead.website_url : `https://${lead.website_url}`, '_blank')
@@ -649,24 +650,31 @@ export function LeadCardCompact({
 
         <span className="text-gray-300 dark:text-gray-600">•</span>
 
-        {/* Service tags (primi 3) */}
+        {/* Service tags (primi 4 con label) */}
         {detectedServices.services.length > 0 && (
-          <div className="inline-flex items-center gap-1">
-            {detectedServices.services.slice(0, 3).map((service) => {
+          <div className="inline-flex items-center gap-1.5 flex-wrap">
+            {detectedServices.services.slice(0, 4).map((service) => {
               const config = SERVICE_CONFIGS[service.type]
               const isMatched = matchResult.matchedServices.includes(service.type)
               return (
                 <span
                   key={service.type}
-                  className={`px-1.5 py-0.5 rounded ${config.bgColor} ${config.textColor} ${isMatched ? 'ring-1 ring-green-400' : ''}`}
+                  className={`
+                    inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium
+                    ${isMatched
+                      ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 ring-1 ring-green-400'
+                      : `${config.bgColor} ${config.textColor}`
+                    }
+                  `}
                   title={`${config.label}: ${service.issueCount} problemi`}
                 >
-                  {config.icon}
+                  <span>{config.icon}</span>
+                  <span>{config.label}</span>
                 </span>
               )
             })}
-            {detectedServices.services.length > 3 && (
-              <span className="text-gray-400">+{detectedServices.services.length - 3}</span>
+            {detectedServices.services.length > 4 && (
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">+{detectedServices.services.length - 4}</span>
             )}
           </div>
         )}

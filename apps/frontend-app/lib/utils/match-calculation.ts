@@ -57,6 +57,16 @@ export function calculateMatch(
     !userServices.includes(service)
   )
 
+  // EARLY RETURN: Se NESSUN servizio corrisponde → 0% match
+  if (matchedServices.length === 0) {
+    return {
+      score: 0,
+      matchedServices: [],
+      unmatchedServices,
+      reason: 'Nessun servizio corrisponde al tuo profilo'
+    }
+  }
+
   // ===== CALCOLO SCORE =====
   let score = 0
 

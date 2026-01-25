@@ -417,7 +417,7 @@ export default function ClientDashboard() {
         if (!hasMatchingService) return false
       }
 
-      // Filtro match score minimo
+      // Filtro match score minimo (esplicito da UI)
       if (advancedFilters.minMatchScore && advancedFilters.minMatchScore > 0) {
         const userServicesOffered = (user?.services_offered || []) as ServiceType[]
         if (userServicesOffered.length === 0) {
@@ -431,6 +431,22 @@ export default function ClientDashboard() {
           const matchResult = calculateMatch(detectedServicesResult, userServicesOffered)
 
           if (matchResult.score < advancedFilters.minMatchScore) return false
+        }
+      }
+
+      // FILTRO AUTOMATICO: Se utente ha configurato servizi, nascondi lead con 0 match
+      // Questo filtro si applica SEMPRE quando l'utente ha servizi configurati
+      const userServicesForAutoFilter = (user?.services_offered || []) as ServiceType[]
+      if (userServicesForAutoFilter.length > 0) {
+        const analysis = lead.website_analysis || lead.analysis
+        if (analysis) {
+          const detectedServicesResult = detectServices(analysis)
+          const matchResult = calculateMatch(detectedServicesResult, userServicesForAutoFilter)
+
+          // Escludi lead che NON hanno NESSUN servizio in comune con l'utente
+          if (matchResult.matchedServices.length === 0) {
+            return false
+          }
         }
       }
 
