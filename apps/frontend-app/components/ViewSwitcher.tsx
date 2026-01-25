@@ -11,10 +11,11 @@ import {
   LayoutGrid,
   Kanban,
   Map,
-  Check
+  Check,
+  Layers
 } from 'lucide-react'
 
-export type ViewType = 'list' | 'grid' | 'kanban' | 'map'
+export type ViewType = 'list' | 'grid' | 'kanban' | 'map' | 'tinder'
 
 interface ViewOption {
   id: ViewType
@@ -50,6 +51,12 @@ const allViews: ViewOption[] = [
     label: 'Kanban',
     icon: Kanban,
     description: 'Pipeline CRM drag & drop'
+  },
+  {
+    id: 'tinder',
+    label: 'Swipe',
+    icon: Layers,
+    description: 'Swipe cards stile Tinder (mobile)'
   },
   {
     id: 'map',
@@ -142,6 +149,7 @@ interface ViewContainerProps {
     grid?: React.ReactNode
     kanban?: React.ReactNode
     map?: React.ReactNode
+    tinder?: React.ReactNode
   }
 }
 
@@ -155,6 +163,8 @@ export function ViewContainer({ currentView, children }: ViewContainerProps) {
       return <>{children.kanban}</> || null
     case 'map':
       return <>{children.map}</> || null
+    case 'tinder':
+      return <>{children.tinder}</> || null
     default:
       return <>{children.list}</> || null
   }

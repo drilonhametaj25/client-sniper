@@ -20,6 +20,10 @@ export interface AuthUser extends User {
   deactivation_reason?: string
   reactivated_at?: string
   preferred_theme?: 'light' | 'dark' | 'system'
+  // Servizi offerti per match calculation
+  services_offered?: string[] // 'seo' | 'gdpr' | 'analytics' | 'mobile' | 'performance' | 'development' | 'design' | 'social'
+  preferred_min_budget?: number
+  preferred_max_budget?: number
 }
 
 export interface AuthState {
@@ -49,7 +53,7 @@ export async function getUserProfile(userId: string, sessionUser?: User): Promis
     // ⚡ OTTIMIZZAZIONE: Query unica per i dati del profilo (con tutti i campi necessari)
     const { data, error } = await supabase
       .from('users')
-      .select('id, email, role, plan, credits_remaining, billing_cycle_start, credits_reset_date, total_credits_used_this_cycle, stripe_subscription_id, stripe_current_period_end, status, deactivated_at, deactivation_reason, reactivated_at, preferred_theme')
+      .select('id, email, role, plan, credits_remaining, billing_cycle_start, credits_reset_date, total_credits_used_this_cycle, stripe_subscription_id, stripe_current_period_end, status, deactivated_at, deactivation_reason, reactivated_at, preferred_theme, services_offered, preferred_min_budget, preferred_max_budget')
       .eq('id', userId)
       .single()
     
@@ -99,6 +103,10 @@ export async function getUserProfile(userId: string, sessionUser?: User): Promis
       deactivation_reason: data.deactivation_reason,
       reactivated_at: data.reactivated_at,
       preferred_theme: data.preferred_theme as 'light' | 'dark' | 'system' || 'system',
+      // Servizi offerti e preferenze budget per match calculation
+      services_offered: data.services_offered || [],
+      preferred_min_budget: data.preferred_min_budget,
+      preferred_max_budget: data.preferred_max_budget,
     }
 
     // ⚡ SALVA NELLA CACHE per accessi futuri ultra-veloci

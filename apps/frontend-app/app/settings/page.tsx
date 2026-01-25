@@ -88,6 +88,12 @@ export default function SettingsPage() {
   const [companyEmail, setCompanyEmail] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
 
+  // Stati per servizi offerti e preferenze (match calculation)
+  const [servicesOffered, setServicesOffered] = useState<string[]>([])
+  const [preferredMinBudget, setPreferredMinBudget] = useState<number | ''>('')
+  const [preferredMaxBudget, setPreferredMaxBudget] = useState<number | ''>('')
+  const [savingServices, setSavingServices] = useState(false)
+
   useEffect(() => {
     if (!user) {
       router.push('/login')
@@ -102,10 +108,10 @@ export default function SettingsPage() {
     if (!user?.id) return
 
     try {
-      // Carica i dati completi dell'utente dal database, incluso il profilo aziendale
+      // Carica i dati completi dell'utente dal database, incluso il profilo aziendale e servizi
       const { data: dbUser, error: userError } = await supabase
         .from('users')
-        .select('company_name, company_phone, company_website, company_email')
+        .select('company_name, company_phone, company_website, company_email, services_offered, preferred_min_budget, preferred_max_budget')
         .eq('id', user.id)
         .single()
 
@@ -131,6 +137,11 @@ export default function SettingsPage() {
       setCompanyPhone(dbUser?.company_phone || '')
       setCompanyWebsite(dbUser?.company_website || '')
       setCompanyEmail(dbUser?.company_email || '')
+
+      // Aggiorna gli stati dei servizi offerti e preferenze budget
+      setServicesOffered(dbUser?.services_offered || [])
+      setPreferredMinBudget(dbUser?.preferred_min_budget || '')
+      setPreferredMaxBudget(dbUser?.preferred_max_budget || '')
 
       // Carica i log del piano se l'utente ha un piano attivo
       if (user.plan && user.plan !== 'free') {
@@ -326,6 +337,59 @@ export default function SettingsPage() {
       setSavingProfile(false)
     }
   }
+
+  // Funzione per salvare i servizi offerti e preferenze budget
+  const handleSaveServices = async () => {
+    if (!user?.id) return
+
+    setSavingServices(true)
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          services_offered: servicesOffered,
+          preferred_min_budget: preferredMinBudget === '' ? null : Number(preferredMinBudget),
+          preferred_max_budget: preferredMaxBudget === '' ? null : Number(preferredMaxBudget)
+        })
+        .eq('id', user.id)
+
+      if (error) throw error
+
+      alert('Servizi e preferenze salvati con successo!')
+
+      // Refresh profile per aggiornare AuthContext
+      if (refreshProfile) {
+        await refreshProfile()
+      }
+    } catch (error: any) {
+      console.error('Errore salvataggio servizi:', error)
+      alert('Errore: ' + error.message)
+    } finally {
+      setSavingServices(false)
+    }
+  }
+
+  // Toggle servizio on/off
+  const toggleService = (service: string) => {
+    setServicesOffered(prev =>
+      prev.includes(service)
+        ? prev.filter(s => s !== service)
+        : [...prev, service]
+    )
+  }
+
+  // Lista servizi disponibili con configurazione
+  const availableServices = [
+    { id: 'seo', icon: '📊', label: 'SEO', description: 'Ottimizzazione motori di ricerca' },
+    { id: 'gdpr', icon: '⚖️', label: 'GDPR', description: 'Privacy e conformità legale' },
+    { id: 'analytics', icon: '📈', label: 'Analytics', description: 'Tracking e analisi dati' },
+    { id: 'mobile', icon: '📱', label: 'Mobile', description: 'Ottimizzazione mobile' },
+    { id: 'performance', icon: '⚡', label: 'Performance', description: 'Velocità e ottimizzazione' },
+    { id: 'development', icon: '💻', label: 'Development', description: 'Sviluppo e redesign' },
+    { id: 'design', icon: '🎨', label: 'Design', description: 'UI/UX e visual design' },
+    { id: 'social', icon: '👥', label: 'Social', description: 'Social media integration' }
+  ]
 
   // Funzione per cambiare email
   const handleChangeEmail = async () => {
@@ -603,13 +667,126 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          {/* I Tuoi Servizi - Match Calculation */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center mb-4">
+              <span className="text-xl mr-2">🎯</span>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">I Tuoi Servizi</h2>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Seleziona i servizi che offri. Useremo queste informazioni per calcolare la compatibilità con i lead e mostrarti quelli più rilevanti per te.
+            </p>
+
+            {/* Selezione Servizi */}
+            <div className="space-y-3 mb-6">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Servizi che offri
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {availableServices.map((service) => {
+                  const isSelected = servicesOffered.includes(service.id)
+                  return (
+                    <button
+                      key={service.id}
+                      type="button"
+                      onClick={() => toggleService(service.id)}
+                      className={`
+                        p-3 rounded-xl border-2 transition-all text-left
+                        ${isSelected
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                        }
+                      `}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xl">{service.icon}</span>
+                        <span className={`font-medium ${isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'}`}>
+                          {service.label}
+                        </span>
+                        {isSelected && (
+                          <CheckCircle className="w-4 h-4 text-blue-500 ml-auto" />
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {service.description}
+                      </p>
+                    </button>
+                  )
+                })}
+              </div>
+              {servicesOffered.length > 0 && (
+                <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">
+                  {servicesOffered.length} servizi selezionati
+                </p>
+              )}
+            </div>
+
+            {/* Preferenze Budget (opzionale) */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-6 mb-6">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Range budget preferito (opzionale)
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                I lead con budget in questo range avranno un match score più alto
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
+                    <input
+                      type="number"
+                      placeholder="Min (es. 500)"
+                      value={preferredMinBudget}
+                      onChange={(e) => setPreferredMinBudget(e.target.value === '' ? '' : Number(e.target.value))}
+                      min="0"
+                      className="w-full pl-8 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+                <span className="text-gray-400">-</span>
+                <div className="flex-1">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
+                    <input
+                      type="number"
+                      placeholder="Max (es. 5000)"
+                      value={preferredMaxBudget}
+                      onChange={(e) => setPreferredMaxBudget(e.target.value === '' ? '' : Number(e.target.value))}
+                      min="0"
+                      className="w-full pl-8 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottone Salva */}
+            <button
+              onClick={handleSaveServices}
+              disabled={savingServices}
+              className="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            >
+              {savingServices ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Salvataggio...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Salva Preferenze Servizi
+                </>
+              )}
+            </button>
+          </div>
+
           {/* Sicurezza Account */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex items-center mb-4">
               <SettingsIcon className="w-5 h-5 text-gray-400 mr-2" />
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Sicurezza Account</h2>
             </div>
-            
+
             <div className="space-y-6">
               {/* Cambio Email */}
               <div className="border-b border-gray-200 dark:border-gray-700 pb-6">

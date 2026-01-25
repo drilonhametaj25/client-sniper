@@ -11,11 +11,11 @@
  */
 
 import { useState, useEffect } from 'react'
-import { 
-  Filter, 
-  X, 
-  ChevronDown, 
-  ChevronUp, 
+import {
+  Filter,
+  X,
+  ChevronDown,
+  ChevronUp,
   RotateCcw,
   Zap,
   Mail,
@@ -25,8 +25,10 @@ import {
   TrendingUp,
   Eye,
   Calendar,
-  AlertTriangle
+  AlertTriangle,
+  Briefcase
 } from 'lucide-react'
+import { SERVICE_CONFIGS, type ServiceType } from '@/lib/types/services'
 
 export interface AdvancedFiltersState {
   scoreRange: {
@@ -46,6 +48,9 @@ export interface AdvancedFiltersState {
     followUpOverdue: boolean
     crmStatus: string // 'all' | 'new' | 'contacted' | 'in_negotiation' | 'won' | 'lost'
   }
+  // Filtri per servizi richiesti dal lead
+  serviceTypes: ServiceType[]
+  minMatchScore: number // 0-100, filtra lead con match % >= questo valore
 }
 
 interface AdvancedFiltersProps {
@@ -78,7 +83,9 @@ const DEFAULT_FILTERS: AdvancedFiltersState = {
     onlyUncontacted: false,
     followUpOverdue: false,
     crmStatus: 'all'
-  }
+  },
+  serviceTypes: [],
+  minMatchScore: 0
 }
 
 const CRM_STATUS_OPTIONS = [
@@ -141,6 +148,18 @@ export default function AdvancedFilters({
     })
   }
 
+  const handleServiceTypeToggle = (serviceType: ServiceType) => {
+    const currentServices = filters.serviceTypes || []
+    const newServices = currentServices.includes(serviceType)
+      ? currentServices.filter(s => s !== serviceType)
+      : [...currentServices, serviceType]
+    handleFilterChange({ serviceTypes: newServices })
+  }
+
+  const handleMinMatchScoreChange = (value: number) => {
+    handleFilterChange({ minMatchScore: value })
+  }
+
   const handleReset = () => {
     onFiltersChange(DEFAULT_FILTERS)
     localStorage.removeItem('advancedFilters')
@@ -169,6 +188,10 @@ export default function AdvancedFilters({
       if (filters.crmFilters.followUpOverdue) count++
       if (filters.crmFilters.crmStatus !== 'all') count++
     }
+
+    // Filtri servizi (disponibili per tutti)
+    if (filters.serviceTypes && filters.serviceTypes.length > 0) count++
+    if (filters.minMatchScore && filters.minMatchScore > 0) count++
 
     return count
   }
@@ -374,6 +397,63 @@ export default function AdvancedFilters({
               </div>
             </div>
           )}
+
+          {/* Filtri Servizi */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
+              <Briefcase className="h-4 w-4" />
+              Servizi Richiesti
+            </h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+              Filtra lead in base ai servizi di cui hanno bisogno
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {(Object.keys(SERVICE_CONFIGS) as ServiceType[]).map(serviceType => {
+                const config = SERVICE_CONFIGS[serviceType]
+                const isSelected = (filters.serviceTypes || []).includes(serviceType)
+
+                return (
+                  <button
+                    key={serviceType}
+                    onClick={() => handleServiceTypeToggle(serviceType)}
+                    className={`
+                      flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all
+                      ${isSelected
+                        ? `${config.bgColor} ${config.textColor} ring-2 ring-offset-1 ring-blue-500`
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }
+                    `}
+                  >
+                    <span>{config.icon}</span>
+                    <span>{config.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Match Score Minimo */}
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <label className="flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-2">
+                <span>Match minimo con il tuo profilo</span>
+                <span className="font-semibold text-blue-600 dark:text-blue-400">
+                  {filters.minMatchScore || 0}%
+                </span>
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="10"
+                value={filters.minMatchScore || 0}
+                onChange={(e) => handleMinMatchScoreChange(parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+              />
+              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <span>Tutti</span>
+                <span>Solo match perfetti</span>
+              </div>
+            </div>
+          </div>
 
           {/* Filtri CRM */}
 

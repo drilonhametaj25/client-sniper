@@ -57,6 +57,9 @@ import {
   type LeadAvailableData,
   type CrmStatus
 } from '@/lib/utils/lead-card-helpers'
+import { detectServices } from '@/lib/utils/service-detection'
+import { calculateMatch, getMatchColor, getMatchIcon } from '@/lib/utils/match-calculation'
+import { SERVICE_CONFIGS, type ServiceType, formatBudget } from '@/lib/types/services'
 
 export interface LeadCardProps {
   lead: {
@@ -77,6 +80,7 @@ export interface LeadCardProps {
   isUnlocked: boolean
   isSelected?: boolean
   isProUser?: boolean
+  userServices?: ServiceType[] // Servizi offerti dall'utente per match calculation
   onUnlock?: (lead: LeadCardProps['lead']) => void
   onView?: (lead: LeadCardProps['lead']) => void
   onSelect?: (id: string) => void
@@ -93,6 +97,7 @@ export default function LeadCard({
   isUnlocked,
   isSelected = false,
   isProUser = false,
+  userServices = [],
   onUnlock,
   onView,
   onSelect,
@@ -110,6 +115,11 @@ export default function LeadCard({
   const CriticalityIcon = criticality.icon
   const isNew = lead.created_at ? isNewLead(lead.created_at) : false
   const budget = estimateBudget(lead.score, problems)
+
+  // Service detection e match calculation
+  const detectedServices = detectServices(analysis)
+  const matchResult = calculateMatch(detectedServices, userServices)
+  const matchColors = getMatchColor(matchResult.score)
 
   return (
     <div
@@ -159,6 +169,13 @@ export default function LeadCard({
         {isNew && (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 animate-pulse">
             ✨ Nuovo
+          </span>
+        )}
+
+        {/* Match score badge (solo se user ha configurato servizi) */}
+        {userServices.length > 0 && (
+          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${matchColors.bgColor} ${matchColors.textColor}`}>
+            {getMatchIcon(matchResult.score)} {matchResult.score}% match
           </span>
         )}
 
@@ -266,6 +283,50 @@ export default function LeadCard({
           {availableCount}/5 informazioni disponibili
         </div>
       </div>
+
+      {/* ===== SERVICE TAGS (Servizi richiesti) ===== */}
+      {detectedServices.services.length > 0 && (
+        <div className="mx-4 mb-3">
+          <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            🛠️ Servizi richiesti:
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {detectedServices.services.slice(0, 5).map((service) => {
+              const config = SERVICE_CONFIGS[service.type]
+              const isMatched = matchResult.matchedServices.includes(service.type)
+
+              return (
+                <div
+                  key={service.type}
+                  className={`
+                    inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs
+                    ${config.bgColor} ${config.textColor}
+                    ${isMatched ? 'ring-2 ring-green-400 ring-offset-1 dark:ring-offset-gray-800' : ''}
+                  `}
+                  title={service.specificIssues.slice(0, 3).join(', ')}
+                >
+                  <span>{config.icon}</span>
+                  <span className="font-medium">{config.label}</span>
+                  <span className="opacity-70">({service.issueCount})</span>
+                  {isMatched && (
+                    <CheckCircle className="w-3 h-3 text-green-500 ml-0.5" />
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Budget totale stimato */}
+          {detectedServices.totalBudget.max > 0 && (
+            <div className="flex items-center gap-2 mt-2 text-xs">
+              <span className="text-gray-500 dark:text-gray-400">💰 Budget stimato:</span>
+              <span className="font-semibold text-gray-700 dark:text-gray-300">
+                {formatBudget(detectedServices.totalBudget)}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ===== PROBLEMS SUMMARY ===== */}
       {(problems.total > 0 || problems.topIssues.length > 0) && (
@@ -470,6 +531,7 @@ export function LeadCardCompact({
   lead,
   isUnlocked,
   isSelected = false,
+  userServices = [],
   onUnlock,
   onView,
   onSelect,
@@ -482,6 +544,11 @@ export function LeadCardCompact({
   const criticality = getCriticalityConfig(lead.score)
   const CriticalityIcon = criticality.icon
   const isNew = lead.created_at ? isNewLead(lead.created_at) : false
+
+  // Service detection e match calculation
+  const detectedServices = detectServices(analysis)
+  const matchResult = calculateMatch(detectedServices, userServices)
+  const matchColors = getMatchColor(matchResult.score)
 
   return (
     <div
@@ -542,6 +609,13 @@ export function LeadCardCompact({
           {lead.score}
         </span>
 
+        {/* Match score badge */}
+        {userServices.length > 0 && (
+          <span className={`px-2 py-1 rounded-lg text-xs font-medium flex-shrink-0 ${matchColors.bgColor} ${matchColors.textColor}`}>
+            {getMatchIcon(matchResult.score)} {matchResult.score}%
+          </span>
+        )}
+
         {/* Action */}
         {isUnlocked ? (
           <button
@@ -572,6 +646,30 @@ export function LeadCardCompact({
           {availableData.hasSocial && <span title="Social">👥</span>}
           <span className="ml-1">{availableCount}/5</span>
         </div>
+
+        <span className="text-gray-300 dark:text-gray-600">•</span>
+
+        {/* Service tags (primi 3) */}
+        {detectedServices.services.length > 0 && (
+          <div className="inline-flex items-center gap-1">
+            {detectedServices.services.slice(0, 3).map((service) => {
+              const config = SERVICE_CONFIGS[service.type]
+              const isMatched = matchResult.matchedServices.includes(service.type)
+              return (
+                <span
+                  key={service.type}
+                  className={`px-1.5 py-0.5 rounded ${config.bgColor} ${config.textColor} ${isMatched ? 'ring-1 ring-green-400' : ''}`}
+                  title={`${config.label}: ${service.issueCount} problemi`}
+                >
+                  {config.icon}
+                </span>
+              )
+            })}
+            {detectedServices.services.length > 3 && (
+              <span className="text-gray-400">+{detectedServices.services.length - 3}</span>
+            )}
+          </div>
+        )}
 
         <span className="text-gray-300 dark:text-gray-600">•</span>
 

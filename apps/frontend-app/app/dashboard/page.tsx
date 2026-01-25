@@ -42,6 +42,10 @@ import BulkActionsBar from '@/components/BulkActionsBar'
 import ExportDropdown from '@/components/ExportDropdown'
 import ViewSwitcher, { ViewType } from '@/components/ViewSwitcher'
 import LeadCard, { LeadCardCompact } from '@/components/LeadCard'
+import { TinderStack } from '@/components/mobile/tinder'
+import type { ServiceType } from '@/lib/types/services'
+import { detectServices } from '@/lib/utils/service-detection'
+import { calculateMatch } from '@/lib/utils/match-calculation'
 import FirstTimeUserModal from '@/components/FirstTimeUserModal'
 import EmailTemplatePreview from '@/components/EmailTemplatePreview'
 import { useOnboarding } from '@/contexts/OnboardingContext'
@@ -86,6 +90,7 @@ interface Lead extends LeadWithCRM {
   last_seen_at?: string
   needed_roles?: string[] // Può essere null o undefined
   issues?: string[] // Può essere null o undefined
+  website_analysis?: any // Analisi sito web per service detection
 }
 
 interface Settings {
@@ -138,7 +143,9 @@ export default function ClientDashboard() {
       onlyUncontacted: false,
       followUpOverdue: false,
       crmStatus: 'all'
-    }
+    },
+    serviceTypes: [] as ServiceType[],
+    minMatchScore: 0
   })
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
 
@@ -391,6 +398,39 @@ export default function ClientDashboard() {
         if (advancedFilters.crmFilters.crmStatus !== 'all') {
           const crmStatus = (lead as LeadWithCRM).crm_status
           if (crmStatus !== advancedFilters.crmFilters.crmStatus) return false
+        }
+      }
+
+      // Filtri servizi - disponibili per tutti
+      if (advancedFilters.serviceTypes && advancedFilters.serviceTypes.length > 0) {
+        const analysis = lead.website_analysis || lead.analysis
+        if (!analysis) return false
+
+        // Calcola i servizi rilevati per questo lead
+        const detectedServicesResult = detectServices(analysis)
+        const detectedServiceTypes = detectedServicesResult.services.map(s => s.type)
+
+        // Verifica che almeno uno dei servizi filtrati sia presente
+        const hasMatchingService = advancedFilters.serviceTypes.some(
+          serviceType => detectedServiceTypes.includes(serviceType)
+        )
+        if (!hasMatchingService) return false
+      }
+
+      // Filtro match score minimo
+      if (advancedFilters.minMatchScore && advancedFilters.minMatchScore > 0) {
+        const userServicesOffered = (user?.services_offered || []) as ServiceType[]
+        if (userServicesOffered.length === 0) {
+          // Se l'utente non ha configurato servizi, non può filtrare per match
+          // ma lasciamo passare tutti
+        } else {
+          const analysis = lead.website_analysis || lead.analysis
+          if (!analysis) return false
+
+          const detectedServicesResult = detectServices(analysis)
+          const matchResult = calculateMatch(detectedServicesResult, userServicesOffered)
+
+          if (matchResult.score < advancedFilters.minMatchScore) return false
         }
       }
 
@@ -1781,7 +1821,7 @@ export default function ClientDashboard() {
                 <ViewSwitcher
                   currentView={currentView}
                   onViewChange={setCurrentView}
-                  availableViews={['list', 'grid']}
+                  availableViews={['list', 'grid', 'tinder']}
                   showLabels={false}
                   size="md"
                 />
@@ -1947,6 +1987,83 @@ export default function ClientDashboard() {
                         ? 'Sblocca alcuni lead per vederli qui, oppure disattiva il filtro'
                         : 'Prova a modificare i filtri o aggiorna i dati'}
                     </p>
+                  </div>
+                )
+              }
+
+              // === TINDER VIEW ===
+              if (currentView === 'tinder') {
+                // Filtra solo lead non ancora sbloccati per il Tinder mode
+                const tinderLeads = filteredLeads.filter(lead => !unlockedLeads.has(lead.id))
+
+                // Servizi offerti dall'utente
+                const userServicesOffered = (user?.services_offered || []) as ServiceType[]
+
+                return (
+                  <div className="h-[70vh] min-h-[500px]">
+                    <TinderStack
+                      leads={tinderLeads}
+                      userServices={userServicesOffered}
+                      creditsRemaining={userProfile?.credits_remaining || 0}
+                      onUnlock={async (leadId) => {
+                        // Usa la logica di sblocco esistente
+                        const remainingCredits = getAvailableCredits()
+                        if (remainingCredits <= 0) {
+                          return { success: false }
+                        }
+
+                        try {
+                          const session = await supabase.auth.getSession()
+                          if (!session.data.session) {
+                            return { success: false }
+                          }
+
+                          const response = await fetch('/api/leads/unlock', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${session.data.session.access_token}`
+                            },
+                            body: JSON.stringify({ leadId })
+                          })
+
+                          if (!response.ok) {
+                            return { success: false }
+                          }
+
+                          const result = await response.json()
+
+                          // Aggiorna stato locale
+                          setUnlockedLeads(prev => new Set([...prev, leadId]))
+                          await refreshProfile()
+
+                          return {
+                            success: true,
+                            phone: result.phone,
+                            email: result.email
+                          }
+                        } catch (error) {
+                          console.error('Errore sblocco:', error)
+                          return { success: false }
+                        }
+                      }}
+                      onSkip={(leadId) => {
+                        // Per ora solo logga lo skip - in futuro potrebbe salvare preferenza
+                        console.log('Lead skipped:', leadId)
+                      }}
+                      onArchive={async (leadId) => {
+                        // Archivia il lead
+                        try {
+                          await supabase
+                            .from('leads')
+                            .update({ status: 'archived' })
+                            .eq('id', leadId)
+                        } catch (error) {
+                          console.error('Errore archiviazione:', error)
+                        }
+                      }}
+                      onRefresh={() => loadLeadsFromAPI(1, false)}
+                    />
                   </div>
                 )
               }
