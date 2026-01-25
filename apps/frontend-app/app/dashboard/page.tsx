@@ -49,6 +49,7 @@ import { calculateMatch } from '@/lib/utils/match-calculation'
 import FirstTimeUserModal from '@/components/FirstTimeUserModal'
 import EmailTemplatePreview from '@/components/EmailTemplatePreview'
 import { useOnboarding } from '@/contexts/OnboardingContext'
+import ForYouSection from '@/components/dashboard/ForYouSection'
 import { CheckSquare, Square, LayoutGrid, List, Utensils, Building2, Stethoscope, ShoppingCart, Briefcase, GraduationCap as Education, Dumbbell, Car, Scissors, HelpCircle } from 'lucide-react'
 
 // Helper: Get category icon
@@ -1605,6 +1606,11 @@ export default function ClientDashboard() {
               <UpgradeUrgencyBanner variant="compact" />
             </div>
           )}
+
+          {/* Sezione Per Te - Lead Personalizzati */}
+          <div className="mb-8">
+            <ForYouSection onUnlockLead={unlockLead} />
+          </div>
 
           {/* Sezione Lead Consigliati per Nuovi Utenti */}
           {isNewUser && recommendedLeads.length > 0 && (

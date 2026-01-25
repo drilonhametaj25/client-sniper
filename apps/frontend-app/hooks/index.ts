@@ -7,3 +7,5 @@ export {
   useIsLandscape,
   useIsTouchDevice,
 } from './useMediaQuery';
+
+export { useBehaviorTracking } from './useBehaviorTracking';

@@ -30,6 +30,7 @@ import Link from 'next/link'
 import InactivePlanBanner from '@/components/InactivePlanBanner'
 import { usePlanStatus } from '@/hooks/usePlanStatus'
 import { getBasePlanType, isProOrHigher } from '@/lib/utils/plan-helpers'
+import LeadPreferencesSection from '@/components/settings/LeadPreferencesSection'
 
 interface UserData {
   id: string
@@ -779,6 +780,9 @@ export default function SettingsPage() {
               )}
             </button>
           </div>
+
+          {/* Preferenze Lead - Configurazione Avanzata */}
+          <LeadPreferencesSection />
 
           {/* Sicurezza Account */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
