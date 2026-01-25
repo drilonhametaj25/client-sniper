@@ -22,6 +22,7 @@ const AuthContext = createContext<AuthState & {
   signOut: () => Promise<any>
   refreshProfile: () => Promise<void>
   getAccessToken: () => string | null
+  decrementCredits: (amount?: number) => void
 }>({
   user: null,
   session: null,
@@ -30,7 +31,8 @@ const AuthContext = createContext<AuthState & {
   signUp: async () => ({}),
   signOut: async () => ({}),
   refreshProfile: async () => {},
-  getAccessToken: () => null
+  getAccessToken: () => null,
+  decrementCredits: () => {}
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -455,6 +457,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return session?.access_token || null
   }, [session])
 
+  // ⚡ AGGIORNAMENTO OTTIMISTICO CREDITI: Aggiorna istantaneamente senza attendere API
+  const decrementCredits = useCallback((amount: number = 1) => {
+    if (user && typeof user.credits_remaining === 'number') {
+      const newCredits = Math.max(0, user.credits_remaining - amount)
+      const updatedUser = {
+        ...user,
+        credits_remaining: newCredits
+      }
+      setUser(updatedUser)
+
+      // Aggiorna anche la cache per persistenza
+      if (session?.user?.id) {
+        setCachedProfile(session.user.id, updatedUser)
+      }
+    }
+  }, [user, session?.user?.id, setCachedProfile])
+
   const value = {
     user,
     session,
@@ -463,7 +482,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signOut,
     refreshProfile,
-    getAccessToken
+    getAccessToken,
+    decrementCredits
   }
 
   return (

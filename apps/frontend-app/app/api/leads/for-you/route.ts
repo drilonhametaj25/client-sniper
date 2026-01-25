@@ -50,8 +50,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Token non valido' }, { status: 401 })
     }
 
-    // Recupera dati utente, profilo e behavior in parallelo
-    const [userResult, profileResult, behaviorResult, leadsResult] = await Promise.all([
+    // Recupera dati utente, profilo, behavior e lead sbloccati in parallelo
+    const [userResult, profileResult, behaviorResult, leadsResult, unlockedResult] = await Promise.all([
       // User data
       getSupabaseAdmin()
         .from('users')
@@ -75,8 +75,19 @@ export async function GET(request: NextRequest) {
         .select('id, business_name, website_url, city, category, score, analysis, created_at')
         .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
         .order('created_at', { ascending: false })
-        .limit(MAX_LEADS_TO_PROCESS)
+        .limit(MAX_LEADS_TO_PROCESS),
+
+      // Lead già sbloccati dall'utente (per escluderli dai Top 5)
+      getSupabaseAdmin()
+        .from('lead_unlocks')
+        .select('lead_id')
+        .eq('user_id', user.id)
     ])
+
+    // Set di lead già sbloccati
+    const unlockedLeadIds = new Set(
+      (unlockedResult.data || []).map((u: { lead_id: string }) => u.lead_id)
+    )
 
     // Prepara dati utente
     const userData = userResult.data as {
@@ -185,8 +196,11 @@ export async function GET(request: NextRequest) {
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
     const sections = {
-      // Top 5 per relevance
-      daily_top_5: leadsWithRelevance.slice(0, 5),
+      // Top 5 per relevance - ESCLUDI lead già sbloccati dall'utente
+      // Così l'utente vede sempre 5 lead "nuovi" per lui ogni giorno
+      daily_top_5: leadsWithRelevance
+        .filter(l => !unlockedLeadIds.has(l.lead.id))
+        .slice(0, 5),
 
       // Perfect match (>= 90%)
       perfect_match: leadsWithRelevance

@@ -102,7 +102,7 @@ interface Settings {
 }
 
 export default function ClientDashboard() {
-  const { user, loading, refreshProfile } = useAuth()
+  const { user, loading, refreshProfile, decrementCredits } = useAuth()
   const router = useRouter()
   const { startTour } = useOnboarding()
   const [leads, setLeads] = useState<Lead[]>([])
@@ -851,6 +851,9 @@ export default function ClientDashboard() {
 
     // Salva la posizione corrente dello scroll
     setScrollPosition(window.scrollY)
+
+    // ⚡ AGGIORNAMENTO OTTIMISTICO: Scala crediti SUBITO per feedback istantaneo
+    decrementCredits(1)
 
     // Sblocca il lead usando l'API REST
     try {
