@@ -17,7 +17,7 @@ import { MobileBottomNav } from '@/components/mobile'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://trovami.it'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://trovami.pro'),
   title: {
     default: 'TrovaMi - Trova Lead Qualificati per la Tua Agenzia | Lead Generation Automatica',
     template: '%s | TrovaMi'
@@ -57,21 +57,14 @@ export const metadata: Metadata = {
     locale: 'it_IT',
     url: 'https://trovami.pro',
     siteName: 'TrovaMi',
-    images: [
-      {
-        url: 'https://trovami.pro/og-image.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'TrovaMi - Lead Generation Automatica'
-      }
-    ]
+    // Immagine generata dinamicamente da opengraph-image.tsx
   },
   twitter: {
     card: 'summary_large_image',
     title: 'TrovaMi - Trova Lead Qualificati per la Tua Agenzia',
     description: 'Lead generation automatica per agenzie web e freelancer. Analisi tecnica siti web e clienti qualificati.',
     creator: '@trovamipro',
-    images: ['https://trovami.pro/twitter-image.jpg']
+    // Immagine generata dinamicamente da twitter-image.tsx
   },
   alternates: {
     canonical: 'https://trovami.pro'

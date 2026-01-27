@@ -5,9 +5,10 @@
 // Integrata con la Navbar globale per evitare duplicazioni
 // ⚠️ Aggiornare se si modificano contenuti o CTA
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
-import { ArrowRight, Target, BarChart3, Users, CheckCircle, Zap, Shield, Globe } from 'lucide-react'
+import { ArrowRight, Target, BarChart3, Users, CheckCircle, Zap, Shield, Globe, Menu, X } from 'lucide-react'
 import NewsletterForm from '@/components/NewsletterForm'
 import StructuredFAQ from '@/components/StructuredFAQ'
 import LeadCostComparison from '@/components/LeadCostComparison'
@@ -16,6 +17,7 @@ import NewPlanSelector from '@/components/NewPlanSelector'
 
 export default function HomePage() {
   const { user } = useAuth()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/30">
@@ -109,9 +111,11 @@ export default function HomePage() {
                 </div>
                 <span className="text-xl font-bold text-gray-900">TrovaMi</span>
               </div>
+
+              {/* Desktop Navigation */}
               <nav className="hidden md:flex items-center space-x-8">
                 <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">
-                  Funzionalità
+                  Funzionalita
                 </a>
                 <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors">
                   Prezzi
@@ -119,14 +123,57 @@ export default function HomePage() {
                 <Link href="/login" className="text-gray-600 hover:text-gray-900 transition-colors">
                   Accedi
                 </Link>
-                <Link 
-                  href="/register" 
+                <Link
+                  href="/register"
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
                 >
                   Inizia Gratis
                 </Link>
               </nav>
+
+              {/* Mobile menu button */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="md:hidden p-2 text-gray-600 hover:text-gray-900 transition-colors"
+                aria-label="Menu"
+              >
+                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
             </div>
+
+            {/* Mobile Navigation */}
+            {mobileMenuOpen && (
+              <div className="md:hidden border-t border-gray-200/50 py-4 space-y-3">
+                <a
+                  href="#features"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  Funzionalita
+                </a>
+                <a
+                  href="#pricing"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  Prezzi
+                </a>
+                <Link
+                  href="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  Accedi
+                </Link>
+                <Link
+                  href="/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block mx-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-center rounded-lg transition-colors font-medium"
+                >
+                  Inizia Gratis
+                </Link>
+              </div>
+            )}
           </div>
         </header>
       )}
@@ -160,21 +207,21 @@ export default function HomePage() {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-              <Link 
-                href="/register" 
+              <Link
+                href="/register"
                 className="group inline-flex items-center justify-center px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
-                Inizia con 5 Lead Gratuiti
+                Crea Account Gratuito
                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <Link 
+              <Link
                 href="/tools/public-scan"
                 className="group inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-lg font-semibold rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
                 <Zap className="mr-2 w-5 h-5" />
-                Prova Gratis (2 al giorno)
+                Prova l'Analisi Gratis
               </Link>
-              <button 
+              <button
                 onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })}
                 className="inline-flex items-center justify-center px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 text-lg font-semibold rounded-2xl border-2 border-gray-200 hover:border-gray-300 transition-all duration-300"
               >
