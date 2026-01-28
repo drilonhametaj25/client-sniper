@@ -195,12 +195,18 @@ export async function GET(request: NextRequest) {
     const now = new Date()
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
+
+    // Calcola prima i Top 5 per poterli escludere da altre sezioni
+    const daily_top_5 = leadsWithRelevance
+      .filter(l => !unlockedLeadIds.has(l.lead.id))
+      .slice(0, 5)
+
+    // Set degli ID dei Top 5 per evitare duplicati in "Nuovi Oggi"
+    const top5Ids = new Set(daily_top_5.map(l => l.lead.id))
     const sections = {
       // Top 5 per relevance - ESCLUDI lead già sbloccati dall'utente
       // Così l'utente vede sempre 5 lead "nuovi" per lui ogni giorno
-      daily_top_5: leadsWithRelevance
-        .filter(l => !unlockedLeadIds.has(l.lead.id))
-        .slice(0, 5),
+      daily_top_5,
 
       // Perfect match (>= 90%)
       perfect_match: leadsWithRelevance
@@ -233,9 +239,9 @@ export async function GET(request: NextRequest) {
             .slice(0, 6)
         : [],
 
-      // New today (ultime 24h)
+      // New today (ultime 24h) - ESCLUDI i Top 5 per evitare duplicati
       new_today: leadsWithRelevance
-        .filter(l => new Date(l.lead.created_at) >= oneDayAgo)
+        .filter(l => new Date(l.lead.created_at) >= oneDayAgo && !top5Ids.has(l.lead.id))
         .slice(0, 10)
     }
 
