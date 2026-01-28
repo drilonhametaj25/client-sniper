@@ -209,6 +209,22 @@ export const blogPosts: BlogPost[] = [
 
   // SEO & WEB POSTS
   {
+    slug: 'tool-gratuiti-analizzare-siti-web-guida-completa-2026',
+    title: 'Tool Gratuiti per Analizzare Siti Web: La Guida Completa 2026',
+    excerpt: 'Scopri i migliori tool gratuiti per analizzare siti web nel 2026. Da PageSpeed a GTmetrix, come usarli per trovare opportunità di business.',
+    content: '',
+    date: '2026-01-28',
+    readTime: '15 min',
+    category: 'SEO & Web',
+    tags: ['tool analisi siti', 'website audit', 'performance web', 'seo tools'],
+    featured: false,
+    emoji: '🛠️',
+    seoTitle: 'Tool Gratuiti per Analizzare Siti Web: Guida Completa [2026]',
+    seoDescription: 'I migliori tool gratuiti per analizzare siti web nel 2026. PageSpeed, GTmetrix, SSL Labs e altri strumenti per trovare opportunità di business.',
+    keywords: ['tool analisi sito web', 'analizzare siti web gratis', 'website audit free', 'tool seo gratis'],
+    published: true
+  },
+  {
     slug: 'audit-seo-gratuito-come-analizzare-sito-web',
     title: 'Audit SEO Gratuito: Come Analizzare un Sito Web',
     excerpt: 'Checklist completa per fare un audit SEO gratuito. Tool da usare, metriche da monitorare e come presentare i risultati ai clienti.',
@@ -862,6 +878,22 @@ export const blogPosts: BlogPost[] = [
   // ============================================
 
   // LEAD GENERATION PER WEB AGENCY (5 articoli)
+  {
+    slug: 'come-trovare-lead-web-agency-strategie-2026',
+    title: 'Come Trovare Lead per Web Agency: 7 Strategie che Funzionano nel 2026',
+    excerpt: 'Scopri le 7 strategie più efficaci per trovare lead qualificati per la tua web agency. Dall\'analisi tecnica al prospecting automatizzato.',
+    content: '',
+    date: '2026-01-28',
+    readTime: '18 min',
+    category: 'Web Agency',
+    tags: ['lead web agency', 'trovare clienti', 'lead generation agenzia', 'prospecting'],
+    featured: false,
+    emoji: '🚀',
+    seoTitle: 'Come Trovare Lead per Web Agency: 7 Strategie [2026]',
+    seoDescription: 'Le 7 strategie più efficaci per trovare lead qualificati per web agency nel 2026. Analisi tecnica, LinkedIn, partnership e prospecting automatizzato.',
+    keywords: ['lead web agency', 'trovare clienti web agency', 'lead generation agenzia web', 'prospecting web agency'],
+    published: true
+  },
   {
     slug: 'come-trovare-clienti-web-agency-2026',
     title: 'Come Trovare Nuovi Clienti per la Tua Web Agency nel 2026',
