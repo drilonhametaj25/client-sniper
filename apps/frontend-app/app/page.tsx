@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { ArrowRight, Target, BarChart3, Users, CheckCircle, Zap, Shield, Globe, Menu, X } from 'lucide-react'
 import NewsletterForm from '@/components/NewsletterForm'
 import StructuredFAQ from '@/components/StructuredFAQ'
-import NewPlanSelector from '@/components/NewPlanSelector'
+import SimplePricing from '@/components/SimplePricing'
 
 export default function HomePage() {
   const { user } = useAuth()
@@ -188,19 +188,19 @@ export default function HomePage() {
 
             {/* Titolo principale SEO-optimized */}
             <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-              Trova Lead Qualificati
+              Trova Clienti nella Tua Zona
               <span className="block">
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800">
-                  per la Tua Agenzia
+                  con Proposte Pronte
                 </span>
               </span>
-              <span className="block">con l'Audit Automatizzato</span>
+              <span className="block">da Inviare</span>
             </h1>
 
             {/* Sottotitolo ottimizzato per SEO */}
             <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
-              <strong>TrovaMi</strong> esegue <strong>audit digitali automatizzati</strong> per identificare aziende con 
-              <strong className="text-gray-900"> criticità tecniche sui loro siti web</strong>. La piattaforma professionale per agenzie, freelancer e consulenti digitali.
+              <strong>TrovaMi</strong> analizza i siti web delle attività vicino a te, trova i problemi e ti prepara
+              <strong className="text-gray-900"> una proposta commerciale professionale</strong> da mandare in 2 click.
             </p>
 
             {/* CTA Buttons */}
@@ -447,12 +447,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Pricing Section - Completa e Ottimizzata */}
-            {/* Pricing Section - Hero Position */}
-      <NewPlanSelector 
-        currentPlan="free"
-        showFree={true}
-        redirectToRegister={true}
+      {/* Pricing Section */}
+      <SimplePricing
+        showAnnual={true}
+        redirectToCheckout={false}
       />
 
 
@@ -467,7 +465,7 @@ export default function HomePage() {
               <span className="block">Primi Lead?</span>
             </h2>
             <p className="text-xl md:text-2xl text-blue-100 mb-12 leading-relaxed">
-              Registrati ora e ricevi <strong className="text-white">5 lead qualificati</strong> completamente gratis. 
+              Registrati ora e ricevi la tua <strong className="text-white">prima proposta gratuita</strong>.
               Nessuna carta di credito richiesta.
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
@@ -512,10 +510,9 @@ export default function HomePage() {
       <StructuredFAQ className="bg-gray-50" />
 
       {/* Bottom Pricing Section - Before Newsletter */}
-      <NewPlanSelector 
-        currentPlan="free"
-        showFree={true}
-        redirectToRegister={true}
+      <SimplePricing
+        showAnnual={true}
+        redirectToCheckout={false}
       />
 
       {/* Newsletter Section */}
@@ -523,8 +520,8 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto">
             <NewsletterForm
-              title="Ricevi Lead Gratuiti ogni Mese"
-              description="Iscriviti alla newsletter per ricevere lead qualificati e strategie di acquisizione clienti direttamente nella tua inbox"
+              title="Ricevi Proposte Gratuite ogni Mese"
+              description="Iscriviti alla newsletter per ricevere opportunità selezionate e strategie di acquisizione clienti direttamente nella tua inbox"
               source="homepage_cta"
               className="mx-auto"
             />

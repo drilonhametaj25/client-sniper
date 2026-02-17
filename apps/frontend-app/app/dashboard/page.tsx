@@ -37,7 +37,7 @@ import {
 } from 'lucide-react'
 import AdvancedFilters, { AdvancedFiltersState } from '@/components/AdvancedFilters'
 import { TourTarget } from '@/components/onboarding/TourTarget'
-import UpgradeUrgencyBanner from '@/components/UpgradeUrgencyBanner'
+import AccountStatusBar from '@/components/AccountStatusBar'
 import BulkActionsBar from '@/components/BulkActionsBar'
 import ExportDropdown from '@/components/ExportDropdown'
 import ViewSwitcher, { ViewType } from '@/components/ViewSwitcher'
@@ -117,7 +117,7 @@ export default function ClientDashboard() {
   const LEADS_PER_PAGE = 20
 
   // Stato per API
-  const [userProfile, setUserProfile] = useState<{role: string, plan: string, credits_remaining: number} | null>(null)
+  const [userProfile, setUserProfile] = useState<{role: string, plan: string, proposals_remaining: number} | null>(null)
   
   // Filtri
   const [filterCategory, setFilterCategory] = useState<string>('')
@@ -126,7 +126,7 @@ export default function ClientDashboard() {
   const [searchTerm, setSearchTerm] = useState<string>('')
   const [searchInput, setSearchInput] = useState<string>('') // Input separato per digitazione
   const [showFilters, setShowFilters] = useState(false)
-  const [showOnlyUnlocked, setShowOnlyUnlocked] = useState(false) // Nuovo filtro per lead sbloccati
+  const [showOnlyUnlocked, setShowOnlyUnlocked] = useState(false) // Filtro per proposte generate
   const [showOnlyMatching, setShowOnlyMatching] = useState(false) // Filtro per lead compatibili con i servizi utente
   const [showWelcomeModal, setShowWelcomeModal] = useState(false) // Modal per nuovi utenti
 
@@ -642,9 +642,9 @@ export default function ClientDashboard() {
   useEffect(() => {
     if (!user || !userProfile) return
 
-    // Verifica se l'utente è nuovo (ha tutti i 5 crediti gratuiti e non ha mai visto il welcome)
+    // Verifica se l'utente è nuovo (ha 1 proposta e non ha mai visto il welcome)
     const hasSeenWelcome = localStorage.getItem('trovami_welcome_seen') === 'true'
-    const isNewUser = userProfile.credits_remaining === 5 && userProfile.plan === 'free'
+    const isNewUser = userProfile.proposals_remaining === 1 && userProfile.plan === 'free'
 
     if (isNewUser && !hasSeenWelcome) {
       // Mostra il modal dopo un breve delay per permettere alla pagina di caricarsi
@@ -771,25 +771,26 @@ export default function ClientDashboard() {
     }
   }
 
-  const getAvailableCredits = () => {
-    return user?.credits_remaining || 0
+  const getAvailableProposals = () => {
+    return (user as any)?.proposals_remaining ?? user?.credits_remaining ?? 0
   }
 
-  // Funzione per consumare un credito
-  const consumeCredit = async (action: string, leadId?: string): Promise<boolean> => {
+  // Funzione per consumare una proposta
+  const consumeProposal = async (action: string, leadId?: string): Promise<boolean> => {
     if (!user) return false
 
     try {
+      const currentProposals = (user as any)?.proposals_remaining ?? user?.credits_remaining ?? 0
       const { data, error } = await supabase
         .from('users')
-        .update({ 
-          credits_remaining: Math.max(0, (user.credits_remaining || 0) - 1)
+        .update({
+          proposals_remaining: Math.max(0, currentProposals - 1)
         })
         .eq('id', user.id)
         .select()
 
       if (error) {
-        console.error('Errore consumo credito:', error)
+        console.error('Errore consumo proposta:', error)
         return false
       }
 
@@ -801,50 +802,50 @@ export default function ClientDashboard() {
           action: action,
           lead_id: leadId || null,
           credits_consumed: 1,
-          credits_remaining: Math.max(0, (user.credits_remaining || 0) - 1),
+          credits_remaining: Math.max(0, currentProposals - 1),
           created_at: new Date().toISOString()
         })
 
       return true
     } catch (error) {
-      console.error('Errore nel consumo credito:', error)
+      console.error('Errore nel consumo proposta:', error)
       return false
     }
   }
 
-  // Funzione per aggiornare solo i crediti senza toccare il profilo completo
-  const refreshCredits = async () => {
+  // Funzione per aggiornare solo le proposte senza toccare il profilo completo
+  const refreshProposals = async () => {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('credits_remaining')
+        .select('proposals_remaining')
         .eq('id', user?.id)
         .single()
-      
+
       if (data && userProfile) {
         setUserProfile(prev => prev ? {
           ...prev,
-          credits_remaining: data.credits_remaining
+          proposals_remaining: data.proposals_remaining
         } : null)
       }
     } catch (error) {
-      console.error('Errore aggiornamento crediti:', error)
+      console.error('Errore aggiornamento proposte:', error)
     }
   }
 
-  // Aggiorna crediti ogni 30 secondi in background
+  // Aggiorna proposte ogni 30 secondi in background
   useEffect(() => {
     if (!user?.id) return
-    
-    const interval = setInterval(refreshCredits, 30000)
+
+    const interval = setInterval(refreshProposals, 30000)
     return () => clearInterval(interval)
   }, [user?.id])
   const unlockLead = async (leadId: string) => {
     if (!user) return
-    
-    const remainingCredits = getAvailableCredits()
-    if (remainingCredits <= 0) {
-      alert('Non hai più crediti disponibili. Aggiorna il tuo piano per continuare.')
+
+    const remainingProposals = getAvailableProposals()
+    if (remainingProposals <= 0) {
+      alert('Non hai più proposte disponibili. Aggiorna il tuo piano per continuare.')
       router.push('/upgrade')
       return
     }
@@ -852,10 +853,10 @@ export default function ClientDashboard() {
     // Salva la posizione corrente dello scroll
     setScrollPosition(window.scrollY)
 
-    // ⚡ AGGIORNAMENTO OTTIMISTICO: Scala crediti SUBITO per feedback istantaneo
+    // ⚡ AGGIORNAMENTO OTTIMISTICO: Scala proposte SUBITO per feedback istantaneo
     decrementCredits(1)
 
-    // Sblocca il lead usando l'API REST
+    // Genera la proposta usando l'API REST
     try {
       // Ottieni la sessione per il token
       const session = await supabase.auth.getSession()
@@ -900,16 +901,16 @@ export default function ClientDashboard() {
       // Imposta il lead come ultimo sbloccato per l'effetto visivo
       setLastUnlockedLeadId(leadId)
       
-      // Aggiorna solo i crediti senza ricaricare tutto il profilo
+      // Aggiorna solo le proposte senza ricaricare tutto il profilo
       if (userProfile) {
         setUserProfile(prev => prev ? {
           ...prev,
-          credits_remaining: Math.max(0, prev.credits_remaining - 1)
+          proposals_remaining: Math.max(0, prev.proposals_remaining - 1)
         } : null)
       }
     } catch (error) {
       console.error('Errore generale:', error)
-      alert('Errore nel sbloccare il lead. Riprova.')
+      alert('Errore nel generare la proposta. Riprova.')
     }
   }
 
@@ -1436,10 +1437,10 @@ export default function ClientDashboard() {
 
   const planBadge = getPlanBadge()
   const currentLimit = getPlanLimit()
-  const remainingCredits = getAvailableCredits()
+  const remainingProposals = getAvailableProposals()
 
-  // Check se utente è nuovo (ha tutti i 5 crediti gratuiti = non ha mai usato il tool)
-  const isNewUser = userProfile?.credits_remaining === 5 && userProfile?.plan === 'free'
+  // Check se utente è nuovo (ha 1 proposta = non ha mai usato il tool)
+  const isNewUser = userProfile?.proposals_remaining === 1 && userProfile?.plan === 'free'
 
   // Lead consigliati per nuovi utenti (primi 3 lead con score alto)
   const recommendedLeads = isNewUser ? leads.filter(l => l.score >= 50).slice(0, 3) : []
@@ -1489,45 +1490,45 @@ export default function ClientDashboard() {
               </div>
             </div>
 
-            {/* Crediti Rimanenti */}
+            {/* Proposte Rimanenti */}
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Crediti</p>
-                  <p className={`text-2xl font-bold mb-1 ${remainingCredits <= 1 ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
-                    {remainingCredits}
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Proposte</p>
+                  <p className={`text-2xl font-bold mb-1 ${remainingProposals <= 1 ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
+                    {remainingProposals}
                   </p>
-                  {remainingCredits <= 1 && getBasePlanType(user?.plan || '') !== 'free' &&  (
-                    <p className="text-xs text-red-500 font-medium">Crediti in esaurimento!</p>
+                  {remainingProposals <= 1 && getBasePlanType(user?.plan || '') !== 'free' &&  (
+                    <p className="text-xs text-red-500 font-medium">Proposte in esaurimento!</p>
                   )}
                 </div>
-                <CreditCard className={`h-8 w-8 ${remainingCredits <= 1 ? 'text-red-500' : 'text-blue-500'}`} />
+                <CreditCard className={`h-8 w-8 ${remainingProposals <= 1 ? 'text-red-500' : 'text-blue-500'}`} />
               </div>
-              {remainingCredits === 0 && (
+              {remainingProposals === 0 && (
                 <button
                   onClick={() => router.push('/upgrade')}
                   className="mt-3 w-full bg-red-500 hover:bg-red-600 text-white text-sm py-2 rounded-lg transition-colors"
                 >
-                  Ricarica Crediti
+                  Ottieni Proposte
                 </button>
               )}
             </div>
 
-            {/* Reset Crediti */}
+            {/* Reset Proposte */}
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Prossimo Reset</p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {user?.credits_reset_date ? getDaysUntilReset(user) : 'N/A'}
+                    {(user as any)?.proposals_reset_date ? getDaysUntilReset(user) : 'N/A'}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {user?.credits_reset_date ? 'giorni' : 'Non disponibile'}
+                    {(user as any)?.proposals_reset_date ? 'giorni' : 'Non disponibile'}
                   </p>
                 </div>
                 <RefreshCw className="h-8 w-8 text-green-500" />
               </div>
-              {user?.credits_reset_date && (
+              {(user as any)?.proposals_reset_date && (
                 <p className="text-xs text-gray-500 mt-2">
                   {formatResetDate(user)}
                 </p>
@@ -1557,16 +1558,16 @@ export default function ClientDashboard() {
               </div>
             </div>
 
-            {/* Lead Sbloccati */}
+            {/* Proposte Generate */}
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Lead Sbloccati</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Proposte Generate</p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">{unlockedLeads.size}</p>
                   <p className="text-xs text-gray-500">
-                    {unlockedLeads.size > 0 
+                    {unlockedLeads.size > 0
                       ? `${Math.round((unlockedLeads.size / Math.max(totalLeads, 1)) * 100)}% del totale`
-                      : 'Nessuno ancora'
+                      : 'Nessuna ancora'
                     }
                   </p>
                 </div>
@@ -1584,7 +1585,7 @@ export default function ClientDashboard() {
                   onClick={() => setShowOnlyUnlocked(true)}
                   className="mt-3 w-full bg-blue-500 hover:bg-blue-600 text-white text-sm py-2 rounded-lg transition-colors"
                 >
-                  Visualizza Solo Sbloccati
+                  Visualizza Proposte
                 </button>
               )}
             </div>
@@ -1606,12 +1607,8 @@ export default function ClientDashboard() {
             </div>
           </div>
 
-          {/* Banner Urgenza per Upgrade (solo utenti free) */}
-          {getBasePlanType(user?.plan || '') === 'free' && (
-            <div className="mb-8">
-              <UpgradeUrgencyBanner variant="compact" />
-            </div>
-          )}
+          {/* Status Proposte */}
+          <AccountStatusBar className="mb-8" variant="full" />
 
           {/* Sezione Per Te - Lead Personalizzati */}
           <div className="mb-8">
@@ -1678,20 +1675,20 @@ export default function ClientDashboard() {
 
                     <button
                       onClick={() => unlockLead(lead.id)}
-                      disabled={unlockedLeads.has(lead.id) || remainingCredits === 0}
+                      disabled={unlockedLeads.has(lead.id) || remainingProposals === 0}
                       className={`w-full py-2 rounded-lg text-sm font-medium transition-colors ${
                         unlockedLeads.has(lead.id)
                           ? 'bg-green-100 text-green-700 cursor-default'
-                          : remainingCredits === 0
+                          : remainingProposals === 0
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             : 'bg-blue-600 hover:bg-blue-700 text-white'
                       }`}
                     >
                       {unlockedLeads.has(lead.id)
-                        ? '✓ Sbloccato'
-                        : remainingCredits === 0
-                          ? 'Crediti esauriti'
-                          : '🔓 Sblocca (1 credito)'
+                        ? '✓ Proposta Generata'
+                        : remainingProposals === 0
+                          ? 'Proposte esaurite'
+                          : '📄 Genera Proposta'
                       }
                     </button>
                   </div>
@@ -1711,28 +1708,7 @@ export default function ClientDashboard() {
             </div>
           )}
 
-          {/* Banner Informativo sui Crediti */}
-          {remainingCredits <= 2 && remainingCredits > 0 && getBasePlanType(user?.plan || '') !== 'free' && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 mb-8">
-              <div className="flex items-center space-x-3">
-                <div className="bg-yellow-100 rounded-full p-2">
-                  <CreditCard className="h-5 w-5 text-yellow-600" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-yellow-800 font-semibold">Crediti in esaurimento</h3>
-                  <p className="text-yellow-700 text-sm">
-                    Ti rimangono solo {remainingCredits} crediti. Ogni azione (sblocca dettagli) costa 1 credito.
-                  </p>
-                </div>
-                <button
-                  onClick={() => router.push('/upgrade')}
-                  className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                >
-                  Ricarica Ora
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Banner Proposte gestito da AccountStatusBar sopra */}
 
           {/* Filtri e Controlli */}
           <TourTarget tourId="dashboard-filters" className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 mb-8 overflow-visible relative">
@@ -1793,7 +1769,7 @@ export default function ClientDashboard() {
 
               {/* Actions */}
               <div className="flex items-center space-x-3">
-                {/* Toggle per lead sbloccati */}
+                {/* Toggle per proposte generate */}
                 <TourTarget tourId="dashboard-filter-toggle" className="flex items-center space-x-2">
                   <label className="inline-flex items-center cursor-pointer">
                     <input
@@ -1811,7 +1787,7 @@ export default function ClientDashboard() {
                     </div>
                   </label>
                   <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">
-                    Solo sbloccati
+                    Solo proposte
                   </span>
                   {showOnlyUnlocked && (
                     <div className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
@@ -2041,11 +2017,11 @@ export default function ClientDashboard() {
                   <div className="text-center py-12">
                     <Target className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                      {showOnlyUnlocked ? 'Nessun lead sbloccato trovato' : 'Nessun lead trovato'}
+                      {showOnlyUnlocked ? 'Nessuna proposta generata' : 'Nessun lead trovato'}
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400">
                       {showOnlyUnlocked
-                        ? 'Sblocca alcuni lead per vederli qui, oppure disattiva il filtro'
+                        ? 'Genera alcune proposte per vederle qui, oppure disattiva il filtro'
                         : 'Prova a modificare i filtri o aggiorna i dati'}
                     </p>
                   </div>
@@ -2054,7 +2030,7 @@ export default function ClientDashboard() {
 
               // === TINDER VIEW ===
               if (currentView === 'tinder') {
-                // Filtra solo lead non ancora sbloccati per il Tinder mode
+                // Filtra solo lead senza proposta generata per il Tinder mode
                 const tinderLeads = filteredLeads.filter(lead => !unlockedLeads.has(lead.id))
 
                 // Servizi offerti dall'utente
@@ -2065,11 +2041,11 @@ export default function ClientDashboard() {
                     <TinderStack
                       leads={tinderLeads}
                       userServices={userServicesOffered}
-                      creditsRemaining={user?.credits_remaining || 0}
+                      creditsRemaining={remainingProposals}
                       onUnlock={async (leadId) => {
-                        // Usa la logica di sblocco esistente
-                        const remainingCredits = getAvailableCredits()
-                        if (remainingCredits <= 0) {
+                        // Usa la logica di generazione proposta esistente
+                        const currentProposals = getAvailableProposals()
+                        if (currentProposals <= 0) {
                           return { success: false }
                         }
 
@@ -2100,7 +2076,7 @@ export default function ClientDashboard() {
                           await refreshProfile()
                           setUserProfile(prev => prev ? {
                             ...prev,
-                            credits_remaining: Math.max(0, prev.credits_remaining - 1)
+                            proposals_remaining: Math.max(0, prev.proposals_remaining - 1)
                           } : null)
 
                           return {
@@ -2241,7 +2217,7 @@ export default function ClientDashboard() {
         onClose={() => setShowWelcomeModal(false)}
         onStartTour={() => startTour('dashboard', true)}
         userName={user?.email?.split('@')[0]}
-        creditsRemaining={user?.credits_remaining || 5}
+        creditsRemaining={remainingProposals}
       />
     </div>
   )
