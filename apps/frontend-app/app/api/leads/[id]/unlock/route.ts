@@ -1,12 +1,18 @@
 /**
- * API per sbloccare lead specifici - TrovaMi
- * Gestisce lo sblocco dei lead utilizzando i crediti dell'utente
- * Usato da: Dashboard per sbloccare contatti dei lead
+ * API per aprire proposte lead - TrovaMi
+ * Gestisce l'apertura dei dettagli lead usando il sistema PROPOSTE
+ *
+ * LOGICA PROPOSTE:
+ * - Lead già aperto: accesso gratuito (non consuma)
+ * - Prima proposta: SEMPRE gratuita per nuovi utenti
+ * - Piano Agency: proposte illimitate
+ * - Piano Starter: 25 proposte/mese
+ * - Piano Free: 1 proposta/settimana
  *
  * TRACKING KLAVIYO:
- * - Lead Unlocked: ogni sblocco
- * - Credits Low: quando crediti <= 3
- * - Credits Depleted: quando crediti = 0
+ * - Proposal Opened: ogni apertura
+ * - Proposals Low: quando proposte <= 3
+ * - Proposals Depleted: quando proposte = 0
  */
 
 export const dynamic = 'force-dynamic'
@@ -67,10 +73,10 @@ export async function POST(
       )
     }
 
-    // Verifica i crediti dell'utente e lo stato del piano usando il client admin
+    // Verifica dati utente e piano usando il client admin
     const { data: userData, error: userError } = await getSupabaseAdmin()
       .from('users')
-      .select('credits_remaining, status, plan')
+      .select('proposals_remaining, credits_remaining, first_proposal_used, status, plan')
       .eq('id', user.id)
       .single()
 
@@ -85,20 +91,22 @@ export async function POST(
     // Verifica che il piano sia attivo
     if (userData.status !== 'active') {
       return NextResponse.json(
-        { error: 'Piano non attivo. Riattiva il tuo piano per sbloccare i lead.' },
+        { error: 'Piano non attivo. Riattiva il tuo piano per continuare.' },
         { status: 403 }
       )
     }
 
-    // Verifica che ci siano crediti disponibili
-    if (userData.credits_remaining <= 0) {
-      return NextResponse.json(
-        { error: 'Crediti insufficienti. Ricarica il tuo piano per continuare.' },
-        { status: 403 }
-      )
-    }
+    // Ottieni info piano (per verificare se illimitato)
+    const { data: planData } = await getSupabaseAdmin()
+      .from('plans')
+      .select('is_unlimited, max_proposals')
+      .eq('name', userData.plan)
+      .single()
 
-    // Verifica se il lead è già stato sbloccato (controlla entrambe le tabelle)
+    const isUnlimited = planData?.is_unlimited || false
+    const isFirstProposal = !userData.first_proposal_used
+
+    // Verifica se il lead è già stato aperto (accesso gratuito, non consuma)
     const { data: existingUnlock } = await getSupabaseAdmin()
       .from('user_unlocked_leads')
       .select('id')
@@ -106,21 +114,50 @@ export async function POST(
       .eq('lead_id', leadId)
       .maybeSingle()
 
-    const { data: existingCrmEntry } = await getSupabaseAdmin()
-      .from('crm_entries')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('lead_id', leadId)
-      .maybeSingle()
+    // Se lead già aperto, restituisci i dati senza consumare proposte
+    if (existingUnlock) {
+      const { data: leadDetails } = await getSupabaseAdmin()
+        .from('leads')
+        .select('phone, email')
+        .eq('id', leadId)
+        .single()
 
-    if (existingUnlock || existingCrmEntry) {
-      return NextResponse.json(
-        { error: 'Lead già sbloccato' },
-        { status: 400 }
-      )
+      return NextResponse.json({
+        success: true,
+        already_opened: true,
+        message: 'Lead già aperto',
+        proposals_remaining: userData.proposals_remaining ?? userData.credits_remaining,
+        phone: leadDetails?.phone || null,
+        email: leadDetails?.email || null
+      })
     }
 
-    // Inizia transazione: sblocca il lead e decrementa i crediti
+    // Logica consumo proposte
+    let consumeProposal = true
+    let isFreeProposal = false
+
+    // Piano illimitato (Agency): sempre OK, non consuma
+    if (isUnlimited) {
+      consumeProposal = false
+      isFreeProposal = false
+    }
+    // Prima proposta: SEMPRE gratuita
+    else if (isFirstProposal) {
+      consumeProposal = false
+      isFreeProposal = true
+    }
+    // Verifica proposte disponibili
+    else {
+      const proposalsRemaining = userData.proposals_remaining ?? userData.credits_remaining ?? 0
+      if (proposalsRemaining <= 0) {
+        return NextResponse.json(
+          { error: 'Proposte esaurite. Passa a un piano superiore per continuare.' },
+          { status: 403 }
+        )
+      }
+    }
+
+    // Inizia transazione: sblocca il lead
     const { error: unlockError } = await getSupabaseAdmin()
       .from('user_unlocked_leads')
       .insert({
@@ -155,36 +192,59 @@ export async function POST(
       // Non bloccare l'operazione se l'inserimento CRM fallisce
     }
 
-    // Decrementa i crediti
-    const { error: creditError } = await getSupabaseAdmin()
-      .from('users')
-      .update({ 
-        credits_remaining: userData.credits_remaining - 1 
-      })
-      .eq('id', user.id)
+    // Calcola nuove proposte rimanenti
+    const currentProposals = userData.proposals_remaining ?? userData.credits_remaining ?? 0
+    let newProposalsRemaining = currentProposals
 
-    if (creditError) {
-      console.error('Errore nel decremento crediti:', creditError)
-      // Nota: in un sistema di produzione, dovresti rollback l'operazione di unlock
-      // Per ora procediamo senza rollback automatico
+    // Gestione proposte in base al tipo
+    if (isFreeProposal) {
+      // Prima proposta gratuita - marca come usata, non decrementa
+      const { error: firstProposalError } = await getSupabaseAdmin()
+        .from('users')
+        .update({ first_proposal_used: true })
+        .eq('id', user.id)
+
+      if (firstProposalError) {
+        console.error('Errore nel segnare prima proposta usata:', firstProposalError)
+      }
+    } else if (consumeProposal) {
+      // Decrementa proposte (solo se non è illimitato e non è prima proposta)
+      newProposalsRemaining = currentProposals - 1
+
+      const { error: proposalError } = await getSupabaseAdmin()
+        .from('users')
+        .update({
+          proposals_remaining: newProposalsRemaining,
+          // Aggiorna anche credits_remaining per retrocompatibilità
+          credits_remaining: newProposalsRemaining
+        })
+        .eq('id', user.id)
+
+      if (proposalError) {
+        console.error('Errore nel decremento proposte:', proposalError)
+      }
     }
+    // Se isUnlimited, non facciamo nulla (proposte illimitate)
 
     // Log dell'operazione per audit
     await getSupabaseAdmin()
       .from('credit_usage_logs')
       .insert({
         user_id: user.id,
-        action: 'unlock_lead',
-        credits_used: 1,
-        credits_remaining: userData.credits_remaining - 1,
-        details: { lead_id: leadId },
+        action: 'open_proposal',
+        credits_used: consumeProposal ? 1 : 0,
+        credits_remaining: isUnlimited ? -1 : newProposalsRemaining,
+        details: {
+          lead_id: leadId,
+          is_free_proposal: isFreeProposal,
+          is_unlimited: isUnlimited
+        },
         created_at: new Date().toISOString()
       })
 
     // =====================================================
     // TRACKING KLAVIYO - Asincrono, non blocca la risposta
     // =====================================================
-    const newCreditsRemaining = userData.credits_remaining - 1
 
     // Recupera dati lead per tracking E per restituire i contatti
     const { data: leadDetails } = await getSupabaseAdmin()
@@ -193,13 +253,13 @@ export async function POST(
       .eq('id', leadId)
       .single()
 
-    // Conta totale lead sbloccati dall'utente
-    const { count: totalUnlocked } = await getSupabaseAdmin()
+    // Conta totale proposte aperte dall'utente
+    const { count: totalOpened } = await getSupabaseAdmin()
       .from('user_unlocked_leads')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
 
-    // Track Lead Unlocked (fire and forget)
+    // Track Proposal Opened (fire and forget)
     klaviyoServer.trackLeadUnlocked(
       user.email!,
       {
@@ -210,33 +270,37 @@ export async function POST(
         city: leadDetails?.city
       },
       {
-        creditsRemaining: newCreditsRemaining,
-        totalUnlocked: (totalUnlocked || 0) + 1,
+        creditsRemaining: isUnlimited ? -1 : newProposalsRemaining,
+        totalUnlocked: (totalOpened || 0) + 1,
         plan: userData.plan || 'free'
       }
-    ).catch(err => console.error('Klaviyo trackLeadUnlocked error:', err))
+    ).catch(err => console.error('Klaviyo trackProposalOpened error:', err))
 
-    // Track Credits Low (quando <= 3, ma > 0)
-    if (newCreditsRemaining > 0 && newCreditsRemaining <= 3) {
+    // Track Proposals Low (quando <= 3, ma > 0) - solo per piani non illimitati
+    if (!isUnlimited && newProposalsRemaining > 0 && newProposalsRemaining <= 3) {
       klaviyoServer.trackCreditsLow(
         user.email!,
-        newCreditsRemaining,
+        newProposalsRemaining,
         userData.plan || 'free'
-      ).catch(err => console.error('Klaviyo trackCreditsLow error:', err))
+      ).catch(err => console.error('Klaviyo trackProposalsLow error:', err))
     }
 
-    // Track Credits Depleted (quando = 0)
-    if (newCreditsRemaining === 0) {
+    // Track Proposals Depleted (quando = 0) - solo per piani non illimitati
+    if (!isUnlimited && newProposalsRemaining === 0) {
       klaviyoServer.trackCreditsDepleted(
         user.email!,
         userData.plan || 'free'
-      ).catch(err => console.error('Klaviyo trackCreditsDepleted error:', err))
+      ).catch(err => console.error('Klaviyo trackProposalsDepleted error:', err))
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Lead sbloccato con successo',
-      credits_remaining: newCreditsRemaining,
+      message: isFreeProposal ? 'Prima proposta gratuita aperta!' : 'Proposta aperta con successo',
+      proposals_remaining: isUnlimited ? -1 : newProposalsRemaining,
+      is_free_proposal: isFreeProposal,
+      is_unlimited: isUnlimited,
+      // Retrocompatibilità
+      credits_remaining: isUnlimited ? -1 : newProposalsRemaining,
       phone: leadDetails?.phone || null,
       email: leadDetails?.email || null
     })

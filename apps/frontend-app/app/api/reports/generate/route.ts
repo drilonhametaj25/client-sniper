@@ -230,6 +230,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Recupera profilo utente per branding automatico
+    const { data: userProfile } = await getSupabaseAdmin()
+      .from('users')
+      .select('company_name, company_logo_url, company_phone, company_website, email')
+      .eq('id', user.id)
+      .single()
+
     // Verifica che l'utente abbia accesso al lead (deve averlo sbloccato)
     const { data: unlockedLead } = await getSupabaseAdmin()
       .from('user_unlocked_leads')
@@ -308,15 +315,46 @@ export async function POST(request: NextRequest) {
     const issues = generateIssues(scores, details)
     const opportunities = generateOpportunities(scores, details)
 
+    // Crea branding da profilo utente (priorità su default)
+    const userBranding: Partial<BrandingConfig> = {}
+
+    if (userProfile?.company_name) {
+      userBranding.companyName = userProfile.company_name
+    }
+    if (userProfile?.company_logo_url) {
+      userBranding.companyLogo = userProfile.company_logo_url
+    }
+    if (userProfile?.company_phone) {
+      userBranding.contactPhone = userProfile.company_phone
+    }
+    if (userProfile?.company_website) {
+      userBranding.website = userProfile.company_website
+    }
+    if (userProfile?.email) {
+      userBranding.contactEmail = userProfile.email
+    }
+    // Footer con nome azienda utente (senza menzione TrovaMi)
+    if (userProfile?.company_name) {
+      userBranding.footerText = `© ${new Date().getFullYear()} ${userProfile.company_name}`
+    }
+
+    // Merge branding: default → profilo utente → custom request
+    const finalBranding: BrandingConfig = {
+      ...defaultBranding,
+      ...userBranding,
+      ...customBranding
+    } as BrandingConfig
+
     // Prepara i dati per il report
     const reportData: AuditReportData = {
       metadata: {
         reportTitle: 'Audit Report Digitale',
         reportDate: new Date(),
         reportId: `RPT-${leadId.slice(0, 8).toUpperCase()}`,
-        preparedBy: 'TrovaMi'
+        preparedBy: finalBranding.companyName, // Usa nome azienda utente
+        preparedFor: lead.business_name || lead.name
       },
-      branding: { ...defaultBranding, ...customBranding } as BrandingConfig,
+      branding: finalBranding,
       businessInfo: {
         name: lead.business_name || lead.name || 'Azienda',
         website: lead.website || lead.url || 'N/A',

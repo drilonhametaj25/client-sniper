@@ -1,13 +1,11 @@
 /**
- * Pagina Onboarding
+ * Pagina Onboarding V2
  *
- * Flow di 6 step per configurare preferenze utente:
- * 1. Tipo utente (Freelancer/Agency/Consultant)
- * 2. Servizi offerti + skill level
- * 3. Budget range preferito
- * 4. Location preferences
- * 5. Industry preferences
- * 6. Capacity settimanale
+ * Flow semplificato a 4 step:
+ * 1. Benvenuto (value proposition)
+ * 2. Specializzazione (cosa offri)
+ * 3. Zona (dove lavori)
+ * 4. Branding (opzionale - personalizza proposte)
  *
  * @file apps/frontend-app/app/onboarding/page.tsx
  */
@@ -18,171 +16,79 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import {
-  OnboardingFormData,
-  OnboardingStep1Data,
-  OnboardingStep2Data,
-  OnboardingStep3Data,
-  OnboardingStep4Data,
-  OnboardingStep5Data,
-  OnboardingStep6Data,
-  ONBOARDING_STEPS
-} from '@/lib/types/onboarding'
+  INITIAL_ONBOARDING_DATA,
+  ONBOARDING_STEPS,
+  type OnboardingV2Data
+} from '@/lib/types/onboarding-v2'
 
-// Step Components
-import StepUserType from './components/StepUserType'
-import StepServices from './components/StepServices'
-import StepBudget from './components/StepBudget'
-import StepLocation from './components/StepLocation'
-import StepIndustries from './components/StepIndustries'
-import StepCapacity from './components/StepCapacity'
-import OnboardingProgress from './components/OnboardingProgress'
-
-// Default form data
-const DEFAULT_FORM_DATA: OnboardingFormData = {
-  step1: { userType: 'freelancer' },
-  step2: { services: [], skillLevels: {} },
-  step3: { budgetMin: 500, budgetMax: 5000 },
-  step4: { cities: [], regions: [], isRemoteOnly: false, radiusKm: 50 },
-  step5: { preferredIndustries: [], excludedIndustries: [] },
-  step6: { weeklyCapacity: 5, projectsInProgress: 0 }
-}
+// Step Components (V2)
+import StepWelcome from './components/StepWelcome'
+import StepSpecialization from './components/StepSpecialization'
+import StepLocationSimple from './components/StepLocationSimple'
+import StepBranding from './components/StepBranding'
 
 export default function OnboardingPage() {
   const router = useRouter()
   const { user, getAccessToken, refreshProfile } = useAuth()
 
   const [currentStep, setCurrentStep] = useState(1)
-  const [formData, setFormData] = useState<OnboardingFormData>(DEFAULT_FORM_DATA)
-  const [isLoading, setIsLoading] = useState(false)
+  const [formData, setFormData] = useState<OnboardingV2Data>(INITIAL_ONBOARDING_DATA)
+  const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const totalSteps = ONBOARDING_STEPS.length
 
-  // Load existing profile data on mount
+  // Check if onboarding already completed
   useEffect(() => {
-    loadExistingProfile()
+    checkOnboardingStatus()
   }, [user])
 
   /**
-   * Carica profilo esistente se presente
+   * Verifica se l'onboarding è già completato
    */
-  const loadExistingProfile = async () => {
-    if (!user) return
+  const checkOnboardingStatus = async () => {
+    if (!user) {
+      setIsLoading(false)
+      return
+    }
 
-    setIsLoading(true)
     try {
-      const token = getAccessToken()
-      if (!token) return
-
-      const response = await fetch('/api/onboarding/profile', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
+      const response = await fetch('/api/onboarding/v2')
 
       if (response.ok) {
-        const { data } = await response.json()
+        const { completed, data } = await response.json()
 
-        // Pre-populate form with existing data
-        setFormData({
-          step1: { userType: data.userType || 'freelancer' },
-          step2: {
-            services: data.servicesOffered || [],
-            skillLevels: data.serviceSkillLevels || {}
-          },
-          step3: {
-            budgetMin: data.preferredMinBudget || 500,
-            budgetMax: data.preferredMaxBudget || 5000
-          },
-          step4: {
-            cities: data.preferredCities || [],
-            regions: data.preferredRegions || [],
-            isRemoteOnly: data.isRemoteOnly || false,
-            radiusKm: data.locationRadiusKm || 50
-          },
-          step5: {
-            preferredIndustries: data.preferredIndustries || [],
-            excludedIndustries: data.excludedIndustries || []
-          },
-          step6: {
-            weeklyCapacity: data.weeklyCapacity || 5,
-            projectsInProgress: data.projectsInProgress || 0
-          }
-        })
-
-        // Resume from last step if not completed
-        if (data.onboardingCurrentStep && !data.onboardingCompletedAt) {
-          setCurrentStep(data.onboardingCurrentStep)
+        // Se già completato, redirect alla dashboard
+        if (completed) {
+          router.push('/dashboard')
+          return
         }
 
-        // If already completed, redirect to dashboard
-        if (data.onboardingCompletedAt) {
-          router.push('/dashboard')
+        // Pre-popola con dati esistenti se presenti
+        if (data) {
+          setFormData(prev => ({
+            ...prev,
+            ...data
+          }))
         }
       }
     } catch (err) {
-      console.error('Errore caricamento profilo:', err)
+      console.error('Errore verifica onboarding:', err)
     } finally {
       setIsLoading(false)
     }
   }
 
   /**
-   * Salva step corrente
+   * Aggiorna i dati del form
    */
-  const saveCurrentStep = async () => {
-    const token = getAccessToken()
-    if (!token) return
-
-    setIsSaving(true)
-    try {
-      // Prepara payload basato su step corrente
-      let payload: Record<string, any> = {
-        onboardingCurrentStep: currentStep
-      }
-
-      switch (currentStep) {
-        case 1:
-          payload.userType = formData.step1.userType
-          break
-        case 2:
-          payload.servicesOffered = formData.step2.services
-          payload.serviceSkillLevels = formData.step2.skillLevels
-          break
-        case 3:
-          payload.preferredMinBudget = formData.step3.budgetMin
-          payload.preferredMaxBudget = formData.step3.budgetMax
-          break
-        case 4:
-          payload.preferredCities = formData.step4.cities
-          payload.preferredRegions = formData.step4.regions
-          payload.isRemoteOnly = formData.step4.isRemoteOnly
-          payload.locationRadiusKm = formData.step4.radiusKm
-          break
-        case 5:
-          payload.preferredIndustries = formData.step5.preferredIndustries
-          payload.excludedIndustries = formData.step5.excludedIndustries
-          break
-        case 6:
-          payload.weeklyCapacity = formData.step6.weeklyCapacity
-          payload.projectsInProgress = formData.step6.projectsInProgress
-          break
-      }
-
-      await fetch('/api/onboarding/profile', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      })
-    } catch (err) {
-      console.error('Errore salvataggio step:', err)
-    } finally {
-      setIsSaving(false)
-    }
+  const handleUpdate = (updates: Partial<OnboardingV2Data>) => {
+    setFormData(prev => ({
+      ...prev,
+      ...updates
+    }))
+    setError(null)
   }
 
   /**
@@ -191,19 +97,11 @@ export default function OnboardingPage() {
   const handleNext = async () => {
     setError(null)
 
-    // Validazione step corrente
-    if (!validateCurrentStep()) {
-      return
-    }
-
-    // Salva step corrente
-    await saveCurrentStep()
-
-    if (currentStep < totalSteps) {
-      setCurrentStep(prev => prev + 1)
-    } else {
-      // Completa onboarding
+    // Se siamo all'ultimo step, salva tutto
+    if (currentStep === totalSteps) {
       await completeOnboarding()
+    } else {
+      setCurrentStep(prev => prev + 1)
     }
   }
 
@@ -217,110 +115,50 @@ export default function OnboardingPage() {
   }
 
   /**
-   * Salta onboarding
+   * Salta onboarding (va alla dashboard senza salvare)
    */
-  const handleSkip = async () => {
-    const token = getAccessToken()
-    if (!token) {
-      router.push('/dashboard')
-      return
-    }
-
-    try {
-      await fetch('/api/onboarding/profile', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ skipOnboarding: true })
-      })
-    } catch (err) {
-      console.error('Errore skip onboarding:', err)
-    }
-
+  const handleSkip = () => {
     router.push('/dashboard')
   }
 
   /**
-   * Completa onboarding
+   * Completa onboarding salvando tutti i dati
    */
   const completeOnboarding = async () => {
-    const token = getAccessToken()
-    if (!token) {
-      router.push('/dashboard')
-      return
-    }
+    setIsSaving(true)
+    setError(null)
 
-    setIsLoading(true)
     try {
-      // Salva ultimo step
-      await saveCurrentStep()
-
-      // Marca come completato
-      await fetch('/api/onboarding/profile', {
-        method: 'PUT',
+      const response = await fetch('/api/onboarding/v2', {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ completeOnboarding: true })
+        body: JSON.stringify(formData)
       })
 
-      // Refresh user profile
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Errore durante il salvataggio')
+      }
+
+      // Refresh profilo utente
       await refreshProfile()
 
-      // Redirect to dashboard
-      router.push('/dashboard?onboarding=complete')
+      // Redirect alla dashboard con messaggio di benvenuto
+      router.push('/dashboard?welcome=true')
     } catch (err) {
       console.error('Errore completamento onboarding:', err)
-      setError('Errore nel completamento. Riprova.')
-    } finally {
-      setIsLoading(false)
+      setError(err instanceof Error ? err.message : 'Errore sconosciuto')
+      setIsSaving(false)
     }
-  }
-
-  /**
-   * Validazione step corrente
-   */
-  const validateCurrentStep = (): boolean => {
-    switch (currentStep) {
-      case 2:
-        // Almeno un servizio selezionato
-        if (formData.step2.services.length === 0) {
-          setError('Seleziona almeno un servizio che offri')
-          return false
-        }
-        break
-      case 3:
-        // Budget min < max
-        if (formData.step3.budgetMin >= formData.step3.budgetMax) {
-          setError('Il budget minimo deve essere inferiore al massimo')
-          return false
-        }
-        break
-    }
-    return true
-  }
-
-  /**
-   * Aggiorna dati step
-   */
-  const updateStepData = <K extends keyof OnboardingFormData>(
-    step: K,
-    data: OnboardingFormData[K]
-  ) => {
-    setFormData(prev => ({
-      ...prev,
-      [step]: data
-    }))
-    setError(null)
   }
 
   // Loading state
-  if (isLoading && currentStep === 1) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">Caricamento...</p>
@@ -329,123 +167,103 @@ export default function OnboardingPage() {
     )
   }
 
+  // Componenti comuni props
+  const stepProps = {
+    data: formData,
+    onUpdate: handleUpdate,
+    onNext: handleNext,
+    onBack: handleBack,
+    onSkip: handleSkip
+  }
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-8">
-      <div className="w-full max-w-2xl">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Benvenuto in TrovaMi!
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Configura il tuo profilo per ricevere lead personalizzati
-          </p>
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      {/* Progress bar (solo dopo step 1) */}
+      {currentStep > 1 && (
+        <div className="w-full bg-gray-200 dark:bg-gray-700 h-1">
+          <div
+            className="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-500"
+            style={{ width: `${((currentStep - 1) / (totalSteps - 1)) * 100}%` }}
+          />
         </div>
+      )}
 
-        {/* Progress */}
-        <OnboardingProgress
-          currentStep={currentStep}
-          totalSteps={totalSteps}
-          steps={ONBOARDING_STEPS}
-        />
+      {/* Step indicator (solo dopo step 1) */}
+      {currentStep > 1 && (
+        <div className="py-4 px-6 flex items-center justify-center gap-2">
+          {ONBOARDING_STEPS.slice(1).map((step, idx) => {
+            const stepNum = idx + 2
+            const isActive = currentStep === stepNum
+            const isCompleted = currentStep > stepNum
 
-        {/* Step Content */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-8 mb-6">
+            return (
+              <div key={step.id} className="flex items-center">
+                <div
+                  className={`
+                    w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all
+                    ${isActive
+                      ? 'bg-blue-600 text-white'
+                      : isCompleted
+                        ? 'bg-green-500 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                    }
+                  `}
+                >
+                  {isCompleted ? (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    stepNum - 1
+                  )}
+                </div>
+
+                {idx < ONBOARDING_STEPS.length - 2 && (
+                  <div
+                    className={`
+                      w-12 h-0.5 mx-1
+                      ${currentStep > stepNum
+                        ? 'bg-green-500'
+                        : 'bg-gray-200 dark:bg-gray-700'
+                      }
+                    `}
+                  />
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className="flex-1 flex items-center justify-center py-8 px-4">
+        <div className="w-full max-w-2xl">
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl">
+              <p className="text-sm text-red-600 dark:text-red-400 text-center">{error}</p>
             </div>
           )}
 
-          {/* Steps */}
-          {currentStep === 1 && (
-            <StepUserType
-              data={formData.step1}
-              onChange={(data) => updateStepData('step1', data)}
-            />
-          )}
-
-          {currentStep === 2 && (
-            <StepServices
-              data={formData.step2}
-              onChange={(data) => updateStepData('step2', data)}
-            />
-          )}
-
-          {currentStep === 3 && (
-            <StepBudget
-              data={formData.step3}
-              onChange={(data) => updateStepData('step3', data)}
-            />
-          )}
-
-          {currentStep === 4 && (
-            <StepLocation
-              data={formData.step4}
-              onChange={(data) => updateStepData('step4', data)}
-            />
-          )}
-
-          {currentStep === 5 && (
-            <StepIndustries
-              data={formData.step5}
-              onChange={(data) => updateStepData('step5', data)}
-            />
-          )}
-
-          {currentStep === 6 && (
-            <StepCapacity
-              data={formData.step6}
-              onChange={(data) => updateStepData('step6', data)}
-            />
-          )}
-        </div>
-
-        {/* Navigation */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={handleBack}
-            disabled={currentStep === 1 || isLoading}
-            className={`px-6 py-3 rounded-lg font-medium transition-all ${
-              currentStep === 1
-                ? 'text-gray-400 cursor-not-allowed'
-                : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
-          >
-            Indietro
-          </button>
-
-          <div className="flex items-center gap-3">
-            {/* Skip button (only on optional steps) */}
-            {ONBOARDING_STEPS[currentStep - 1]?.isOptional && (
-              <button
-                onClick={handleSkip}
-                disabled={isLoading}
-                className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-              >
-                Salta per ora
-              </button>
-            )}
-
-            <button
-              onClick={handleNext}
-              disabled={isLoading || isSaving}
-              className="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-medium hover:from-blue-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {isLoading || isSaving ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Salvataggio...
-                </>
-              ) : currentStep === totalSteps ? (
-                'Completa'
-              ) : (
-                'Avanti'
-              )}
-            </button>
+          {/* Step Content */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-10">
+            {currentStep === 1 && <StepWelcome {...stepProps} />}
+            {currentStep === 2 && <StepSpecialization {...stepProps} />}
+            {currentStep === 3 && <StepLocationSimple {...stepProps} />}
+            {currentStep === 4 && <StepBranding {...stepProps} />}
           </div>
         </div>
+      </div>
+
+      {/* Footer */}
+      <div className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+        Hai bisogno di aiuto?{' '}
+        <a
+          href="mailto:support@trovami.pro"
+          className="text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          Contattaci
+        </a>
       </div>
     </div>
   )

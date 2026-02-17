@@ -46,11 +46,20 @@ interface LeadData {
   security_score?: number
 }
 
+interface UserProfile {
+  company_name?: string
+  company_logo_url?: string
+  company_phone?: string
+  company_website?: string
+  email?: string
+}
+
 interface ReportPreviewProps {
   lead: LeadData
   token: string
   onDownloadComplete?: () => void
   customBranding?: Partial<BrandingConfig>
+  userProfile?: UserProfile
 }
 
 const getScoreColor = (score: number) => {
@@ -81,12 +90,28 @@ const ScoreItem = ({ label, score, icon: Icon }: { label: string; score: number;
   </div>
 )
 
-export default function ReportPreview({ lead, token, onDownloadComplete, customBranding }: ReportPreviewProps) {
+export default function ReportPreview({ lead, token, onDownloadComplete, customBranding, userProfile }: ReportPreviewProps) {
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloadStatus, setDownloadStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
   const [showBrandingOptions, setShowBrandingOptions] = useState(false)
-  const [branding, setBranding] = useState<Partial<BrandingConfig>>(customBranding || {})
+
+  // Inizializza branding con dati utente se disponibili
+  const [branding, setBranding] = useState<Partial<BrandingConfig>>(() => {
+    if (customBranding && Object.keys(customBranding).length > 0) {
+      return customBranding
+    }
+    if (userProfile) {
+      const userBranding: Partial<BrandingConfig> = {}
+      if (userProfile.company_name) userBranding.companyName = userProfile.company_name
+      if (userProfile.company_logo_url) userBranding.companyLogo = userProfile.company_logo_url
+      if (userProfile.company_phone) userBranding.contactPhone = userProfile.company_phone
+      if (userProfile.company_website) userBranding.website = userProfile.company_website
+      if (userProfile.email) userBranding.contactEmail = userProfile.email
+      return userBranding
+    }
+    return {}
+  })
 
   const businessName = lead.business_name || lead.name || 'Azienda'
   const website = lead.website || lead.url || 'N/A'

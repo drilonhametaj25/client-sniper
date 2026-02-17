@@ -97,13 +97,14 @@ export interface AuditReportData {
   opportunities: OpportunityItem[]
 }
 
-// Default branding for TrovaMi
+// Default branding generico (senza menzione TrovaMi)
+// L'API sovrascriverà con i dati del profilo utente se disponibili
 export const defaultBranding: BrandingConfig = {
-  companyName: 'TrovaMi',
+  companyName: 'Studio Digitale',
   primaryColor: '#2563EB', // Blue 600
   secondaryColor: '#1E40AF', // Blue 800
   accentColor: '#F59E0B', // Amber 500
-  contactEmail: 'info@trovami.it',
-  website: 'https://trovami.it',
-  footerText: 'Report generato da TrovaMi - La piattaforma per trovare clienti online'
+  contactEmail: '',
+  website: '',
+  footerText: '' // Verrà generato dinamicamente con il nome azienda utente
 }

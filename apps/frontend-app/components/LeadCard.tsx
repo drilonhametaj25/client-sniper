@@ -1,26 +1,21 @@
 /**
- * LeadCard - Componente principale per visualizzare un lead
+ * LeadCard - Componente per visualizzare opportunità commerciali
+ *
+ * NUOVO APPROCCIO PROPOSTE:
+ * - Info base SEMPRE visibili: nome, città, categoria, problema principale, score
+ * - Nessun lucchetto - parliamo di "proposte" non di "lead bloccati"
+ * - CTA: "Vedi Proposta" invece di "Sblocca Lead"
+ * - Problemi tradotti in linguaggio umano
  *
  * Due versioni:
- * - LeadCard (expanded): Card completa con tutte le info
- * - LeadCardCompact: Versione compressa per scan veloce
- *
- * Include TUTTE le info essenziali organizzate bene:
- * - Header con criticità, location, status
- * - Business info con score prominente
- * - Dati disponibili PRIMA dello sblocco
- * - Problemi identificati
- * - Data scansione + potenziale budget
- * - Disclaimer sempre visibile
- * - Actions
+ * - LeadCard (expanded): Card completa
+ * - LeadCardCompact: Versione compressa
  */
 
 'use client'
 
 import { useState } from 'react'
 import {
-  Lock,
-  Unlock,
   ExternalLink,
   Phone,
   Mail,
@@ -37,7 +32,9 @@ import {
   Archive,
   CheckCircle,
   Clock,
-  Zap
+  Zap,
+  FileText,
+  TrendingUp
 } from 'lucide-react'
 import {
   getCriticalityConfig,
@@ -60,6 +57,12 @@ import {
 import { detectServices } from '@/lib/utils/service-detection'
 import { calculateMatch, getMatchColor, getMatchIcon } from '@/lib/utils/match-calculation'
 import { SERVICE_CONFIGS, type ServiceType, formatBudget } from '@/lib/types/services'
+import {
+  extractProblemKeysFromAnalysis,
+  getMainProblem,
+  translateProblems,
+  SEVERITY_COLORS
+} from '@/lib/utils/problem-translator'
 
 export interface LeadCardProps {
   lead: {
@@ -179,29 +182,46 @@ export default function LeadCard({
           </span>
         )}
 
-        {/* Unlock status - pushed to right */}
+        {/* Status proposta - pushed to right */}
         <span className={`ml-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
           isUnlocked
             ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+            : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
         }`}>
           {isUnlocked ? (
-            <><Unlock className="w-3 h-3" /> Sbloccato</>
+            <><CheckCircle className="w-3 h-3" /> Proposta aperta</>
           ) : (
-            <><Lock className="w-3 h-3" /> Bloccato</>
+            <><FileText className="w-3 h-3" /> Proposta disponibile</>
           )}
         </span>
       </div>
 
-      {/* ===== BUSINESS INFO ROW ===== */}
+      {/* ===== BUSINESS INFO ROW - SEMPRE VISIBILE ===== */}
       <div className="flex justify-between items-start p-4 pb-3">
         <div className="flex-1 min-w-0 pr-4">
+          {/* Nome azienda SEMPRE visibile */}
           <h3 className="text-xl font-bold text-gray-900 dark:text-white truncate">
-            {isUnlocked ? (lead.business_name || 'Nome non disponibile') : (lead.category || 'Azienda')}
+            {lead.business_name || lead.category || 'Opportunità'}
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            {lead.category || 'Categoria non specificata'}
+            {lead.category || 'Attività locale'}
           </p>
+
+          {/* Problema principale in linguaggio umano - SEMPRE VISIBILE */}
+          {(() => {
+            const problemKeys = extractProblemKeysFromAnalysis(analysis)
+            const mainProblem = getMainProblem(problemKeys)
+            if (mainProblem) {
+              const colors = SEVERITY_COLORS[mainProblem.severity]
+              return (
+                <div className={`mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${colors.bg} ${colors.text}`}>
+                  <span>{mainProblem.emoji}</span>
+                  <span className="font-medium">{mainProblem.title}</span>
+                </div>
+              )
+            }
+            return null
+          })()}
         </div>
 
         {/* Score prominente */}
@@ -209,13 +229,16 @@ export default function LeadCard({
           <div className={`text-3xl font-bold ${criticality.textColor}`}>
             {lead.score}
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">/100</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">opportunità</div>
           {/* Progress bar */}
           <div className="w-20 h-2 bg-gray-200 dark:bg-gray-700 rounded-full mt-1 overflow-hidden">
             <div
               className={`h-full ${getScoreBarColor(lead.score)} transition-all duration-300`}
-              style={{ width: `${lead.score}%` }}
+              style={{ width: `${100 - lead.score}%` }}
             />
+          </div>
+          <div className="text-xs text-gray-400 mt-1">
+            {lead.score <= 30 ? 'Alta' : lead.score <= 60 ? 'Media' : 'Bassa'}
           </div>
         </div>
       </div>
@@ -395,13 +418,13 @@ export default function LeadCard({
       <div className="flex gap-2 p-4 pt-0">
         {isUnlocked ? (
           <>
-            {/* Primary CTA - Solo se sbloccato */}
+            {/* Primary CTA - Proposta già aperta */}
             <button
               onClick={() => onView?.(lead)}
               className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors"
             >
-              <Eye className="w-4 h-4" />
-              Analisi Completa
+              <FileText className="w-4 h-4" />
+              Vedi Proposta Completa
             </button>
 
             {/* Call CTA */}
@@ -427,13 +450,13 @@ export default function LeadCard({
             )}
           </>
         ) : (
-          /* Unlock CTA - Unico pulsante quando locked */
+          /* CTA per aprire proposta - usa 1 proposta */
           <button
             onClick={() => onUnlock?.(lead)}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl transition-colors"
+            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm font-medium rounded-xl transition-colors shadow-lg"
           >
-            <Unlock className="w-4 h-4" />
-            Sblocca per vedere analisi e contatti (1 ⚡)
+            <TrendingUp className="w-4 h-4" />
+            Apri Proposta Commerciale
           </button>
         )}
 
@@ -586,11 +609,11 @@ export function LeadCardCompact({
           {isUnlocked ? (lead.business_name?.charAt(0) || '?') : lead.score}
         </div>
 
-        {/* Name & Category */}
+        {/* Name & Category - SEMPRE VISIBILE */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-              {isUnlocked ? (lead.business_name || 'Azienda') : (lead.category || 'Lead')}
+              {lead.business_name || lead.category || 'Opportunità'}
             </h3>
             {isNew && (
               <span className="text-xs px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded">
@@ -623,15 +646,15 @@ export function LeadCardCompact({
             onClick={() => onView?.(lead)}
             className="flex-shrink-0 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors font-medium"
           >
-            Dettagli →
+            Proposta →
           </button>
         ) : (
           <button
             onClick={() => onUnlock?.(lead)}
-            className="flex-shrink-0 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors inline-flex items-center gap-1"
+            className="flex-shrink-0 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm font-medium rounded-lg transition-colors inline-flex items-center gap-1"
           >
-            <Unlock className="w-3.5 h-3.5" />
-            Sblocca
+            <FileText className="w-3.5 h-3.5" />
+            Apri
           </button>
         )}
       </div>

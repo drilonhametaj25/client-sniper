@@ -11,8 +11,6 @@ import { useAuth } from '@/contexts/AuthContext'
 import { ArrowRight, Target, BarChart3, Users, CheckCircle, Zap, Shield, Globe, Menu, X } from 'lucide-react'
 import NewsletterForm from '@/components/NewsletterForm'
 import StructuredFAQ from '@/components/StructuredFAQ'
-import LeadCostComparison from '@/components/LeadCostComparison'
-import UpgradeUrgencyBanner from '@/components/UpgradeUrgencyBanner'
 import NewPlanSelector from '@/components/NewPlanSelector'
 
 export default function HomePage() {
@@ -229,19 +227,15 @@ export default function HomePage() {
               </button>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900 mb-2">5000+</div>
-                <div className="text-gray-600">Audit Completati</div>
-              </div>
+            {/* Stats - Solo dati reali e verificabili */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-8 max-w-2xl mx-auto">
               <div className="text-center">
                 <div className="text-3xl font-bold text-gray-900 mb-2">78+</div>
                 <div className="text-gray-600">Parametri Analizzati</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900 mb-2">24/7</div>
-                <div className="text-gray-600">Monitoraggio Attivo</div>
+                <div className="text-3xl font-bold text-gray-900 mb-2">1 min</div>
+                <div className="text-gray-600">Per Ogni Analisi</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-gray-900 mb-2">0€</div>
@@ -252,14 +246,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Upgrade Urgency Banner for visitors */}
-      {!user && (
-        <div className="bg-gradient-to-r from-orange-50 to-red-50 border-t border-b border-orange-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <UpgradeUrgencyBanner variant="full" />
-          </div>
-        </div>
-      )}
 
       {/* Features Section */}
       <section id="features" className="py-24 bg-gradient-to-b from-gray-50 to-white">
@@ -436,24 +422,24 @@ export default function HomePage() {
 
           <div className="mt-12 text-center">
             <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-8 text-white">
-              <h3 className="text-2xl font-bold mb-4">🚀 Massimizza le Tue Conversioni</h3>
+              <h3 className="text-2xl font-bold mb-4">Proposte Pronte da Inviare</h3>
               <p className="text-lg mb-6 text-purple-100">
-                Gli utenti PRO ricevono per ogni lead una <strong>lista personalizzata di servizi consigliati</strong> 
-                con prezzi ottimizzati per il mercato locale, aumentando il tasso di conversione del 340%
+                Per ogni opportunità ricevi una <strong>proposta commerciale completa</strong> con
+                analisi tecnica dettagliata, problemi identificati e prezzi suggeriti per il mercato italiano
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link 
-                  href="/register" 
+                <Link
+                  href="/register"
                   className="inline-flex items-center px-6 py-3 bg-white hover:bg-gray-100 text-purple-600 font-semibold rounded-xl transition-all duration-300"
                 >
-                  Upgrading a PRO
+                  Prova Gratis
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Link>
-                <Link 
-                  href="/digital-services" 
+                <Link
+                  href="/tools/public-scan"
                   className="inline-flex items-center px-6 py-3 bg-purple-500 hover:bg-purple-400 text-white font-semibold rounded-xl transition-all duration-300"
                 >
-                  Esplora Catalogo
+                  Analizza un Sito Ora
                 </Link>
               </div>
             </div>
@@ -469,20 +455,6 @@ export default function HomePage() {
         redirectToRegister={true}
       />
 
-      {/* Lead Cost Comparison */}
-      <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Confronto <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-blue-600">Costi per Lead</span>
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Vedi quanto puoi risparmiare rispetto ai metodi tradizionali
-            </p>
-          </div>
-          <LeadCostComparison variant="full" />
-        </div>
-      </section>
 
       {/* CTA Section */}
       <section className="py-24 relative overflow-hidden">
@@ -516,7 +488,7 @@ export default function HomePage() {
 
             {/* Trust indicators */}
             <div className="mt-16 pt-12 border-t border-white/20">
-              <p className="text-blue-100 mb-8">Unisciti a centinaia di agenzie e freelancer che hanno già trovato clienti con TrovaMi</p>
+              <p className="text-blue-100 mb-8">Usato da freelancer e agenzie web in tutta Italia</p>
               <div className="flex flex-wrap justify-center items-center gap-8 opacity-60">
                 <div className="flex items-center space-x-2">
                   <Shield className="w-5 h-5 text-white" />
@@ -552,7 +524,7 @@ export default function HomePage() {
           <div className="max-w-4xl mx-auto">
             <NewsletterForm
               title="Ricevi Lead Gratuiti ogni Mese"
-              description="Unisciti a oltre 500+ agenzie e freelancer che ricevono lead qualificati e strategie di acquisizione clienti direttamente nella loro inbox"
+              description="Iscriviti alla newsletter per ricevere lead qualificati e strategie di acquisizione clienti direttamente nella tua inbox"
               source="homepage_cta"
               className="mx-auto"
             />
