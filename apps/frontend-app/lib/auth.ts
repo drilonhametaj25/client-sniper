@@ -267,7 +267,7 @@ export async function signIn(email: string, password: string) {
 export async function signOut() {
   try {
     const { error } = await supabase.auth.signOut()
-    
+
     if (error) {
       throw error
     }
@@ -276,6 +276,46 @@ export async function signOut() {
   } catch (error) {
     console.error('Errore logout:', error)
     return { error }
+  }
+}
+
+// Funzione per richiedere reset password
+export async function requestPasswordReset(email: string) {
+  try {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.trovami.pro'
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${siteUrl}/reset-password`
+    })
+
+    if (error) {
+      console.error('Errore richiesta reset password:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (error: any) {
+    console.error('Errore requestPasswordReset:', error)
+    return { success: false, error: error.message || 'Errore durante la richiesta' }
+  }
+}
+
+// Funzione per aggiornare la password (dopo aver verificato il token)
+export async function updatePassword(newPassword: string) {
+  try {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    })
+
+    if (error) {
+      console.error('Errore aggiornamento password:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (error: any) {
+    console.error('Errore updatePassword:', error)
+    return { success: false, error: error.message || 'Errore durante l\'aggiornamento' }
   }
 }
 

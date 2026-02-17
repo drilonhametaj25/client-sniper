@@ -147,6 +147,112 @@ Hai domande? Rispondi a questa email!
     }
   }
 
+  // Template email di reset password
+  static getPasswordResetEmailTemplate(resetUrl: string, userEmail: string): EmailTemplate {
+    return {
+      subject: '🔐 Reimposta la tua password TrovaMi',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Reset Password TrovaMi</title>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden; margin-top: 40px;">
+
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">
+                🎯 TrovaMi
+              </h1>
+              <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0; font-size: 16px;">
+                Reset della password
+              </p>
+            </div>
+
+            <!-- Content -->
+            <div style="padding: 40px 30px;">
+              <h2 style="color: #1a202c; margin: 0 0 20px 0; font-size: 24px; font-weight: 600;">
+                Hai richiesto di reimpostare la password 🔐
+              </h2>
+
+              <p style="color: #4a5568; line-height: 1.6; margin: 0 0 20px 0; font-size: 16px;">
+                Abbiamo ricevuto una richiesta di reset password per il tuo account TrovaMi associato a <strong>${userEmail}</strong>.
+              </p>
+
+              <p style="color: #4a5568; line-height: 1.6; margin: 0 0 30px 0; font-size: 16px;">
+                Clicca sul pulsante qui sotto per creare una nuova password:
+              </p>
+
+              <!-- CTA Button -->
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${resetUrl}"
+                   style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                          color: white;
+                          text-decoration: none;
+                          padding: 16px 32px;
+                          border-radius: 8px;
+                          font-weight: 600;
+                          font-size: 16px;
+                          display: inline-block;
+                          box-shadow: 0 4px 14px rgba(102, 126, 234, 0.3);">
+                  🔐 Reimposta Password
+                </a>
+              </div>
+
+              <!-- Security Notice -->
+              <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 30px 0;">
+                <p style="color: #92400e; margin: 0; font-size: 14px;">
+                  <strong>⚠️ Nota di sicurezza:</strong> Questo link scade tra 1 ora. Se non hai richiesto tu il reset della password, ignora questa email.
+                </p>
+              </div>
+
+              <p style="color: #718096; line-height: 1.6; margin: 20px 0 0 0; font-size: 14px;">
+                Se il pulsante non funziona, copia e incolla questo link nel tuo browser:<br>
+                <a href="${resetUrl}" style="color: #667eea; word-break: break-all;">${resetUrl}</a>
+              </p>
+            </div>
+
+            <!-- Footer -->
+            <div style="background-color: #f7fafc; padding: 25px 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #718096; margin: 0; font-size: 14px;">
+                Hai problemi? Rispondi a questa email, siamo qui per aiutarti! 💬
+              </p>
+              <p style="color: #a0aec0; margin: 10px 0 0 0; font-size: 12px;">
+                © 2025 TrovaMi. Tutti i diritti riservati.
+              </p>
+            </div>
+          </div>
+
+          <!-- Mobile optimization -->
+          <style>
+            @media only screen and (max-width: 600px) {
+              .container { margin: 10px !important; }
+              .content { padding: 20px !important; }
+              .header { padding: 30px 20px !important; }
+            }
+          </style>
+        </body>
+        </html>
+      `,
+      text: `
+Hai richiesto di reimpostare la password 🔐
+
+Abbiamo ricevuto una richiesta di reset password per il tuo account TrovaMi associato a ${userEmail}.
+
+Per creare una nuova password, clicca qui: ${resetUrl}
+
+⚠️ Nota di sicurezza: Questo link scade tra 1 ora. Se non hai richiesto tu il reset della password, ignora questa email.
+
+Hai problemi? Rispondi a questa email, siamo qui per aiutarti!
+
+© 2025 TrovaMi
+      `
+    }
+  }
+
   // Template email di benvenuto post-conferma
   static getWelcomeEmailTemplate(userEmail: string, dashboardUrl: string): EmailTemplate {
     return {
@@ -301,6 +407,12 @@ Hai domande? Rispondi a questa email.
   // Metodo convenienza per email di benvenuto
   async sendWelcomeEmail(userEmail: string, dashboardUrl: string): Promise<boolean> {
     const template = EmailService.getWelcomeEmailTemplate(userEmail, dashboardUrl)
+    return this.sendEmail({ to: userEmail, template })
+  }
+
+  // Metodo convenienza per email di reset password
+  async sendPasswordResetEmail(userEmail: string, resetUrl: string): Promise<boolean> {
+    const template = EmailService.getPasswordResetEmailTemplate(resetUrl, userEmail)
     return this.sendEmail({ to: userEmail, template })
   }
 }

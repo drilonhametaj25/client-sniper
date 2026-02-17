@@ -848,6 +848,15 @@ export default function SettingsPage() {
                   >
                     {changingPassword ? 'Aggiornando...' : 'Aggiorna Password'}
                   </button>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-3">
+                    Non ricordi la password attuale?{' '}
+                    <Link
+                      href="/forgot-password"
+                      className="text-blue-600 hover:text-blue-500 font-medium"
+                    >
+                      Reimposta password
+                    </Link>
+                  </p>
                 </div>
               </div>
             </div>
