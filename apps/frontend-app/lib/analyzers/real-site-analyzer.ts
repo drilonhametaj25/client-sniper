@@ -226,20 +226,89 @@ export class RealSiteAnalyzer {
   }
 
   /**
-   * Analizza tracking e pixel
+   * Analizza tracking e pixel - MIGLIORATO con pattern robusti e verifica window objects
+   * Allineato con services/scraping-engine/src/analyzers/enhanced-website-analyzer.ts
    */
   private async analyzeTracking(): Promise<TrackingAnalysis> {
     if (!this.page) throw new Error('Pagina non disponibile')
 
-    const content = await this.page.content()
-    
+    const html = await this.page.content()
+
+    // Fase 1: Pattern HTML
+    const gaPatterns = [
+      /gtag\s*\(/i,
+      /google-analytics\.com/i,
+      /googletagmanager\.com\/gtag\/js/i,
+      /UA-\d{4,10}-\d{1,4}/i,
+      /G-[A-Z0-9]{10,}/i,
+      /analytics\.js/i,
+      /gtag\/js\?id=/i,
+      /__gaTracker/i,
+      /GoogleAnalyticsObject/i
+    ]
+    let hasGoogleAnalytics = gaPatterns.some(pattern => pattern.test(html))
+
+    const fbPatterns = [
+      /connect\.facebook\.net.*fbevents/i,
+      /fbq\s*\(/i,
+      /facebook\.com\/tr/i,
+      /_fbp/i,
+      /fbevents\.js/i,
+      /fb-pixel/i,
+      /facebook\.net\/en_US\/fbevents/i
+    ]
+    let hasFacebookPixel = fbPatterns.some(pattern => pattern.test(html))
+
+    const gtmPatterns = [
+      /googletagmanager\.com\/gtm\.js/i,
+      /GTM-[A-Z0-9]{6,}/i,
+      /gtm\.start/i,
+      /googletagmanager\.com\/ns\.html/i
+    ]
+    let hasGoogleTagManager = gtmPatterns.some(pattern => pattern.test(html))
+
+    let hasHotjar = /static\.hotjar\.com/i.test(html) || /hj\s*\(/i.test(html)
+    let hasClarityMicrosoft = /clarity\.ms/i.test(html) || /clarity\s*\(/i.test(html)
+
+    // Fase 2: Verifica window objects per rilevamento più affidabile
+    try {
+      const windowTracking = await this.page.evaluate(() => {
+        const w = window as any
+        return {
+          hasGtag: typeof w.gtag === 'function',
+          hasGa: typeof w.ga === 'function' || typeof w.GoogleAnalyticsObject === 'string',
+          hasDataLayerWithGtm: Array.isArray(w.dataLayer) &&
+            w.dataLayer.some((item: any) => item['gtm.start'] || item.event === 'gtm.js'),
+          hasFbq: typeof w.fbq === 'function',
+          hasHj: typeof w.hj === 'function',
+          hasClarity: typeof w.clarity === 'function'
+        }
+      })
+
+      if (windowTracking.hasGtag || windowTracking.hasGa) hasGoogleAnalytics = true
+      if (windowTracking.hasDataLayerWithGtm) hasGoogleTagManager = true
+      if (windowTracking.hasFbq) hasFacebookPixel = true
+      if (windowTracking.hasHj) hasHotjar = true
+      if (windowTracking.hasClarity) hasClarityMicrosoft = true
+    } catch {
+      // Errore nell'evaluate - usa solo rilevamento HTML
+    }
+
+    // Custom tracking
+    const customTracking: string[] = []
+    if (/matomo/i.test(html)) customTracking.push('Matomo')
+    if (/segment\.com/i.test(html)) customTracking.push('Segment')
+    if (/hubspot/i.test(html)) customTracking.push('HubSpot')
+    if (/ttq\s*\(/i.test(html) || /analytics\.tiktok\.com/i.test(html)) customTracking.push('TikTok Pixel')
+    if (/lintrk\s*\(/i.test(html) || /linkedin\.com\/insight/i.test(html)) customTracking.push('LinkedIn Insight')
+
     return {
-      hasGoogleAnalytics: content.includes('google-analytics.com') || content.includes('gtag') || content.includes('ga('),
-      hasFacebookPixel: content.includes('fbevents.js') || content.includes('facebook.com/tr'),
-      hasGoogleTagManager: content.includes('googletagmanager.com'),
-      hasHotjar: content.includes('hotjar.com'),
-      hasClarityMicrosoft: content.includes('clarity.ms'),
-      customTracking: []
+      hasGoogleAnalytics,
+      hasFacebookPixel,
+      hasGoogleTagManager,
+      hasHotjar,
+      hasClarityMicrosoft,
+      customTracking
     }
   }
 

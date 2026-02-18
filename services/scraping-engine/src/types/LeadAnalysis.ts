@@ -83,6 +83,22 @@ export interface TechnicalIssues {
   httpsIssues: boolean
 }
 
+/**
+ * Affidabilità dell'analisi - indica quanto sono attendibili i risultati
+ * Aggiunto per migliorare la trasparenza verso l'utente
+ */
+export interface AnalysisReliability {
+  overallConfidence: number           // 0-100, affidabilità complessiva
+  failedModules: string[]             // Moduli che hanno fallito completamente
+  partialModules: string[]            // Moduli con dati parziali
+  analysisMethod: 'full' | 'partial' | 'fallback' | 'unavailable'
+  warnings: string[]                  // Avvisi per l'utente
+  timestamp: string                   // ISO timestamp dell'analisi
+  analysisDuration: number            // ms totali per l'analisi
+  frameworkDetected?: string          // 'react' | 'vue' | 'angular' | 'nextjs' | null
+  pageLoadStrategy?: string           // Strategia usata per il caricamento
+}
+
 export interface WebsiteAnalysis {
   url: string
   finalUrl?: string // dopo redirect
@@ -99,6 +115,13 @@ export interface WebsiteAnalysis {
   overallScore: number // 0-100
   analysisDate: Date
   analysisTime: number // millisecondi per completare l'analisi
+
+  // NUOVO: Affidabilità dell'analisi
+  reliability?: AnalysisReliability
+
+  // NUOVO: Score con indicatore di completezza
+  scoreCompleteness?: number // 0-100, quanto è completa l'analisi
+  reliableScore?: boolean    // true se >70% dei moduli hanno funzionato
 }
 
 export interface BusinessLead {

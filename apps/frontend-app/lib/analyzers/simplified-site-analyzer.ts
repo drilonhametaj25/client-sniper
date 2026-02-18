@@ -167,36 +167,64 @@ export class SimplifiedSiteAnalyzer {
   }
   
   /**
-   * Rileva script di tracking
+   * Rileva script di tracking - MIGLIORATO con pattern robusti
+   * Allineato con services/scraping-engine/src/analyzers/enhanced-website-analyzer.ts
    */
   private analyzeTracking(html: string): TrackingAnalysis {
-    // Google Analytics
-    const hasGoogleAnalytics = html.includes('google-analytics.com') || 
-                              html.includes('gtag') || 
-                              html.includes('ga(');
-                              
-    // Facebook Pixel
-    const hasFacebookPixel = html.includes('connect.facebook.net') || 
-                            html.includes('fbq(');
-                            
+    // Google Analytics (UA e GA4)
+    const gaPatterns = [
+      /gtag\s*\(/i,
+      /google-analytics\.com/i,
+      /googletagmanager\.com\/gtag\/js/i,
+      /UA-\d{4,10}-\d{1,4}/i,
+      /G-[A-Z0-9]{10,}/i,
+      /analytics\.js/i,
+      /gtag\/js\?id=/i,
+      /__gaTracker/i,
+      /GoogleAnalyticsObject/i
+    ]
+    const hasGoogleAnalytics = gaPatterns.some(pattern => pattern.test(html))
+
+    // Facebook Pixel (inclusi fbevents.js e cookie _fbp/_fbc)
+    const fbPatterns = [
+      /connect\.facebook\.net.*fbevents/i,
+      /fbq\s*\(/i,
+      /facebook\.com\/tr/i,
+      /_fbp/i,
+      /fbevents\.js/i,
+      /fb-pixel/i,
+      /facebook\.net\/en_US\/fbevents/i
+    ]
+    const hasFacebookPixel = fbPatterns.some(pattern => pattern.test(html))
+
     // Google Tag Manager
-    const hasGTM = html.includes('googletagmanager.com') || 
-                   html.includes('gtm.js');
-                   
+    const gtmPatterns = [
+      /googletagmanager\.com\/gtm\.js/i,
+      /GTM-[A-Z0-9]{6,}/i,
+      /gtm\.start/i,
+      /googletagmanager\.com\/ns\.html/i
+    ]
+    const hasGTM = gtmPatterns.some(pattern => pattern.test(html))
+
     // Hotjar
-    const hasHotjar = html.includes('hotjar.com') || 
-                      html.includes('hjSetting');
-                      
+    const hasHotjar = /static\.hotjar\.com/i.test(html) ||
+                      /hj\s*\(/i.test(html) ||
+                      /hotjar\.com\/c\/hotjar/i.test(html)
+
     // Microsoft Clarity
-    const hasClarity = html.includes('clarity.ms') || 
-                       html.includes('clarity.js');
-    
+    const hasClarity = /clarity\.ms/i.test(html) ||
+                       /clarity\s*\(/i.test(html) ||
+                       /microsoft\/clarity/i.test(html)
+
     // Custom Tracking (alcuni comuni)
-    const customTracking: string[] = [];
-    if (html.includes('matomo')) customTracking.push('Matomo');
-    if (html.includes('segment')) customTracking.push('Segment');
-    if (html.includes('hubspot')) customTracking.push('HubSpot');
-    
+    const customTracking: string[] = []
+    if (/matomo/i.test(html)) customTracking.push('Matomo')
+    if (/segment\.com/i.test(html) || /analytics\.min\.js/i.test(html)) customTracking.push('Segment')
+    if (/hubspot/i.test(html)) customTracking.push('HubSpot')
+    if (/ttq\s*\(/i.test(html) || /analytics\.tiktok\.com/i.test(html)) customTracking.push('TikTok Pixel')
+    if (/lintrk\s*\(/i.test(html) || /linkedin\.com\/insight/i.test(html)) customTracking.push('LinkedIn Insight')
+    if (/pintrk\s*\(/i.test(html) || /pinterest\.com\/tag/i.test(html)) customTracking.push('Pinterest Tag')
+
     return {
       hasGoogleAnalytics,
       hasFacebookPixel,
@@ -204,7 +232,7 @@ export class SimplifiedSiteAnalyzer {
       hasHotjar,
       hasClarityMicrosoft: hasClarity,
       customTracking
-    };
+    }
   }
   
   /**

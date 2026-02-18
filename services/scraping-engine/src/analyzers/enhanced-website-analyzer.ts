@@ -16,6 +16,7 @@ import { PerformanceAnalyzer, PerformanceMetrics } from '../utils/performance-an
 import { BusinessContactParser } from '../utils/business-contact-parser'
 import { BrowserManager } from '../utils/browser-manager'
 import type { SocialAnalysisResult } from './social-analyzer'
+import type { AnalysisReliability } from '../types/LeadAnalysis'
 
 // Nuovi analyzer integrati
 import { SecurityAnalyzer, SecurityAnalysis } from './security-analyzer'
@@ -161,7 +162,10 @@ export interface EnhancedWebsiteAnalysis {
   overallScore: number // 0-100
   businessValue: number // 0-100
   technicalHealth: number // 0-100
-  
+
+  // Analysis Reliability - indica quanto sono attendibili i risultati
+  reliability?: AnalysisReliability
+
   // Analysis Meta
   analysisDate: Date
   analysisTime: number // ms
@@ -189,6 +193,81 @@ export class EnhancedWebsiteAnalyzer {
     this.securityAnalyzer = new SecurityAnalyzer()
     this.contentQualityAnalyzer = new ContentQualityAnalyzer()
     this.accessibilityAnalyzer = new AccessibilityAnalyzer()
+  }
+
+  /**
+   * Attesa intelligente per JS frameworks - sostituisce wait hardcoded
+   * Rileva React, Vue, Angular, Next.js e attende hydration completa
+   */
+  private async waitForJSFrameworks(page: Page, maxWait = 10000): Promise<{ frameworkDetected: string | null, waitStrategy: string }> {
+    const startTime = Date.now()
+
+    // 1. Attendi che il documento sia completamente caricato
+    try {
+      await page.waitForFunction(() => document.readyState === 'complete', { timeout: maxWait })
+    } catch {
+      // Timeout, procedi comunque
+    }
+
+    // 2. Rileva framework JavaScript
+    const frameworkInfo = await page.evaluate(() => {
+      // React
+      if ((window as any).__REACT_DEVTOOLS_GLOBAL_HOOK__ || document.querySelector('[data-reactroot]') || document.querySelector('[data-react-root]')) {
+        return { framework: 'react', needsHydration: true }
+      }
+      // Next.js (React-based SSR)
+      if ((window as any).__NEXT_DATA__) {
+        return { framework: 'nextjs', needsHydration: true }
+      }
+      // Vue
+      if ((window as any).__VUE__ || document.querySelector('[data-v-]') || (window as any).Vue) {
+        return { framework: 'vue', needsHydration: true }
+      }
+      // Nuxt (Vue-based SSR)
+      if ((window as any).__NUXT__) {
+        return { framework: 'nuxt', needsHydration: true }
+      }
+      // Angular
+      if ((window as any).ng || document.querySelector('[ng-version]') || document.querySelector('[ng-app]')) {
+        return { framework: 'angular', needsHydration: true }
+      }
+      // Svelte
+      if (document.querySelector('[data-svelte-h]') || document.querySelector('.svelte-')) {
+        return { framework: 'svelte', needsHydration: true }
+      }
+      return { framework: null, needsHydration: false }
+    })
+
+    let waitStrategy = 'standard'
+
+    if (frameworkInfo.needsHydration) {
+      waitStrategy = `${frameworkInfo.framework}-hydration`
+
+      // Attendi hydration (2-3 secondi per framework SPA)
+      const hydrationWait = Math.min(3000, maxWait - (Date.now() - startTime))
+      if (hydrationWait > 0) {
+        await page.waitForTimeout(hydrationWait)
+      }
+
+      // Attendi che non ci siano più richieste network pendenti
+      try {
+        const remainingTime = Math.max(2000, maxWait - (Date.now() - startTime))
+        await page.waitForLoadState('networkidle', { timeout: remainingTime })
+      } catch {
+        // Timeout networkidle, procedi comunque
+      }
+    } else {
+      // Sito tradizionale - attesa minima 1 secondo per JS asincrono
+      const elapsed = Date.now() - startTime
+      if (elapsed < 1000) {
+        await page.waitForTimeout(1000 - elapsed)
+      }
+    }
+
+    return {
+      frameworkDetected: frameworkInfo.framework,
+      waitStrategy
+    }
   }
 
   /**
@@ -256,9 +335,11 @@ export class EnhancedWebsiteAnalyzer {
         security: browserAnalysis.security,
         contentQuality: browserAnalysis.contentQuality,
         accessibility: browserAnalysis.accessibility,
+        // Affidabilità analisi
+        reliability: browserAnalysis.reliability,
         analysisDate: new Date(),
         analysisTime: Date.now() - startTime,
-        version: '2.1.0'
+        version: '2.2.0'
       }
       
     } catch (error) {
@@ -270,66 +351,78 @@ export class EnhancedWebsiteAnalyzer {
   }
 
   /**
-   * Analisi dettagliata con browser
+   * Analisi dettagliata con browser - versione migliorata con tracking affidabilità
    */
-  private async performBrowserAnalysis(url: string): Promise<Partial<EnhancedWebsiteAnalysis>> {
+  private async performBrowserAnalysis(url: string): Promise<Partial<EnhancedWebsiteAnalysis> & { reliability?: AnalysisReliability }> {
     const browserId = `analyzer-${Date.now()}`;
+    const analysisStartTime = Date.now()
     const { browser, context } = await this.browserManager.getBrowser(browserId);
     const page = await context.newPage();
-    
+
+    // Tracking affidabilità
+    const failedModules: string[] = []
+    const partialModules: string[] = []
+    const warnings: string[] = []
+
     try {
       // Configura pagina
       await page.setExtraHTTPHeaders({
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       })
       await page.setViewportSize({ width: 1920, height: 1080 })
-      
+
       // Carica pagina
-      const response = await page.goto(url, { 
-        waitUntil: 'networkidle',
-        timeout: 30000 
+      const response = await page.goto(url, {
+        waitUntil: 'domcontentloaded', // Cambiato da networkidle per migliore affidabilità
+        timeout: 30000
       })
-      
+
       if (!response) {
         throw new Error('Impossibile caricare la pagina')
       }
-      
-      // Attendi rendering completo
-      await page.waitForTimeout(3000)
-      
+
+      // Attendi rendering JS framework (sostituisce waitForTimeout hardcoded)
+      const { frameworkDetected, waitStrategy } = await this.waitForJSFrameworks(page, 10000)
+
       // Raccogli HTML e metadata
       const htmlContent = await page.content()
       const pageTitle = await page.title()
-      
-      // Analisi parallele con fallback
-      const [
-        seoAnalysis,
-        imagesAnalysis,
-        trackingAnalysis,
-        gdprAnalysis,
-        mobileAnalysis,
-        contentAnalysis,
-        performanceMetrics,
-        techStackInfo,
-        // Nuove analisi
-        securityAnalysis,
-        contentQualityAnalysis,
-        accessibilityAnalysis
-      ] = await Promise.all([
-        this.analyzeSEO(page, htmlContent).catch(() => this.getDefaultSEO()),
-        this.analyzeImages(page).catch(() => this.getDefaultImages()),
-        this.analyzeTracking(page, htmlContent).catch(() => this.getDefaultTracking()),
-        this.analyzeGDPR(page, htmlContent).catch(() => this.getDefaultGDPR()),
-        this.analyzeMobileCompatibility(page).catch(() => this.getDefaultMobile()),
-        this.analyzeContent(page, htmlContent).catch(() => this.getDefaultContent()),
-        this.performanceAnalyzer.analyzePerformance(page, url).catch(() => this.performanceAnalyzer['getDefaultMetrics']()),
-        this.techDetector.detectTechStack(htmlContent, response.headers() as Record<string, string>).catch(() => this.getDefaultTechStack()),
-        // Nuove analisi
-        this.securityAnalyzer.analyzeSecurityFromHtml(url, htmlContent, response.headers() as Record<string, string>).catch(() => null),
-        this.contentQualityAnalyzer.analyzeContentQuality(page, url, htmlContent).catch(() => null),
-        this.accessibilityAnalyzer.analyzeAccessibility(page, url).catch(() => null)
+
+      // Analisi parallele con tracking errori individuali
+      const moduleResults = await Promise.allSettled([
+        this.analyzeSEO(page, htmlContent),
+        this.analyzeImages(page),
+        this.analyzeTracking(page, htmlContent),
+        this.analyzeGDPR(page, htmlContent),
+        this.analyzeMobileCompatibility(page),
+        this.analyzeContent(page, htmlContent),
+        this.performanceAnalyzer.analyzePerformance(page, url),
+        this.techDetector.detectTechStack(htmlContent, response.headers() as Record<string, string>),
+        this.securityAnalyzer.analyzeSecurityFromHtml(url, htmlContent, response.headers() as Record<string, string>),
+        this.contentQualityAnalyzer.analyzeContentQuality(page, url, htmlContent),
+        this.accessibilityAnalyzer.analyzeAccessibility(page, url)
       ])
-      
+
+      // Estrai risultati con tracking fallimenti
+      const moduleNames = ['seo', 'images', 'tracking', 'gdpr', 'mobile', 'content', 'performance', 'techStack', 'security', 'contentQuality', 'accessibility']
+
+      const seoAnalysis = this.extractResultOrDefault(moduleResults[0], 'seo', this.getDefaultSEO(), failedModules, warnings)
+      const imagesAnalysis = this.extractResultOrDefault(moduleResults[1], 'images', this.getDefaultImages(), failedModules, warnings)
+      const trackingAnalysis = this.extractResultOrDefault(moduleResults[2], 'tracking', this.getDefaultTracking(), failedModules, warnings)
+      const gdprAnalysis = this.extractResultOrDefault(moduleResults[3], 'gdpr', this.getDefaultGDPR(), failedModules, warnings)
+      const mobileAnalysis = this.extractResultOrDefault(moduleResults[4], 'mobile', this.getDefaultMobile(), failedModules, warnings)
+      const contentAnalysis = this.extractResultOrDefault(moduleResults[5], 'content', this.getDefaultContent(), failedModules, warnings)
+      const performanceMetrics = this.extractResultOrDefault(moduleResults[6], 'performance', this.performanceAnalyzer['getDefaultMetrics'](), failedModules, warnings)
+      const techStackInfo = this.extractResultOrDefault(moduleResults[7], 'techStack', this.getDefaultTechStack(), failedModules, warnings)
+      const securityAnalysis = moduleResults[8].status === 'fulfilled' ? moduleResults[8].value : null
+      const contentQualityAnalysis = moduleResults[9].status === 'fulfilled' ? moduleResults[9].value : null
+      const accessibilityAnalysis = moduleResults[10].status === 'fulfilled' ? moduleResults[10].value : null
+
+      // Moduli opzionali falliti (non critici)
+      if (moduleResults[8].status === 'rejected') partialModules.push('security')
+      if (moduleResults[9].status === 'rejected') partialModules.push('contentQuality')
+      if (moduleResults[10].status === 'rejected') partialModules.push('accessibility')
+
       // Identifica problemi
       const issues = this.identifyIssues({
         seo: seoAnalysis,
@@ -339,12 +432,42 @@ export class EnhancedWebsiteAnalyzer {
         mobile: mobileAnalysis,
         performance: performanceMetrics,
         techStack: techStackInfo,
-        // Nuove analisi
         security: securityAnalysis,
         contentQuality: contentQualityAnalysis,
         accessibility: accessibilityAnalysis
       })
-      
+
+      // Calcola confidence score
+      const coreModulesCount = 8 // seo, images, tracking, gdpr, mobile, content, performance, techStack
+      const coreModulesFailed = failedModules.filter(m =>
+        ['seo', 'images', 'tracking', 'gdpr', 'mobile', 'content', 'performance', 'techStack'].includes(m)
+      ).length
+      const successRate = (coreModulesCount - coreModulesFailed) / coreModulesCount
+      const overallConfidence = Math.round(successRate * 100)
+
+      // Determina metodo di analisi
+      let analysisMethod: 'full' | 'partial' | 'fallback' | 'unavailable' = 'full'
+      if (coreModulesFailed === coreModulesCount) {
+        analysisMethod = 'unavailable'
+      } else if (coreModulesFailed >= 3) {
+        analysisMethod = 'fallback'
+      } else if (coreModulesFailed > 0 || partialModules.length > 0) {
+        analysisMethod = 'partial'
+      }
+
+      // Costruisci oggetto reliability
+      const reliability: AnalysisReliability = {
+        overallConfidence,
+        failedModules,
+        partialModules,
+        analysisMethod,
+        warnings,
+        timestamp: new Date().toISOString(),
+        analysisDuration: Date.now() - analysisStartTime,
+        frameworkDetected: frameworkDetected || undefined,
+        pageLoadStrategy: waitStrategy
+      }
+
       return {
         seo: seoAnalysis,
         images: imagesAnalysis,
@@ -355,16 +478,35 @@ export class EnhancedWebsiteAnalyzer {
         performance: performanceMetrics || this.performanceAnalyzer['getDefaultMetrics'](),
         techStack: techStackInfo,
         issues,
-        // Nuove analisi
         security: securityAnalysis || undefined,
         contentQuality: contentQualityAnalysis || undefined,
-        accessibility: accessibilityAnalysis || undefined
+        accessibility: accessibilityAnalysis || undefined,
+        reliability
       }
-      
+
     } finally {
       await page.close()
       await this.browserManager.releaseBrowser(browserId)
     }
+  }
+
+  /**
+   * Helper per estrarre risultato da Promise.allSettled con tracking errori
+   */
+  private extractResultOrDefault<T>(
+    result: PromiseSettledResult<T>,
+    moduleName: string,
+    defaultValue: T,
+    failedModules: string[],
+    warnings: string[]
+  ): T {
+    if (result.status === 'fulfilled') {
+      return result.value
+    }
+    failedModules.push(moduleName)
+    const errorMsg = result.reason instanceof Error ? result.reason.message : String(result.reason)
+    warnings.push(`Modulo ${moduleName} fallito: ${errorMsg.substring(0, 100)}`)
+    return defaultValue
   }
 
   /**
@@ -617,47 +759,59 @@ export class EnhancedWebsiteAnalyzer {
 
   /**
    * Analisi tracking migliorata con rilevamento robusto
-   * Include: GA, GTM, Facebook, TikTok, LinkedIn, Snapchat, Pinterest
+   * Include: GA4, GTM, Facebook, TikTok, LinkedIn, Snapchat, Pinterest
+   * MIGLIORATO: Verifica anche dataLayer e oggetti window per rilevare GA4 via GTM
    */
   private async analyzeTracking(page: Page, html: string): Promise<EnhancedWebsiteAnalysis['tracking']> {
-    // Pattern più robusti per rilevamento
+    // Pattern più robusti per rilevamento HTML
     const patterns = {
       googleAnalytics: [
-        /gtag\(/i,
+        /gtag\s*\(/i,
         /google-analytics\.com/i,
-        /UA-\d+-\d+/i,
-        /G-[A-Z0-9]+/i,
-        /analytics\.js/i
+        /googletagmanager\.com\/gtag\/js/i,
+        /UA-\d{4,10}-\d{1,4}/i,
+        /G-[A-Z0-9]{10,}/i,
+        /analytics\.js/i,
+        /gtag\/js\?id=/i,
+        /__gaTracker/i,
+        /GoogleAnalyticsObject/i
       ],
       googleTagManager: [
-        /googletagmanager\.com/i,
-        /GTM-[A-Z0-9]+/i,
-        /dataLayer/i
+        /googletagmanager\.com\/gtm\.js/i,
+        /GTM-[A-Z0-9]{6,}/i,
+        /gtm\.start/i,
+        /googletagmanager\.com\/ns\.html/i
       ],
       facebookPixel: [
-        /connect\.facebook\.net/i,
-        /fbq\(/i,
+        /connect\.facebook\.net.*fbevents/i,
+        /fbq\s*\(/i,
         /facebook\.com\/tr/i,
         /_fbp/i,
         /pixel\.facebook\.com/i,
-        /_fbc/i
+        /_fbc/i,
+        /fbevents\.js/i,
+        /fb-pixel/i,
+        /facebook\.net\/en_US\/fbevents/i
       ],
       googleAds: [
         /googleadservices\.com/i,
         /google\.com\/ads/i,
-        /AW-\d+/i
+        /AW-\d+/i,
+        /conversion\.js/i,
+        /gtag.*config.*AW-/i
       ],
       hotjar: [
         /static\.hotjar\.com/i,
-        /hj\(/i
+        /hj\s*\(/i,
+        /hotjar\.com\/c\/hotjar/i
       ],
       clarity: [
         /clarity\.ms/i,
-        /clarity\(/i
+        /clarity\s*\(/i,
+        /microsoft\/clarity/i
       ],
-      // NUOVI PIXEL AGGIUNTI
       tiktokPixel: [
-        /ttq\(/i,
+        /ttq\s*\(/i,
         /analytics\.tiktok\.com/i,
         /tiktok\.com\/i18n\/pixel/i,
         /TiktokAnalyticsObject/i
@@ -667,16 +821,16 @@ export class EnhancedWebsiteAnalyzer {
         /linkedin\.com\/px/i,
         /linkedin\.com\/insight/i,
         /_linkedin_data_partner_id/i,
-        /lintrk\(/i
+        /lintrk\s*\(/i
       ],
       snapchatPixel: [
         /sc-static\.net/i,
-        /snaptr\(/i,
+        /snaptr\s*\(/i,
         /tr\.snapchat\.com/i,
         /SnapchatPixel/i
       ],
       pinterestTag: [
-        /pintrk\(/i,
+        /pintrk\s*\(/i,
         /pinterest\.com\/tag/i,
         /ct\.pinterest\.com/i,
         /PinterestTag/i
@@ -698,7 +852,7 @@ export class EnhancedWebsiteAnalyzer {
       trackingScore: 0
     }
 
-    // Controlla ogni pattern
+    // Fase 1: Controlla pattern nell'HTML
     for (const [key, patternList] of Object.entries(patterns)) {
       const found = patternList.some(pattern => pattern.test(html))
       if (found && key in results) {
@@ -706,7 +860,71 @@ export class EnhancedWebsiteAnalyzer {
       }
     }
 
-    // Cerca script personalizzati - BUG FIX: parentesi corrette per operatore OR
+    // Fase 2: NUOVA - Verifica oggetti window e dataLayer per rilevamento più affidabile
+    try {
+      const windowTracking = await page.evaluate(() => {
+        const w = window as any
+        const tracking = {
+          // Google Analytics - gtag o ga object
+          hasGtag: typeof w.gtag === 'function',
+          hasGa: typeof w.ga === 'function' || typeof w.GoogleAnalyticsObject === 'string',
+          // Google Tag Manager - dataLayer
+          hasDataLayer: Array.isArray(w.dataLayer),
+          dataLayerHasGtm: Array.isArray(w.dataLayer) &&
+            w.dataLayer.some((item: any) => item['gtm.start'] || item.event === 'gtm.js'),
+          dataLayerHasGa: Array.isArray(w.dataLayer) &&
+            w.dataLayer.some((item: any) =>
+              item.event === 'gtm.load' ||
+              (item[0] === 'config' && typeof item[1] === 'string' && /^G-|^UA-/.test(item[1]))
+            ),
+          // Facebook Pixel
+          hasFbq: typeof w.fbq === 'function',
+          hasFbPixelId: typeof w._fbp === 'string' || typeof w._fbc === 'string',
+          // Hotjar
+          hasHj: typeof w.hj === 'function',
+          // Microsoft Clarity
+          hasClarity: typeof w.clarity === 'function',
+          // TikTok
+          hasTtq: typeof w.ttq === 'object',
+          // LinkedIn
+          hasLintrk: typeof w.lintrk === 'function',
+          // Pinterest
+          hasPintrk: typeof w.pintrk === 'function'
+        }
+        return tracking
+      })
+
+      // Aggiorna risultati con rilevamento window object
+      if (windowTracking.hasGtag || windowTracking.hasGa || windowTracking.dataLayerHasGa) {
+        results.googleAnalytics = true
+      }
+      if (windowTracking.hasDataLayer && windowTracking.dataLayerHasGtm) {
+        results.googleTagManager = true
+      }
+      if (windowTracking.hasFbq || windowTracking.hasFbPixelId) {
+        results.facebookPixel = true
+      }
+      if (windowTracking.hasHj) {
+        results.hotjar = true
+      }
+      if (windowTracking.hasClarity) {
+        results.clarity = true
+      }
+      if (windowTracking.hasTtq) {
+        results.tiktokPixel = true
+      }
+      if (windowTracking.hasLintrk) {
+        results.linkedInInsightTag = true
+      }
+      if (windowTracking.hasPintrk) {
+        results.pinterestTag = true
+      }
+    } catch (e) {
+      // Errore nell'evaluate - usa solo rilevamento HTML
+      console.warn('Tracking detection: window evaluate failed, using HTML-only detection')
+    }
+
+    // Cerca script personalizzati
     const scriptMatches = html.match(/<script[^>]*src=["'][^"']*["'][^>]*>/gi) || []
     const customScripts = scriptMatches
       .filter(script => {
@@ -727,14 +945,13 @@ export class EnhancedWebsiteAnalyzer {
 
     results.customPixels = customScripts
 
-    // Calcola punteggio tracking (aggiornato con nuovi pixel)
+    // Calcola punteggio tracking
     let score = 0
     if (results.googleAnalytics) score += 25
     if (results.googleTagManager) score += 20
     if (results.facebookPixel) score += 15
     if (results.googleAdsConversion) score += 10
     if (results.hotjar || results.clarity) score += 10
-    // Nuovi pixel
     if (results.tiktokPixel) score += 5
     if (results.linkedInInsightTag) score += 5
     if (results.snapchatPixel) score += 5
