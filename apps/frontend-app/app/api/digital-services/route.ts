@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateUser } from '@/lib/auth-middleware'
 import { createClient } from '@supabase/supabase-js'
-import { isProOrHigher } from '@/lib/utils/plan-helpers'
+import { isStarterOrHigher } from '@/lib/utils/plan-helpers'
 
 function getSupabaseAdmin() {
   return createClient(

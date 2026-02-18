@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateUser } from '@/lib/auth-middleware'
 import { createClient } from '@supabase/supabase-js'
-import { isProOrHigher } from '@/lib/utils/plan-helpers'
+import { isStarterOrHigher } from '@/lib/utils/plan-helpers'
 
 function getSupabaseAdmin() {
   return createClient(
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    if (!isProOrHigher(userData.plan) || userData.status !== 'active') {
+    if (!isStarterOrHigher(userData.plan) || userData.status !== 'active') {
       return NextResponse.json(
         { error: 'Funzionalità disponibile solo per utenti PRO+ con piano attivo' },
         { status: 403 }
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!isProOrHigher(userData.plan) || userData.status !== 'active') {
+    if (!isStarterOrHigher(userData.plan) || userData.status !== 'active') {
       return NextResponse.json(
         { error: 'Funzionalità disponibile solo per utenti PRO+ con piano attivo' },
         { status: 403 }

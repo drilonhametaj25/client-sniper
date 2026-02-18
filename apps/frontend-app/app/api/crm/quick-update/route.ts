@@ -10,7 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { isProOrHigher } from '@/lib/utils/plan-helpers';
+import { isStarterOrHigher } from '@/lib/utils/plan-helpers';
 import { CRMQuickUpdateRequest, CRMStatusType } from '@/lib/types/crm';
 
 // Forza rendering dinamico per questa API route
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!isProOrHigher(userProfile.plan)) {
+    if (!isStarterOrHigher(userProfile.plan)) {
       return NextResponse.json(
         { error: 'Access denied. CRM is available for PRO and AGENCY users only.' },
         { status: 403 }

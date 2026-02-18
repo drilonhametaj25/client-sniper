@@ -15,7 +15,7 @@ import Badge from '@/components/ui/Badge';
 import { useToast } from '@/components/ToastProvider';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { isProOrHigher } from '@/lib/utils/plan-helpers';
+import { isStarterOrHigher } from '@/lib/utils/plan-helpers';
 import { TourTarget } from '@/components/onboarding/TourTarget';
 import { 
   Search, 
@@ -103,12 +103,12 @@ export default function CrmPage() {
     console.log('🔍 CRM Auth Debug:', {
       plan: user.plan,
       status: user.status,
-      isProOrHigher: isProOrHigher(user.plan || ''),
+      isStarterOrHigher: isStarterOrHigher(user.plan || ''),
       userId: user.id
     });
 
-    if (!isProOrHigher(user.plan || '')) {
-      error('Accesso Limitato', 'Il CRM è disponibile solo per utenti con piano PRO o AGENCY');
+    if (!isStarterOrHigher(user.plan || '')) {
+      error('Accesso Limitato', 'Il CRM è disponibile solo per utenti con piano Starter o Agency');
       return;
     }
 
@@ -334,7 +334,7 @@ export default function CrmPage() {
   }
 
   // Se il piano non è PRO o superiore, mostra messaggio di upgrade
-  if (!user || !isProOrHigher(user.plan || '')) {
+  if (!user || !isStarterOrHigher(user.plan || '')) {
     return (
       <div className="container mx-auto px-4 py-8 min-h-screen bg-gray-50 dark:bg-gray-900">
         <Card className="max-w-2xl mx-auto text-center">

@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { isProOrHigher } from '@/lib/utils/plan-helpers';
+import { isStarterOrHigher } from '@/lib/utils/plan-helpers';
 
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
@@ -53,7 +53,7 @@ export async function GET(
       .eq('id', user.id)
       .single();
 
-    if (userError || !isProOrHigher(userData?.plan || '')) {
+    if (userError || !isStarterOrHigher(userData?.plan || '')) {
       return NextResponse.json(
         { 
           error: 'Access denied. CRM is available for PRO and AGENCY users only.',
@@ -135,7 +135,7 @@ export async function POST(
       .eq('id', user.id)
       .single();
 
-    if (userError || !isProOrHigher(userData?.plan || '')) {
+    if (userError || !isStarterOrHigher(userData?.plan || '')) {
       return NextResponse.json(
         { 
           error: 'Access denied. CRM is available for PRO and AGENCY users only.',
@@ -246,7 +246,7 @@ export async function DELETE(
       .eq('id', user.id)
       .single();
 
-    if (userError || !isProOrHigher(userData?.plan || '')) {
+    if (userError || !isStarterOrHigher(userData?.plan || '')) {
       return NextResponse.json(
         { 
           error: 'Access denied. CRM is available for PRO and AGENCY users only.',

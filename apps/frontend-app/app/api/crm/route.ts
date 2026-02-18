@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { isProOrHigher } from '@/lib/utils/plan-helpers';
+import { isStarterOrHigher } from '@/lib/utils/plan-helpers';
 
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verifica piano PRO o superiore (include pro_monthly, pro_annual, agency_monthly, agency_annual)
-    if (!isProOrHigher(userData?.plan || '')) {
+    if (!isStarterOrHigher(userData?.plan || '')) {
       return NextResponse.json({ 
         error: 'Piano PRO richiesto', 
         current_plan: userData?.plan || 'unknown',
@@ -270,7 +270,7 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    if (userError || !isProOrHigher(userData?.plan || '')) {
+    if (userError || !isStarterOrHigher(userData?.plan || '')) {
       return NextResponse.json({ 
         error: 'Piano PRO richiesto',
         current_plan: userData?.plan || 'unknown',

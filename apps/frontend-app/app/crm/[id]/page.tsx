@@ -19,7 +19,7 @@ import Badge from '@/components/ui/Badge';
 import { useToast } from '@/components/ToastProvider';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { isProOrHigher } from '@/lib/utils/plan-helpers';
+import { isStarterOrHigher } from '@/lib/utils/plan-helpers';
 import { supabase } from '@/lib/supabase';
 import { 
   ArrowLeft,
@@ -128,9 +128,9 @@ export default function CrmLeadDetailPage() {
       return;
     }
 
-    if (!isProOrHigher(user.plan || '')) {
-      console.error('❌ Access denied - Plan not Pro or higher:', user.plan);
-      showError('Accesso Limitato', 'Il CRM è disponibile solo per utenti con piano PRO o AGENCY');
+    if (!isStarterOrHigher(user.plan || '')) {
+      console.error('❌ Access denied - Plan not Starter or higher:', user.plan);
+      showError('Accesso Limitato', 'Il CRM è disponibile solo per utenti con piano Starter o Agency');
       router.push('/upgrade');
       return;
     }

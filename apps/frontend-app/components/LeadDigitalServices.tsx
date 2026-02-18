@@ -11,7 +11,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePlanStatus } from '@/hooks/usePlanStatus'
 import { useDigitalServices, useProposedServices, type DigitalService } from '@/hooks/useDigitalServices'
-import { isProOrHigher } from '@/lib/utils/plan-helpers'
+import { isStarterOrHigher } from '@/lib/utils/plan-helpers'
 import {
   Plus,
   CheckCircle,
@@ -66,7 +66,7 @@ export default function LeadDigitalServices({ lead }: LeadDigitalServicesProps) 
   // OTTIMIZZAZIONE: Memoizza la condizione per caricare i dati
   const shouldLoadData = useMemo(() => {
     if (!user || !lead.id || !mountedRef.current) return false
-    if (!isProOrHigher(user.plan || 'free')) return false
+    if (!isStarterOrHigher(user.plan || 'free')) return false
     if (planStatus.status !== 'active') return false
     
     // Carica solo se l'utente è cambiato o non abbiamo mai caricato
@@ -169,7 +169,7 @@ export default function LeadDigitalServices({ lead }: LeadDigitalServicesProps) 
   }
 
   // Verifica se l'utente ha accesso ai servizi digitali
-  if (!user || !isProOrHigher(user.plan || 'free')) {
+  if (!user || !isStarterOrHigher(user.plan || 'free')) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
         <div className="text-center">
@@ -178,7 +178,7 @@ export default function LeadDigitalServices({ lead }: LeadDigitalServicesProps) 
             Servizi Digitali
           </h3>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            Upgrade al piano PRO per vedere servizi personalizzati per questo lead
+            Passa al piano Starter o superiore per vedere servizi personalizzati per questo lead
           </p>
           <a 
             href="/settings/subscription"

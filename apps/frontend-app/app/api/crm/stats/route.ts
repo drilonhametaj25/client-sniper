@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { isProOrHigher } from '@/lib/utils/plan-helpers';
+import { isStarterOrHigher } from '@/lib/utils/plan-helpers';
 
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    if (!userData || !isProOrHigher(userData.plan || '')) {
+    if (!userData || !isStarterOrHigher(userData.plan || '')) {
       return NextResponse.json(
         { 
           error: 'Access denied. CRM is available for PRO and AGENCY users only.',

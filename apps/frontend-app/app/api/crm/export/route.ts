@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { isProOrHigher } from '@/lib/utils/plan-helpers'
+import { isStarterOrHigher } from '@/lib/utils/plan-helpers'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (!userData || !isProOrHigher(userData.plan || '')) {
+    if (!userData || !isStarterOrHigher(userData.plan || '')) {
       return NextResponse.json({
         error: 'Piano PRO richiesto per export'
       }, { status: 403 })
