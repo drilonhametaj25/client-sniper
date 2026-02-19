@@ -60,12 +60,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Errore nel recupero dati utente' }, { status: 500 });
     }
 
-    // Verifica piano PRO o superiore (include pro_monthly, pro_annual, agency_monthly, agency_annual)
+    // Verifica piano Starter o superiore (include starter, pro, agency - mensile e annuale)
     if (!isStarterOrHigher(userData?.plan || '')) {
-      return NextResponse.json({ 
-        error: 'Piano PRO richiesto', 
+      return NextResponse.json({
+        error: 'Piano Starter richiesto',
         current_plan: userData?.plan || 'unknown',
-        message: 'Il CRM è disponibile solo per utenti con piano PRO o AGENCY'
+        message: 'Il CRM è disponibile solo per utenti con piano Starter o Agency'
       }, { status: 403 });
     }
 
@@ -271,10 +271,10 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (userError || !isStarterOrHigher(userData?.plan || '')) {
-      return NextResponse.json({ 
-        error: 'Piano PRO richiesto',
+      return NextResponse.json({
+        error: 'Piano Starter richiesto',
         current_plan: userData?.plan || 'unknown',
-        message: 'La creazione/modifica entry CRM richiede piano PRO o AGENCY'
+        message: 'La creazione/modifica entry CRM richiede piano Starter o Agency'
       }, { status: 403 });
     }
 

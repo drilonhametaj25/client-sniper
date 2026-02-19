@@ -29,7 +29,12 @@
       "Bash(npm run dev:*)",
       "Bash(timeout:*)",
       "Bash(git checkout:*)",
-      "Bash(tasklist:*)"
+      "Bash(tasklist:*)",
+      "Bash(find:*)",
+      "Bash(git push:*)",
+      "Bash(ping:*)",
+      "Bash(netstat:*)",
+      "Bash(powershell -Command \"Stop-Process -Id 20072 -Force\")"
     ]
   }
 }

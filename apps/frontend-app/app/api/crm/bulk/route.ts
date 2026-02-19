@@ -60,7 +60,7 @@ export async function PATCH(request: NextRequest) {
 
     if (!userData || !isStarterOrHigher(userData.plan || '')) {
       return NextResponse.json({
-        error: 'Piano PRO richiesto per operazioni bulk'
+        error: 'Piano Starter richiesto per operazioni bulk'
       }, { status: 403 })
     }
 

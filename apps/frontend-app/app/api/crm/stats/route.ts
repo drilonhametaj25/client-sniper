@@ -50,10 +50,10 @@ export async function GET(req: NextRequest) {
 
     if (!userData || !isStarterOrHigher(userData.plan || '')) {
       return NextResponse.json(
-        { 
-          error: 'Access denied. CRM is available for PRO and AGENCY users only.',
+        {
+          error: 'Access denied. CRM is available for Starter and Agency users only.',
           currentPlan: userData?.plan || 'free'
-        }, 
+        },
         { status: 403 }
       );
     }

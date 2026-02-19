@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 
     if (!isStarterOrHigher(userData.plan) || userData.status !== 'active') {
       return NextResponse.json(
-        { error: 'Funzionalità disponibile solo per utenti PRO+ con piano attivo' },
+        { error: 'Funzionalità disponibile solo per utenti Starter o superiore con piano attivo' },
         { status: 403 }
       )
     }
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
 
     if (!isStarterOrHigher(userData.plan) || userData.status !== 'active') {
       return NextResponse.json(
-        { error: 'Funzionalità disponibile solo per utenti PRO+ con piano attivo' },
+        { error: 'Funzionalità disponibile solo per utenti Starter o superiore con piano attivo' },
         { status: 403 }
       )
     }

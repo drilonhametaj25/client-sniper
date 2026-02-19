@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     if (!isStarterOrHigher(userProfile.plan)) {
       return NextResponse.json(
-        { error: 'Access denied. CRM is available for PRO and AGENCY users only.' },
+        { error: 'Access denied. CRM is available for Starter and Agency users only.' },
         { status: 403 }
       );
     }

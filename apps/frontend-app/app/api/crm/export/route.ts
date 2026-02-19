@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
 
     if (!userData || !isStarterOrHigher(userData.plan || '')) {
       return NextResponse.json({
-        error: 'Piano PRO richiesto per export'
+        error: 'Piano Starter richiesto per export'
       }, { status: 403 })
     }
 

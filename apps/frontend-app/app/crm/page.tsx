@@ -341,10 +341,10 @@ export default function CrmPage() {
           <div className="py-12">
             <Lock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-              CRM Personale - Solo Piano PRO/AGENCY
+              CRM Personale - Piano Starter o superiore
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Il sistema CRM è disponibile esclusivamente per gli utenti con piano PRO o AGENCY. 
+              Il sistema CRM è disponibile per gli utenti con piano Starter o Agency.
               Aggiorna il tuo piano per accedere a tutte le funzionalità di gestione lead.
             </p>
             <div className="space-y-4">
@@ -352,7 +352,7 @@ export default function CrmPage() {
                 Il tuo piano attuale: <Badge variant="info">{user?.plan?.toUpperCase() || 'FREE'}</Badge>
               </p>
               <Button onClick={() => window.location.href = '/upgrade'}>
-                Aggiorna a Piano PRO
+                Aggiorna a Piano Starter
               </Button>
             </div>
           </div>

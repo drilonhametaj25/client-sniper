@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 
     if (!userData || !isStarterOrHigher(userData.plan || '')) {
       return NextResponse.json({
-        error: 'Piano PRO richiesto per analytics'
+        error: 'Piano Starter richiesto per analytics'
       }, { status: 403 })
     }
 
