@@ -210,17 +210,17 @@ export default function CRMLeadSidebar({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-900 shadow-xl z-50 overflow-y-auto"
+            className="fixed right-0 top-0 h-full w-full sm:max-w-md bg-white dark:bg-gray-900 shadow-xl z-50 overflow-y-auto"
           >
             {/* Header */}
-            <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-4 z-10">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white truncate pr-4">
+            <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-3 sm:p-4 z-10">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">
                   {entry.lead_business_name}
                 </h2>
                 <button
                   onClick={onClose}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                  className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0"
                 >
                   <X className="w-5 h-5 text-gray-500" />
                 </button>
@@ -286,14 +286,14 @@ export default function CRMLeadSidebar({
                       <button
                         key={key}
                         onClick={() => setStatus(key)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all text-sm ${
+                        className={`flex items-center gap-2 px-3 py-2.5 min-h-[44px] rounded-lg border-2 transition-all text-sm ${
                           isSelected
                             ? `${config.bgColor} ${config.color} border-current`
                             : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 text-gray-600 dark:text-gray-400'
                         }`}
                       >
-                        <Icon className="w-4 h-4" />
-                        <span className="truncate">{config.label}</span>
+                        <Icon className="w-4 h-4 flex-shrink-0" />
+                        <span className="truncate text-left">{config.label}</span>
                       </button>
                     )
                   })}
@@ -310,7 +310,7 @@ export default function CRMLeadSidebar({
                   type="date"
                   value={followUpDate ? followUpDate.split('T')[0] : ''}
                   onChange={(e) => setFollowUpDate(e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 ${
+                  className={`w-full px-3 py-2.5 min-h-[44px] text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 ${
                     isOverdue
                       ? 'border-red-300 dark:border-red-700 text-red-600 dark:text-red-400'
                       : 'border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100'
@@ -332,7 +332,7 @@ export default function CRMLeadSidebar({
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="Aggiungi note sul lead..."
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2.5 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -386,12 +386,12 @@ export default function CRMLeadSidebar({
               </div>
             </div>
 
-            {/* Footer Actions */}
-            <div className="sticky bottom-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-4 space-y-3">
+            {/* Footer Actions - Safe area for mobile */}
+            <div className="sticky bottom-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-3 sm:p-4 pb-safe space-y-2 sm:space-y-3">
               <Button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="w-full"
+                className="w-full min-h-[48px]"
               >
                 {isSaving ? (
                   <>
@@ -408,7 +408,7 @@ export default function CRMLeadSidebar({
               <Button
                 variant="secondary"
                 onClick={() => onViewDetail(entry.lead_id)}
-                className="w-full"
+                className="w-full min-h-[48px]"
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
                 Vedi Dettaglio Completo

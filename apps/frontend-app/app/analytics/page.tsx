@@ -37,11 +37,11 @@ export const metadata: Metadata = {
 export default function AnalyticsPage() {
   return (
     <AnalyticsProtection>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Analytics Dashboard</h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-300">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-4 sm:py-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="mb-4 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Analytics Dashboard</h1>
+            <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-300">
               Monitora le performance e il ROI dei tuoi lead generati
             </p>
           </div>
@@ -52,7 +52,7 @@ export default function AnalyticsPage() {
           </Suspense>
 
           {/* CRM Analytics + Score Distribution */}
-          <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="mt-4 sm:mt-8 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
             {/* CRM Analytics Widget */}
             <Suspense fallback={<LoadingSpinner />}>
               <CrmAnalyticsWidget />
@@ -65,18 +65,18 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Heatmap + Conversion Chart */}
-          <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="mt-4 sm:mt-8 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
             {/* Heatmap Geografica */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Distribuzione Geografica</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-white">Distribuzione Geografica</h2>
               <Suspense fallback={<LoadingSpinner />}>
                 <GeographicHeatmap />
               </Suspense>
             </div>
 
             {/* Conversion Rate Chart */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Tasso di Conversione</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-white">Tasso di Conversione</h2>
               <Suspense fallback={<LoadingSpinner />}>
                 <ConversionRateChart />
               </Suspense>
@@ -84,23 +84,23 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Activity Timeline + ROI Calculator */}
-          <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="mt-4 sm:mt-8 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
             {/* Activity Timeline */}
             <Suspense fallback={<LoadingSpinner />}>
               <ActivityTimeline />
             </Suspense>
 
             {/* ROI Calculator */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Calcolatore ROI</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-white">Calcolatore ROI</h2>
               <ROICalculator />
             </div>
           </div>
 
           {/* Export Reports */}
-          <div className="mt-8">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Esportazione Report</h2>
+          <div className="mt-4 sm:mt-8">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-white">Esportazione Report</h2>
               <ExportReports />
             </div>
           </div>

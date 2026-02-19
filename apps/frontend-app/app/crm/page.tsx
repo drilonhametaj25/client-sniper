@@ -525,38 +525,38 @@ export default function CrmPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 min-h-screen bg-gray-50 dark:bg-gray-900">
-      <TourTarget tourId="crm-header" className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h1 id="crm-header" className="text-3xl font-bold text-gray-900 dark:text-gray-100">CRM Pipeline</h1>
-        <div className="flex items-center gap-2">
-          {/* Toggle Vista */}
-          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 min-h-screen bg-gray-50 dark:bg-gray-900">
+      <TourTarget tourId="crm-header" className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6">
+        <h1 id="crm-header" className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">CRM Pipeline</h1>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {/* Toggle Vista - Touch friendly */}
+          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden flex-1 sm:flex-none">
             <button
               onClick={() => setViewMode('kanban')}
-              className={`px-3 py-2 flex items-center gap-1.5 text-sm font-medium transition-colors ${
+              className={`flex-1 sm:flex-none px-3 py-2.5 sm:py-2 flex items-center justify-center gap-1.5 text-sm font-medium transition-colors min-h-[44px] ${
                 viewMode === 'kanban'
                   ? 'bg-blue-600 text-white'
                   : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}
             >
               <LayoutGrid className="w-4 h-4" />
-              Kanban
+              <span className="hidden xs:inline">Kanban</span>
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`px-3 py-2 flex items-center gap-1.5 text-sm font-medium transition-colors ${
+              className={`flex-1 sm:flex-none px-3 py-2.5 sm:py-2 flex items-center justify-center gap-1.5 text-sm font-medium transition-colors min-h-[44px] ${
                 viewMode === 'list'
                   ? 'bg-blue-600 text-white'
                   : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}
             >
               <LayoutList className="w-4 h-4" />
-              Lista
+              <span className="hidden xs:inline">Lista</span>
             </button>
           </div>
-          <Button onClick={loadCrmData} variant="secondary">
-            <RotateCcw className="w-4 h-4 mr-2" />
-            Aggiorna
+          <Button onClick={loadCrmData} variant="secondary" className="min-h-[44px] px-3">
+            <RotateCcw className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Aggiorna</span>
           </Button>
         </div>
       </TourTarget>
@@ -566,22 +566,22 @@ export default function CrmPage() {
         <CRMStatsHeader stats={stats} entries={entries} />
       </TourTarget>
 
-      {/* Filtri e Ricerca */}
-      <TourTarget tourId="crm-filters" className="flex flex-col sm:flex-row gap-4 mb-6">
+      {/* Filtri e Ricerca - Mobile friendly */}
+      <TourTarget tourId="crm-filters" className="flex flex-col gap-2 sm:flex-row sm:gap-4 mb-4 sm:mb-6">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Cerca per nome, sito web o città..."
+            placeholder="Cerca lead..."
             value={searchTerm}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-10 min-h-[44px] text-base"
           />
         </div>
         <div className="w-full sm:w-48">
           <select
             value={statusFilter}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2.5 min-h-[44px] text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Tutti gli stati</option>
             {Object.entries(STATUS_CONFIG).map(([key, config]) => (
@@ -689,18 +689,21 @@ export default function CrmPage() {
         )}
       </TourTarget>
 
-      {/* Modal Modifica Entry - Semplificato */}
+      {/* Modal Modifica Entry - Mobile optimized */}
       {isEditModalOpen && selectedEntry && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Modifica Lead CRM</h2>
-            <div className="space-y-4">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <Card className="w-full sm:max-w-md rounded-t-2xl sm:rounded-xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white dark:bg-gray-800 pb-2 border-b border-gray-200 dark:border-gray-700 mb-4">
+              <div className="w-12 h-1 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-3 sm:hidden" />
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">Modifica Lead CRM</h2>
+            </div>
+            <div className="space-y-4 pb-safe">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stato</label>
                 <select
                   value={formData.status}
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormData({...formData, status: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2.5 min-h-[44px] text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {Object.entries(STATUS_CONFIG).map(([key, config]) => (
                     <option key={key} value={key}>
@@ -717,7 +720,7 @@ export default function CrmPage() {
                   value={formData.note}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({...formData, note: e.target.value})}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2.5 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -730,15 +733,15 @@ export default function CrmPage() {
                     const date = e.target.value ? new Date(e.target.value) : null;
                     setFormData({...formData, follow_up_date: date});
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2.5 min-h-[44px] text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
-              <div className="flex justify-end space-x-2">
-                <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>
+              <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-2">
+                <Button variant="secondary" onClick={() => setIsEditModalOpen(false)} className="w-full sm:w-auto min-h-[44px]">
                   Annulla
                 </Button>
-                <Button onClick={handleSaveEntry}>
+                <Button onClick={handleSaveEntry} className="w-full sm:w-auto min-h-[44px]">
                   Salva
                 </Button>
               </div>

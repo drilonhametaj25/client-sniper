@@ -194,7 +194,7 @@ export function ActivityTimeline() {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-center h-48">
           <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
         </div>
@@ -204,13 +204,13 @@ export function ActivityTimeline() {
 
   if (error) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
         <div className="text-center py-8 text-red-500">
           <AlertCircle className="w-8 h-8 mx-auto mb-2" />
-          <p>{error}</p>
+          <p className="text-sm sm:text-base">{error}</p>
           <button
             onClick={loadActivities}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-2 mx-auto"
+            className="mt-4 px-4 py-2.5 min-h-[44px] bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-2 mx-auto"
           >
             <RefreshCw className="w-4 h-4" />
             Riprova
@@ -221,18 +221,18 @@ export function ActivityTimeline() {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div className="flex items-center gap-2">
           <Clock className="w-5 h-5 text-blue-500" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
             Attivita' Recenti
           </h3>
         </div>
         <button
           onClick={loadActivities}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           title="Aggiorna"
         >
           <RefreshCw className="w-4 h-4 text-gray-500" />

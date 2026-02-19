@@ -2,6 +2,7 @@
  * Componente Kanban Board per CRM
  * Visualizzazione drag-and-drop dei lead per stato
  * Usa HTML5 Drag and Drop API nativa
+ * Mobile: Vista accordion collapsabile
  */
 
 'use client'
@@ -22,7 +23,9 @@ import {
   Briefcase,
   MoreVertical,
   Calendar,
-  MessageSquare
+  MessageSquare,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react'
 
 // Configurazione stati
@@ -113,6 +116,25 @@ export default function CRMKanban({ entries, onStatusChange, onEntryClick, onQui
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
   const [isUpdating, setIsUpdating] = useState<string | null>(null)
   const [openMenu, setOpenMenu] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+  const [expandedColumns, setExpandedColumns] = useState<string[]>(['to_contact', 'in_negotiation'])
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Toggle column expansion for mobile accordion
+  const toggleColumn = (status: string) => {
+    setExpandedColumns(prev =>
+      prev.includes(status)
+        ? prev.filter(s => s !== status)
+        : [...prev, status]
+    )
+  }
 
   // Chiudi menu quando si clicca fuori
   useEffect(() => {
@@ -185,8 +207,127 @@ export default function CRMKanban({ entries, onStatusChange, onEntryClick, onQui
     return 'text-red-600 dark:text-red-400'
   }
 
+  // Mobile Accordion View
+  if (isMobile) {
+    return (
+      <div className="space-y-2">
+        {COLUMN_ORDER.map(status => {
+          const config = STATUS_CONFIG[status]
+          const Icon = config.icon
+          const columnEntries = entriesByStatus[status] || []
+          const isExpanded = expandedColumns.includes(status)
+
+          return (
+            <div
+              key={status}
+              className={`rounded-lg border-2 overflow-hidden ${config.bgColor}`}
+            >
+              {/* Accordion Header - Touch friendly 48px height */}
+              <button
+                onClick={() => toggleColumn(status)}
+                className={`w-full p-3 min-h-[48px] flex items-center justify-between ${config.bgColor}`}
+              >
+                <div className="flex items-center gap-2">
+                  <Icon className={`w-5 h-5 ${config.color}`} />
+                  <span className={`font-medium ${config.color}`}>
+                    {config.label}
+                  </span>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full bg-white/50 dark:bg-black/20 ${config.color}`}>
+                    {columnEntries.length}
+                  </span>
+                </div>
+                {isExpanded ? (
+                  <ChevronDown className={`w-5 h-5 ${config.color}`} />
+                ) : (
+                  <ChevronRight className={`w-5 h-5 ${config.color}`} />
+                )}
+              </button>
+
+              {/* Accordion Content */}
+              {isExpanded && (
+                <div className="p-2 space-y-2 bg-white/50 dark:bg-black/20">
+                  {columnEntries.length === 0 ? (
+                    <p className="text-center py-4 text-sm text-gray-400">Nessun lead</p>
+                  ) : (
+                    columnEntries.map(entry => (
+                      <div
+                        key={entry.id}
+                        onClick={() => onEntryClick(entry)}
+                        className={`
+                          bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700
+                          p-3 active:bg-gray-50 dark:active:bg-gray-700
+                          ${isUpdating === entry.id ? 'opacity-50 pointer-events-none' : ''}
+                        `}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-gray-900 dark:text-white truncate">
+                              {entry.lead_business_name}
+                            </h4>
+                            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                              {entry.lead_city && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  {entry.lead_city}
+                                </span>
+                              )}
+                              <span className={`flex items-center gap-1 ${getScoreColor(entry.lead_score)}`}>
+                                <Star className="w-3 h-3" />
+                                {entry.lead_score}
+                              </span>
+                            </div>
+                            {entry.follow_up_date && (
+                              <div className={`mt-2 text-xs px-2 py-1 rounded inline-block ${
+                                new Date(entry.follow_up_date) < new Date()
+                                  ? 'bg-red-100 dark:bg-red-900/30 text-red-600'
+                                  : 'bg-purple-100 dark:bg-purple-900/30 text-purple-600'
+                              }`}>
+                                {new Date(entry.follow_up_date).toLocaleDateString('it-IT')}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Mobile Quick Actions */}
+                          <div className="flex flex-col gap-1">
+                            {entry.status !== 'closed_positive' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  onStatusChange(entry.id, 'closed_positive')
+                                }}
+                                className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30 min-h-[40px] min-w-[40px] flex items-center justify-center"
+                              >
+                                <CheckCircle className="w-4 h-4 text-green-600" />
+                              </button>
+                            )}
+                            {entry.lead_website_url && (
+                              <a
+                                href={entry.lead_website_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 min-h-[40px] min-w-[40px] flex items-center justify-center"
+                              >
+                                <Globe className="w-4 h-4 text-blue-600" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
+  // Desktop Kanban View
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4 min-h-[600px]">
+    <div className="flex gap-4 overflow-x-auto pb-4">
       {COLUMN_ORDER.map(status => {
         const config = STATUS_CONFIG[status]
         const Icon = config.icon
@@ -221,7 +362,7 @@ export default function CRMKanban({ entries, onStatusChange, onEntryClick, onQui
             </div>
 
             {/* Cards */}
-            <div className="p-2 space-y-2 min-h-[500px]">
+            <div className="p-2 space-y-2 min-h-[400px]">
               {columnEntries.map(entry => (
                 <div
                   key={entry.id}

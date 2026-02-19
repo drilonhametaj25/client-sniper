@@ -103,71 +103,73 @@ export default function CRMStatsHeader({ stats, entries }: CRMStatsHeaderProps) 
   if (!stats) return null
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3 mb-6">
       {/* Pipeline Value */}
-      <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white">
-        <div className="flex items-center justify-between mb-2">
-          <DollarSign className="w-5 h-5 opacity-80" />
-          <span className="text-xs opacity-80">Pipeline</span>
+      <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-3 sm:p-4 text-white">
+        <div className="flex items-center justify-between mb-1 sm:mb-2">
+          <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 opacity-80" />
+          <span className="text-[10px] sm:text-xs opacity-80">Pipeline</span>
         </div>
-        <p className="text-2xl font-bold">€{metrics.pipelineValue.toLocaleString()}</p>
-        <p className="text-xs opacity-80 mt-1">{metrics.activeDeals} deal attivi</p>
+        <p className="text-lg sm:text-2xl font-bold">€{metrics.pipelineValue.toLocaleString()}</p>
+        <p className="text-[10px] sm:text-xs opacity-80 mt-0.5 sm:mt-1">{metrics.activeDeals} deal attivi</p>
       </div>
 
       {/* Conversion Rate */}
-      <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 text-white">
-        <div className="flex items-center justify-between mb-2">
-          <Target className="w-5 h-5 opacity-80" />
-          <span className="text-xs opacity-80">Conversione</span>
+      <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-3 sm:p-4 text-white">
+        <div className="flex items-center justify-between mb-1 sm:mb-2">
+          <Target className="w-4 h-4 sm:w-5 sm:h-5 opacity-80" />
+          <span className="text-[10px] sm:text-xs opacity-80">Conversione</span>
         </div>
-        <p className="text-2xl font-bold">{metrics.conversionRate}%</p>
-        <p className="text-xs opacity-80 mt-1">{stats.closed_positive} vinti su {stats.closed_positive + stats.closed_negative}</p>
+        <p className="text-lg sm:text-2xl font-bold">{metrics.conversionRate}%</p>
+        <p className="text-[10px] sm:text-xs opacity-80 mt-0.5 sm:mt-1 truncate">{stats.closed_positive}/{stats.closed_positive + stats.closed_negative}</p>
       </div>
 
       {/* Da Contattare */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-2">
-          <Users className="w-5 h-5 text-blue-500" />
-          <span className="text-xs text-gray-500">Da Contattare</span>
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-3 sm:p-4 border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between mb-1 sm:mb-2">
+          <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
+          <span className="text-[10px] sm:text-xs text-gray-500 hidden sm:inline">Da Contattare</span>
+          <span className="text-[10px] text-gray-500 sm:hidden">Contatto</span>
         </div>
-        <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.to_contact}</p>
-        <p className="text-xs text-gray-500 mt-1">lead in attesa</p>
+        <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">{stats.to_contact}</p>
+        <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1 hidden sm:block">lead in attesa</p>
       </div>
 
       {/* In Trattativa */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-2">
-          <TrendingUp className="w-5 h-5 text-yellow-500" />
-          <span className="text-xs text-gray-500">In Trattativa</span>
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-3 sm:p-4 border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between mb-1 sm:mb-2">
+          <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
+          <span className="text-[10px] sm:text-xs text-gray-500 hidden sm:inline">In Trattativa</span>
+          <span className="text-[10px] text-gray-500 sm:hidden">Trattativa</span>
         </div>
-        <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.in_negotiation}</p>
-        <p className="text-xs text-gray-500 mt-1">negoziazioni attive</p>
+        <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">{stats.in_negotiation}</p>
+        <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1 hidden sm:block">negoziazioni attive</p>
       </div>
 
       {/* Chiusi Positivi */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-2">
-          <CheckCircle className="w-5 h-5 text-green-500" />
-          <span className="text-xs text-gray-500">Vinti</span>
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-3 sm:p-4 border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between mb-1 sm:mb-2">
+          <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+          <span className="text-[10px] sm:text-xs text-gray-500">Vinti</span>
         </div>
-        <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.closed_positive}</p>
-        <p className="text-xs text-gray-500 mt-1">clienti acquisiti</p>
+        <p className="text-lg sm:text-2xl font-bold text-green-600 dark:text-green-400">{stats.closed_positive}</p>
+        <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1 hidden sm:block">clienti acquisiti</p>
       </div>
 
       {/* Follow-up Scaduti */}
-      <div className={`rounded-xl p-4 border ${
+      <div className={`rounded-xl p-3 sm:p-4 border ${
         stats.overdue_follow_ups > 0
           ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
           : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
       }`}>
-        <div className="flex items-center justify-between mb-2">
-          <AlertTriangle className={`w-5 h-5 ${stats.overdue_follow_ups > 0 ? 'text-red-500' : 'text-gray-400'}`} />
-          <span className="text-xs text-gray-500">Scaduti</span>
+        <div className="flex items-center justify-between mb-1 sm:mb-2">
+          <AlertTriangle className={`w-4 h-4 sm:w-5 sm:h-5 ${stats.overdue_follow_ups > 0 ? 'text-red-500' : 'text-gray-400'}`} />
+          <span className="text-[10px] sm:text-xs text-gray-500">Scaduti</span>
         </div>
-        <p className={`text-2xl font-bold ${stats.overdue_follow_ups > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
+        <p className={`text-lg sm:text-2xl font-bold ${stats.overdue_follow_ups > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
           {stats.overdue_follow_ups}
         </p>
-        <p className="text-xs text-gray-500 mt-1">follow-up urgenti</p>
+        <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1 hidden sm:block">follow-up urgenti</p>
       </div>
     </div>
   )
