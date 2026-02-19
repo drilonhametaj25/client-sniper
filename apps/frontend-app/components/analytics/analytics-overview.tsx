@@ -1,7 +1,8 @@
 /**
  * Analytics Overview Component
  * Componente che mostra le metriche principali dell'analytics in card
- * 
+ * Include trend indicators con variazione % rispetto al periodo precedente
+ *
  * Utilizzato da: analytics dashboard page
  * Dipende da: analyticsService per il recupero dati
  */
@@ -10,7 +11,28 @@
 
 import { useEffect, useState } from 'react'
 import { analyticsService, AnalyticsOverview as AnalyticsOverviewType } from '@/lib/services/analytics'
-import { TrendingUp, TrendingDown, Users, Target, DollarSign, BarChart3 } from 'lucide-react'
+import { TrendingUp, TrendingDown, Users, Target, DollarSign, BarChart3, ArrowUp, ArrowDown, Minus } from 'lucide-react'
+
+// Componente per il trend indicator
+function TrendIndicator({ value, label }: { value: number; label?: string }) {
+  if (value === 0) {
+    return (
+      <div className="flex items-center gap-1 text-xs text-gray-500">
+        <Minus className="w-3 h-3" />
+        <span>Stabile</span>
+      </div>
+    )
+  }
+
+  const isPositive = value > 0
+  return (
+    <div className={`flex items-center gap-1 text-xs ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+      {isPositive ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
+      <span>{isPositive ? '+' : ''}{value.toFixed(1)}%</span>
+      {label && <span className="text-gray-400">{label}</span>}
+    </div>
+  )
+}
 
 export function AnalyticsOverview() {
   const [data, setData] = useState<AnalyticsOverviewType | null>(null)
@@ -63,6 +85,8 @@ export function AnalyticsOverview() {
       icon: Users,
       color: 'text-blue-600 dark:text-blue-400',
       bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+      trend: data.weeklyGrowth || 0,
+      trendLabel: 'vs sett. scorsa'
     },
     {
       name: 'Conversioni',
@@ -70,6 +94,8 @@ export function AnalyticsOverview() {
       icon: Target,
       color: 'text-green-600 dark:text-green-400',
       bgColor: 'bg-green-50 dark:bg-green-900/20',
+      trend: 0, // Conversioni non hanno trend calcolato
+      trendLabel: ''
     },
     {
       name: 'Tasso Conversione',
@@ -77,6 +103,8 @@ export function AnalyticsOverview() {
       icon: BarChart3,
       color: 'text-purple-600 dark:text-purple-400',
       bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+      trend: 0,
+      trendLabel: ''
     },
     {
       name: 'ROI Medio',
@@ -84,6 +112,8 @@ export function AnalyticsOverview() {
       icon: data.averageROI >= 0 ? TrendingUp : TrendingDown,
       color: data.averageROI >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400',
       bgColor: data.averageROI >= 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20',
+      trend: 0,
+      trendLabel: ''
     },
   ]
 
@@ -97,9 +127,12 @@ export function AnalyticsOverview() {
               <div className={`p-3 rounded-lg ${metric.bgColor}`}>
                 <Icon className={`h-6 w-6 ${metric.color}`} />
               </div>
-              <div className="ml-4">
+              <div className="ml-4 flex-1">
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{metric.name}</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">{metric.value}</p>
+                {metric.trend !== 0 && (
+                  <TrendIndicator value={metric.trend} label={metric.trendLabel} />
+                )}
               </div>
             </div>
           </div>

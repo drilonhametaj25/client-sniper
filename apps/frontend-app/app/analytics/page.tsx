@@ -1,29 +1,36 @@
 /**
  * Analytics Dashboard Page
  * Pagina principale per la dashboard di analytics che mostra:
+ * - Overview metriche con trend
+ * - CRM Analytics (pipeline, conversioni, status)
+ * - Distribuzione qualita' lead
  * - Heatmap geografica dei lead
  * - Grafici di conversione
+ * - Timeline attivita' recenti
  * - Calcolatore ROI
  * - Esportazione report
- * 
- * Utilizzata da: utenti admin e utenti con piano premium
+ *
+ * Utilizzata da: utenti Starter+
  * Dipende da: /lib/analytics per servizi, /components/analytics per componenti
  */
 
 import { Metadata } from 'next'
 import { Suspense } from 'react'
-import { 
-  GeographicHeatmap, 
-  ConversionRateChart, 
-  ROICalculator, 
-  ExportReports, 
-  AnalyticsOverview 
+import {
+  GeographicHeatmap,
+  ConversionRateChart,
+  ROICalculator,
+  ExportReports,
+  AnalyticsOverview,
+  CrmAnalyticsWidget,
+  ScoreDistribution,
+  ActivityTimeline
 } from '@/components/analytics'
 import { AnalyticsProtection } from '@/components/analytics/analytics-protection'
 import LoadingSpinner from '@/components/ui/loading-spinner'
 
 export const metadata: Metadata = {
-  title: 'Analytics Dashboard - ClientSniper',
+  title: 'Analytics Dashboard - TrovaMi',
   description: 'Dashboard completa per l\'analisi delle performance e ROI dei lead generati',
 }
 
@@ -39,11 +46,25 @@ export default function AnalyticsPage() {
             </p>
           </div>
 
-          {/* Overview Cards */}
+          {/* Overview Cards con Trend */}
           <Suspense fallback={<LoadingSpinner />}>
             <AnalyticsOverview />
           </Suspense>
 
+          {/* CRM Analytics + Score Distribution */}
+          <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* CRM Analytics Widget */}
+            <Suspense fallback={<LoadingSpinner />}>
+              <CrmAnalyticsWidget />
+            </Suspense>
+
+            {/* Score Distribution */}
+            <Suspense fallback={<LoadingSpinner />}>
+              <ScoreDistribution />
+            </Suspense>
+          </div>
+
+          {/* Heatmap + Conversion Chart */}
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Heatmap Geografica */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
@@ -62,14 +83,22 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
+          {/* Activity Timeline + ROI Calculator */}
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Activity Timeline */}
+            <Suspense fallback={<LoadingSpinner />}>
+              <ActivityTimeline />
+            </Suspense>
+
             {/* ROI Calculator */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
               <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Calcolatore ROI</h2>
               <ROICalculator />
             </div>
+          </div>
 
-            {/* Export Reports */}
+          {/* Export Reports */}
+          <div className="mt-8">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
               <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Esportazione Report</h2>
               <ExportReports />

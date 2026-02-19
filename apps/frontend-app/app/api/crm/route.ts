@@ -189,6 +189,42 @@ export async function GET(request: NextRequest) {
         crmEntries = rpcEntries || [];
       }
 
+      // Aggiungi conteggio proposte per ogni entry
+      if (crmEntries.length > 0) {
+        const leadIds = crmEntries.map((e: any) => e.lead_id);
+
+        const { data: proposalsData, error: proposalsError } = await getSupabaseAdmin()
+          .from('lead_proposed_services')
+          .select(`
+            lead_id,
+            custom_price_eur,
+            digital_services (price_freelance_eur)
+          `)
+          .eq('user_id', user.id)
+          .in('lead_id', leadIds);
+
+        if (!proposalsError && proposalsData) {
+          // Raggruppa proposte per lead_id
+          const proposalsByLead: Record<string, { count: number; value: number }> = {};
+
+          proposalsData.forEach((proposal: any) => {
+            if (!proposalsByLead[proposal.lead_id]) {
+              proposalsByLead[proposal.lead_id] = { count: 0, value: 0 };
+            }
+            proposalsByLead[proposal.lead_id].count++;
+            const price = proposal.custom_price_eur || proposal.digital_services?.price_freelance_eur || 0;
+            proposalsByLead[proposal.lead_id].value += price;
+          });
+
+          // Aggiungi dati proposte alle entries
+          crmEntries = crmEntries.map((entry: any) => ({
+            ...entry,
+            proposals_count: proposalsByLead[entry.lead_id]?.count || 0,
+            proposals_value: proposalsByLead[entry.lead_id]?.value || 0
+          }));
+        }
+      }
+
       // Prova RPC per statistiche
       const { data: rpcStats, error: statsError } = await getSupabaseAdmin()
         .rpc('get_user_crm_stats', { user_id: user.id });

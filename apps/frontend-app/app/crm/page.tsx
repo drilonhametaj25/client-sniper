@@ -7,6 +7,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -17,14 +18,17 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { isStarterOrHigher } from '@/lib/utils/plan-helpers';
 import { TourTarget } from '@/components/onboarding/TourTarget';
-import { 
-  Search, 
-  Plus, 
-  Edit, 
-  Calendar as CalendarIcon, 
-  Paperclip, 
-  Phone, 
-  Mail, 
+import CRMKanban from '@/components/CRMKanban';
+import CRMStatsHeader from '@/components/CRMStatsHeader';
+import CRMLeadSidebar from '@/components/CRMLeadSidebar';
+import {
+  Search,
+  Plus,
+  Edit,
+  Calendar as CalendarIcon,
+  Paperclip,
+  Phone,
+  Mail,
   Globe,
   TrendingUp,
   Clock,
@@ -33,7 +37,9 @@ import {
   Pause,
   RotateCcw,
   Filter,
-  Lock
+  Lock,
+  LayoutList,
+  LayoutGrid
 } from 'lucide-react';
 
 // Tipi per TypeScript
@@ -43,15 +49,19 @@ interface CrmEntry {
   status: string;
   note: string | null;
   follow_up_date: string | null;
-  attachments: any[];
-  created_at: string;
-  updated_at: string;
   lead_business_name: string;
   lead_website_url: string;
   lead_city: string;
   lead_category: string;
   lead_score: number;
-  lead_analysis: any;
+  // Campi opzionali
+  attachments?: any[];
+  created_at?: string;
+  updated_at?: string;
+  lead_analysis?: any;
+  // Proposte servizi
+  proposals_count?: number;
+  proposals_value?: number;
 }
 
 interface CrmStats {
@@ -82,6 +92,15 @@ export default function CrmPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedEntry, setSelectedEntry] = useState<CrmEntry | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [sidebarEntry, setSidebarEntry] = useState<CrmEntry | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>(() => {
+    // Recupera preferenza da localStorage se disponibile
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('crm-view-mode') as 'list' | 'kanban') || 'kanban';
+    }
+    return 'kanban';
+  });
   const [formData, setFormData] = useState({
     status: '',
     note: '',
@@ -90,6 +109,14 @@ export default function CrmPage() {
   const { success, error } = useToast();
   const { actualTheme } = useTheme();
   const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+
+  // Salva preferenza vista in localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('crm-view-mode', viewMode);
+    }
+  }, [viewMode]);
 
   // Verifica piano e stato prima di procedere
   useEffect(() => {
@@ -288,6 +315,117 @@ export default function CrmPage() {
     }
   };
 
+  // Handler per cambio status da Kanban drag-and-drop
+  const handleKanbanStatusChange = async (entryId: string, newStatus: string) => {
+    try {
+      const session = await supabase.auth.getSession();
+      if (!session.data.session) {
+        error('Errore Autenticazione', 'Sessione non valida');
+        return;
+      }
+
+      // Trova l'entry per ottenere il lead_id
+      const entry = entries.find(e => e.id === entryId);
+      if (!entry) return;
+
+      const response = await fetch('/api/crm', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.data.session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          lead_id: entry.lead_id,
+          status: newStatus
+        })
+      });
+
+      if (response.ok) {
+        // Aggiorna localmente per feedback immediato
+        setEntries(prev => prev.map(e =>
+          e.id === entryId ? { ...e, status: newStatus } : e
+        ));
+        // Ricalcola stats
+        const updatedEntries = entries.map(e =>
+          e.id === entryId ? { ...e, status: newStatus } : e
+        );
+        setStats(calculateStats(updatedEntries));
+        success('Stato Aggiornato', `Lead spostato in "${STATUS_CONFIG[newStatus as keyof typeof STATUS_CONFIG]?.label || newStatus}"`);
+      } else {
+        throw new Error('Errore nel salvataggio');
+      }
+    } catch (err) {
+      console.error('Errore cambio stato Kanban:', err);
+      error('Errore', 'Impossibile aggiornare lo stato');
+      // Ricarica per ripristinare stato corretto
+      loadCrmData();
+    }
+  };
+
+  // Handler per click su card Kanban - apre sidebar
+  const handleKanbanEntryClick = (entry: CrmEntry) => {
+    setSidebarEntry(entry);
+    setIsSidebarOpen(true);
+  };
+
+  // Handler per salvare da sidebar
+  const handleSidebarSave = async (entryId: string, data: { status: string; note: string; follow_up_date: string | null }) => {
+    try {
+      const session = await supabase.auth.getSession();
+      if (!session.data.session) {
+        error('Errore Autenticazione', 'Sessione non valida');
+        return;
+      }
+
+      const entry = entries.find(e => e.id === entryId);
+      if (!entry) return;
+
+      const response = await fetch('/api/crm', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.data.session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          lead_id: entry.lead_id,
+          status: data.status,
+          note: data.note,
+          follow_up_date: data.follow_up_date
+        })
+      });
+
+      if (response.ok) {
+        // Aggiorna localmente
+        setEntries(prev => prev.map(e =>
+          e.id === entryId
+            ? { ...e, status: data.status, note: data.note, follow_up_date: data.follow_up_date }
+            : e
+        ));
+        // Ricalcola stats
+        const updatedEntries = entries.map(e =>
+          e.id === entryId
+            ? { ...e, status: data.status, note: data.note, follow_up_date: data.follow_up_date }
+            : e
+        );
+        setStats(calculateStats(updatedEntries));
+        // Aggiorna anche entry nella sidebar
+        setSidebarEntry(prev => prev ? { ...prev, status: data.status, note: data.note, follow_up_date: data.follow_up_date } : null);
+        success('Salvato', 'Modifiche salvate con successo');
+      } else {
+        throw new Error('Errore nel salvataggio');
+      }
+    } catch (err) {
+      console.error('Errore salvataggio sidebar:', err);
+      error('Errore', 'Impossibile salvare le modifiche');
+    }
+  };
+
+  // Handler per navigare al dettaglio da sidebar
+  const handleViewDetail = (leadId: string) => {
+    setIsSidebarOpen(false);
+    router.push(`/crm/${leadId}`);
+  };
+
   const getStatusIcon = (status: string) => {
     const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG];
     const Icon = config?.icon || Phone;
@@ -385,9 +523,34 @@ export default function CrmPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 min-h-screen bg-gray-50 dark:bg-gray-900">
-      <TourTarget tourId="crm-header" className="flex justify-between items-center mb-6">
-        <h1 id="crm-header" className="text-3xl font-bold text-gray-900 dark:text-gray-100">CRM Personale</h1>
-        <div className="flex gap-2">
+      <TourTarget tourId="crm-header" className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 id="crm-header" className="text-3xl font-bold text-gray-900 dark:text-gray-100">CRM Pipeline</h1>
+        <div className="flex items-center gap-2">
+          {/* Toggle Vista */}
+          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <button
+              onClick={() => setViewMode('kanban')}
+              className={`px-3 py-2 flex items-center gap-1.5 text-sm font-medium transition-colors ${
+                viewMode === 'kanban'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              Kanban
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`px-3 py-2 flex items-center gap-1.5 text-sm font-medium transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
+            >
+              <LayoutList className="w-4 h-4" />
+              Lista
+            </button>
+          </div>
           <Button onClick={loadCrmData} variant="secondary">
             <RotateCcw className="w-4 h-4 mr-2" />
             Aggiorna
@@ -395,58 +558,10 @@ export default function CrmPage() {
         </div>
       </TourTarget>
 
-      {/* Statistiche */}
-      {stats && (
-        <TourTarget tourId="crm-stats" className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Totale Lead</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.total_entries}</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Da Contattare</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.to_contact}</p>
-              </div>
-              <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/50 rounded-full flex items-center justify-center">
-                <Phone className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">In Negoziazione</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.in_negotiation}</p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-full flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Follow-up Scaduti</p>
-                <p className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.overdue_follow_ups}</p>
-              </div>
-              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/50 rounded-full flex items-center justify-center">
-                <Clock className="w-6 h-6 text-red-600 dark:text-red-400" />
-              </div>
-            </div>
-          </Card>
-        </TourTarget>
-      )}
+      {/* Statistiche Dashboard */}
+      <TourTarget tourId="crm-stats">
+        <CRMStatsHeader stats={stats} entries={entries} />
+      </TourTarget>
 
       {/* Filtri e Ricerca */}
       <TourTarget tourId="crm-filters" className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -475,75 +590,99 @@ export default function CrmPage() {
         </div>
       </TourTarget>
 
-      {/* Lista Lead CRM */}
-      <TourTarget tourId="crm-entries" className="space-y-4">
-        {filteredEntries.length === 0 ? (
-          <Card>
-            <div className="text-center py-8">
-              <p className="text-gray-500 dark:text-gray-400">Nessun lead trovato nel tuo CRM</p>
-            </div>
-          </Card>
+      {/* Vista Kanban o Lista */}
+      <TourTarget tourId="crm-entries">
+        {viewMode === 'kanban' ? (
+          /* Vista Kanban */
+          <div className="overflow-x-auto">
+            {filteredEntries.length === 0 ? (
+              <Card>
+                <div className="text-center py-12">
+                  <LayoutGrid className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-500 dark:text-gray-400 text-lg">Nessun lead nel tuo CRM</p>
+                  <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Sblocca dei lead per iniziare a gestirli</p>
+                </div>
+              </Card>
+            ) : (
+              <CRMKanban
+                entries={filteredEntries}
+                onStatusChange={handleKanbanStatusChange}
+                onEntryClick={handleKanbanEntryClick}
+              />
+            )}
+          </div>
         ) : (
-          filteredEntries.map((entry) => (
-            <Card key={entry.id} className="hover:shadow-md transition-shadow">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">{entry.lead_business_name}</h3>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {getStatusBadge(entry.status)}
-                    <Badge variant="info">
-                      Punteggio: {entry.lead_score}/100
-                    </Badge>
-                    {entry.follow_up_date && (
-                      <Badge variant={isOverdue(entry.follow_up_date) ? 'error' : 'info'}>
-                        <CalendarIcon className="w-3 h-3 mr-1" />
-                        {formatDate(entry.follow_up_date)}
-                      </Badge>
-                    )}
+          /* Vista Lista */
+          <div className="space-y-4">
+            {filteredEntries.length === 0 ? (
+              <Card>
+                <div className="text-center py-8">
+                  <p className="text-gray-500 dark:text-gray-400">Nessun lead trovato nel tuo CRM</p>
+                </div>
+              </Card>
+            ) : (
+              filteredEntries.map((entry) => (
+                <Card key={entry.id} className="hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">{entry.lead_business_name}</h3>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {getStatusBadge(entry.status)}
+                        <Badge variant="info">
+                          Punteggio: {entry.lead_score}/100
+                        </Badge>
+                        {entry.follow_up_date && (
+                          <Badge variant={isOverdue(entry.follow_up_date) ? 'error' : 'info'}>
+                            <CalendarIcon className="w-3 h-3 mr-1" />
+                            {formatDate(entry.follow_up_date)}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => router.push(`/crm/${entry.lead_id}`)}
+                      >
+                        <Globe className="w-4 h-4 mr-2" />
+                        Dettaglio
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleEditEntry(entry)}
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Modifica
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => window.open(`/crm/${entry.lead_id}`, '_blank')}
-                  >
-                    <Globe className="w-4 h-4 mr-2" />
-                    Dettaglio
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleEditEntry(entry)}
-                  >
-                    <Edit className="w-4 h-4 mr-2" />
-                    Modifica
-                  </Button>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                  <Globe className="w-4 h-4 mr-2" />
-                  {entry.lead_website_url}
-                </div>
-                <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                  <span className="w-4 h-4 mr-2">📍</span>
-                  {entry.lead_city}
-                </div>
-                <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                  <span className="w-4 h-4 mr-2">🏢</span>
-                  {entry.lead_category}
-                </div>
-              </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                      <Globe className="w-4 h-4 mr-2" />
+                      {entry.lead_website_url}
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                      <span className="w-4 h-4 mr-2">📍</span>
+                      {entry.lead_city}
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                      <span className="w-4 h-4 mr-2">🏢</span>
+                      {entry.lead_category}
+                    </div>
+                  </div>
 
-              {entry.note && (
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <p className="text-sm text-gray-700 dark:text-gray-300">{entry.note}</p>
-                </div>
-              )}
-            </Card>
-          ))
+                  {entry.note && (
+                    <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                      <p className="text-sm text-gray-700 dark:text-gray-300">{entry.note}</p>
+                    </div>
+                  )}
+                </Card>
+              ))
+            )}
+          </div>
         )}
       </TourTarget>
 
@@ -604,6 +743,15 @@ export default function CrmPage() {
           </Card>
         </div>
       )}
+
+      {/* Sidebar Dettaglio Lead */}
+      <CRMLeadSidebar
+        entry={sidebarEntry}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        onSave={handleSidebarSave}
+        onViewDetail={handleViewDetail}
+      />
     </div>
   );
 }

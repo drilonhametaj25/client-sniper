@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   Phone,
   TrendingUp,
@@ -18,7 +18,11 @@ import {
   MapPin,
   Star,
   GripVertical,
-  ExternalLink
+  ExternalLink,
+  Briefcase,
+  MoreVertical,
+  Calendar,
+  MessageSquare
 } from 'lucide-react'
 
 // Configurazione stati
@@ -87,18 +91,37 @@ interface CrmEntry {
   lead_city: string
   lead_category: string
   lead_score: number
+  // Campi opzionali (usati dalla pagina CRM ma non dal Kanban)
+  attachments?: any[]
+  created_at?: string
+  updated_at?: string
+  lead_analysis?: any
+  // Campi proposte servizi
+  proposals_count?: number
+  proposals_value?: number
 }
 
 interface CRMKanbanProps {
   entries: CrmEntry[]
   onStatusChange: (entryId: string, newStatus: string) => Promise<void>
   onEntryClick: (entry: CrmEntry) => void
+  onQuickAction?: (entry: CrmEntry, action: string) => void
 }
 
-export default function CRMKanban({ entries, onStatusChange, onEntryClick }: CRMKanbanProps) {
+export default function CRMKanban({ entries, onStatusChange, onEntryClick, onQuickAction }: CRMKanbanProps) {
   const [draggedEntry, setDraggedEntry] = useState<CrmEntry | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
   const [isUpdating, setIsUpdating] = useState<string | null>(null)
+  const [openMenu, setOpenMenu] = useState<string | null>(null)
+
+  // Chiudi menu quando si clicca fuori
+  useEffect(() => {
+    const handleClickOutside = () => setOpenMenu(null)
+    if (openMenu) {
+      document.addEventListener('click', handleClickOutside)
+      return () => document.removeEventListener('click', handleClickOutside)
+    }
+  }, [openMenu])
 
   // Raggruppa entries per stato
   const entriesByStatus = COLUMN_ORDER.reduce((acc, status) => {
@@ -213,15 +236,121 @@ export default function CRMKanban({ entries, onStatusChange, onEntryClick }: CRM
                     ${isUpdating === entry.id ? 'opacity-50 pointer-events-none' : ''}
                   `}
                 >
-                  {/* Grip handle */}
+                  {/* Grip handle + Quick Actions */}
                   <div className="flex items-start gap-2">
                     <GripVertical className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
 
                     <div className="flex-1 min-w-0">
-                      {/* Nome azienda */}
-                      <h4 className="font-medium text-sm text-gray-900 dark:text-white truncate">
-                        {entry.lead_business_name}
-                      </h4>
+                      {/* Header con nome e menu */}
+                      <div className="flex items-start justify-between gap-1">
+                        <h4 className="font-medium text-sm text-gray-900 dark:text-white truncate">
+                          {entry.lead_business_name}
+                        </h4>
+
+                        {/* Quick Actions Menu */}
+                        <div className="relative flex-shrink-0">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setOpenMenu(openMenu === entry.id ? null : entry.id)
+                            }}
+                            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                          >
+                            <MoreVertical className="w-4 h-4 text-gray-400" />
+                          </button>
+
+                          {/* Dropdown Menu */}
+                          {openMenu === entry.id && (
+                            <div className="absolute right-0 top-6 z-50 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1">
+                              {/* Quick Status Changes */}
+                              {entry.status !== 'in_negotiation' && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    onStatusChange(entry.id, 'in_negotiation')
+                                    setOpenMenu(null)
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                                >
+                                  <TrendingUp className="w-4 h-4 text-yellow-500" />
+                                  Inizia Trattativa
+                                </button>
+                              )}
+                              {entry.status !== 'follow_up' && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    onStatusChange(entry.id, 'follow_up')
+                                    setOpenMenu(null)
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                                >
+                                  <Calendar className="w-4 h-4 text-purple-500" />
+                                  Imposta Follow-up
+                                </button>
+                              )}
+                              {entry.status !== 'closed_positive' && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    onStatusChange(entry.id, 'closed_positive')
+                                    setOpenMenu(null)
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                                >
+                                  <CheckCircle className="w-4 h-4 text-green-500" />
+                                  Chiudi Positivo
+                                </button>
+                              )}
+                              {entry.status !== 'closed_negative' && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    onStatusChange(entry.id, 'closed_negative')
+                                    setOpenMenu(null)
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                                >
+                                  <XCircle className="w-4 h-4 text-red-500" />
+                                  Chiudi Negativo
+                                </button>
+                              )}
+
+                              <hr className="my-1 border-gray-200 dark:border-gray-700" />
+
+                              {/* Open Website */}
+                              {entry.lead_website_url && (
+                                <a
+                                  href={entry.lead_website_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setOpenMenu(null)
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                                >
+                                  <Globe className="w-4 h-4 text-blue-500" />
+                                  Apri Sito Web
+                                </a>
+                              )}
+
+                              {/* View Details */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setOpenMenu(null)
+                                  onEntryClick(entry)
+                                }}
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                              >
+                                <MessageSquare className="w-4 h-4 text-gray-500" />
+                                Dettagli e Note
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
 
                       {/* Info */}
                       <div className="mt-1 space-y-1">
@@ -260,6 +389,17 @@ export default function CRMKanban({ entries, onStatusChange, onEntryClick }: CRM
                           </a>
                         )}
                       </div>
+
+                      {/* Proposals indicator */}
+                      {entry.proposals_count && entry.proposals_count > 0 && (
+                        <div className="mt-2 flex items-center gap-1.5 text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-1 rounded">
+                          <Briefcase className="w-3 h-3" />
+                          <span>{entry.proposals_count} {entry.proposals_count === 1 ? 'proposta' : 'proposte'}</span>
+                          {entry.proposals_value && entry.proposals_value > 0 && (
+                            <span className="font-medium ml-auto">€{entry.proposals_value.toLocaleString()}</span>
+                          )}
+                        </div>
+                      )}
 
                       {/* Follow-up indicator */}
                       {entry.follow_up_date && (
