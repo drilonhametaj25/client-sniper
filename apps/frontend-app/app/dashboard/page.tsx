@@ -16,8 +16,8 @@ import { createPortal } from 'react-dom'
 import { LeadStatusBadge } from '@/components/LeadStatusBadge'
 import { LeadWithCRM, CRMStatusType } from '@/lib/types/crm'
 import LeadInsights from '@/components/LeadInsights'
-import { 
-  Target, 
+import {
+  Target,
   CreditCard,
   Filter,
   ExternalLink,
@@ -33,7 +33,8 @@ import {
   Users,
   Calendar,
   Eye,
-  MessageCircle
+  MessageCircle,
+  X
 } from 'lucide-react'
 import AdvancedFilters, { AdvancedFiltersState } from '@/components/AdvancedFilters'
 import { TourTarget } from '@/components/onboarding/TourTarget'
@@ -1710,192 +1711,277 @@ export default function ClientDashboard() {
 
           {/* Banner Proposte gestito da AccountStatusBar sopra */}
 
-          {/* Filtri e Controlli */}
+          {/* Filtri e Controlli - Layout Unificato */}
           <TourTarget tourId="dashboard-filters" className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-gray-200/50 dark:border-gray-700/50 mb-8 overflow-hidden relative">
-            <div className="flex flex-col gap-4">
-              {/* Search */}
-              <TourTarget tourId="dashboard-search" className="relative w-full lg:max-w-md">
-                <Search className={`absolute left-3 top-3 h-5 w-5 transition-colors ${
-                  isSearching ? 'text-blue-500 animate-pulse' : 'text-gray-400'
-                }`} />
-                <input
-                  data-tour="dashboard-search"
-                  type="text"
-                  placeholder={searchInput.length > 0 && searchInput.length < 3 ? "Digita almeno 3 caratteri..." : "Cerca aziende..."}
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && executeSearch()}
-                  className={`w-full pl-10 pr-20 py-3 bg-gray-50 dark:bg-gray-900/50 border transition-colors text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    searchInput.length > 0 && searchInput.length < 3 
-                      ? 'border-yellow-300 dark:border-yellow-600' 
-                      : 'border-gray-200 dark:border-gray-700'
+            {/* Row 1: Search */}
+            <TourTarget tourId="dashboard-search" className="relative w-full mb-4">
+              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors ${
+                isSearching ? 'text-blue-500 animate-pulse' : 'text-gray-400'
+              }`} />
+              <input
+                data-tour="dashboard-search"
+                type="text"
+                placeholder={searchInput.length > 0 && searchInput.length < 3 ? "Digita almeno 3 caratteri..." : "Cerca aziende..."}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && executeSearch()}
+                className={`w-full pl-10 pr-20 py-3 min-h-[44px] bg-gray-50 dark:bg-gray-900/50 border transition-colors text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  searchInput.length > 0 && searchInput.length < 3
+                    ? 'border-yellow-300 dark:border-yellow-600'
+                    : 'border-gray-200 dark:border-gray-700'
+                }`}
+              />
+              {searchInput && (
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  {searchInput.length > 0 && searchInput.length < 3 && (
+                    <span className="text-xs text-yellow-600 dark:text-yellow-400">
+                      {3 - searchInput.length} car.
+                    </span>
+                  )}
+                  {isSearching && searchInput.length >= 3 && (
+                    <div className="flex items-center text-xs text-blue-600 dark:text-blue-400">
+                      <div className="animate-spin h-3 w-3 border border-blue-600 border-t-transparent rounded-full mr-1"></div>
+                    </div>
+                  )}
+                  <button
+                    onClick={clearSearch}
+                    className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+                    title="Pulisci"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </TourTarget>
+
+            {/* Row 2: Actions Bar */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              {/* Pulsante Filtri Unificato */}
+              <TourTarget tourId="dashboard-filter-toggle">
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`flex items-center gap-2 px-3 sm:px-4 py-2 min-h-[44px] rounded-xl transition-colors ${
+                    showFilters || filterCategory || filterCity || filterRole || showOnlyUnlocked || showOnlyMatching
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                   }`}
-                />
-                {searchInput && (
-                  <div className="absolute right-2 top-2 flex items-center space-x-1">
-                    {searchInput.length > 0 && searchInput.length < 3 && (
-                      <span className="text-xs text-yellow-600 dark:text-yellow-400 mr-1">
-                        {3 - searchInput.length} car.
+                >
+                  <Filter className="h-4 w-4" />
+                  <span className="text-sm font-medium">Filtri</span>
+                  {/* Badge conteggio filtri attivi */}
+                  {(() => {
+                    const activeCount = [
+                      showOnlyUnlocked,
+                      showOnlyMatching,
+                      filterCategory,
+                      filterCity,
+                      filterRole
+                    ].filter(Boolean).length
+                    return activeCount > 0 ? (
+                      <span className={`px-1.5 py-0.5 text-xs font-bold rounded-full ${
+                        showFilters ? 'bg-white/20 text-white' : 'bg-blue-500 text-white'
+                      }`}>
+                        {activeCount}
                       </span>
-                    )}
-                    {isSearching && searchInput.length >= 3 && (
-                      <div className="flex items-center text-xs text-blue-600 dark:text-blue-400 mr-1">
-                        <div className="animate-spin h-3 w-3 border border-blue-600 border-t-transparent rounded-full mr-1"></div>
-                        Ricerca...
-                      </div>
-                    )}
-                    <button
-                      onClick={executeSearch}
-                      className="p-1 text-blue-600 hover:text-blue-700 transition-colors"
-                      title="Cerca ora"
-                    >
-                      <Search className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={clearSearch}
-                      className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                      title="Pulisci"
-                    >
-                      ×
-                    </button>
-                  </div>
-                )}
-                {searchTerm && searchTerm !== searchInput && (
-                  <div className="absolute top-full left-0 mt-1 text-xs text-blue-600 dark:text-blue-400">
-                    Cercando: "{searchTerm}"
-                  </div>
-                )}
+                    ) : null
+                  })()}
+                  <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                </button>
               </TourTarget>
 
-              {/* Actions - Row 1: Toggles */}
-              <div className="flex flex-wrap items-center gap-3">
-                {/* Toggle per proposte generate */}
-                <TourTarget tourId="dashboard-filter-toggle" className="flex items-center gap-2">
-                  <label className="inline-flex items-center cursor-pointer">
+              {/* Dropdown Ordinamento */}
+              <div className="relative">
+                <select
+                  value={`${sortBy}-${sortOrder}`}
+                  onChange={(e) => {
+                    const [newSortBy, newSortOrder] = e.target.value.split('-')
+                    setSortBy(newSortBy as 'score' | 'created_at' | 'last_seen_at' | 'business_name')
+                    setSortOrder(newSortOrder as 'asc' | 'desc')
+                  }}
+                  className="appearance-none bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 pl-3 pr-8 py-2 min-h-[44px] text-sm rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                >
+                  {sortOptions.map((option, index) => (
+                    <option key={index} value={`${option.value}-${option.order}`}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              </div>
+
+              {/* Spacer */}
+              <div className="flex-1" />
+
+              {/* View Switcher */}
+              <ViewSwitcher
+                currentView={currentView}
+                onViewChange={setCurrentView}
+                availableViews={['list', 'grid', 'tinder']}
+                showLabels={false}
+                size="md"
+              />
+
+              {/* Export Dropdown */}
+              <ExportDropdown
+                leads={leads.filter(l => unlockedLeads.has(l.id))}
+                selectedLeadIds={selectedLeads.length > 0 ? selectedLeads : undefined}
+              />
+
+              {/* Refresh Button */}
+              <TourTarget tourId="dashboard-refresh">
+                <button
+                  onClick={() => loadLeadsFromAPI(currentPage, false)}
+                  className="flex items-center gap-2 px-3 sm:px-4 py-2 min-h-[44px] bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  <span className="hidden sm:inline text-sm font-medium">Aggiorna</span>
+                </button>
+              </TourTarget>
+            </div>
+
+            {/* Active Filters Chips */}
+            {(showOnlyUnlocked || showOnlyMatching || filterCategory || filterCity || filterRole || searchTerm) && (
+              <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <span className="text-xs text-gray-500 dark:text-gray-400">Filtri attivi:</span>
+
+                {searchTerm && (
+                  <button
+                    onClick={clearSearch}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    <Search className="h-3 w-3" />
+                    "{searchTerm}"
+                    <X className="h-3 w-3 ml-1" />
+                  </button>
+                )}
+
+                {showOnlyUnlocked && (
+                  <button
+                    onClick={() => setShowOnlyUnlocked(false)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs rounded-full hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
+                  >
+                    Solo proposte
+                    <X className="h-3 w-3 ml-1" />
+                  </button>
+                )}
+
+                {showOnlyMatching && (
+                  <button
+                    onClick={() => setShowOnlyMatching(false)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-full hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                  >
+                    Solo compatibili
+                    <X className="h-3 w-3 ml-1" />
+                  </button>
+                )}
+
+                {filterCategory && (
+                  <button
+                    onClick={() => setFilterCategory('')}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs rounded-full hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
+                  >
+                    {translateCategory(filterCategory)}
+                    <X className="h-3 w-3 ml-1" />
+                  </button>
+                )}
+
+                {filterCity && (
+                  <button
+                    onClick={() => { setFilterCity(''); setCitySearchTerm(''); }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-xs rounded-full hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors"
+                  >
+                    <MapPin className="h-3 w-3" />
+                    {filterCity}
+                    <X className="h-3 w-3 ml-1" />
+                  </button>
+                )}
+
+                {filterRole && (
+                  <button
+                    onClick={() => setFilterRole('')}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs rounded-full hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors"
+                  >
+                    {translateRole(filterRole)}
+                    <X className="h-3 w-3 ml-1" />
+                  </button>
+                )}
+
+                {/* Clear All */}
+                <button
+                  onClick={() => {
+                    setShowOnlyUnlocked(false)
+                    setShowOnlyMatching(false)
+                    setFilterCategory('')
+                    setFilterCity('')
+                    setCitySearchTerm('')
+                    setFilterRole('')
+                    clearSearch()
+                  }}
+                  className="text-xs text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-medium ml-2"
+                >
+                  Rimuovi tutti
+                </button>
+              </div>
+            )}
+
+            {/* Pannello Filtri Espandibile - Unificato */}
+            {showFilters && (
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                {/* Toggles Row */}
+                <div className="flex flex-wrap gap-4 mb-4">
+                  {/* Toggle Solo Proposte */}
+                  <label className="flex items-center gap-3 cursor-pointer p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                    <div className={`relative w-11 h-6 rounded-full transition-colors ${
+                      showOnlyUnlocked ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}>
+                      <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform ${
+                        showOnlyUnlocked ? 'translate-x-5' : 'translate-x-0'
+                      }`}></div>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">Solo proposte generate</span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Mostra solo lead sbloccati</p>
+                    </div>
                     <input
                       type="checkbox"
                       checked={showOnlyUnlocked}
                       onChange={(e) => setShowOnlyUnlocked(e.target.checked)}
                       className="sr-only"
                     />
-                    <div className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out ${
-                      showOnlyUnlocked ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
-                    }`}>
-                      <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${
-                        showOnlyUnlocked ? 'translate-x-5' : 'translate-x-0'
-                      }`}></div>
-                    </div>
                   </label>
-                  <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 font-medium whitespace-nowrap">
-                    Solo proposte
-                  </span>
-                  {showOnlyUnlocked && (
-                    <div className="hidden sm:block px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                      ✓
-                    </div>
-                  )}
-                </TourTarget>
 
-                {/* Toggle Solo Compatibili - solo se utente ha servizi configurati */}
-                {user?.services_offered && (user.services_offered as string[]).length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <label className="inline-flex items-center cursor-pointer">
+                  {/* Toggle Solo Compatibili */}
+                  {user?.services_offered && (user.services_offered as string[]).length > 0 && (
+                    <label className="flex items-center gap-3 cursor-pointer p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                      <div className={`relative w-11 h-6 rounded-full transition-colors ${
+                        showOnlyMatching ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}>
+                        <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform ${
+                          showOnlyMatching ? 'translate-x-5' : 'translate-x-0'
+                        }`}></div>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">Solo compatibili</span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Lead che necessitano dei tuoi servizi</p>
+                      </div>
                       <input
                         type="checkbox"
                         checked={showOnlyMatching}
                         onChange={(e) => setShowOnlyMatching(e.target.checked)}
                         className="sr-only"
                       />
-                      <div className={`relative w-11 h-6 rounded-full transition-colors duration-200 ease-in-out ${
-                        showOnlyMatching ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
-                      }`}>
-                        <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${
-                          showOnlyMatching ? 'translate-x-5' : 'translate-x-0'
-                        }`}></div>
-                      </div>
                     </label>
-                    <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 font-medium whitespace-nowrap">
-                      Solo compatibili
-                    </span>
-                    {showOnlyMatching && (
-                      <div className="hidden sm:block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                        ✓
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Divider - hidden on mobile */}
-                <div className="hidden lg:block w-px h-6 bg-gray-300 dark:bg-gray-600" />
-
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center gap-2 px-3 sm:px-4 py-2 min-h-[40px] bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <Filter className="h-4 w-4" />
-                  <span className="hidden sm:inline">Filtri</span>
-                  <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-                </button>
-
-                {/* Dropdown Ordinamento */}
-                <div className="relative">
-                  <select
-                    value={`${sortBy}-${sortOrder}`}
-                    onChange={(e) => {
-                      const [newSortBy, newSortOrder] = e.target.value.split('-')
-                      setSortBy(newSortBy as 'score' | 'created_at' | 'last_seen_at' | 'business_name')
-                      setSortOrder(newSortOrder as 'asc' | 'desc')
-                    }}
-                    className="appearance-none bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 sm:px-4 py-2 pr-8 sm:pr-10 min-h-[40px] text-sm rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  >
-                    {sortOptions.map((option, index) => (
-                      <option key={index} value={`${option.value}-${option.order}`}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  )}
                 </div>
 
-                {/* View Switcher */}
-                <ViewSwitcher
-                  currentView={currentView}
-                  onViewChange={setCurrentView}
-                  availableViews={['list', 'grid', 'tinder']}
-                  showLabels={false}
-                  size="md"
-                />
-
-                {/* Export Dropdown */}
-                <ExportDropdown
-                  leads={leads.filter(l => unlockedLeads.has(l.id))}
-                  selectedLeadIds={selectedLeads.length > 0 ? selectedLeads : undefined}
-                />
-
-                <TourTarget tourId="dashboard-refresh" className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors">
-                  <button
-                    onClick={() => loadLeadsFromAPI(currentPage, false)}
-                    className="flex items-center space-x-2"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    <span>Aggiorna</span>
-                  </button>
-                </TourTarget>
-
-
-              </div>
-            </div>
-
-            {/* Filtri Espandibili */}
-            {showFilters && (
-              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 overflow-visible">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative">
+                {/* Dropdowns Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Categoria</label>
                     <select
                       value={filterCategory}
                       onChange={(e) => setFilterCategory(e.target.value)}
-                      className="w-full p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:text-white"
+                      className="w-full p-3 min-h-[44px] bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:text-white"
                     >
                       <option value="">Tutte le categorie</option>
                       {categories.map(category => (
@@ -1917,24 +2003,22 @@ export default function ClientDashboard() {
                           setShowCityDropdown(true)
                         }}
                         onFocus={() => setShowCityDropdown(true)}
-                        className="w-full p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                        className="w-full p-3 min-h-[44px] bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                       />
                       {filterCity && (
-                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                          <button
-                            onClick={() => {
-                              setFilterCity('')
-                              setCitySearchTerm('')
-                            }}
-                            className="text-gray-400 hover:text-gray-600 transition-colors"
-                          >
-                            ×
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => {
+                            setFilterCity('')
+                            setCitySearchTerm('')
+                          }}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
                       )}
                       {/* Dropdown renderizzato con Portal */}
                       {showCityDropdown && filteredCities.length > 0 && typeof window !== 'undefined' && createPortal(
-                        <div 
+                        <div
                           data-dropdown-portal
                           className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto animate-in fade-in-0 zoom-in-95 duration-100"
                           style={{
@@ -1963,11 +2047,6 @@ export default function ClientDashboard() {
                         document.body
                       )}
                     </div>
-                    {filterCity && (
-                      <div className="mt-1 text-sm text-blue-600 dark:text-blue-400">
-                        Filtrando per: {filterCity}
-                      </div>
-                    )}
                   </div>
 
                   <div>
@@ -1975,7 +2054,7 @@ export default function ClientDashboard() {
                     <select
                       value={filterRole}
                       onChange={(e) => setFilterRole(e.target.value)}
-                      className="w-full p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:text-white"
+                      className="w-full p-3 min-h-[44px] bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:text-white"
                     >
                       <option value="">Tutti i ruoli</option>
                       {roles.map(role => (
