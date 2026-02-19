@@ -15,7 +15,7 @@ import Badge from './ui/Badge'
 import ThemeToggle from './theme/ThemeToggle'
 import TourControlMenu from './onboarding/TourControlMenu'
 import NotificationCenter from './NotificationCenter'
-import { isProOrHigher } from '@/lib/utils/plan-helpers'
+import { isStarterOrHigher } from '@/lib/utils/plan-helpers'
 
 // Tools disponibili per il dropdown
 const toolsMenu = [
@@ -118,7 +118,7 @@ export default function Navbar() {
       { name: 'Feedback', href: '/feedback', icon: MessageSquare, description: 'Feedback e suggerimenti della community' },
     ]),
     { name: 'Tools', href: '/tools', icon: Wrench, description: 'Strumenti di analisi', isDropdown: true },
-    ...(user?.plan && isProOrHigher(user.plan) ? [
+    ...(user?.plan && isStarterOrHigher(user.plan) ? [
       { name: 'CRM', href: '/crm', icon: FolderOpen, description: 'Gestisci i tuoi lead sbloccati' },
       { name: 'Analytics', href: '/analytics', icon: BarChart, description: 'Dashboard analytics e ROI' },
     ] : []),
@@ -133,7 +133,7 @@ export default function Navbar() {
     { name: 'Dashboard', href: '/dashboard', icon: Home, description: 'I miei lead' },
     { name: 'Blog', href: '/blog', icon: BookOpen, description: 'Guide e strategie per trovare clienti' },
     { name: 'Tools', href: '/tools', icon: Wrench, description: 'Strumenti di analisi', isDropdown: true },
-    ...(user?.plan && isProOrHigher(user.plan) ? [
+    ...(user?.plan && isStarterOrHigher(user.plan) ? [
       { name: 'CRM', href: '/crm', icon: FolderOpen, description: 'Gestisci i tuoi lead sbloccati' },
       { name: 'Analytics', href: '/analytics', icon: BarChart, description: 'Dashboard analytics e ROI' },
     ] : []),
