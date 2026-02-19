@@ -1711,10 +1711,10 @@ export default function ClientDashboard() {
           {/* Banner Proposte gestito da AccountStatusBar sopra */}
 
           {/* Filtri e Controlli */}
-          <TourTarget tourId="dashboard-filters" className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 mb-8 overflow-visible relative">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+          <TourTarget tourId="dashboard-filters" className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-gray-200/50 dark:border-gray-700/50 mb-8 overflow-hidden relative">
+            <div className="flex flex-col gap-4">
               {/* Search */}
-              <TourTarget tourId="dashboard-search" className="relative flex-1 max-w-md">
+              <TourTarget tourId="dashboard-search" className="relative w-full lg:max-w-md">
                 <Search className={`absolute left-3 top-3 h-5 w-5 transition-colors ${
                   isSearching ? 'text-blue-500 animate-pulse' : 'text-gray-400'
                 }`} />
@@ -1767,10 +1767,10 @@ export default function ClientDashboard() {
                 )}
               </TourTarget>
 
-              {/* Actions */}
-              <div className="flex items-center space-x-3">
+              {/* Actions - Row 1: Toggles */}
+              <div className="flex flex-wrap items-center gap-3">
                 {/* Toggle per proposte generate */}
-                <TourTarget tourId="dashboard-filter-toggle" className="flex items-center space-x-2">
+                <TourTarget tourId="dashboard-filter-toggle" className="flex items-center gap-2">
                   <label className="inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
@@ -1786,19 +1786,19 @@ export default function ClientDashboard() {
                       }`}></div>
                     </div>
                   </label>
-                  <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">
+                  <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 font-medium whitespace-nowrap">
                     Solo proposte
                   </span>
                   {showOnlyUnlocked && (
-                    <div className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                      ✓ Attivo
+                    <div className="hidden sm:block px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                      ✓
                     </div>
                   )}
                 </TourTarget>
 
                 {/* Toggle Solo Compatibili - solo se utente ha servizi configurati */}
                 {user?.services_offered && (user.services_offered as string[]).length > 0 && (
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2">
                     <label className="inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
@@ -1814,23 +1814,26 @@ export default function ClientDashboard() {
                         }`}></div>
                       </div>
                     </label>
-                    <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">
+                    <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 font-medium whitespace-nowrap">
                       Solo compatibili
                     </span>
                     {showOnlyMatching && (
-                      <div className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                        ✓ Attivo
+                      <div className="hidden sm:block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                        ✓
                       </div>
                     )}
                   </div>
                 )}
 
+                {/* Divider - hidden on mobile */}
+                <div className="hidden lg:block w-px h-6 bg-gray-300 dark:bg-gray-600" />
+
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                  className="flex items-center gap-2 px-3 sm:px-4 py-2 min-h-[40px] bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                 >
                   <Filter className="h-4 w-4" />
-                  <span>Filtri</span>
+                  <span className="hidden sm:inline">Filtri</span>
                   <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
                 </button>
 
@@ -1843,7 +1846,7 @@ export default function ClientDashboard() {
                       setSortBy(newSortBy as 'score' | 'created_at' | 'last_seen_at' | 'business_name')
                       setSortOrder(newSortOrder as 'asc' | 'desc')
                     }}
-                    className="appearance-none bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-4 py-2 pr-10 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    className="appearance-none bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 sm:px-4 py-2 pr-8 sm:pr-10 min-h-[40px] text-sm rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                   >
                     {sortOptions.map((option, index) => (
                       <option key={index} value={`${option.value}-${option.order}`}>
@@ -1851,7 +1854,7 @@ export default function ClientDashboard() {
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  <ChevronDown className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                 </div>
 
                 {/* View Switcher */}
