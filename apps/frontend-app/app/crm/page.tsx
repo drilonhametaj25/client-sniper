@@ -258,12 +258,15 @@ export default function CrmPage() {
 
   // Filtra entries in base a ricerca e filtro stato
   const filteredEntries = entries.filter(entry => {
-    const matchesSearch = entry.lead_business_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         entry.lead_website_url.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         entry.lead_city.toLowerCase().includes(searchTerm.toLowerCase());
-    
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = !searchTerm ||
+      (entry.lead_business_name || '').toLowerCase().includes(searchLower) ||
+      (entry.lead_website_url || '').toLowerCase().includes(searchLower) ||
+      (entry.lead_city || '').toLowerCase().includes(searchLower) ||
+      (entry.lead_category || '').toLowerCase().includes(searchLower);
+
     const matchesStatus = statusFilter === 'all' || entry.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
 
