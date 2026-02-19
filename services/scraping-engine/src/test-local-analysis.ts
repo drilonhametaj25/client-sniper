@@ -115,6 +115,28 @@ async function testAnalysis(url: string) {
       if (analysis.techStack.hosting) console.log(`      Hosting: ${analysis.techStack.hosting}`)
     }
 
+    // Reliability (NEW)
+    if (analysis.reliability) {
+      console.log('\n   🎯 AFFIDABILITÀ ANALISI:')
+      console.log(`      Confidence Score: ${analysis.reliability.overallConfidence}%`)
+      console.log(`      Metodo Analisi: ${analysis.reliability.analysisMethod}`)
+      console.log(`      Durata: ${analysis.reliability.analysisDuration}ms`)
+      if (analysis.reliability.frameworkDetected) {
+        console.log(`      Framework JS Rilevato: ${analysis.reliability.frameworkDetected}`)
+      }
+      console.log(`      Strategia Caricamento: ${analysis.reliability.pageLoadStrategy}`)
+      if (analysis.reliability.failedModules.length > 0) {
+        console.log(`      ⚠️ Moduli Falliti: ${analysis.reliability.failedModules.join(', ')}`)
+      }
+      if (analysis.reliability.partialModules.length > 0) {
+        console.log(`      ⚠️ Moduli Parziali: ${analysis.reliability.partialModules.join(', ')}`)
+      }
+      if (analysis.reliability.warnings.length > 0) {
+        console.log('      Avvisi:')
+        analysis.reliability.warnings.forEach(w => console.log(`         - ${w}`))
+      }
+    }
+
     // 3. Email Scraping
     console.log('\n' + '─'.repeat(60))
     console.log('3️⃣  ESTRAZIONE EMAIL')

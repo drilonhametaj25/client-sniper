@@ -223,160 +223,149 @@ export class PerformanceAnalyzer {
    * Raccoglie Core Web Vitals usando API del browser
    * INP (Interaction to Next Paint) sostituisce FID dal marzo 2024
    * Timeout migliorato con early resolution quando possibile
+   * FIX: Usa Function constructor per evitare errore __name di esbuild/tsx
    */
   private async collectCoreWebVitals(page: Page): Promise<Partial<PerformanceMetrics>> {
-    const webVitals = await page.evaluate(() => {
-      return new Promise((resolve) => {
+    // Usiamo una stringa per evitare che esbuild/tsx aggiunga helpers (__name) che non esistono nel browser
+    const webVitalsScript = `
+      new Promise((resolve) => {
         const vitals = {
-          lcp: null as number | null,
-          inp: null as number | null,  // Nuovo: sostituisce FID
-          fid: null as number | null,  // Deprecato, mantenuto per retrocompatibilità
-          cls: null as number | null
-        }
+          lcp: null,
+          inp: null,
+          fid: null,
+          cls: null
+        };
 
-        let metricsCollected = 0
-        const expectedMetrics = 3 // LCP, INP/FID, CLS
-        let resolved = false
+        let metricsCollected = 0;
+        const expectedMetrics = 3;
+        let resolved = false;
 
-        const checkAndResolve = () => {
-          metricsCollected++
-          // Risolvi quando abbiamo raccolto sufficienti metriche
+        function checkAndResolve() {
+          metricsCollected++;
           if (!resolved && (metricsCollected >= expectedMetrics || vitals.lcp !== null)) {
-            // Dai un po' più di tempo per CLS che si accumula
-            setTimeout(() => {
+            setTimeout(function() {
               if (!resolved) {
-                resolved = true
-                resolve(vitals)
+                resolved = true;
+                resolve(vitals);
               }
-            }, 1000)
+            }, 1000);
           }
         }
 
         if ('PerformanceObserver' in window) {
-          // LCP - Largest Contentful Paint
+          // LCP
           try {
-            const lcpObserver = new PerformanceObserver((entryList) => {
-              const entries = entryList.getEntries()
-              const lastEntry = entries[entries.length - 1]
-              vitals.lcp = Math.round(lastEntry.startTime)
-              lcpObserver.disconnect()
-              checkAndResolve()
-            })
-            lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true })
-
-            // Timeout per LCP se non si attiva
-            setTimeout(() => {
+            const lcpObserver = new PerformanceObserver(function(entryList) {
+              const entries = entryList.getEntries();
+              const lastEntry = entries[entries.length - 1];
+              vitals.lcp = Math.round(lastEntry.startTime);
+              lcpObserver.disconnect();
+              checkAndResolve();
+            });
+            lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true });
+            setTimeout(function() {
               if (vitals.lcp === null) {
-                lcpObserver.disconnect()
-                checkAndResolve()
+                lcpObserver.disconnect();
+                checkAndResolve();
               }
-            }, 5000)
+            }, 5000);
           } catch (e) {
-            checkAndResolve()
+            checkAndResolve();
           }
 
-          // INP - Interaction to Next Paint (sostituisce FID)
+          // INP/FID
           try {
-            let maxInp = 0
-            const inpObserver = new PerformanceObserver((entryList) => {
-              const entries = entryList.getEntries()
-              entries.forEach((entry: any) => {
-                // INP considera la durata totale dell'interazione
-                const duration = entry.duration || 0
+            let maxInp = 0;
+            const inpObserver = new PerformanceObserver(function(entryList) {
+              const entries = entryList.getEntries();
+              entries.forEach(function(entry) {
+                const duration = entry.duration || 0;
                 if (duration > maxInp) {
-                  maxInp = duration
-                  vitals.inp = Math.round(maxInp)
+                  maxInp = duration;
+                  vitals.inp = Math.round(maxInp);
                 }
-              })
-            })
-            // Osserva eventi per INP
-            inpObserver.observe({ type: 'event', buffered: true, durationThreshold: 16 })
-
-            setTimeout(() => {
-              inpObserver.disconnect()
-              // Fallback: prova FID se INP non disponibile
+              });
+            });
+            try {
+              inpObserver.observe({ type: 'event', buffered: true });
+            } catch (e) {
+              // event type not supported
+            }
+            setTimeout(function() {
+              inpObserver.disconnect();
               if (vitals.inp === null) {
                 try {
-                  const fidObserver = new PerformanceObserver((entryList) => {
-                    const entries = entryList.getEntries()
-                    entries.forEach((entry: any) => {
+                  const fidObserver = new PerformanceObserver(function(entryList) {
+                    const entries = entryList.getEntries();
+                    entries.forEach(function(entry) {
                       if (entry.processingStart) {
-                        vitals.fid = Math.round(entry.processingStart - entry.startTime)
-                        // Usa FID come fallback per INP
+                        vitals.fid = Math.round(entry.processingStart - entry.startTime);
                         if (vitals.inp === null) {
-                          vitals.inp = vitals.fid
+                          vitals.inp = vitals.fid;
                         }
                       }
-                    })
-                    fidObserver.disconnect()
-                  })
-                  fidObserver.observe({ type: 'first-input', buffered: true })
-                } catch {
-                  // FID non supportato
-                }
+                    });
+                    fidObserver.disconnect();
+                  });
+                  fidObserver.observe({ type: 'first-input', buffered: true });
+                } catch (e) {}
               }
-              checkAndResolve()
-            }, 4000)
+              checkAndResolve();
+            }, 4000);
           } catch (e) {
-            checkAndResolve()
+            checkAndResolve();
           }
 
-          // CLS - Cumulative Layout Shift
+          // CLS
           try {
-            let clsValue = 0
-            let sessionValue = 0
-            let sessionEntries: any[] = []
-            const clsObserver = new PerformanceObserver((entryList) => {
-              const entries = entryList.getEntries()
-              entries.forEach((entry: any) => {
-                // Solo shift senza input utente recente
+            let clsValue = 0;
+            let sessionValue = 0;
+            let sessionEntries = [];
+            const clsObserver = new PerformanceObserver(function(entryList) {
+              const entries = entryList.getEntries();
+              entries.forEach(function(entry) {
                 if (!entry.hadRecentInput) {
-                  // Sessione-based CLS (metodo moderno)
-                  const firstEntry = sessionEntries[0]
-                  const lastEntry = sessionEntries[sessionEntries.length - 1]
-
+                  const firstEntry = sessionEntries[0];
+                  const lastEntry = sessionEntries[sessionEntries.length - 1];
                   if (sessionEntries.length > 0 &&
                       entry.startTime - lastEntry.startTime < 1000 &&
                       entry.startTime - firstEntry.startTime < 5000) {
-                    sessionValue += entry.value
-                    sessionEntries.push(entry)
+                    sessionValue += entry.value;
+                    sessionEntries.push(entry);
                   } else {
-                    sessionValue = entry.value
-                    sessionEntries = [entry]
+                    sessionValue = entry.value;
+                    sessionEntries = [entry];
                   }
-
                   if (sessionValue > clsValue) {
-                    clsValue = sessionValue
+                    clsValue = sessionValue;
                   }
                 }
-              })
-              vitals.cls = Math.round(clsValue * 1000) / 1000
-            })
-            clsObserver.observe({ type: 'layout-shift', buffered: true })
-
-            setTimeout(() => {
-              clsObserver.disconnect()
-              vitals.cls = vitals.cls !== null ? vitals.cls : Math.round(clsValue * 1000) / 1000
-              checkAndResolve()
-            }, 5000)
+              });
+              vitals.cls = Math.round(clsValue * 1000) / 1000;
+            });
+            clsObserver.observe({ type: 'layout-shift', buffered: true });
+            setTimeout(function() {
+              clsObserver.disconnect();
+              vitals.cls = vitals.cls !== null ? vitals.cls : Math.round(clsValue * 1000) / 1000;
+              checkAndResolve();
+            }, 5000);
           } catch (e) {
-            checkAndResolve()
+            checkAndResolve();
           }
         } else {
-          // Browser non supporta PerformanceObserver
-          resolve(vitals)
+          resolve(vitals);
         }
 
-        // Timeout finale di sicurezza (8s invece di 3s per dare più tempo)
-        setTimeout(() => {
+        setTimeout(function() {
           if (!resolved) {
-            resolved = true
-            resolve(vitals)
+            resolved = true;
+            resolve(vitals);
           }
-        }, 8000)
+        }, 8000);
       })
-    })
+    `
 
+    const webVitals = await page.evaluate(webVitalsScript)
     return webVitals as Partial<PerformanceMetrics>
   }
 
