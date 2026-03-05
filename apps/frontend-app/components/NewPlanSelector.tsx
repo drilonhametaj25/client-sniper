@@ -375,8 +375,8 @@ export default function PlanSelector({
 
               {/* Descrizione breve */}
               <p className="text-sm text-gray-600 mt-3">
-                {plan.id === 'free' ? 
-                  '5 lead immediati + crescita settimanale' : 
+                {plan.id === 'free' ?
+                  '1 lead di prova alla registrazione' :
                   `${plan.credits} lead/${isAnnual ? 'anno' : 'mese'} + ${plan.replacements} sostituzioni gratuite`
                 }
               </p>

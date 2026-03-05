@@ -444,4 +444,4 @@ Trovare lead per una web agency non deve essere un'attività stressante e imprev
 
 [Prova TrovaMi Gratis →](/auth/register)
 
-Con 5 lead gratuiti puoi testare l'approccio e vedere i risultati in prima persona.
+Con 1 lead di prova gratuito puoi testare l'approccio e vedere i risultati in prima persona.

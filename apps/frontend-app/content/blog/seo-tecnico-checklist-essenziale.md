@@ -793,7 +793,7 @@ Invece di fare audit manuali per trovare prospect, ricevi lead pre-qualificati d
 
 ### Inizia Gratis
 
-Ricevi 5 lead gratuiti di aziende con problemi SEO tecnici verificati.
+Ricevi 1 lead di prova gratuito di aziende con problemi SEO tecnici verificati.
 
 [**Prova TrovaMi Gratis**](/register)
 

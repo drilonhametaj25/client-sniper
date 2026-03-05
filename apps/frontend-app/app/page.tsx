@@ -36,7 +36,7 @@ export default function HomePage() {
               "@type": "Offer",
               "price": "0",
               "priceCurrency": "EUR",
-              "description": "5 lead gratuiti per iniziare"
+              "description": "1 lead di prova gratuito per iniziare"
             },
             "creator": {
               "@type": "Organization",

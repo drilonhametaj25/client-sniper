@@ -346,7 +346,7 @@ export default function TechDetectorPage() {
                 href="/register"
                 className="inline-flex items-center px-8 py-4 bg-white text-purple-600 font-semibold rounded-xl hover:bg-gray-100 transition-colors"
               >
-                Inizia con 5 Lead Gratuiti
+                Prova Gratis
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Link>
             </div>

@@ -35,7 +35,7 @@ ON public.users USING GIN (specialization);
 COMMENT ON COLUMN public.users.proposals_remaining IS 'Proposte rimanenti nel periodo corrente';
 COMMENT ON COLUMN public.users.proposals_reset_date IS 'Data prossimo reset proposte';
 COMMENT ON COLUMN public.users.first_proposal_used IS 'TRUE se ha gia usato la prima proposta gratuita';
-COMMENT ON COLUMN public.users.proposals_reset_type IS 'weekly=FREE, monthly=STARTER, never=AGENCY';
+COMMENT ON COLUMN public.users.proposals_reset_type IS 'none=FREE (no reset), monthly=STARTER, never=AGENCY';
 COMMENT ON COLUMN public.users.specialization IS 'Array: web_development, seo, marketing, design, other';
 COMMENT ON COLUMN public.users.company_logo_url IS 'URL logo caricato su Supabase Storage';
 
@@ -47,9 +47,9 @@ ALTER TABLE public.plans
 ADD COLUMN IF NOT EXISTS max_proposals INT DEFAULT 0,
 ADD COLUMN IF NOT EXISTS is_unlimited BOOLEAN DEFAULT FALSE,
 ADD COLUMN IF NOT EXISTS reset_type TEXT DEFAULT 'monthly'
-  CHECK (reset_type IN ('weekly', 'monthly', 'never'));
+  CHECK (reset_type IN ('weekly', 'monthly', 'never', 'none'));
 
-COMMENT ON COLUMN public.plans.max_proposals IS 'Numero proposte per periodo (1=FREE weekly, 25=STARTER monthly, -1=illimitato)';
+COMMENT ON COLUMN public.plans.max_proposals IS 'Numero proposte per periodo (1=FREE once, 25=STARTER monthly, -1=illimitato)';
 COMMENT ON COLUMN public.plans.is_unlimited IS 'TRUE per piano Agency (proposte illimitate)';
 COMMENT ON COLUMN public.plans.reset_type IS 'Tipo di reset: weekly, monthly, never';
 
@@ -61,9 +61,9 @@ COMMENT ON COLUMN public.plans.reset_type IS 'Tipo di reset: weekly, monthly, ne
 UPDATE public.plans SET
   max_proposals = 1,
   is_unlimited = FALSE,
-  reset_type = 'weekly',
+  reset_type = 'none',
   price_monthly = 0,
-  description = '1 proposta completa a settimana per iniziare. Prima proposta sempre gratuita.'
+  description = '1 credito di prova alla registrazione. Prova la piattaforma gratuitamente.'
 WHERE name = 'free';
 
 -- Piano STARTER Monthly: 25 proposte al mese, €19
@@ -143,7 +143,7 @@ UPDATE public.users SET
   ),
   proposals_reset_date = COALESCE(credits_reset_date, NOW() + INTERVAL '7 days'),
   proposals_reset_type = CASE
-    WHEN plan = 'free' THEN 'weekly'
+    WHEN plan = 'free' THEN 'none'
     WHEN plan LIKE 'agency%' THEN 'never'
     ELSE 'monthly'
   END,

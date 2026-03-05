@@ -334,7 +334,7 @@ export function useUpgradePrompt(user: any) {
       setPromptContext({ creditsRemaining: credits })
     } else if (credits === 0) {
       setShouldShowPrompt('lead_limit')
-    } else if (usedCredits >= 5 && usedCredits % 5 === 0) {
+    } else if (usedCredits >= 1 && usedCredits % 1 === 0) {
       setShouldShowPrompt('usage_milestone')
       setPromptContext({ leadsUnlocked: usedCredits })
     }

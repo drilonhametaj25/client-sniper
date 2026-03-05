@@ -308,7 +308,7 @@ export default function AccessibilityCheckPage() {
               </h3>
               <p className="text-purple-100 mb-6 max-w-2xl mx-auto">
                 TrovaMi ti connette con aziende che hanno bisogno di migliorare il loro sito.
-                Registrati gratis e ricevi 5 lead qualificati!
+                Registrati gratis e prova il servizio!
               </p>
               <div className="flex gap-4 justify-center">
                 <Link

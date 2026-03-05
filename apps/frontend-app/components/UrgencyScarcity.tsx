@@ -102,7 +102,7 @@ export default function UrgencyScarcity() {
           </div>
           
           <div className="text-sm text-orange-700 mb-4">
-            5 lead gratuiti disponibili ancora per:
+            Prova gratuita disponibile ancora per:
           </div>
           
           <div className="flex justify-center space-x-4">

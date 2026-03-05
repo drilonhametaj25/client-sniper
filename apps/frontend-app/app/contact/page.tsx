@@ -263,7 +263,7 @@ export default function Contact() {
                     Come funziona il piano gratuito?
                   </h3>
                   <p className="text-gray-600 text-sm">
-                    Il piano gratuito include 5 lead gratuiti. 
+                    Il piano gratuito include 1 lead di prova.
                     Perfetto per testare la piattaforma.
                   </p>
                 </div>

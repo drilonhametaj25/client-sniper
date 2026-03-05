@@ -152,10 +152,10 @@ export default function AccountStatusBar({
           )}
 
           {/* Info reset */}
-          {!isUnlimited && daysToReset !== null && (
+          {!isUnlimited && resetType !== 'never' && daysToReset !== null && (
             <div className="mt-2 text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
               <RefreshCw className="w-3.5 h-3.5" />
-              {resetType === 'weekly' ? 'Reset settimanale' : 'Reset mensile'} tra {daysToReset} giorni
+              Reset mensile tra {daysToReset} giorni
             </div>
           )}
 
@@ -227,7 +227,7 @@ function getPlanConfig(plan: string): {
       label: 'Piano Free',
       maxProposals: 1,
       isUnlimited: false,
-      resetType: 'weekly'
+      resetType: 'never'
     },
     starter_monthly: {
       label: 'Piano Starter',
@@ -275,19 +275,19 @@ function getStatusMessage(
   }
 
   if (remaining <= 0) {
-    return resetType === 'weekly'
-      ? 'Proposte esaurite — reset domenica'
+    return resetType === 'never'
+      ? 'Credito di prova esaurito — abbonati per continuare'
       : 'Proposte esaurite — upgrade per continuare'
   }
 
   if (remaining === 1) {
-    return resetType === 'weekly'
-      ? '1 proposta disponibile questa settimana'
+    return resetType === 'never'
+      ? '1 credito di prova disponibile'
       : '1 proposta rimasta questo mese'
   }
 
-  return resetType === 'weekly'
-    ? `${remaining} proposte disponibili questa settimana`
+  return resetType === 'never'
+    ? `${remaining} crediti di prova disponibili`
     : `${remaining}/${max} proposte rimaste questo mese`
 }
 

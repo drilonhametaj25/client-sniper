@@ -74,7 +74,9 @@ export async function POST(request: NextRequest) {
             id: user.id,
             email: user.email,
             plan: 'free',
-            credits_remaining: 5,
+            credits_remaining: 1,
+            proposals_remaining: 1,
+            proposals_reset_type: 'none',
             created_at: new Date().toISOString()
           }, {
             onConflict: 'id',

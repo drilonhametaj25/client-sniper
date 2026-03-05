@@ -80,7 +80,7 @@ ALTER TABLE users ADD CONSTRAINT users_plan_check
   CHECK (plan IN ('free', 'starter_monthly', 'starter_annual', 'pro_monthly', 'pro_annual', 'agency_monthly', 'agency_annual'));
 
 -- 5. Rimuovere piani esistenti e inserire nuovi piani configurabili
-DELETE FROM plans WHERE name IN ('free', 'starter', 'pro');
+DELETE FROM plans WHERE name IN ('free', 'starter', 'pro', 'starter_monthly', 'starter_annual', 'pro_monthly', 'pro_annual', 'agency_monthly', 'agency_annual');
 
 -- Inserimento nuovi piani mensili
 INSERT INTO plans (
@@ -104,10 +104,10 @@ INSERT INTO plans (
   visible_fields
 ) VALUES
 -- Piano Free
-('free', 0, 0, 5, 
- 'Inizia gratis con 5 lead immediati + 1 lead a settimana via email.',
+('free', 0, 0, 1,
+ '1 credito di prova alla registrazione. Prova la piattaforma gratuitamente.',
  NULL, 0,
- '["5 lead immediati", "1 lead extra a settimana via email", "Accesso a 1 nicchia", "Supporto community"]',
+ '["1 lead di prova gratuito", "Analisi completa del sito", "Accesso a 1 nicchia", "Supporto community"]',
  TRUE, 1, NULL, 1, FALSE, FALSE, FALSE, FALSE, FALSE,
  ARRAY['business_name','website_url']),
 
@@ -135,7 +135,7 @@ INSERT INTO plans (
  NULL, -- Da configurare con env var
  3,
  '["100 lead al mese", "3 sostituzioni gratuite al mese", "Esportazione CSV/Excel", "Accesso a 3 nicchie diverse", "Cruscotto con statistiche base", "CRM integrato", "Supporto prioritario"]',
- TRUE, 4, 'Most Popular', 3, TRUE, TRUE, TRUE, TRUE,
+ TRUE, 4, 'Most Popular', 3, TRUE, TRUE, TRUE, TRUE, FALSE,
  ARRAY['business_name','website_url','phone','city','email']),
 
 -- Piano Pro Annuale
@@ -144,7 +144,7 @@ INSERT INTO plans (
  NULL, -- Da configurare con env var
  3,
  '["100 lead al mese", "3 sostituzioni gratuite al mese", "Esportazione CSV/Excel", "Accesso a 3 nicchie diverse", "Cruscotto con statistiche base", "CRM integrato", "Supporto prioritario", "Risparmi 2 mesi"]',
- TRUE, 5, 'Most Popular', 3, TRUE, TRUE, TRUE, TRUE,
+ TRUE, 5, 'Most Popular', 3, TRUE, TRUE, TRUE, TRUE, TRUE,
  ARRAY['business_name','website_url','phone','city','email']),
 
 -- Piano Agency Mensile
@@ -153,7 +153,7 @@ INSERT INTO plans (
  NULL, -- Da configurare con env var
  10,
  '["300 lead al mese", "10 sostituzioni gratuite al mese", "Accesso a tutte le nicchie", "Esportazione CSV/Excel", "Cruscotto avanzato", "Supporto dedicato", "Onboarding personalizzato"]',
- TRUE, 6, 'Early Adopter', 999, TRUE, TRUE, TRUE, TRUE,
+ TRUE, 6, 'Early Adopter', 999, TRUE, TRUE, TRUE, TRUE, FALSE,
  ARRAY['business_name','website_url','phone','city','email','category','rating']),
 
 -- Piano Agency Annuale
@@ -162,7 +162,7 @@ INSERT INTO plans (
  NULL, -- Da configurare con env var
  10,
  '["300 lead al mese", "10 sostituzioni gratuite al mese", "Accesso a tutte le nicchie", "Esportazione CSV/Excel", "Cruscotto avanzato", "Supporto dedicato", "Onboarding personalizzato", "Risparmi 2 mesi"]',
- TRUE, 7, 'Early Adopter', 999, TRUE, TRUE, TRUE, TRUE,
+ TRUE, 7, 'Early Adopter', 999, TRUE, TRUE, TRUE, TRUE, TRUE,
  ARRAY['business_name','website_url','phone','city','email','category','rating']);
 
 -- 6. Funzione per reset individuale sostituzioni utente (basato su rinnovo)
@@ -257,17 +257,21 @@ ALTER TABLE user_monthly_replacements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lead_replacement_requests ENABLE ROW LEVEL SECURITY;
 
 -- Policies per sostituzioni mensili (solo proprie)
+DROP POLICY IF EXISTS "Users can view own monthly replacements" ON user_monthly_replacements;
 CREATE POLICY "Users can view own monthly replacements" ON user_monthly_replacements
   FOR SELECT USING (auth.uid() = user_id);
 
 -- Policies per richieste sostituzione (solo proprie)
+DROP POLICY IF EXISTS "Users can view own replacement requests" ON lead_replacement_requests;
 CREATE POLICY "Users can view own replacement requests" ON lead_replacement_requests
   FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can create replacement requests" ON lead_replacement_requests;
 CREATE POLICY "Users can create replacement requests" ON lead_replacement_requests
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Policies per admin (ruolo admin può vedere tutto)
+DROP POLICY IF EXISTS "Admins can view all replacement requests" ON lead_replacement_requests;
 CREATE POLICY "Admins can view all replacement requests" ON lead_replacement_requests
   FOR ALL USING (
     EXISTS (

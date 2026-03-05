@@ -413,7 +413,7 @@ Stanco di perdere tempo a qualificare lead che non andranno mai da nessuna parte
 
 Non sprecare piu ore a qualificare contatti freddi. Con TrovaMi parti gia un passo avanti: sai esattamente quali problemi ha l'azienda e puoi proporre soluzioni concrete fin dal primo contatto.
 
-[**Prova TrovaMi Gratis**](https://trovami.pro) - 5 lead gratuiti per iniziare, senza carta di credito.
+[**Prova TrovaMi Gratis**](https://trovami.pro) - 1 lead di prova gratuito per iniziare, senza carta di credito.
 
 ---
 

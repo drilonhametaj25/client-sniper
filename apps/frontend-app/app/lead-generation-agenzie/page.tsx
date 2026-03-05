@@ -416,7 +416,7 @@ export default function LeadGenerationAgenzie() {
           </h2>
           <p className="text-xl text-purple-100 mb-8 max-w-2xl mx-auto">
             Unisciti a centinaia di agenzie che hanno già trasformato il loro business development. 
-            Inizia con 5 lead gratuiti e vedi la differenza.
+            Inizia con 1 lead di prova gratuito e vedi la differenza.
           </p>
           <Link 
             href="/register" 

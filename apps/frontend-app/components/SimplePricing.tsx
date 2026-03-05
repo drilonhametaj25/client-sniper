@@ -2,7 +2,7 @@
  * SimplePricing - Tabella prezzi semplificata TrovaMi
  *
  * 3 piani chiari:
- * - FREE: 1 proposta/settimana, €0
+ * - FREE: 1 proposta di prova, €0
  * - STARTER: 25 proposte/mese, €19/mese
  * - AGENCY: Illimitate, €99/mese
  *
@@ -41,8 +41,8 @@ export default function SimplePricing({
       bgGradient: 'from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900',
       borderColor: 'border-gray-200 dark:border-gray-700',
       price: { monthly: 0, annual: 0 },
-      proposals: '1 proposta/settimana',
-      resetType: 'Reset ogni domenica',
+      proposals: '1 proposta di prova',
+      resetType: 'Solo alla registrazione',
       features: [
         'Analisi completa del sito',
         'Report PDF scaricabile',

@@ -206,7 +206,7 @@ export async function signUpWithCustomEmail(email: string, password: string) {
           id: data.user.id,
           email: data.user.email,
           plan: 'free',
-          credits_remaining: 5,
+          credits_remaining: 1,
           created_at: new Date().toISOString()
         })
 

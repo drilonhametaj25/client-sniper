@@ -115,7 +115,7 @@ Lower score = more technical issues = better opportunity for digital agencies:
 
 | Piano | Crediti | Prezzo Mensile | Prezzo Annuale |
 |-------|---------|----------------|----------------|
-| Free | 5 | €0 | - |
+| Free | 1 (prova) | €0 | - |
 | Starter | 25/mese | €19 | €190 |
 | Pro | 100/mese | €49 | €490 |
 | Agency | 300/mese | €99 | €990 |
@@ -153,7 +153,7 @@ Ogni tool ha:
 3. **API Routes**: RESTful with Supabase auth middleware
 4. **Stripe Webhooks**: Handle `invoice.payment_succeeded` for auto-reactivation of inactive plans
 5. **Credit System**: Users consume credits to unlock lead details
-6. **Free Credits**: Piano Free = 5 lead gratuiti (non 2)
+6. **Free Credits**: Piano Free = 1 lead di prova (solo alla registrazione, senza rinnovo)
 
 ## Environment Variables
 

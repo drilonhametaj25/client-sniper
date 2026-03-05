@@ -853,7 +853,7 @@ Invece di cold outreach generico, contatti aziende con:
 
 ### Inizia Gratis
 
-Ricevi 5 lead gratuiti di aziende con problemi di velocità verificati.
+Ricevi 1 lead di prova gratuito di aziende con problemi di velocità verificati.
 
 [**Prova TrovaMi Gratis**](/register)
 

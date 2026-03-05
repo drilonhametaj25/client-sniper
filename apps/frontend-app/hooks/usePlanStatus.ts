@@ -122,7 +122,7 @@ export function usePlanLimitations(): PlanLimitations {
         canUnlockLeads: planStatus.credits_remaining > 0,
         canViewContacts: false,
         canExportData: false,
-        maxLeadsPerMonth: 2,
+        maxLeadsPerMonth: 1,
         message: planStatus.credits_remaining === 0 ? 
           'Hai esaurito i crediti gratuiti. Fai l\'upgrade per continuare.' : undefined
       }

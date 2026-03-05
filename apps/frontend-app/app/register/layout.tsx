@@ -138,7 +138,7 @@ export default function RegisterLayout({
                   "name": "Piano Gratuito",
                   "price": "0",
                   "priceCurrency": "EUR",
-                  "description": "5 lead gratuiti per iniziare"
+                  "description": "1 lead di prova per iniziare"
                 },
                 {
                   "@type": "Offer",

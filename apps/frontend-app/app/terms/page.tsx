@@ -95,7 +95,7 @@ export default function TermsOfService() {
             </h3>
             <div className="bg-gray-50 p-4 rounded-lg mb-4">
               <ul className="space-y-2 text-gray-700">
-                <li><strong>Piano Free:</strong> 5 lead gratuiti</li>
+                <li><strong>Piano Free:</strong> 1 lead di prova</li>
                 <li><strong>Piano Starter:</strong> 50 lead/mese - €29/mese</li>
                 <li><strong>Piano Pro:</strong> 200 lead/mese - €79/mese</li>
               </ul>

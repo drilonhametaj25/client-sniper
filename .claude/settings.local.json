@@ -34,7 +34,10 @@
       "Bash(git push:*)",
       "Bash(ping:*)",
       "Bash(netstat:*)",
-      "Bash(powershell -Command \"Stop-Process -Id 20072 -Force\")"
+      "Bash(powershell -Command \"Stop-Process -Id 20072 -Force\")",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_close",
+      "Bash(npx next:*)"
     ]
   }
 }

@@ -641,21 +641,15 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   const previousPlan = currentUser?.plan || 'unknown'
   const previousStatus = currentUser?.status || 'unknown'
 
-  // Ottieni i crediti del piano free dal database
-  const { data: freePlanData } = await getSupabase()
-    .from('plans')
-    .select('max_credits')
-    .eq('name', 'free')
-    .single()
-
-  const freeCredits = freePlanData?.max_credits || 5
-
-  // Downgrade a piano gratuito
+  // Downgrade a piano gratuito con 0 crediti (ha gia usato il test)
   const { error } = await getSupabase()
     .from('users')
     .update({
       plan: 'free',
-      credits_remaining: freeCredits,
+      credits_remaining: 0,
+      proposals_remaining: 0,
+      proposals_reset_type: 'none',
+      proposals_reset_date: null,
       status: 'cancelled',
       stripe_customer_id: null,
       stripe_subscription_id: null,
@@ -897,21 +891,15 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       // 🔴 DOWNGRADE: Quando subscription non è più attiva, porta l'utente a piano free
       console.log(`🔴 Subscription non attiva (${subscription.status}), downgrade a free per ${userId}`)
 
-      // Ottieni i crediti del piano free dal database
-      const { data: freePlanData } = await getSupabase()
-        .from('plans')
-        .select('max_credits')
-        .eq('name', 'free')
-        .single()
-
-      const freeCredits = freePlanData?.max_credits || 5
-
-      // Downgrade a piano free
+      // Downgrade a piano free con 0 crediti (ha gia usato il test)
       const { error: updateError } = await getSupabase()
         .from('users')
         .update({
           plan: 'free',
-          credits_remaining: freeCredits,
+          credits_remaining: 0,
+          proposals_remaining: 0,
+          proposals_reset_type: 'none',
+          proposals_reset_date: null,
           status: newStatus,
           deactivated_at: new Date().toISOString(),
           deactivation_reason: `Subscription status: ${subscription.status}`
@@ -1031,21 +1019,15 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
     if (totalFailures >= 3 && user.plan !== 'free') {
       console.log(`🔴 3+ pagamenti falliti per ${user.email}, esecuzione auto-downgrade...`)
 
-      // Ottieni i crediti del piano free dal database
-      const { data: freePlanData } = await getSupabase()
-        .from('plans')
-        .select('max_credits')
-        .eq('name', 'free')
-        .single()
-
-      const freeCredits = freePlanData?.max_credits || 5
-
-      // Esegui downgrade
+      // Esegui downgrade con 0 crediti (ha gia usato il test)
       const { error: downgradeError } = await getSupabase()
         .from('users')
         .update({
           plan: 'free',
-          credits_remaining: freeCredits,
+          credits_remaining: 0,
+          proposals_remaining: 0,
+          proposals_reset_type: 'none',
+          proposals_reset_date: null,
           status: 'inactive',
           deactivated_at: new Date().toISOString(),
           deactivation_reason: `Auto-downgrade: ${totalFailures} pagamenti falliti consecutivi`

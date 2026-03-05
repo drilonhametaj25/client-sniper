@@ -801,7 +801,7 @@ Con TrovaMi trovi aziende che **hanno bisogno esattamente di questo** ma non lo 
 
 ### Inizia Gratis
 
-Ricevi 5 lead gratuiti di aziende con problemi SEO tecnici, inclusa l'assenza di schema markup.
+Ricevi 1 lead di prova gratuito di aziende con problemi SEO tecnici, inclusa l'assenza di schema markup.
 
 [**Prova TrovaMi Gratis**](/register)
 

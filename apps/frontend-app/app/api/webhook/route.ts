@@ -182,7 +182,7 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
       .from('users')
       .update({
         plan: 'free',
-        credits_remaining: 5,
+        credits_remaining: 0,
         subscription_status: 'canceled',
         stripe_subscription_id: null
       })

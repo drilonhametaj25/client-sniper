@@ -462,12 +462,12 @@ class SMTPEmailService {
           <!-- Header -->
           <div style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); padding: 30px; text-align: center;">
             <div style="font-size: 40px; margin-bottom: 10px;">🎁</div>
-            <h1 style="color: white; margin: 0; font-size: 24px;">I tuoi 5 crediti gratuiti ti aspettano!</h1>
+            <h1 style="color: white; margin: 0; font-size: 24px;">Il tuo credito di prova ti aspetta!</h1>
           </div>
 
           <div style="padding: 30px;">
             <p style="color: #4a5568; line-height: 1.6; font-size: 16px;">
-              Ciao! Hai ancora <strong style="color: #6366f1; font-size: 20px;">5 crediti gratuiti</strong> da usare per scoprire nuovi potenziali clienti.
+              Ciao! Hai ancora il tuo <strong style="color: #6366f1; font-size: 20px;">credito di prova gratuito</strong> da usare per scoprire nuovi potenziali clienti.
             </p>
 
             <p style="color: #4a5568; line-height: 1.6; font-size: 16px;">
@@ -538,7 +538,7 @@ class SMTPEmailService {
 
     return this.sendEmail({
       to: email,
-      subject: '🎁 I tuoi 5 crediti gratuiti ti aspettano! - TrovaMi',
+      subject: '🎁 Il tuo credito di prova ti aspetta! - TrovaMi',
       html
     })
   }
@@ -858,7 +858,7 @@ class SMTPEmailService {
             <div style="font-size: 50px; margin-bottom: 15px;">🎉</div>
             <h1 style="color: white; margin: 0; font-size: 26px;">Benvenuto in TrovaMi!</h1>
             <p style="color: rgba(255,255,255,0.9); margin: 15px 0 0 0; font-size: 16px;">
-              Hai 5 crediti gratuiti da usare subito
+              Hai 1 credito di prova da usare subito
             </p>
           </div>
 
@@ -871,9 +871,9 @@ class SMTPEmailService {
             </p>
 
             <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin: 25px 0; text-align: center;">
-              <p style="color: #166534; margin: 0 0 5px 0; font-size: 14px;">I tuoi crediti gratuiti</p>
-              <p style="color: #15803d; margin: 0; font-size: 48px; font-weight: bold;">5</p>
-              <p style="color: #166534; margin: 5px 0 0 0; font-size: 14px;">Usa un credito per sbloccare i contatti di un lead</p>
+              <p style="color: #166534; margin: 0 0 5px 0; font-size: 14px;">Il tuo credito di prova</p>
+              <p style="color: #15803d; margin: 0; font-size: 48px; font-weight: bold;">1</p>
+              <p style="color: #166534; margin: 5px 0 0 0; font-size: 14px;">Usa il credito per sbloccare i contatti di un lead</p>
             </div>
 
             <h3 style="color: #1a202c; font-size: 16px; margin: 25px 0 15px 0;">Ecco alcuni lead disponibili ora:</h3>
@@ -917,7 +917,7 @@ class SMTPEmailService {
 
     return this.sendEmail({
       to: email,
-      subject: '🎉 Benvenuto in TrovaMi! Ecco i tuoi 5 crediti gratuiti',
+      subject: '🎉 Benvenuto in TrovaMi! Ecco il tuo credito di prova gratuito',
       html
     })
   }
@@ -991,7 +991,7 @@ class SMTPEmailService {
                         font-weight: 600;
                         font-size: 16px;
                         display: inline-block;">
-                Prova ora - hai ancora 5 crediti!
+                Prova ora - hai ancora il tuo credito!
               </a>
             </div>
           </div>
@@ -1049,7 +1049,7 @@ class SMTPEmailService {
             </div>
 
             <p style="color: #4a5568; line-height: 1.6; font-size: 16px;">
-              I tuoi <strong>5 crediti gratuiti</strong> ti aspettano ancora. Non lasciarli scadere!
+              Il tuo <strong>credito di prova gratuito</strong> ti aspetta ancora. Non lasciarlo scadere!
             </p>
 
             <h3 style="color: #1a202c; font-size: 16px; margin: 25px 0 15px 0;">Lead disponibili ora:</h3>
@@ -1145,7 +1145,7 @@ class SMTPEmailService {
             </div>
 
             <p style="color: #4a5568; line-height: 1.6; font-size: 16px; text-align: center;">
-              Tu hai ancora <strong style="color: #6366f1;">5 crediti gratuiti</strong>.<br>
+              Tu hai ancora il tuo <strong style="color: #6366f1;">credito di prova gratuito</strong>.<br>
               Bastano per trovare il tuo prossimo cliente.
             </p>
 
@@ -1291,7 +1291,7 @@ class SMTPEmailService {
 
             <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 25px 0;">
               <p style="color: #92400e; margin: 0; font-size: 14px;">
-                <strong>I tuoi 5 crediti gratuiti sono ancora disponibili</strong> - usali prima che sia troppo tardi!
+                <strong>Il tuo credito di prova gratuito è ancora disponibile</strong> - usalo prima che sia troppo tardi!
               </p>
             </div>
 
@@ -1872,7 +1872,7 @@ class SMTPEmailService {
 
           <div style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); padding: 30px; text-align: center;">
             <div style="font-size: 50px; margin-bottom: 10px;">⭐</div>
-            <h1 style="color: white; margin: 0; font-size: 24px;">5 lead sbloccati! Stai diventando un pro!</h1>
+            <h1 style="color: white; margin: 0; font-size: 24px;">Lead sbloccato! Stai diventando un pro!</h1>
           </div>
 
           <div style="padding: 30px; text-align: center;">
@@ -1913,7 +1913,7 @@ class SMTPEmailService {
 
     return this.sendEmail({
       to: email,
-      subject: '⭐ 5 lead sbloccati! Stai diventando un pro!',
+      subject: '⭐ Lead sbloccato! Stai diventando un pro!',
       html
     })
   }

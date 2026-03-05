@@ -133,7 +133,7 @@ export default async function Image() {
               maxWidth: '800px',
             }}
           >
-            Audit digitali automatizzati | 78+ parametri analizzati | 5 lead gratuiti
+            Audit digitali automatizzati | 78+ parametri analizzati | Prova gratuita
           </p>
         </div>
 

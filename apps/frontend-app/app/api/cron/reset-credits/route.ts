@@ -46,19 +46,21 @@ export async function POST(request: NextRequest) {
     console.log(`Timestamp: ${new Date().toISOString()}`)
 
     // 🎯 FIND USERS TO RESET: Trova utenti che necessitano reset crediti
+    // Escludi utenti free (non hanno reset, solo 1 credito di prova)
     const now = new Date()
     const { data: usersToReset, error: queryError } = await getSupabase()
       .from('users')
       .select(`
-        id, 
-        email, 
-        plan, 
-        credits_remaining, 
+        id,
+        email,
+        plan,
+        credits_remaining,
         credits_reset_date,
         stripe_subscription_id,
         stripe_customer_id
       `)
       .not('credits_reset_date', 'is', null)
+      .neq('plan', 'free')
       .lte('credits_reset_date', now.toISOString())
 
     if (queryError) {

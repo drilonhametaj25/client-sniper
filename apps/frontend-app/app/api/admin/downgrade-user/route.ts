@@ -93,23 +93,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Ottieni i crediti del piano free dal database
-    const { data: freePlanData } = await getSupabaseAdmin()
-      .from('plans')
-      .select('max_credits')
-      .eq('name', 'free')
-      .single()
-
-    const freeCredits = freePlanData?.max_credits || 5
     const previousPlan = targetUser.plan
     const previousCredits = targetUser.credits_remaining
 
-    // Esegui il downgrade
+    // Esegui il downgrade con 0 crediti (ha gia usato il test)
     const { error: updateError } = await getSupabaseAdmin()
       .from('users')
       .update({
         plan: 'free',
-        credits_remaining: freeCredits,
+        credits_remaining: 0,
+        proposals_remaining: 0,
+        proposals_reset_type: 'none',
+        proposals_reset_date: null,
         status: 'cancelled',
         stripe_subscription_id: null,
         deactivated_at: new Date().toISOString(),
@@ -154,7 +149,7 @@ export async function POST(request: NextRequest) {
         previousPlan,
         previousCredits,
         newPlan: 'free',
-        newCredits: freeCredits
+        newCredits: 0
       }
     })
 

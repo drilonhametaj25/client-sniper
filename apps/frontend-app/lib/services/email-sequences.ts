@@ -37,7 +37,7 @@ export interface SequenceDefinition {
 export const SEQUENCES: Record<string, SequenceDefinition> = {
   welcome: {
     steps: [
-      { day: 0, template: 'welcome_day0', subject: 'Benvenuto! Ecco i tuoi 5 crediti gratuiti' },
+      { day: 0, template: 'welcome_day0', subject: 'Benvenuto! Ecco il tuo credito di prova gratuito' },
       { day: 1, template: 'welcome_day1', subject: 'Come trovare il lead perfetto in 30 secondi' },
       { day: 3, template: 'welcome_day3', subject: 'Altri {X} freelancer hanno già sbloccato lead' },
       { day: 5, template: 'welcome_day5', subject: 'Ecco cosa puoi fare con 1 solo lead' },

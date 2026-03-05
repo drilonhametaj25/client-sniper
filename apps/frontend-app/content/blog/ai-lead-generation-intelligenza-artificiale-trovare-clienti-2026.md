@@ -310,7 +310,7 @@ La chiave non è avere tanti lead, ma avere lead qualificati. L'AI ti aiuta a tr
 
 ---
 
-> **Vuoi lead già qualificati senza il lavoro manuale?** TrovaMi.pro analizza automaticamente i siti web italiani e ti mostra solo le aziende con problemi reali: SEO mancante, siti lenti, design obsoleto. Ricevi 5 lead gratuiti e scopri aziende che hanno davvero bisogno di te. [Registrati gratis →](/registrati)
+> **Vuoi lead già qualificati senza il lavoro manuale?** TrovaMi.pro analizza automaticamente i siti web italiani e ti mostra solo le aziende con problemi reali: SEO mancante, siti lenti, design obsoleto. Ricevi 1 lead di prova gratuito e scopri aziende che hanno davvero bisogno di te. [Registrati gratis →](/registrati)
 
 ---
 

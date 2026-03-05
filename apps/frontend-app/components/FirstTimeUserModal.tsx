@@ -23,7 +23,7 @@ export default function FirstTimeUserModal({
   onClose,
   onStartTour,
   userName,
-  creditsRemaining = 5
+  creditsRemaining = 1
 }: FirstTimeUserModalProps) {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(0)
@@ -57,7 +57,7 @@ export default function FirstTimeUserModal({
     {
       icon: Unlock,
       title: 'Sblocca i Contatti',
-      description: `Hai ${creditsRemaining} crediti gratuiti. Ogni credito sblocca email e telefono di un lead.`,
+      description: `Hai ${creditsRemaining} credito di prova gratuito. Ogni credito sblocca email e telefono di un lead.`,
       color: 'text-green-600',
       bgColor: 'bg-green-100'
     },
@@ -157,7 +157,7 @@ export default function FirstTimeUserModal({
                 <CheckCircle className="h-5 w-5 text-green-600 mr-3 flex-shrink-0" />
                 <div>
                   <p className="font-medium text-green-800 dark:text-green-300">
-                    {creditsRemaining} crediti gratuiti disponibili
+                    {creditsRemaining} credito di prova gratuito disponibile
                   </p>
                   <p className="text-sm text-green-600 dark:text-green-400">
                     Nessuna carta di credito richiesta

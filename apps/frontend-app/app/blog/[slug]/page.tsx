@@ -140,7 +140,7 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
               href="/register"
               className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 font-medium"
             >
-              Inizia Gratis - 5 Lead Inclusi
+              Prova Gratis
               <TrendingUp className="ml-2 h-4 w-4" />
             </Link>
           </div>
@@ -196,7 +196,7 @@ export default function BlogPostPage({ params }: BlogPostPageProps) {
             <div className="bg-white rounded-lg p-4 shadow-sm">
               <h4 className="font-medium text-gray-900 mb-2">Come posso iniziare con TrovaMi?</h4>
               <p className="text-gray-600 text-sm">
-                Registrati gratuitamente e ricevi 5 lead qualificati per testare il servizio. 
+                Registrati gratuitamente e prova il servizio con 1 lead di prova.
                 Non serve carta di credito per iniziare.
               </p>
             </div>

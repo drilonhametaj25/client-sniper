@@ -4,10 +4,10 @@
  *
  * LOGICA PROPOSTE:
  * - Lead già aperto: accesso gratuito (non consuma)
- * - Prima proposta: SEMPRE gratuita per nuovi utenti
+ * - Prima proposta: gratuita per piani a pagamento (non free)
  * - Piano Agency: proposte illimitate
  * - Piano Starter: 25 proposte/mese
- * - Piano Free: 1 proposta/settimana
+ * - Piano Free: 1 credito di prova (senza rinnovo)
  *
  * TRACKING KLAVIYO:
  * - Proposal Opened: ogni apertura
@@ -141,8 +141,8 @@ export async function POST(
       consumeProposal = false
       isFreeProposal = false
     }
-    // Prima proposta: SEMPRE gratuita
-    else if (isFirstProposal) {
+    // Prima proposta: gratuita solo per piani a pagamento (non free)
+    else if (isFirstProposal && userData.plan !== 'free') {
       consumeProposal = false
       isFreeProposal = true
     }

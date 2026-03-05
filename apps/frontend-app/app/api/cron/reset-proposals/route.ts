@@ -2,7 +2,7 @@
  * Cron Job - Reset Proposte TrovaMi
  *
  * Reset automatico delle proposte:
- * - FREE: 1 proposta ogni settimana (reset domenica)
+ * - FREE: 1 credito di prova, nessun reset
  * - STARTER: 25 proposte ogni mese
  * - AGENCY: illimitate (nessun reset)
  *
@@ -46,41 +46,11 @@ export async function GET(request: NextRequest) {
     console.log(`[Reset Proposals] Inizio job: ${now.toISOString()}`)
 
     // ===================================================
-    // RESET SETTIMANALE (Piano FREE)
-    // Reset ogni domenica a mezzanotte
+    // RESET SETTIMANALE (Piano FREE) - DISABILITATO
+    // Il piano Free ora ha 1 credito di prova senza rinnovo (reset_type='none')
+    // Nessun piano usa piu 'weekly', questa sezione e' mantenuta per sicurezza
     // ===================================================
-    const { data: weeklyUsers, error: weeklyError } = await supabase
-      .from('users')
-      .select('id, email, proposals_reset_date, proposals_reset_type')
-      .eq('proposals_reset_type', 'weekly')
-      .lte('proposals_reset_date', now.toISOString())
-
-    if (weeklyError) {
-      console.error('Errore fetch utenti weekly:', weeklyError)
-      results.errors.push(`Weekly fetch: ${weeklyError.message}`)
-    } else if (weeklyUsers && weeklyUsers.length > 0) {
-      console.log(`[Weekly] Trovati ${weeklyUsers.length} utenti da resettare`)
-
-      // Calcola prossima domenica
-      const nextSunday = getNextSunday()
-
-      const { error: updateError, count } = await supabase
-        .from('users')
-        .update({
-          proposals_remaining: 1,
-          proposals_reset_date: nextSunday.toISOString()
-        })
-        .eq('proposals_reset_type', 'weekly')
-        .lte('proposals_reset_date', now.toISOString())
-
-      if (updateError) {
-        console.error('Errore update weekly:', updateError)
-        results.errors.push(`Weekly update: ${updateError.message}`)
-      } else {
-        results.weeklyResets = count || weeklyUsers.length
-        console.log(`[Weekly] Resettati ${results.weeklyResets} utenti`)
-      }
-    }
+    console.log('[Weekly] Skipped - nessun piano usa piu reset settimanale')
 
     // ===================================================
     // RESET MENSILE (Piano STARTER)
