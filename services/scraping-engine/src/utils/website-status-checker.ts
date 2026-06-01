@@ -33,6 +33,14 @@ export interface WebsiteStatusResult {
   finalUrl: string
   redirectChain: string[]
   sslValid: boolean
+  /**
+   * True se l'endpoint HTTPS risponde DAVVERO (sondato in modo indipendente),
+   * non dedotto dal fatto che l'URL inizi con "https". Evita il falso positivo
+   * "manca HTTPS" sui siti http:// che fanno redirect 301 verso https://.
+   */
+  hasSSL: boolean
+  /** True se la versione http:// reindirizza a https:// (HTTPS forzato). */
+  redirectsToHttps: boolean
   responseTime: number
   isAccessible: boolean
   /**
@@ -187,25 +195,29 @@ export class WebsiteStatusChecker {
         }
       }
       
-      // Step 4: Controllo SSL se la URL finale è HTTPS
-      let sslInfo: SSLCertificateInfo | undefined
-      if (finalUrl.startsWith('https://')) {
-        sslInfo = await this.checkSSLCertificate(finalUrl)
-      }
-      
+      // Step 4: HTTPS/SSL ROBUSTO — sonda l'endpoint https in modo indipendente
+      // dallo schema dell'URL e dal redirect, così "manca HTTPS" non è più un falso
+      // positivo sui siti http:// che reindirizzano a https://.
+      const sslProbe = await this.probeHttps(httpResult.finalUrl || finalUrl)
+      const sslInfo: SSLCertificateInfo | undefined = sslProbe.cert
+
       // Step 5: Se basic check fallisce, prova con browser
       let browserResult: any = null
       if (!httpResult.isAccessible || (httpResult.httpCode && httpResult.httpCode >= 400)) {
         browserResult = await this.checkWithBrowser(finalUrl)
       }
-      
+
       // Step 6: Determina lo stato finale
       const responseTime = Date.now() - startTime
       const finalResult = this.determineFinalStatus(httpResult, browserResult, sslInfo)
-      
+
       return {
         ...finalResult,
         finalUrl: httpResult.finalUrl || finalUrl,
+        // hasSSL/sslValid dal sondaggio reale, non dalla stringa dell'URL.
+        hasSSL: sslProbe.hasSSL,
+        redirectsToHttps: sslProbe.redirectsToHttps,
+        sslValid: sslProbe.sslValid,
         responseTime,
         // verdict/attempts vengono assegnati dal wrapper checkWebsiteStatus.
         verdict: 'uncertain',
@@ -225,6 +237,8 @@ export class WebsiteStatusChecker {
         finalUrl: normalizedUrl,
         redirectChain: [],
         sslValid: false,
+        hasSSL: false,
+        redirectsToHttps: false,
         responseTime: Date.now() - startTime,
         isAccessible: false,
         verdict: 'uncertain',
@@ -447,6 +461,79 @@ export class WebsiteStatusChecker {
     }
   }
 
+  private safeHostname(url: string): string | null {
+    try {
+      const u = url.startsWith('http') ? url : `https://${url}`
+      return new URL(u).hostname.replace(/^www\./, '')
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Determina in modo AFFIDABILE se un sito ha l'HTTPS, indipendentemente dallo
+   * schema dell'URL salvato e dal redirect:
+   *  - sonda direttamente https://host (qualsiasi risposta = endpoint https esistente)
+   *  - rileva se http://host reindirizza a https:// (HTTPS forzato)
+   *  - verifica la validità del certificato
+   * Risolve il falso positivo "manca HTTPS" sui siti http:// con redirect a https.
+   */
+  private async probeHttps(rawUrl: string): Promise<{
+    hasSSL: boolean
+    sslValid: boolean
+    redirectsToHttps: boolean
+    cert?: SSLCertificateInfo
+  }> {
+    const hostname = this.safeHostname(rawUrl)
+    if (!hostname) return { hasSSL: false, sslValid: false, redirectsToHttps: false }
+
+    // 1) L'endpoint https risponde? (anche un 4xx/5xx significa che https esiste)
+    let hasSSL = false
+    try {
+      const res = await axios.get(`https://${hostname}`, {
+        timeout: this.TIMEOUT_MS,
+        maxRedirects: this.MAX_REDIRECTS,
+        validateStatus: () => true,
+        headers: { 'User-Agent': this.USER_AGENT }
+      })
+      hasSSL = res.status > 0
+    } catch {
+      hasSSL = false
+    }
+
+    // 2) http:// reindirizza a https:// ? (non seguiamo il redirect per leggerlo)
+    let redirectsToHttps = false
+    try {
+      const res = await axios.get(`http://${hostname}`, {
+        timeout: this.TIMEOUT_MS,
+        maxRedirects: 0,
+        validateStatus: () => true,
+        headers: { 'User-Agent': this.USER_AGENT }
+      })
+      const loc = (res.headers?.location as string) || ''
+      if (res.status >= 300 && res.status < 400 && /^https:\/\//i.test(loc)) {
+        redirectsToHttps = true
+        hasSSL = true
+      }
+    } catch {
+      // ignora: l'esito di https sopra è quello che conta
+    }
+
+    // 3) Validità del certificato (solo se l'https esiste)
+    let cert: SSLCertificateInfo | undefined
+    let sslValid = false
+    if (hasSSL) {
+      try {
+        cert = await this.checkSSLCertificate(`https://${hostname}`)
+        sslValid = cert.valid
+      } catch {
+        sslValid = false
+      }
+    }
+
+    return { hasSSL, sslValid, redirectsToHttps, cert }
+  }
+
   /**
    * Verifica certificato SSL
    */
@@ -521,7 +608,7 @@ export class WebsiteStatusChecker {
     httpResult: Partial<WebsiteStatusResult>,
     browserResult: any,
     sslInfo?: SSLCertificateInfo
-  ): Omit<WebsiteStatusResult, 'responseTime' | 'verdict' | 'attempts'> {
+  ): Omit<WebsiteStatusResult, 'responseTime' | 'verdict' | 'attempts' | 'hasSSL' | 'redirectsToHttps'> {
     
     // Se il browser riesce dove HTTP fallisce
     if (browserResult && browserResult.isAccessible && !httpResult.isAccessible) {

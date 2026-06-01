@@ -46,6 +46,7 @@ import QuotationTab from "@/components/QuotationTab";
 import EmailComposerModal from "@/components/EmailComposerModal";
 import LeadOpportunitySummary from "@/components/LeadOpportunitySummary";
 import ReportLeadIssueButton from "@/components/ReportLeadIssueButton";
+import VerifiedContactsCard from "@/components/VerifiedContactsCard";
 import {
   normalizeAnalysis,
   calculateSEOScore,
@@ -484,6 +485,9 @@ export default function LeadDetailPage() {
                 <ReportLeadIssueButton leadId={lead.id} />
               </div>
             </TourTarget>
+
+            {/* Sezione "tipo Apollo": contatti verificati + dati azienda (on-demand) */}
+            <VerifiedContactsCard leadId={lead.id} phone={lead.phone} />
 
             {/* Ruoli Necessari */}
             {lead.needed_roles && lead.needed_roles.length > 0 && (

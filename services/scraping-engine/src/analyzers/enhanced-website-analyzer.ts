@@ -19,6 +19,8 @@ import type { SocialAnalysisResult } from './social-analyzer'
 import type { AnalysisReliability } from '../types/LeadAnalysis'
 import { decideLeadPublication } from '../utils/confidence'
 import type { ReachabilityVerdict, LeadConfidenceDecision, SignalConfidence } from '../utils/confidence'
+import { enrichLead } from '../utils/lead-enrichment'
+import type { LeadEnrichment } from '../utils/lead-enrichment'
 
 // Nuovi analyzer integrati
 import { SecurityAnalyzer, SecurityAnalysis } from './security-analyzer'
@@ -184,6 +186,10 @@ export interface EnhancedWebsiteAnalysis {
   reachabilityVerdict?: ReachabilityVerdict
   // Decisione di pubblicazione del lead (published/quarantine) con motivazioni.
   leadConfidence?: LeadConfidenceDecision
+  // Forza HTTPS: http:// reindirizza a https:// (segnale positivo, non un difetto).
+  redirectsToHttps?: boolean
+  // Arricchimento da fonti pubbliche gratuite (età dominio, MX/provider email).
+  enrichment?: LeadEnrichment
 
   // Analysis Meta
   analysisDate: Date
@@ -327,7 +333,16 @@ export class EnhancedWebsiteAnalyzer {
       // Step 3: Calcola punteggi e opportunità
       const scores = this.calculateScores(browserAnalysis)
       const opportunities = this.identifyOpportunities(browserAnalysis, scores)
-      
+
+      // Step 3b: Arricchimento da fonti pubbliche gratuite (età dominio, MX/provider email).
+      // Difensivo: non blocca mai l'analisi se fallisce.
+      let enrichment: LeadEnrichment | undefined
+      try {
+        enrichment = (await enrichLead(statusResult.finalUrl)) || undefined
+      } catch {
+        enrichment = undefined
+      }
+
       return {
         url,
         finalUrl: statusResult.finalUrl,
@@ -336,7 +351,11 @@ export class EnhancedWebsiteAnalyzer {
         httpStatusCode: statusResult.httpCode,
         reachabilityVerdict: statusResult.verdict,
         leadConfidence: decideLeadPublication({ reachability: 'online' }),
-        hasSSL: statusResult.finalUrl.startsWith('https://'),
+        // hasSSL dal sondaggio reale dell'endpoint https (non dalla stringa URL):
+        // niente più falso "manca HTTPS" sui siti http:// con redirect a https.
+        hasSSL: statusResult.hasSSL ?? statusResult.finalUrl.startsWith('https://'),
+        redirectsToHttps: statusResult.redirectsToHttps,
+        enrichment,
         sslValid: statusResult.sslValid,
         sslDetails: statusResult.technicalDetails.sslCertificate ? {
           issuer: statusResult.technicalDetails.sslCertificate.issuer,
@@ -1765,8 +1784,8 @@ export class EnhancedWebsiteAnalyzer {
       httpStatusCode: statusResult.httpCode,
       reachabilityVerdict: verdict,
       leadConfidence: decision,
-      hasSSL: url.startsWith('https://'),
-      sslValid: false,
+      hasSSL: statusResult.hasSSL ?? url.startsWith('https://'),
+      sslValid: statusResult.sslValid ?? false,
       performance: this.performanceAnalyzer['getDefaultMetrics'](),
       seo: this.getDefaultSEO(),
       images: this.getDefaultImages(),
