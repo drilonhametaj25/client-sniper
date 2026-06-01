@@ -846,7 +846,7 @@ export default function ClientDashboard() {
 
     const remainingProposals = getAvailableProposals()
     if (remainingProposals <= 0) {
-      alert('Non hai più proposte disponibili. Aggiorna il tuo piano per continuare.')
+      alert('Non hai più crediti disponibili. Aggiorna il tuo piano per continuare.')
       router.push('/upgrade')
       return
     }
@@ -911,7 +911,7 @@ export default function ClientDashboard() {
       }
     } catch (error) {
       console.error('Errore generale:', error)
-      alert('Errore nel generare la proposta. Riprova.')
+      alert('Errore nello sbloccare il lead. Riprova.')
     }
   }
 
@@ -1495,12 +1495,13 @@ export default function ClientDashboard() {
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Proposte</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Crediti</p>
                   <p className={`text-2xl font-bold mb-1 ${remainingProposals <= 1 ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
                     {remainingProposals}
                   </p>
+                  <p className="text-xs text-gray-500">1 credito = 1 lead sbloccato</p>
                   {remainingProposals <= 1 && getBasePlanType(user?.plan || '') !== 'free' &&  (
-                    <p className="text-xs text-red-500 font-medium">Proposte in esaurimento!</p>
+                    <p className="text-xs text-red-500 font-medium">Crediti in esaurimento!</p>
                   )}
                 </div>
                 <CreditCard className={`h-8 w-8 ${remainingProposals <= 1 ? 'text-red-500' : 'text-blue-500'}`} />
@@ -1510,7 +1511,7 @@ export default function ClientDashboard() {
                   onClick={() => router.push('/upgrade')}
                   className="mt-3 w-full bg-red-500 hover:bg-red-600 text-white text-sm py-2 rounded-lg transition-colors"
                 >
-                  Ottieni Proposte
+                  Ottieni Crediti
                 </button>
               )}
             </div>
@@ -1563,12 +1564,12 @@ export default function ClientDashboard() {
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Proposte Generate</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Lead Sbloccati</p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">{unlockedLeads.size}</p>
                   <p className="text-xs text-gray-500">
                     {unlockedLeads.size > 0
                       ? `${Math.round((unlockedLeads.size / Math.max(totalLeads, 1)) * 100)}% del totale`
-                      : 'Nessuna ancora'
+                      : 'Nessuno ancora'
                     }
                   </p>
                 </div>
@@ -1586,7 +1587,7 @@ export default function ClientDashboard() {
                   onClick={() => setShowOnlyUnlocked(true)}
                   className="mt-3 w-full bg-blue-500 hover:bg-blue-600 text-white text-sm py-2 rounded-lg transition-colors"
                 >
-                  Visualizza Proposte
+                  Vedi Sbloccati
                 </button>
               )}
             </div>
@@ -1686,10 +1687,10 @@ export default function ClientDashboard() {
                       }`}
                     >
                       {unlockedLeads.has(lead.id)
-                        ? '✓ Proposta Generata'
+                        ? '✓ Lead Sbloccato'
                         : remainingProposals === 0
-                          ? 'Proposte esaurite'
-                          : '📄 Genera Proposta'
+                          ? 'Crediti esauriti'
+                          : '🔓 Sblocca Lead'
                       }
                     </button>
                   </div>
@@ -1860,7 +1861,7 @@ export default function ClientDashboard() {
                     onClick={() => setShowOnlyUnlocked(false)}
                     className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs rounded-full hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
                   >
-                    Solo proposte
+                    Solo sbloccati
                     <X className="h-3 w-3 ml-1" />
                   </button>
                 )}
@@ -1939,8 +1940,8 @@ export default function ClientDashboard() {
                       }`}></div>
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">Solo proposte generate</span>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Mostra solo lead sbloccati</p>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">Solo lead sbloccati</span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Mostra solo i lead che hai gi&agrave; sbloccato</p>
                     </div>
                     <input
                       type="checkbox"
@@ -1974,8 +1975,8 @@ export default function ClientDashboard() {
                   )}
                 </div>
 
-                {/* Dropdowns Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Dropdowns Grid (Categoria + Città; il filtro servizi è in Avanzati) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Categoria</label>
                     <select
@@ -2049,19 +2050,10 @@ export default function ClientDashboard() {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Ruolo Necessario</label>
-                    <select
-                      value={filterRole}
-                      onChange={(e) => setFilterRole(e.target.value)}
-                      className="w-full p-3 min-h-[44px] bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 dark:text-white"
-                    >
-                      <option value="">Tutti i ruoli</option>
-                      {roles.map(role => (
-                        <option key={role} value={role}>{translateRole(role)}</option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* Il filtro per "tipo di lavoro necessario" vive ora solo in
+                      Filtri Avanzati → "Servizi Richiesti" (più ricco e con icone).
+                      Rimosso da qui il duplicato "Ruolo Necessario" per evitare due
+                      filtri che fanno la stessa cosa. */}
                 </div>
               </div>
             )}
@@ -2099,11 +2091,11 @@ export default function ClientDashboard() {
                   <div className="text-center py-12">
                     <Target className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                      {showOnlyUnlocked ? 'Nessuna proposta generata' : 'Nessun lead trovato'}
+                      {showOnlyUnlocked ? 'Nessun lead sbloccato' : 'Nessun lead trovato'}
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400">
                       {showOnlyUnlocked
-                        ? 'Genera alcune proposte per vederle qui, oppure disattiva il filtro'
+                        ? 'Sblocca alcuni lead per vederli qui, oppure disattiva il filtro'
                         : 'Prova a modificare i filtri o aggiorna i dati'}
                     </p>
                   </div>

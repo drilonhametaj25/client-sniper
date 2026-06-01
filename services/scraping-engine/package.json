@@ -18,6 +18,7 @@
     "seed:reset": "tsx src/scripts/seed-database.ts reset",
     "seed:stats": "tsx src/scripts/seed-database.ts stats",
     "migrate": "tsx src/scripts/migrate-database.ts",
+    "recheck-leads": "tsx src/scripts/recheck-leads.ts",
     "test:scraping": "tsx src/scripts/test-improved-scraping.ts",
     "test:contacts": "tsx -e \"import('./src/utils/contact-parser.ts').then(m => console.log('Contact parser test passed'))\"",
     "test:piva": "tsx src/scripts/test-piva.ts",

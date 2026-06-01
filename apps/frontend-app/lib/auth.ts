@@ -10,6 +10,12 @@ export interface AuthUser extends User {
   role?: 'admin' | 'client'
   plan?: string // Ora supporta tutti i nuovi nomi: free, starter_monthly, starter_annual, pro_monthly, pro_annual, agency_monthly, agency_annual
   credits_remaining?: number
+  // Sistema crediti corrente (il backend usa proposals_remaining; il frontend lo
+  // mostra come "crediti"). Va caricato qui, altrimenti il frontend ripiega su
+  // credits_remaining (legacy) e dopo un upgrade vede 0 crediti.
+  proposals_remaining?: number
+  proposals_reset_date?: string
+  first_proposal_used?: boolean
   billing_cycle_start?: string
   credits_reset_date?: string
   total_credits_used_this_cycle?: number
@@ -53,7 +59,7 @@ export async function getUserProfile(userId: string, sessionUser?: User): Promis
     // ⚡ OTTIMIZZAZIONE: Query unica per i dati del profilo (con tutti i campi necessari)
     const { data, error } = await supabase
       .from('users')
-      .select('id, email, role, plan, credits_remaining, billing_cycle_start, credits_reset_date, total_credits_used_this_cycle, stripe_subscription_id, stripe_current_period_end, status, deactivated_at, deactivation_reason, reactivated_at, preferred_theme, services_offered, preferred_min_budget, preferred_max_budget')
+      .select('id, email, role, plan, credits_remaining, proposals_remaining, proposals_reset_date, first_proposal_used, billing_cycle_start, credits_reset_date, total_credits_used_this_cycle, stripe_subscription_id, stripe_current_period_end, status, deactivated_at, deactivation_reason, reactivated_at, preferred_theme, services_offered, preferred_min_budget, preferred_max_budget')
       .eq('id', userId)
       .single()
     
@@ -93,6 +99,9 @@ export async function getUserProfile(userId: string, sessionUser?: User): Promis
       role: data.role as 'admin' | 'client',
       plan: data.plan, // Ora supporta tutti i nuovi nomi
       credits_remaining: data.credits_remaining || 0,
+      proposals_remaining: data.proposals_remaining ?? 0,
+      proposals_reset_date: data.proposals_reset_date,
+      first_proposal_used: data.first_proposal_used,
       billing_cycle_start: data.billing_cycle_start,
       credits_reset_date: data.credits_reset_date,
       total_credits_used_this_cycle: data.total_credits_used_this_cycle,

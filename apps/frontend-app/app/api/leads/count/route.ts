@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { leadsHasStatusColumn } from '@/lib/utils/leads-schema'
 
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
@@ -34,10 +35,17 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Conta TUTTI i lead nel database (senza filtri)
-    const { count, error } = await getSupabaseAdmin()
+    // Conta i lead pubblicati (la quarantena a bassa confidenza resta esclusa,
+    // così il totale riflette ciò che gli utenti possono davvero vedere).
+    // Il filtro si applica solo se la colonna `status` esiste (robusto pre-migration).
+    const admin = getSupabaseAdmin()
+    let countQuery = admin
       .from('leads')
       .select('*', { count: 'exact', head: true })
+    if (await leadsHasStatusColumn(admin)) {
+      countQuery = countQuery.eq('status', 'published')
+    }
+    const { count, error } = await countQuery
 
     if (error) {
       console.error('Errore conteggio lead:', error)

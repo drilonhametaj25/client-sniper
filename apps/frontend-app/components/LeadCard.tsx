@@ -1,10 +1,10 @@
 /**
  * LeadCard - Componente per visualizzare opportunità commerciali
  *
- * NUOVO APPROCCIO PROPOSTE:
+ * APPROCCIO:
  * - Info base SEMPRE visibili: nome, città, categoria, problema principale, score
- * - Nessun lucchetto - parliamo di "proposte" non di "lead bloccati"
- * - CTA: "Vedi Proposta" invece di "Sblocca Lead"
+ * - Terminologia unificata: si "sblocca un lead" spendendo 1 credito
+ * - CTA: "Sblocca Lead" per i lead non ancora sbloccati
  * - Problemi tradotti in linguaggio umano
  *
  * Due versioni:
@@ -189,9 +189,9 @@ export default function LeadCard({
             : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
         }`}>
           {isUnlocked ? (
-            <><CheckCircle className="w-3 h-3" /> Proposta aperta</>
+            <><CheckCircle className="w-3 h-3" /> Lead sbloccato</>
           ) : (
-            <><FileText className="w-3 h-3" /> Proposta disponibile</>
+            <><FileText className="w-3 h-3" /> Da sbloccare</>
           )}
         </span>
       </div>
@@ -424,7 +424,7 @@ export default function LeadCard({
               className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors"
             >
               <FileText className="w-4 h-4" />
-              Vedi Proposta Completa
+              Vedi Dettaglio Lead
             </button>
 
             {/* Call CTA */}
@@ -450,13 +450,13 @@ export default function LeadCard({
             )}
           </>
         ) : (
-          /* CTA per aprire proposta - usa 1 proposta */
+          /* CTA per sbloccare il lead - usa 1 credito */
           <button
             onClick={() => onUnlock?.(lead)}
             className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm font-medium rounded-xl transition-colors shadow-lg"
           >
             <TrendingUp className="w-4 h-4" />
-            Apri Proposta Commerciale
+            Sblocca Lead (1 credito)
           </button>
         )}
 
@@ -646,7 +646,7 @@ export function LeadCardCompact({
             onClick={() => onView?.(lead)}
             className="flex-shrink-0 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors font-medium"
           >
-            Proposta →
+            Dettaglio →
           </button>
         ) : (
           <button
@@ -654,7 +654,7 @@ export function LeadCardCompact({
             className="flex-shrink-0 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm font-medium rounded-lg transition-colors inline-flex items-center gap-1"
           >
             <FileText className="w-3.5 h-3.5" />
-            Apri
+            Sblocca
           </button>
         )}
       </div>

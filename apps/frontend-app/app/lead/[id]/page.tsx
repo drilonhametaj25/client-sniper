@@ -44,6 +44,8 @@ import LeadDigitalServices from "@/components/LeadDigitalServices";
 import ContactTemplates from "@/components/ContactTemplates";
 import QuotationTab from "@/components/QuotationTab";
 import EmailComposerModal from "@/components/EmailComposerModal";
+import LeadOpportunitySummary from "@/components/LeadOpportunitySummary";
+import ReportLeadIssueButton from "@/components/ReportLeadIssueButton";
 import {
   normalizeAnalysis,
   calculateSEOScore,
@@ -79,6 +81,10 @@ interface Lead {
   last_seen_at: string;
   assigned_to: string;
   origin?: "scraping" | "manual";
+  // Sistema di confidenza (Fase 0/1)
+  confidence_score?: number;
+  status?: "published" | "quarantine";
+  reachability_verdict?: string;
 }
 
 export default function LeadDetailPage() {
@@ -88,6 +94,8 @@ export default function LeadDetailPage() {
   const leadId = params.id as string;
 
   const [lead, setLead] = useState<Lead | null>(null);
+  // Grafici dettagliati nascosti di default: riducono la ripetizione di metriche già mostrate sopra.
+  const [showTechCharts, setShowTechCharts] = useState(false);
   const [analysis, setAnalysis] = useState<EnhancedWebsiteAnalysis | WebsiteAnalysis | null>(null);
   const [normalizedData, setNormalizedData] = useState<NormalizedAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
@@ -401,6 +409,9 @@ export default function LeadDetailPage() {
           </div>
         </TourTarget>
 
+        {/* Riepilogo opportunità: traduce i dati tecnici in valore di vendita */}
+        <LeadOpportunitySummary lead={lead} />
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Colonna Sinistra - Info Principali */}
           <div className="lg:col-span-1 space-y-6">
@@ -467,6 +478,11 @@ export default function LeadDetailPage() {
                   </div>
                 )}
               </div>
+
+              {/* Segnalazione dati errati: alimenta la quarantena automatica */}
+              <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
+                <ReportLeadIssueButton leadId={lead.id} />
+              </div>
             </TourTarget>
 
             {/* Ruoli Necessari */}
@@ -489,84 +505,14 @@ export default function LeadDetailPage() {
               </div>
             )}
 
-            {/* Raccomandazioni per il Cliente */}
-            {analysis && (
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                  <Activity className="h-5 w-5 mr-2 text-green-600" />
-                  Raccomandazioni per il Cliente
-                </h2>
+            {/* "Raccomandazioni per il Cliente" (lista) rimossa: le raccomandazioni
+                sono ora in un unico posto, la griglia "Riepilogo Opportunità" (più
+                ricca, con priorità e aree), oltre al Riepilogo Opportunità in cima. */}
 
-                <div className="space-y-4">
-                  {getRecommendations().map((rec, index) => (
-                    <div
-                      key={index}
-                      className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          {getCategoryIcon(rec.category)}
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">
-                            {rec.title}
-                          </span>
-                        </div>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${getPriorityColor(
-                            rec.priority
-                          )}`}
-                        >
-                          {getPriorityIcon(rec.priority)}
-                          <span className="ml-1 capitalize">
-                            {rec.priority === "high"
-                              ? "Alta"
-                              : rec.priority === "medium"
-                              ? "Media"
-                              : "Bassa"}
-                          </span>
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                        {rec.description}
-                      </p>
-                      <div className="mt-2">
-                        <span className="inline-block px-2 py-1 bg-gray-100 dark:bg-gray-900 text-xs text-gray-600 dark:text-gray-400 rounded">
-                          {rec.category}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-
-                  {getRecommendations().length === 0 && (
-                    <div className="text-center py-8">
-                      <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
-                      <p className="text-gray-600 dark:text-gray-400">
-                        Ottimo! Non sono stati identificati problemi critici.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Problemi Legacy (se presenti) */}
-            {lead.issues && lead.issues.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Problemi Identificati (Legacy)
-                </h2>
-
-                <div className="space-y-2">
-                  {lead.issues.map((issue, index) => (
-                    <div key={index} className="flex items-start">
-                      <AlertTriangle className="h-4 w-4 text-orange-500 mr-2 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">
-                        {issue}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Sezione "Problemi Identificati (Legacy)" rimossa: duplicava il
+                Riepilogo Opportunità in cima e l'Analisi Tecnica Completa.
+                I problemi chiave sono già mostrati in linguaggio di vendita nel
+                riepilogo e in dettaglio nell'analisi tecnica. */}
           </div>
 
           {/* Colonna Destra - Analisi Tecnica */}
@@ -1281,155 +1227,9 @@ export default function LeadDetailPage() {
                   </div>
                 )}
 
-                {/* GDPR Compliance */}
-                {isNewFormat() && analysis.gdpr && (
-                  <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                      <Shield className="h-5 w-5 mr-2 text-green-600" />
-                      Conformità GDPR
-                    </h3>
+                {/* Sezione "Conformità GDPR" rimossa: duplicava "GDPR & Legal" qui sopra. */}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                        <span className="text-sm text-gray-700 dark:text-gray-300">
-                          Cookie Banner
-                        </span>
-                        {analysis.gdpr.hasCookieBanner ? (
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                        ) : (
-                          <XCircle className="h-5 w-5 text-red-500" />
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                        <span className="text-sm text-gray-700 dark:text-gray-300">
-                          Privacy Policy
-                        </span>
-                        {analysis.gdpr.hasPrivacyPolicy ? (
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                        ) : (
-                          <XCircle className="h-5 w-5 text-red-500" />
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                        <span className="text-sm text-gray-700 dark:text-gray-300">
-                          Termini di Servizio
-                        </span>
-                        {analysis.gdpr.hasTermsOfService ? (
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                        ) : (
-                          <XCircle className="h-5 w-5 text-red-500" />
-                        )}
-                      </div>
-                      {((analysis.gdpr as any).riskyEmbeds as string[]) &&
-                        ((analysis.gdpr as any).riskyEmbeds as string[]).length > 0 && (
-                          <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                            <span className="text-sm text-gray-700 dark:text-gray-300">
-                              Embed Rischiosi
-                            </span>
-                            <AlertTriangle className="h-5 w-5 text-red-500" />
-                          </div>
-                        )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Social Presence */}
-                {isNewFormat() && analysis.social && (
-                  <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                      <Eye className="h-5 w-5 mr-2 text-pink-500" />
-                      Presenza Social
-                    </h3>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {(((analysis.social as any).facebook) || ((analysis.social as any).platforms?.facebook)) && (
-                        <a
-                          href={((analysis.social as any).facebook) || ((analysis.social as any).platforms?.facebook)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors group"
-                        >
-                          <div className="flex items-center">
-                            <Facebook className="h-5 w-5 text-blue-600 mr-2" />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">
-                              Facebook
-                            </span>
-                          </div>
-                          <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-blue-600" />
-                        </a>
-                      )}
-                      {(((analysis.social as any).instagram) || ((analysis.social as any).platforms?.instagram)) && (
-                        <a
-                          href={((analysis.social as any).instagram) || ((analysis.social as any).platforms?.instagram)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-between p-3 bg-pink-50 dark:bg-pink-900/20 rounded-lg hover:bg-pink-100 dark:hover:bg-pink-900/30 transition-colors group"
-                        >
-                          <div className="flex items-center">
-                            <Instagram className="h-5 w-5 text-pink-600 mr-2" />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">
-                              Instagram
-                            </span>
-                          </div>
-                          <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-pink-600" />
-                        </a>
-                      )}
-                      {(((analysis.social as any).linkedin) || ((analysis.social as any).platforms?.linkedin)) && (
-                        <a
-                          href={((analysis.social as any).linkedin) || ((analysis.social as any).platforms?.linkedin)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors group"
-                        >
-                          <div className="flex items-center">
-                            <Linkedin className="h-5 w-5 text-blue-700 mr-2" />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">
-                              LinkedIn
-                            </span>
-                          </div>
-                          <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-blue-700" />
-                        </a>
-                      )}
-                      {(((analysis.social as any).twitter) || ((analysis.social as any).platforms?.twitter)) && (
-                        <a
-                          href={((analysis.social as any).twitter) || ((analysis.social as any).platforms?.twitter)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors group"
-                        >
-                          <div className="flex items-center">
-                            <Twitter className="h-5 w-5 text-blue-500 mr-2" />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">
-                              Twitter
-                            </span>
-                          </div>
-                          <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-blue-500" />
-                        </a>
-                      )}
-                      {(((analysis.social as any).youtube) || ((analysis.social as any).platforms?.youtube)) && (
-                        <a
-                          href={((analysis.social as any).youtube) || ((analysis.social as any).platforms?.youtube)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors group"
-                        >
-                          <div className="flex items-center">
-                            <Youtube className="h-5 w-5 text-red-600 mr-2" />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">
-                              YouTube
-                            </span>
-                          </div>
-                          <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-red-600" />
-                        </a>
-                      )}
-                      {!analysis.social.hasAnySocial && (
-                        <div className="col-span-full text-center p-4 text-gray-500 dark:text-gray-400">
-                          Nessuna presenza social rilevata
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+                {/* Sezione "Presenza Social" rimossa: duplicava "Presenza Social & Contatti" qui sopra. */}
 
                 {/* Tracking & Analytics - Legacy Format */}
                 {!isNewFormat() &&
@@ -1707,6 +1507,20 @@ export default function LeadDetailPage() {
               </>
             )}
 
+            {/* Toggle: i grafici dettagliati ripetono metriche già mostrate sopra,
+                quindi sono nascosti di default per una pagina più pulita. */}
+            <button
+              onClick={() => setShowTechCharts(!showTechCharts)}
+              className="w-full flex items-center justify-between bg-white dark:bg-gray-800 rounded-xl p-4 text-left text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+            >
+              <span className="flex items-center font-semibold">
+                <BarChart3 className="h-5 w-5 mr-2 text-blue-500" />
+                Grafici e visualizzazioni dettagliate
+              </span>
+              <span className="text-sm text-gray-500">{showTechCharts ? 'Nascondi −' : 'Mostra +'}</span>
+            </button>
+
+            {showTechCharts && (<>
             {/* Grafici e Visualizzazioni Avanzate */}
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
@@ -2142,6 +1956,7 @@ export default function LeadDetailPage() {
                 )}
               </div>
             </div>
+            </>)}
 
             {/* Sezione Servizi Digitali per utenti PRO */}
             <LeadDigitalServices lead={lead} />
@@ -2161,86 +1976,9 @@ export default function LeadDetailPage() {
               userPlan={(user?.plan as 'free' | 'starter' | 'pro') || 'free'}
             />
 
-            {/* Riepilogo Finale */}
-            <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                💡 Riepilogo Raccomandazioni
-              </h3>
-
-              <div className="space-y-3">
-                {analysis && (
-                  <>
-                    {/* SEO Issues */}
-                    {((isNewFormat() &&
-                      (!analysis.seo?.hasTitle ||
-                        !analysis.seo?.hasMetaDescription ||
-                        !analysis.seo?.hasH1)) ||
-                      (!isNewFormat() &&
-                        (analysis as any).missing_meta_tags &&
-                        ((analysis as any).missing_meta_tags as string[]).length > 0)) && (
-                      <div className="flex items-start">
-                        <Zap className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">
-                          <strong>SEO:</strong> Ottimizzare i meta tag (title,
-                          description, H1) per migliorare la visibilità sui
-                          motori di ricerca
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Tracking Issues */}
-                    {((isNewFormat() &&
-                      !analysis.tracking?.hasGoogleAnalytics &&
-                      !analysis.tracking?.hasFacebookPixel) ||
-                      (!isNewFormat() &&
-                        (analysis as any).has_tracking_pixel === false)) && (
-                      <div className="flex items-start">
-                        <Zap className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">
-                          <strong>Analytics:</strong> Installare Google
-                          Analytics e Facebook Pixel per monitorare le
-                          conversioni
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Performance Issues */}
-                    {getPerformanceScore() < 70 && (
-                      <div className="flex items-start">
-                        <Zap className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">
-                          <strong>Performance:</strong> Ottimizzare la velocità
-                          di caricamento per migliorare l'esperienza utente
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Mobile Issues */}
-                    {((isNewFormat() &&
-                      (analysis.performance as any)?.isResponsive === false) ||
-                      (!isNewFormat() &&
-                        (analysis as any).mobile_friendly === false)) && (
-                      <div className="flex items-start">
-                        <Smartphone className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">
-                          <strong>Mobile:</strong> Rendere il sito responsive
-                          per migliorare l'esperienza su dispositivi mobili
-                        </span>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {!analysis && (
-                  <div className="text-center py-8">
-                    <Activity className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-600 dark:text-gray-400">
-                      Nessuna analisi disponibile
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* "Riepilogo Raccomandazioni" finale rimosso: era la terza ripetizione
+                delle stesse raccomandazioni (già presenti in "Raccomandazioni per il
+                Cliente" in alto e, in forma vendibile, nel "Preventivo Automatico"). */}
           </div>
         </div>
       </div>

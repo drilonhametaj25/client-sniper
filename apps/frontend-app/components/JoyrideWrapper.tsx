@@ -23,6 +23,9 @@ interface JoyrideWrapperProps {
   hideCloseButton?: boolean
   spotlightClicks?: boolean
   styles?: any
+  // Etichette tradotte dei pulsanti (Avanti/Indietro/Salta/Finito): senza questa prop
+  // Joyride usava i default inglesi ("Next (Step X of Y)").
+  locale?: any
 }
 
 const JoyrideWrapper: React.FC<JoyrideWrapperProps> = (props) => {

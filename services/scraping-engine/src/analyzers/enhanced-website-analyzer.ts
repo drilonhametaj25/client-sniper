@@ -17,6 +17,8 @@ import { BusinessContactParser } from '../utils/business-contact-parser'
 import { BrowserManager } from '../utils/browser-manager'
 import type { SocialAnalysisResult } from './social-analyzer'
 import type { AnalysisReliability } from '../types/LeadAnalysis'
+import { decideLeadPublication } from '../utils/confidence'
+import type { ReachabilityVerdict, LeadConfidenceDecision, SignalConfidence } from '../utils/confidence'
 
 // Nuovi analyzer integrati
 import { SecurityAnalyzer, SecurityAnalysis } from './security-analyzer'
@@ -90,6 +92,12 @@ export interface EnhancedWebsiteAnalysis {
     pinterestTag: boolean
     customPixels: string[]
     trackingScore: number // 0-100
+    /**
+     * Confidenza sull'ASSENZA di tracking. 'confirmed' = la pagina si è caricata
+     * del tutto e nessun tracker è stato visto (in rete/HTML/window) -> "no tracking"
+     * è affidabile. 'unverifiable' = rendering incompleto -> non affermare l'assenza.
+     */
+    detectionConfidence?: SignalConfidence
   }
   
   // GDPR & Privacy
@@ -103,6 +111,12 @@ export interface EnhancedWebsiteAnalysis {
     hasVatNumber: boolean
     vatNumbers: string[]
     gdprScore: number // 0-100
+    /**
+     * Confidenza sull'ASSENZA di cookie banner/CMP. 'confirmed' = pagina caricata
+     * e nessun CMP rilevato (DOM o rete). 'unverifiable' = rendering incompleto o
+     * CMP potenzialmente in iframe non analizzabile.
+     */
+    cookieBannerConfidence?: SignalConfidence
   }
   
   // Mobile & Responsiveness
@@ -165,6 +179,11 @@ export interface EnhancedWebsiteAnalysis {
 
   // Analysis Reliability - indica quanto sono attendibili i risultati
   reliability?: AnalysisReliability
+
+  // Confidenza di raggiungibilità (Fase 0/1): distingue assenza certa da sospetta.
+  reachabilityVerdict?: ReachabilityVerdict
+  // Decisione di pubblicazione del lead (published/quarantine) con motivazioni.
+  leadConfidence?: LeadConfidenceDecision
 
   // Analysis Meta
   analysisDate: Date
@@ -282,6 +301,10 @@ export class EnhancedWebsiteAnalyzer {
       const statusResult = await this.statusChecker.checkWebsiteStatus(url)
       
       if (!statusResult.isAccessible) {
+        // NB: createFailedAnalysis ora distingue, tramite statusResult.verdict, fra
+        // assenza CERTA (DNS/refused/parcheggio -> lead valido) e assenza SOSPETTA
+        // (timeout/reset -> quarantena + ri-verifica). Un timeout non è più un
+        // "sito morto" automatico: è qui che si annullano i falsi positivi.
         return this.createFailedAnalysis(url, statusResult, startTime)
       }
       
@@ -311,6 +334,8 @@ export class EnhancedWebsiteAnalyzer {
         websiteStatus: statusResult.status,
         isAccessible: true,
         httpStatusCode: statusResult.httpCode,
+        reachabilityVerdict: statusResult.verdict,
+        leadConfidence: decideLeadPublication({ reachability: 'online' }),
         hasSSL: statusResult.finalUrl.startsWith('https://'),
         sslValid: statusResult.sslValid,
         sslDetails: statusResult.technicalDetails.sslCertificate ? {
@@ -371,6 +396,14 @@ export class EnhancedWebsiteAnalyzer {
       })
       await page.setViewportSize({ width: 1920, height: 1080 })
 
+      // Intercetta TUTTE le richieste di rete: è il segnale più affidabile per
+      // rilevare tracking/CMP. Un tag GA/Pixel caricato via GTM o in ritardo non
+      // appare nell'HTML iniziale ma fa sempre una richiesta di rete riconoscibile.
+      const networkRequests: string[] = []
+      page.on('request', (req) => {
+        try { networkRequests.push(req.url()) } catch { /* noop */ }
+      })
+
       // Carica pagina
       const response = await page.goto(url, {
         waitUntil: 'domcontentloaded', // Cambiato da networkidle per migliore affidabilità
@@ -384,6 +417,18 @@ export class EnhancedWebsiteAnalyzer {
       // Attendi rendering JS framework (sostituisce waitForTimeout hardcoded)
       const { frameworkDetected, waitStrategy } = await this.waitForJSFrameworks(page, 10000)
 
+      // Lascia che gli script di tracking/CMP completino le loro richieste di rete.
+      // Se la rete si "calma" (networkidle) consideriamo il rilevamento AFFIDABILE:
+      // un'eventuale assenza di tracker sarà allora una prova, non un dubbio.
+      let renderReliable = false
+      try {
+        await page.waitForLoadState('networkidle', { timeout: 8000 })
+        renderReliable = true
+      } catch {
+        // La rete non si è calmata (long-polling, ws, risorse lente): non affermeremo
+        // assenze con certezza. renderReliable resta false.
+      }
+
       // Raccogli HTML e metadata
       const htmlContent = await page.content()
       const pageTitle = await page.title()
@@ -392,8 +437,8 @@ export class EnhancedWebsiteAnalyzer {
       const moduleResults = await Promise.allSettled([
         this.analyzeSEO(page, htmlContent),
         this.analyzeImages(page),
-        this.analyzeTracking(page, htmlContent),
-        this.analyzeGDPR(page, htmlContent),
+        this.analyzeTracking(page, htmlContent, networkRequests, renderReliable),
+        this.analyzeGDPR(page, htmlContent, networkRequests, renderReliable),
         this.analyzeMobileCompatibility(page),
         this.analyzeContent(page, htmlContent),
         this.performanceAnalyzer.analyzePerformance(page, url),
@@ -514,30 +559,45 @@ export class EnhancedWebsiteAnalyzer {
    */
   private async analyzeSEO(page: Page, html: string): Promise<EnhancedWebsiteAnalysis['seo']> {
     const seoData = await page.evaluate(() => {
-      // Title
-      const titleEl = document.querySelector('title')
-      const title = titleEl?.textContent?.trim() || ''
-      
-      // Meta description
-      const metaDesc = document.querySelector('meta[name="description"]')
-      const description = metaDesc?.getAttribute('content')?.trim() || ''
-      
+      // Helper case-insensitive: alcuni siti usano name/property in maiuscolo.
+      const metaContent = (sel: string): string => {
+        const el = document.querySelector(sel)
+        return el?.getAttribute('content')?.trim() || ''
+      }
+
+      // Title con FALLBACK: <title> -> og:title -> twitter:title -> primo <h1>.
+      // Evita falsi "manca title" su SPA/temi che impostano il titolo altrove.
+      const rawTitle = document.querySelector('title')?.textContent?.trim() || ''
+      const ogTitleContent = metaContent('meta[property="og:title"], meta[name="og:title"]')
+      const twitterTitleContent = metaContent('meta[name="twitter:title"], meta[property="twitter:title"]')
+      const firstH1 = document.querySelector('h1')?.textContent?.trim() || ''
+      const title = rawTitle || ogTitleContent || twitterTitleContent || firstH1
+
+      // Meta description con FALLBACK: meta description -> og:description -> twitter:description.
+      const rawDesc = metaContent('meta[name="description"]')
+      const ogDescContent = metaContent('meta[property="og:description"], meta[name="og:description"]')
+      const twitterDescContent = metaContent('meta[name="twitter:description"], meta[property="twitter:description"]')
+      const description = rawDesc || ogDescContent || twitterDescContent
+
       // H tags
       const h1Elements = Array.from(document.querySelectorAll('h1'))
       const h2Elements = Array.from(document.querySelectorAll('h2'))
       const h1Text = h1Elements.map(el => el.textContent?.trim() || '')
-      
-      // Other meta tags
-      const robotsMeta = document.querySelector('meta[name="robots"]')
-      const canonical = document.querySelector('link[rel="canonical"]')
-      const ogTitle = document.querySelector('meta[property="og:title"]')
-      const twitterCard = document.querySelector('meta[name="twitter:card"]')
-      
+
+      // Other meta tags (case-insensitive su name/property)
+      const robotsMeta = document.querySelector('meta[name="robots"], meta[name="ROBOTS"]')
+      const canonical = document.querySelector('link[rel="canonical"], link[rel="CANONICAL"]')
+      const ogTitle = document.querySelector('meta[property="og:title"], meta[name="og:title"]')
+      const twitterCard = document.querySelector('meta[name="twitter:card"], meta[property="twitter:card"]')
+
       return {
         title,
         titleLength: title.length,
+        // Distinguiamo il titolo "proprio" (tag <title>) dai fallback, per trasparenza.
+        titleFromFallback: !rawTitle && title.length > 0,
         description,
         descriptionLength: description.length,
+        descriptionFromFallback: !rawDesc && description.length > 0,
         h1Text,
         h1Count: h1Elements.length,
         h2Count: h2Elements.length,
@@ -762,7 +822,12 @@ export class EnhancedWebsiteAnalyzer {
    * Include: GA4, GTM, Facebook, TikTok, LinkedIn, Snapchat, Pinterest
    * MIGLIORATO: Verifica anche dataLayer e oggetti window per rilevare GA4 via GTM
    */
-  private async analyzeTracking(page: Page, html: string): Promise<EnhancedWebsiteAnalysis['tracking']> {
+  private async analyzeTracking(
+    page: Page,
+    html: string,
+    networkRequests: string[] = [],
+    renderReliable: boolean = false
+  ): Promise<EnhancedWebsiteAnalysis['tracking']> {
     // Pattern più robusti per rilevamento HTML
     const patterns = {
       googleAnalytics: [
@@ -849,7 +914,49 @@ export class EnhancedWebsiteAnalyzer {
       snapchatPixel: false,
       pinterestTag: false,
       customPixels: [] as string[],
-      trackingScore: 0
+      trackingScore: 0,
+      detectionConfidence: undefined as SignalConfidence | undefined
+    }
+
+    // Fase 0 (PIÙ AFFIDABILE): richieste di rete intercettate. Se il browser ha
+    // contattato il dominio del tracker, il tracking C'È, senza dubbio. Questo è ciò
+    // che elimina i falsi "no tracking" su GA/Pixel caricati via GTM o in ritardo.
+    const networkPatterns: Record<string, RegExp[]> = {
+      googleAnalytics: [
+        /google-analytics\.com/i, /analytics\.google\.com/i,
+        /googletagmanager\.com\/gtag\/js/i, /\/(g|r)\/collect/i,
+        /region\d+\.google-analytics\.com/i, /stats\.g\.doubleclick\.net/i
+      ],
+      googleTagManager: [/googletagmanager\.com\/gtm\.js/i, /googletagmanager\.com\/ns\.html/i],
+      facebookPixel: [/connect\.facebook\.net\/[^/]+\/fbevents/i, /facebook\.com\/tr\/?\?/i, /\bfacebook\.com\/tr\b/i],
+      googleAds: [/googleadservices\.com/i, /googlesyndication\.com/i, /\bdoubleclick\.net/i, /google\.com\/pagead/i],
+      hotjar: [/static\.hotjar\.com/i, /script\.hotjar\.com/i, /\.hotjar\.io/i],
+      clarity: [/\.clarity\.ms/i],
+      tiktokPixel: [/analytics\.tiktok\.com/i, /\.tiktok\.com\/i18n\/pixel/i],
+      linkedInInsightTag: [/snap\.licdn\.com/i, /px\.ads\.linkedin\.com/i, /linkedin\.com\/(px|insight)/i],
+      snapchatPixel: [/tr\.snapchat\.com/i, /sc-static\.net/i],
+      pinterestTag: [/ct\.pinterest\.com/i, /s\.pinimg\.com\/ct/i]
+    }
+    // Mappa la chiave dei pattern verso la chiave del risultato (googleAds -> googleAdsConversion).
+    const keyMap: Record<string, keyof typeof results> = {
+      googleAnalytics: 'googleAnalytics', googleTagManager: 'googleTagManager',
+      facebookPixel: 'facebookPixel', googleAds: 'googleAdsConversion',
+      hotjar: 'hotjar', clarity: 'clarity', tiktokPixel: 'tiktokPixel',
+      linkedInInsightTag: 'linkedInInsightTag', snapchatPixel: 'snapchatPixel',
+      pinterestTag: 'pinterestTag'
+    }
+    let detectedViaNetwork = false
+    if (networkRequests.length > 0) {
+      const blob = networkRequests.join('\n')
+      for (const [key, patternList] of Object.entries(networkPatterns)) {
+        if (patternList.some(p => p.test(blob))) {
+          const resultKey = keyMap[key]
+          if (resultKey) {
+            (results as any)[resultKey] = true
+            detectedViaNetwork = true
+          }
+        }
+      }
     }
 
     // Fase 1: Controlla pattern nell'HTML
@@ -959,13 +1066,34 @@ export class EnhancedWebsiteAnalyzer {
 
     results.trackingScore = Math.min(score, 100)
 
+    // Confidenza sull'ASSENZA di tracking (per non generare falsi difetti "no tracking"):
+    // - presenza rilevata -> 'confirmed'
+    // - nessun tracker MA pagina caricata del tutto e traffico di rete osservato -> 'confirmed'
+    // - altrimenti (rendering incompleto) -> 'unverifiable': non affermiamo l'assenza
+    const anyTracking = results.googleAnalytics || results.googleTagManager || results.facebookPixel ||
+      results.googleAdsConversion || results.hotjar || results.clarity || results.tiktokPixel ||
+      results.linkedInInsightTag || results.snapchatPixel || results.pinterestTag
+    results.detectionConfidence = (anyTracking || (renderReliable && networkRequests.length > 0))
+      ? 'confirmed'
+      : 'unverifiable'
+
+    if (detectedViaNetwork) {
+      // Nota diagnostica utile a capire perché un tracker risulta presente.
+      console.log('🔎 Tracking rilevato via richieste di rete')
+    }
+
     return results
   }
 
   /**
    * Analisi GDPR e privacy - MIGLIORATA con selettori DOM specifici
    */
-  private async analyzeGDPR(page: Page, html: string): Promise<EnhancedWebsiteAnalysis['gdpr']> {
+  private async analyzeGDPR(
+    page: Page,
+    html: string,
+    networkRequests: string[] = [],
+    renderReliable: boolean = false
+  ): Promise<EnhancedWebsiteAnalysis['gdpr']> {
     const gdprData = await page.evaluate(() => {
       // Cookie banner detection MIGLIORATA - cerca elementi DOM specifici
       const cookieBannerSelectors = [
@@ -1091,21 +1219,51 @@ export class EnhancedWebsiteAnalyzer {
       }
     })
     
+    // Rilevamento CMP via richieste di rete: i principali Consent Management Platform
+    // caricano i banner da domini noti, spesso dentro iframe non visibili al DOM.
+    // Questo elimina i falsi "no cookie banner" su OneTrust/Cookiebot/Iubenda/ecc.
+    const cmpPatterns: RegExp[] = [
+      /cdn\.cookielaw\.org/i, /onetrust\.com/i,                 // OneTrust
+      /consent\.cookiebot\.com/i, /cookiebot\.com/i,            // Cookiebot
+      /cdn\.iubenda\.com/i, /cs\.iubenda\.com/i,                // Iubenda
+      /sdk\.privacy-center\.org/i, /api\.privacy-center\.org/i, // Didomi
+      /usercentrics\.eu/i,                                      // Usercentrics
+      /app\.termly\.io/i,                                       // Termly
+      /cmp\.osano\.com/i, /\bosano\.com/i,                      // Osano
+      /quantcast\.mgr\.consensu\.org/i, /cmp\.quantcast/i,      // Quantcast
+      /cdn-cookieyes\.com/i,                                    // CookieYes
+      /static\.axept\.io/i, /axeptio\.eu/i,                     // Axeptio
+      /consent\.trustarc\.com/i, /trustarc\.com/i,              // TrustArc
+      /tarteaucitron/i, /complianz/i, /borlabs/i
+    ]
+    const cmpViaNetwork = networkRequests.length > 0 &&
+      cmpPatterns.some(p => p.test(networkRequests.join('\n')))
+
+    const hasCookieBanner = gdprData.hasCookieBanner || cmpViaNetwork
+
+    // Confidenza sull'ASSENZA del cookie banner: se ne troviamo uno è confermato;
+    // se non ne troviamo ma la pagina si è caricata del tutto, l'assenza è affidabile;
+    // altrimenti potrebbe esserci un CMP non ancora caricato -> non affermiamo nulla.
+    const cookieBannerConfidence: SignalConfidence =
+      hasCookieBanner || renderReliable ? 'confirmed' : 'unverifiable'
+
     // Ricerca P.IVA nel contenuto
     const contacts = this.contactParser.parseContacts(html)
     const hasVatNumber = contacts.vatNumbers.length > 0
     const hasBusinessAddress = contacts.addresses.length > 0
-    
+
     // Calcola punteggio GDPR
     let gdprScore = 0
-    if (gdprData.hasCookieBanner) gdprScore += 25
+    if (hasCookieBanner) gdprScore += 25
     if (gdprData.hasPrivacyPolicy) gdprScore += 25
     if (gdprData.hasTermsOfService) gdprScore += 15
     if (hasVatNumber) gdprScore += 20
     if (gdprData.hasContactInfo) gdprScore += 15
-    
+
     return {
       ...gdprData,
+      hasCookieBanner,
+      cookieBannerConfidence,
       hasBusinessAddress,
       hasVatNumber,
       vatNumbers: contacts.vatNumbers,
@@ -1278,10 +1436,22 @@ export class EnhancedWebsiteAnalyzer {
     if (!analysisData.seo.hasMetaDescription) {
       issues.high.push('Manca la meta description')
     }
-    if (!analysisData.tracking.googleAnalytics && !analysisData.tracking.googleTagManager) {
+    // "Nessun tracciamento" è un DIFETTO solo se siamo sicuri dell'assenza
+    // (detectionConfidence === 'confirmed'). Con rendering incompleto non lo affermiamo,
+    // così evitiamo i falsi positivi su tracker caricati via GTM o in ritardo.
+    if (
+      !analysisData.tracking.googleAnalytics &&
+      !analysisData.tracking.googleTagManager &&
+      analysisData.tracking.detectionConfidence !== 'unverifiable'
+    ) {
       issues.high.push('Nessun sistema di tracciamento installato')
     }
-    if (!analysisData.gdpr.hasCookieBanner && analysisData.tracking.trackingScore > 0) {
+    // "Tracking senza consenso" solo se c'è tracking E siamo sicuri che manchi il banner.
+    if (
+      !analysisData.gdpr.hasCookieBanner &&
+      analysisData.tracking.trackingScore > 0 &&
+      analysisData.gdpr.cookieBannerConfidence !== 'unverifiable'
+    ) {
       issues.high.push('Tracking senza consenso GDPR')
     }
     
@@ -1573,12 +1743,28 @@ export class EnhancedWebsiteAnalyzer {
    * Crea analisi fallita per siti non accessibili
    */
   private createFailedAnalysis(url: string, statusResult: any, startTime: number): EnhancedWebsiteAnalysis {
+    // Il verdetto distingue l'assenza certa da quella sospetta.
+    const verdict: ReachabilityVerdict = statusResult.verdict || 'offline_confirmed'
+    const decision = decideLeadPublication({ reachability: verdict })
+
+    // Assenza CERTA o dominio parcheggiato => il sito è davvero assente: ottima
+    // opportunità, lo trattiamo come "sito non accessibile" e lo pubblichiamo.
+    // Assenza SOSPETTA/incerta => non affermiamo nulla: niente "Sito non accessibile",
+    // il lead va in quarantena (decision.status) per ri-verifica.
+    const isConfirmedAbsence = verdict === 'offline_confirmed' || statusResult.status === 'parked'
+
+    const criticalIssue = isConfirmedAbsence
+      ? 'Sito non accessibile'
+      : 'Raggiungibilità del sito non confermata (da ri-verificare)'
+
     return {
       url,
       finalUrl: statusResult.finalUrl || url,
       websiteStatus: statusResult.status,
       isAccessible: false,
       httpStatusCode: statusResult.httpCode,
+      reachabilityVerdict: verdict,
+      leadConfidence: decision,
       hasSSL: url.startsWith('https://'),
       sslValid: false,
       performance: this.performanceAnalyzer['getDefaultMetrics'](),
@@ -1590,16 +1776,16 @@ export class EnhancedWebsiteAnalyzer {
       techStack: this.getDefaultTechStack(),
       content: this.getDefaultContent(),
       issues: {
-        critical: ['Sito non accessibile'],
+        critical: [criticalIssue],
         high: [],
         medium: [],
         low: []
       },
       opportunities: {
-        neededServices: ['Riparazione sito web', 'Sviluppo nuovo sito'],
-        neededRoles: ['developer', 'designer'],
-        priorityLevel: 'critical',
-        estimatedValue: 10,
+        neededServices: isConfirmedAbsence ? ['Riparazione sito web', 'Sviluppo nuovo sito'] : [],
+        neededRoles: isConfirmedAbsence ? ['developer', 'designer'] : [],
+        priorityLevel: isConfirmedAbsence ? 'critical' : 'low',
+        estimatedValue: isConfirmedAbsence ? 10 : 0,
         quickWins: []
       },
       overallScore: 0,
@@ -1615,10 +1801,13 @@ export class EnhancedWebsiteAnalyzer {
    * Crea analisi di errore
    */
   private createErrorAnalysis(url: string, error: any, startTime: number): EnhancedWebsiteAnalysis {
+    // Un errore imprevisto durante l'analisi NON è una prova che il sito sia morto:
+    // verdict 'uncertain' => il lead finisce in quarantena per ri-verifica.
     return this.createFailedAnalysis(url, {
       finalUrl: url,
       status: 'offline',
-      httpCode: 0
+      httpCode: 0,
+      verdict: 'uncertain'
     }, startTime)
   }
 

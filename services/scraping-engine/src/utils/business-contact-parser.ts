@@ -233,10 +233,51 @@ export class BusinessContactParser {
   }
 
   /**
-   * Validazione email
+   * Domini ed indizi tipici di email "spazzatura" che NON sono contatti del business:
+   * placeholder, librerie/CDN, servizi tecnici, esempi. Estrarle come contatto reale
+   * era una fonte di "dati sbagliati" (es. l'utente chiama/scrive a un indirizzo finto).
+   */
+  private readonly JUNK_EMAIL_DOMAINS = [
+    'example.com', 'example.org', 'example.net', 'domain.com', 'email.com',
+    'yourdomain.com', 'yourcompany.com', 'company.com', 'test.com',
+    'sentry.io', 'wixpress.com', 'sentry.wixpress.com', 'schema.org', 'w3.org',
+    'googleapis.com', 'gstatic.com', 'cloudflare.com', 'jquery.com',
+    'bootstrapcdn.com', 'fontawesome.com', 'wordpress.org', 'wordpress.com',
+    'placeholder.com', 'noreply.com', 'no-reply.com'
+  ]
+
+  private readonly JUNK_EMAIL_LOCALPARTS = [
+    'your', 'youremail', 'yourname', 'name', 'nome', 'email', 'mail',
+    'example', 'esempio', 'test', 'user', 'username', 'noreply', 'no-reply',
+    'sentry', 'wordpress', 'placeholder'
+  ]
+
+  private isJunkEmail(email: string): boolean {
+    const lower = email.toLowerCase()
+    const [localPart, domain] = lower.split('@')
+    if (!localPart || !domain) return true
+
+    // Domini palesemente non-business
+    if (this.JUNK_EMAIL_DOMAINS.some(d => domain === d || domain.endsWith('.' + d))) return true
+
+    // Local-part placeholder esatto (es. "your@", "name@", "email@")
+    if (this.JUNK_EMAIL_LOCALPARTS.includes(localPart)) return true
+
+    // Sembra un nome di file immagine (es. logo@2x.png finito nel testo)
+    if (/@2x|@3x|\.(png|jpe?g|gif|svg|webp)$/i.test(lower)) return true
+
+    // Hash/stringhe casuali tipiche di asset offuscati (local-part lunghissima esadecimale)
+    if (/^[0-9a-f]{16,}$/.test(localPart)) return true
+
+    return false
+  }
+
+  /**
+   * Validazione email (scarta le email-spazzatura: placeholder, CDN, esempi)
    */
   private isValidEmail(text: string): boolean {
-    return this.EMAIL_PATTERN.test(text)
+    if (!this.EMAIL_PATTERN.test(text)) return false
+    return !this.isJunkEmail(text)
   }
 
   /**

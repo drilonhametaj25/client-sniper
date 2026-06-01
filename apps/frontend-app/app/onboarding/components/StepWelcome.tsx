@@ -54,7 +54,7 @@ export default function StepWelcome({ onNext }: StepProps) {
       {/* First proposal badge */}
       <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-xl text-sm font-medium mb-8">
         <Zap className="w-4 h-4" />
-        La tua prima proposta è GRATUITA!
+        Il tuo primo sblocco è GRATUITO!
       </div>
 
       {/* CTA */}

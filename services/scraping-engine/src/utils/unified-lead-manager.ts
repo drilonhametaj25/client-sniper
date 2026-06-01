@@ -354,12 +354,33 @@ export class UnifiedLeadManager {
     return score
   }
 
+  /**
+   * Normalizza un nome per il confronto: minuscole, accenti rimossi, forme societarie
+   * e punteggiatura eliminate. Così "S.R.L. Rossi Mario" e "Rossi Mario srl" combaciano.
+   */
+  private normalizeBusinessName(name: string): string {
+    // Range combining diacritical marks U+0300–U+036F via RegExp esplicito (no char literali).
+    const accents = new RegExp('[\\u0300-\\u036f]', 'g')
+    return (name || '')
+      .toLowerCase()
+      .normalize('NFD').replace(accents, '') // rimuove accenti
+      .replace(/\b(s\.?r\.?l\.?s?|s\.?p\.?a|s\.?n\.?c|s\.?a\.?s|snc|sas|srl|spa|ditta|studio)\b/g, '')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+
   private stringSimilarity(str1: string, str2: string): number {
-    const longer = str1.length > str2.length ? str1 : str2
-    const shorter = str1.length > str2.length ? str2 : str1
-    
+    // Confronto case/accent-insensitive e senza forme societarie: prima il bug era
+    // che "Rossi" vs "rossi" contava come differenza, abbassando i match validi.
+    const a = this.normalizeBusinessName(str1)
+    const b = this.normalizeBusinessName(str2)
+
+    const longer = a.length > b.length ? a : b
+    const shorter = a.length > b.length ? b : a
+
     if (longer.length === 0) return 1.0
-    
+
     const distance = this.levenshteinDistance(longer, shorter)
     return (longer.length - distance) / longer.length
   }

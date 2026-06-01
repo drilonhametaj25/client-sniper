@@ -19,6 +19,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { calculateRelevanceScore, LeadForRelevance } from '@/lib/utils/relevance-calculation'
 import { detectServices } from '@/lib/utils/service-detection'
+import { leadsHasStatusColumn } from '@/lib/utils/leads-schema'
 import { UserProfile, UserBehaviorSummary } from '@/lib/types/onboarding'
 import { ServiceType } from '@/lib/types/services'
 
@@ -50,6 +51,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Token non valido' }, { status: 401 })
     }
 
+    // Query lead recenti: applica il filtro status solo se la colonna esiste (robusto pre-migration).
+    let recentLeadsQuery = getSupabaseAdmin()
+      .from('leads')
+      .select('id, business_name, website_url, city, category, score, analysis, created_at')
+      .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+      .order('created_at', { ascending: false })
+      .limit(MAX_LEADS_TO_PROCESS)
+    if (await leadsHasStatusColumn(getSupabaseAdmin())) {
+      recentLeadsQuery = recentLeadsQuery.eq('status', 'published')
+    }
+
     // Recupera dati utente, profilo, behavior e lead sbloccati in parallelo
     const [userResult, profileResult, behaviorResult, leadsResult, unlockedResult] = await Promise.all([
       // User data
@@ -69,13 +81,8 @@ export async function GET(request: NextRequest) {
       // Behavior summary
       getBehaviorSummary(user.id),
 
-      // Leads recenti (ultimi 30 giorni, max 500)
-      getSupabaseAdmin()
-        .from('leads')
-        .select('id, business_name, website_url, city, category, score, analysis, created_at')
-        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-        .order('created_at', { ascending: false })
-        .limit(MAX_LEADS_TO_PROCESS),
+      // Leads recenti (ultimi 30 giorni, max 500) — query costruita sopra
+      recentLeadsQuery,
 
       // Lead già sbloccati dall'utente (per escluderli dai Top 5)
       getSupabaseAdmin()

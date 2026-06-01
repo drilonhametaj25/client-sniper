@@ -118,34 +118,20 @@ export default function CrmPage() {
     }
   }, [viewMode]);
 
-  // Verifica piano e stato prima di procedere
+  // Verifica piano e stato prima di procedere.
+  // NB: gli stati di accesso negato (non loggato, piano insufficiente, piano disattivato)
+  // sono mostrati dal render con una schermata dedicata. Qui NON mostriamo toast (prima
+  // ne comparivano fino a 4 duplicati) e fermiamo lo skeleton con setLoading(false),
+  // altrimenti il blocco restava intrappolato nel caricamento infinito.
   useEffect(() => {
     if (authLoading) return;
 
-    if (!user) {
-      error('Errore Autenticazione', 'Devi effettuare il login per accedere al CRM');
-      return;
-    }
-
-    console.log('🔍 CRM Auth Debug:', {
-      plan: user.plan,
-      status: user.status,
-      isStarterOrHigher: isStarterOrHigher(user.plan || ''),
-      userId: user.id
-    });
-
-    if (!isStarterOrHigher(user.plan || '')) {
-      error('Accesso Limitato', 'Il CRM è disponibile solo per utenti con piano Starter o Agency');
-      return;
-    }
-
-    if (user.status === 'inactive') {
-      error('Piano Disattivato', 'Il tuo piano è temporaneamente disattivato. Riattivalo per accedere al CRM');
-      return;
-    }
+    if (!user) { setLoading(false); return; }
+    if (!isStarterOrHigher(user.plan || '')) { setLoading(false); return; }
+    if (user.status === 'inactive') { setLoading(false); return; }
 
     loadCrmData();
-  }, [authLoading, user]);
+  }, [authLoading, user?.id, user?.plan, user?.status]);
 
   // Carica dati CRM
   const loadCrmData = async () => {
@@ -485,7 +471,7 @@ export default function CrmPage() {
               CRM Personale - Piano Starter o superiore
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Il sistema CRM è disponibile per gli utenti con piano Starter o Agency.
+              Il sistema CRM è disponibile per gli utenti con piano Starter, Pro o Agency.
               Aggiorna il tuo piano per accedere a tutte le funzionalità di gestione lead.
             </p>
             <div className="space-y-4">

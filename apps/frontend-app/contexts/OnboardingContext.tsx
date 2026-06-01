@@ -417,6 +417,15 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ children
           continuous={true}
           showProgress={true}
           showSkipButton={true}
+          locale={{
+            back: 'Indietro',
+            close: 'Chiudi',
+            last: 'Finito',
+            next: 'Avanti',
+            // Con showProgress Joyride usa questa etichetta (default EN "Next (Step X of Y)").
+            nextLabelWithProgress: 'Avanti ({step}/{steps})',
+            skip: 'Salta tour',
+          }}
           scrollToFirstStep={true}
           scrollOffset={100}
           disableOverlayClose={false}

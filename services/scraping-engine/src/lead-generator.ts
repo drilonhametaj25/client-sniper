@@ -11,6 +11,8 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { BusinessData } from './scrapers/google-maps';
 import { BusinessLead } from './types/LeadAnalysis';
 import { EnhancedWebsiteAnalyzer, EnhancedWebsiteAnalysis } from './analyzers/enhanced-website-analyzer';
+import { decideLeadPublication } from './utils/confidence';
+import type { LeadConfidenceDecision } from './utils/confidence';
 import { createHash } from 'crypto';
 
 // Interfaccia per business con analisi moderna
@@ -252,6 +254,11 @@ export class LeadGenerator {
       });
     }
     
+    // Decisione di pubblicazione: combina raggiungibilità (Fase 1), proprietà del
+    // sito e affidabilità dei contatti (Fase 3). I lead a bassa confidenza vanno in
+    // quarantena e NON vengono mostrati agli utenti, finché non sono ri-verificati.
+    const confidence = this.computeLeadConfidence(business);
+
     return {
       unique_key: uniqueKey,
       content_hash: contentHash,
@@ -264,6 +271,13 @@ export class LeadGenerator {
       score,
       origin: 'scraping',
       source: business.source || 'google_maps',
+      // Confidenza e stato di pubblicazione
+      status: confidence?.status || 'published',
+      confidence_score: confidence?.score ?? 100,
+      needs_recheck: confidence?.needsRecheck ?? false,
+      quarantine_reasons: confidence?.reasons || [],
+      reachability_verdict: business.websiteAnalysis?.reachabilityVerdict || null,
+      last_verified_at: new Date().toISOString(),
       // Struttura moderna completa
       website_analysis: business.websiteAnalysis,
       // Struttura legacy per compatibilità
@@ -276,6 +290,72 @@ export class LeadGenerator {
       social_presence: business.websiteAnalysis?.social || null,
       created_at: new Date().toISOString()
     };
+  }
+
+  /**
+   * Normalizza un telefono alle ultime 8 cifre significative, per confronti robusti
+   * a prefissi/spaziature diverse.
+   */
+  private phoneTail(phone?: string | null): string {
+    if (!phone) return ''
+    const digits = phone.replace(/\D/g, '')
+    return digits.length >= 8 ? digits.slice(-8) : ''
+  }
+
+  /**
+   * Verifica che il sito web associato al business sia DAVVERO il suo.
+   * Segnale forte: il telefono/email del business compare tra i contatti estratti
+   * dal sito. Se il sito espone contatti ma NESSUNO combacia, è sospetto (sito sbagliato,
+   * aggregatore, social). Se non abbiamo elementi sufficienti, ritorniamo null (ignoto).
+   *
+   * @returns true = verificato, false = sospetto non-proprietà, null = non determinabile
+   */
+  private verifyWebsiteOwnership(business: AnalyzedBusiness): boolean | null {
+    const analysis = business.websiteAnalysis
+    if (!analysis || !analysis.isAccessible) return null
+    const content = analysis.content
+    if (!content) return null
+
+    const sitePhones = (content.phoneNumbers || []).map(p => this.phoneTail(p)).filter(Boolean)
+
+    const bizPhone = this.phoneTail(business.phone)
+
+    // Match positivo: il telefono del business compare tra i contatti del sito.
+    if (bizPhone && sitePhones.includes(bizPhone)) return true
+
+    // Il sito espone telefoni ma nessuno combacia col business -> sospetto sito sbagliato.
+    if (bizPhone && sitePhones.length > 0) return false
+
+    // Non abbastanza informazioni per decidere.
+    return null
+  }
+
+  /**
+   * Calcola la decisione di pubblicazione del lead combinando tutti i segnali di
+   * confidenza disponibili: raggiungibilità, proprietà del sito, contatti, e numero
+   * di segnali tecnici non verificabili.
+   */
+  private computeLeadConfidence(business: AnalyzedBusiness): LeadConfidenceDecision {
+    const analysis = business.websiteAnalysis
+
+    const ownership = this.verifyWebsiteOwnership(business)
+    // Contattabile se abbiamo un telefono dallo scraping o contatti estratti dal sito.
+    const siteContacts = analysis?.content
+    const hasReliableContact = !!business.phone ||
+      !!(siteContacts?.phoneNumbers?.length) ||
+      !!(siteContacts?.emailAddresses?.length)
+
+    // Conta i segnali tecnici che non siamo riusciti a verificare con certezza.
+    let unverifiableSignalsCount = 0
+    if (analysis?.tracking?.detectionConfidence === 'unverifiable') unverifiableSignalsCount++
+    if (analysis?.gdpr?.cookieBannerConfidence === 'unverifiable') unverifiableSignalsCount++
+
+    return decideLeadPublication({
+      reachability: analysis?.reachabilityVerdict,
+      websiteOwnershipVerified: ownership,
+      hasReliableContact,
+      unverifiableSignalsCount
+    })
   }
 
   /**

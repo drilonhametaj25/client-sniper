@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getBasePlanType, isProOrHigher, isStarterOrHigher } from '@/lib/utils/plan-helpers'
+import { leadsHasStatusColumn } from '@/lib/utils/leads-schema'
 
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
@@ -178,7 +179,15 @@ export async function GET(request: NextRequest) {
       
       query = query.in('id', unlockedLeadIds)
     }
-    
+
+    // Mostra solo i lead PUBBLICATI: quelli a bassa confidenza sono in quarantena e
+    // restano nascosti (scelta "fiducia prima del volume"). Eccezione: i lead già
+    // sbloccati dall'utente restano sempre visibili, anche se messi in quarantena dopo.
+    // Il filtro si applica solo se la colonna `status` esiste (robusto pre-migration).
+    if (!showOnlyUnlocked && await leadsHasStatusColumn(getSupabaseAdmin())) {
+      query = query.eq('status', 'published')
+    }
+
     // Nota: Tutti i lead sono pubblici, non c'è più il concetto di "assigned_to"
     
     // ⚡ OTTIMIZZAZIONE: Applica filtri in ordine di selettività (più selettivi prima)

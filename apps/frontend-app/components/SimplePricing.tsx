@@ -41,7 +41,7 @@ export default function SimplePricing({
       bgGradient: 'from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900',
       borderColor: 'border-gray-200 dark:border-gray-700',
       price: { monthly: 0, annual: 0 },
-      proposals: '1 proposta di prova',
+      proposals: '1 credito di prova',
       resetType: 'Solo alla registrazione',
       features: [
         'Analisi completa del sito',
@@ -62,7 +62,7 @@ export default function SimplePricing({
       bgGradient: 'from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20',
       borderColor: 'border-blue-300 dark:border-blue-700',
       price: { monthly: 19, annual: 190 },
-      proposals: '25 proposte/mese',
+      proposals: '25 crediti/mese',
       resetType: 'Reset mensile',
       features: [
         'Tutto di Free, più:',
@@ -86,11 +86,11 @@ export default function SimplePricing({
       bgGradient: 'from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20',
       borderColor: 'border-purple-300 dark:border-purple-700',
       price: { monthly: 99, annual: 990 },
-      proposals: 'Proposte illimitate',
+      proposals: 'Crediti illimitati',
       resetType: 'Nessun limite',
       features: [
         'Tutto di Starter, più:',
-        'Proposte ILLIMITATE',
+        'Crediti ILLIMITATI',
         'Accesso a tutte le nicchie',
         'Logo personalizzato sui report',
         'API per integrazioni',

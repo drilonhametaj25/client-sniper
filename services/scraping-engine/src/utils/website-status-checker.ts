@@ -11,10 +11,11 @@ import axios, { AxiosResponse, AxiosError } from 'axios'
 import { chromium, Browser, Page } from 'playwright'
 import * as https from 'https'
 import * as tls from 'tls'
+import type { ReachabilityVerdict } from './confidence'
 
-export type WebsiteStatus = 
+export type WebsiteStatus =
   | 'online'
-  | 'offline' 
+  | 'offline'
   | 'broken_link'
   | 'forbidden'
   | 'timeout'
@@ -23,6 +24,7 @@ export type WebsiteStatus =
   | 'javascript_blocked'
   | 'server_error'
   | 'dns_error'
+  | 'parked'
   | 'not_mobile_friendly'
 
 export interface WebsiteStatusResult {
@@ -33,6 +35,14 @@ export interface WebsiteStatusResult {
   sslValid: boolean
   responseTime: number
   isAccessible: boolean
+  /**
+   * Verdetto di raggiungibilità con confidenza. Distingue l'assenza CERTA
+   * (DNS che non risolve) da quella SOSPETTA (timeout/rate-limit): è la chiave
+   * per non marcare come "sito assente" un sito vivo ma lento o protetto.
+   */
+  verdict: ReachabilityVerdict
+  /** Numero di tentativi effettuati prima di arrivare al verdetto. */
+  attempts: number
   errorMessage?: string
   technicalDetails: {
     hasJavaScript: boolean
@@ -54,17 +64,88 @@ export interface SSLCertificateInfo {
 
 export class WebsiteStatusChecker {
   private browser: Browser | null = null
-  private readonly TIMEOUT_MS = 15000
+  // Timeout più generoso: 15s tagliava fuori siti lenti/CDN congestionati -> falsi "offline".
+  private readonly TIMEOUT_MS = 25000
   private readonly MAX_REDIRECTS = 10
+  // Numero massimo di tentativi prima di concludere che un sito è irraggiungibile.
+  // Un singolo timeout NON deve bastare a dichiarare un sito offline.
+  private readonly MAX_ATTEMPTS = 3
+  // Backoff base tra i tentativi (ms). Cresce linearmente: 1.2s, 2.4s, ...
+  private readonly RETRY_BACKOFF_MS = 1200
   private readonly USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 
   /**
-   * Verifica completa dello stato di un sito web con tentativo intelligente HTTP/HTTPS
+   * Verifica completa con RETRY ed emissione di un verdetto con confidenza.
+   *
+   * Ritenta sui fallimenti transitori (timeout, connessione resettata) prima di
+   * concludere alcunché. Un errore DNS, invece, è deterministico: lo confermiamo
+   * subito come assenza certa. Il risultato include `verdict` per decidere a valle
+   * se il lead è pubblicabile o va in quarantena.
    */
   async checkWebsiteStatus(url: string): Promise<WebsiteStatusResult> {
     const startTime = Date.now()
     const normalizedUrl = this.normalizeUrl(url)
-    
+
+    let lastResult: WebsiteStatusResult | null = null
+
+    for (let attempt = 1; attempt <= this.MAX_ATTEMPTS; attempt++) {
+      const result = await this.runSingleCheck(normalizedUrl, startTime)
+      result.attempts = attempt
+
+      // Successo, oppure il server ha comunque risposto (4xx/5xx) => il dominio è vivo.
+      if (result.isAccessible || result.httpCode > 0) {
+        result.verdict = this.computeVerdict(result)
+        return result
+      }
+
+      // DNS che non risolve = assenza deterministica: inutile ritentare a oltranza.
+      if (result.status === 'dns_error') {
+        result.verdict = 'offline_confirmed'
+        return result
+      }
+
+      lastResult = result
+
+      // Fallimento transitorio (timeout/refused/reset): backoff e ritenta.
+      if (attempt < this.MAX_ATTEMPTS) {
+        const wait = this.RETRY_BACKOFF_MS * attempt
+        console.log(`⏳ Tentativo ${attempt}/${this.MAX_ATTEMPTS} fallito (${result.status}), ritento tra ${wait}ms: ${normalizedUrl}`)
+        await this.delay(wait)
+      }
+    }
+
+    // Esauriti i tentativi: il sito resta irraggiungibile. Confidenza = sospetta, non certa.
+    const finalResult = lastResult as WebsiteStatusResult
+    finalResult.verdict = this.computeVerdict(finalResult)
+    finalResult.responseTime = Date.now() - startTime
+    return finalResult
+  }
+
+  /**
+   * Determina il verdetto di raggiungibilità a partire dal risultato grezzo.
+   * - online: sito raggiungibile, oppure server che risponde anche con 4xx/5xx (dominio vivo)
+   * - offline_confirmed: DNS non risolve o connessione rifiutata in modo ripetuto
+   * - offline_suspected: timeout/reset ripetuti -> potrebbe essere vivo ma lento/protetto
+   * - uncertain: stato non riconducibile a una causa chiara
+   */
+  private computeVerdict(result: WebsiteStatusResult): ReachabilityVerdict {
+    if (result.isAccessible) return 'online'
+    // Il server HA risposto (anche 403/500/503): il dominio esiste ed è raggiungibile.
+    if (result.httpCode > 0) return 'online'
+    if (result.status === 'dns_error') return 'offline_confirmed'
+    if (result.status === 'offline') return 'offline_confirmed' // ECONNREFUSED ripetuto
+    if (result.status === 'timeout') return 'offline_suspected'
+    return 'uncertain'
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  /**
+   * Un singolo tentativo di verifica (HTTP -> fallback HTTPS/HTTP -> SSL -> browser).
+   */
+  private async runSingleCheck(normalizedUrl: string, startTime: number): Promise<WebsiteStatusResult> {
     console.log(`🔍 Verifica stato sito: ${normalizedUrl}`)
 
     try {
@@ -126,15 +207,18 @@ export class WebsiteStatusChecker {
         ...finalResult,
         finalUrl: httpResult.finalUrl || finalUrl,
         responseTime,
+        // verdict/attempts vengono assegnati dal wrapper checkWebsiteStatus.
+        verdict: 'uncertain',
+        attempts: 1,
         technicalDetails: {
           ...finalResult.technicalDetails,
           sslCertificate: sslInfo
         }
       }
-      
+
     } catch (error) {
       console.error(`❌ Errore verifica sito ${normalizedUrl}:`, error)
-      
+
       return {
         status: 'offline',
         httpCode: 0,
@@ -143,6 +227,8 @@ export class WebsiteStatusChecker {
         sslValid: false,
         responseTime: Date.now() - startTime,
         isAccessible: false,
+        verdict: 'uncertain',
+        attempts: 1,
         errorMessage: error instanceof Error ? error.message : 'Errore sconosciuto',
         technicalDetails: {
           hasJavaScript: false,
@@ -182,12 +268,19 @@ export class WebsiteStatusChecker {
       
       // Considera successo anche per redirect (3xx)
       const isSuccessful = response.status >= 200 && response.status < 400
-      
+
+      // Rileva pagine "parcheggio" / dominio in vendita / placeholder host:
+      // rispondono 200 ma non sono un vero sito aziendale -> opportunità, ma non
+      // vanno trattate come sito sano. La distinzione evita falsi "tutto ok".
+      const html = typeof response.data === 'string' ? response.data : ''
+      const parked = isSuccessful && this.isParkedOrPlaceholder(html, finalUrl)
+
       return {
         httpCode: response.status,
         finalUrl: finalUrl,
         redirectChain,
         isAccessible: isSuccessful,
+        status: parked ? 'parked' : undefined,
         technicalDetails: {
           hasJavaScript: this.detectJavaScript(response.data),
           isResponsive: this.detectResponsiveDesign(response.data),
@@ -198,19 +291,27 @@ export class WebsiteStatusChecker {
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError
-        
-        if (axiosError.code === 'ENOTFOUND') {
+
+        if (axiosError.code === 'ENOTFOUND' || axiosError.code === 'EAI_AGAIN') {
           return { status: 'dns_error', httpCode: 0, isAccessible: false }
         }
-        
+
         if (axiosError.code === 'ECONNREFUSED') {
           return { status: 'offline', httpCode: 0, isAccessible: false }
         }
-        
-        if (axiosError.code === 'ETIMEDOUT') {
+
+        // Axios segnala il timeout come ECONNABORTED ('timeout exceeded'); ETIMEDOUT è
+        // il livello OS. ECONNRESET è un reset transitorio: lo trattiamo come timeout
+        // così il wrapper ritenta invece di dichiarare il sito offline.
+        if (
+          axiosError.code === 'ECONNABORTED' ||
+          axiosError.code === 'ETIMEDOUT' ||
+          axiosError.code === 'ECONNRESET' ||
+          /timeout/i.test(axiosError.message || '')
+        ) {
           return { status: 'timeout', httpCode: 0, isAccessible: false }
         }
-        
+
         if (axiosError.response) {
           return {
             httpCode: axiosError.response.status,
@@ -420,7 +521,7 @@ export class WebsiteStatusChecker {
     httpResult: Partial<WebsiteStatusResult>,
     browserResult: any,
     sslInfo?: SSLCertificateInfo
-  ): Omit<WebsiteStatusResult, 'responseTime'> {
+  ): Omit<WebsiteStatusResult, 'responseTime' | 'verdict' | 'attempts'> {
     
     // Se il browser riesce dove HTTP fallisce
     if (browserResult && browserResult.isAccessible && !httpResult.isAccessible) {
@@ -461,9 +562,9 @@ export class WebsiteStatusChecker {
       }
     }
     
-    // Successo HTTP
+    // Successo HTTP (preserva 'parked' se rilevato: dominio vivo ma senza sito reale)
     return {
-      status: 'online',
+      status: httpResult.status === 'parked' ? 'parked' : 'online',
       httpCode: httpResult.httpCode || 200,
       finalUrl: httpResult.finalUrl || '',
       redirectChain: httpResult.redirectChain || [],
@@ -515,6 +616,60 @@ export class WebsiteStatusChecker {
     const hasResponsiveClasses = /\b(col-|row-|flex|grid|responsive|mobile|tablet)\b/i.test(html)
     
     return hasViewport || hasMediaQueries || hasResponsiveClasses
+  }
+
+  /**
+   * Rileva pagine "parcheggio", domini in vendita o placeholder dell'hosting.
+   * Questi siti rispondono 200 ma non sono un vero sito aziendale: per il
+   * lead-gen equivalgono a "sito assente" (ottima opportunità), ma non vanno
+   * confusi con un sito funzionante. Heuristica volutamente conservativa:
+   * combiniamo pattern testuali tipici con la pochezza del contenuto.
+   */
+  private isParkedOrPlaceholder(html: string, finalUrl: string): boolean {
+    if (!html) return false
+    const lower = html.toLowerCase()
+
+    const parkingPatterns = [
+      'this domain is for sale',
+      'domain is for sale',
+      'buy this domain',
+      'questo dominio è in vendita',
+      'dominio in vendita',
+      'parked free, courtesy of',
+      'domain parking',
+      'godaddy.com/domains',
+      'sedoparking.com',
+      'bodis.com',
+      'hugedomains',
+      'afternic',
+      'future home of something qute',
+      'future home of something quite cool',
+      'default web site page',
+      'apache2 ubuntu default page',
+      'welcome to nginx',
+      'index of /',
+      'website coming soon',
+      'sito in costruzione',
+      'coming soon',
+      'site under construction',
+      'account suspended',
+      'this account has been suspended',
+    ]
+
+    const matched = parkingPatterns.some(p => lower.includes(p))
+    if (!matched) return false
+
+    // Per i pattern molto generici ('coming soon', 'in costruzione') richiediamo
+    // anche un contenuto povero, così non scartiamo un sito reale che cita la frase.
+    const strongPatterns = [
+      'for sale', 'in vendita', 'parking', 'suspended', 'default page',
+      'welcome to nginx', 'apache2 ubuntu default',
+    ]
+    const isStrong = strongPatterns.some(p => lower.includes(p))
+    if (isStrong) return true
+
+    // 'coming soon' / 'in costruzione': solo se la pagina è davvero scarna.
+    return html.length < 4000
   }
 
   /**

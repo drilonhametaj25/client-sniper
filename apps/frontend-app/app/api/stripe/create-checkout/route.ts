@@ -232,6 +232,11 @@ export async function POST(request: NextRequest) {
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
+      // Mostra il campo "Codice promozionale" nel checkout (necessario per applicare i coupon).
+      allow_promotion_codes: true,
+      // Con un coupon 100% (es. DRI) il totale è €0: non chiedere la carta in quel caso.
+      // Per gli abbonamenti a pagamento normali la carta viene comunque richiesta.
+      payment_method_collection: 'if_required',
       line_items: [
         {
           price: priceId,

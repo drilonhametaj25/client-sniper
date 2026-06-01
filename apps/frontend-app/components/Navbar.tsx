@@ -62,7 +62,9 @@ export default function Navbar() {
 
   const formatPlanName = (plan?: string) => {
     if (!plan) return 'Free'
-    return plan.charAt(0).toUpperCase() + plan.slice(1)
+    // Nome piano "umano": rimuove i suffissi _monthly/_annual (es. "starter_monthly" -> "Starter").
+    const base = plan.replace(/_(monthly|annual)$/i, '')
+    return base.charAt(0).toUpperCase() + base.slice(1)
   }
 
   // Se siamo sulla homepage e non c'è utente, non mostrare la navbar
@@ -138,7 +140,7 @@ export default function Navbar() {
       { name: 'Analytics', href: '/analytics', icon: BarChart, description: 'Dashboard analytics e ROI' },
     ] : []),
     { name: 'I miei Feedback', href: '/dashboard/feedback', icon: MessageSquare, description: 'I tuoi feedback e risposte' },
-    { name: 'Feedback', href: '/feedback', icon: MessageSquare, description: 'Feedback e suggerimenti della community' },
+    { name: 'Invia Feedback', href: '/feedback', icon: MessageSquare, description: 'Invia un feedback o un suggerimento' },
     { name: 'Account', href: '/settings', icon: User, description: 'Gestisci account e abbonamento' },
     { name: 'Upgrade', href: '/upgrade', icon: Crown, description: 'Aggiorna piano' },
   ]

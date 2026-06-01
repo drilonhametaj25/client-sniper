@@ -69,11 +69,11 @@ export default function AccountStatusBar({
         {isUnlimited ? (
           <span className="text-purple-600 dark:text-purple-400 font-medium flex items-center gap-1">
             <Crown className="w-4 h-4" />
-            Illimitate
+            Illimitati
           </span>
         ) : (
           <span className={`font-medium ${isDepleted ? 'text-red-600' : isLow ? 'text-orange-600' : 'text-gray-700 dark:text-gray-300'}`}>
-            {proposalsRemaining} proposte
+            {proposalsRemaining} crediti
           </span>
         )}
       </div>
@@ -88,7 +88,7 @@ export default function AccountStatusBar({
           <PlanIcon plan={plan} />
           {isUnlimited ? (
             <span className="text-sm font-medium text-purple-600 dark:text-purple-400">
-              Proposte illimitate
+              Crediti illimitati
             </span>
           ) : (
             <>
@@ -163,7 +163,7 @@ export default function AccountStatusBar({
           {isFirstProposalAvailable && (
             <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg text-sm font-medium">
               <Zap className="w-3.5 h-3.5" />
-              Prima proposta GRATUITA disponibile!
+              Primo sblocco GRATUITO disponibile!
             </div>
           )}
         </div>
@@ -177,7 +177,7 @@ export default function AccountStatusBar({
                 className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm font-medium rounded-xl transition-colors"
               >
                 <TrendingUp className="w-4 h-4" />
-                Ottieni più proposte
+                Ottieni più crediti
                 <ChevronRight className="w-4 h-4" />
               </Link>
             ) : isLow ? (
@@ -267,28 +267,28 @@ function getStatusMessage(
   isFirstProposalAvailable: boolean
 ): string {
   if (isUnlimited) {
-    return 'Proposte illimitate'
+    return 'Crediti illimitati'
   }
 
   if (isFirstProposalAvailable) {
-    return 'Prova la tua prima proposta gratuita!'
+    return 'Prova il tuo primo sblocco gratuito!'
   }
 
   if (remaining <= 0) {
     return resetType === 'never'
       ? 'Credito di prova esaurito — abbonati per continuare'
-      : 'Proposte esaurite — upgrade per continuare'
+      : 'Crediti esauriti — upgrade per continuare'
   }
 
   if (remaining === 1) {
     return resetType === 'never'
       ? '1 credito di prova disponibile'
-      : '1 proposta rimasta questo mese'
+      : '1 credito rimasto questo mese'
   }
 
   return resetType === 'never'
     ? `${remaining} crediti di prova disponibili`
-    : `${remaining}/${max} proposte rimaste questo mese`
+    : `${remaining}/${max} crediti rimasti questo mese`
 }
 
 // Helper: Colore progress bar

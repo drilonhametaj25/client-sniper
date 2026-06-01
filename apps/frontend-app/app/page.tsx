@@ -465,7 +465,7 @@ export default function HomePage() {
               <span className="block">Primi Lead?</span>
             </h2>
             <p className="text-xl md:text-2xl text-blue-100 mb-12 leading-relaxed">
-              Registrati ora e ricevi la tua <strong className="text-white">prima proposta gratuita</strong>.
+              Registrati ora e sblocca il tuo <strong className="text-white">primo lead gratis</strong>.
               Nessuna carta di credito richiesta.
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
