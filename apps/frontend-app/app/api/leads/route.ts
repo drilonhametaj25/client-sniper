@@ -6,7 +6,46 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getBasePlanType, isProOrHigher, isStarterOrHigher } from '@/lib/utils/plan-helpers'
-import { leadsHasStatusColumn } from '@/lib/utils/leads-schema'
+import { leadsHasStatusColumn, leadsHasColumn } from '@/lib/utils/leads-schema'
+import { detectServices } from '@/lib/utils/service-detection'
+import { calculateMatch } from '@/lib/utils/match-calculation'
+import type { ServiceType } from '@/lib/types/services'
+
+// Limite del working-set quando è attivo un filtro per servizi/match: questi filtri
+// si calcolano in-process (detectServices) perché non sono esprimibili in SQL, quindi
+// limitiamo le righe analizzate per evitare query pesanti. Con l'ordinamento di default
+// (score crescente = peggiori = migliori opportunità) i lead più rilevanti rientrano qui.
+const SERVICE_FILTER_WORKING_SET = 1000
+
+// Ricostruisce un oggetto "analysis" moderno dai sotto-oggetti di website_analysis
+// selezionati via JSON-path (alias wa_*), con fallback alla colonna legacy `analysis`.
+function buildDetectionInput(lead: any): any {
+  const hasModern =
+    lead.wa_seo || lead.wa_tracking || lead.wa_gdpr || lead.wa_mobile || lead.wa_social
+  if (hasModern) {
+    return {
+      seo: lead.wa_seo,
+      gdpr: lead.wa_gdpr,
+      tracking: lead.wa_tracking,
+      mobile: lead.wa_mobile,
+      performance: lead.wa_performance,
+      images: lead.wa_images,
+      social: lead.wa_social,
+      hasSSL: lead.wa_hasSSL,
+      overallScore: lead.wa_overall_score
+    }
+  }
+  return lead.analysis
+}
+
+// Rimuove gli alias tecnici wa_* prima di restituire il lead al client.
+function stripDetectionFields(lead: any): any {
+  const {
+    wa_seo, wa_gdpr, wa_tracking, wa_mobile, wa_performance,
+    wa_images, wa_social, wa_hasSSL, wa_overall_score, ...rest
+  } = lead
+  return rest
+}
 
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
@@ -54,7 +93,16 @@ export async function GET(request: NextRequest) {
     const onlyUncontacted = searchParams.get('onlyUncontacted') === '1'
     const followUpOverdue = searchParams.get('followUpOverdue') === '1'
     const crmStatus = searchParams.get('crmStatus')
-    
+    // Filtri "Servizi Richiesti" / match — calcolati server-side per avere
+    // paginazione corretta (la detection non è esprimibile in SQL puro).
+    const serviceTypes = (searchParams.get('serviceTypes') || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean) as ServiceType[]
+    const minMatchScore = parseInt(searchParams.get('minMatchScore') || '0') || 0
+    const onlyMatching = searchParams.get('onlyMatching') === '1'
+    const serviceFilterActive = serviceTypes.length > 0 || minMatchScore > 0 || onlyMatching
+
     // Parametri di ordinamento
     const sortBy = searchParams.get('sortBy') || 'score'
     const sortOrder = searchParams.get('sortOrder') || 'asc'
@@ -84,9 +132,10 @@ export async function GET(request: NextRequest) {
     
 
     // Ottieni il profilo utente con fallback creation (usa service role per scrivere)
+    // I campi servizi/budget servono al match server-side ("Servizi Richiesti").
     let { data: userProfile, error: profileError } = await getSupabaseAdmin()
       .from('users')
-      .select('id, role, plan, credits_remaining')
+      .select('id, role, plan, credits_remaining, services_offered, preferred_min_budget, preferred_max_budget')
       .eq('id', user.id)
       .single()
 
@@ -103,7 +152,7 @@ export async function GET(request: NextRequest) {
           credits_remaining: 1,
           created_at: new Date().toISOString()
         })
-        .select('id, role, plan, credits_remaining')
+        .select('id, role, plan, credits_remaining, services_offered, preferred_min_budget, preferred_max_budget')
         .single()
 
       if (createError) {
@@ -132,11 +181,23 @@ export async function GET(request: NextRequest) {
     
     // Tutti i piani vedono tutti i dati - i piani differiscono solo per crediti e funzionalità (CRM per PRO)
     // Questo permette di mostrare informazioni REALI nelle card bloccate (contatti disponibili, problemi tecnici)
-    const selectFields = `id, business_name, website_url, phone, email, address, city, category, score, analysis, created_at, last_seen_at`
-    
-    let query = getSupabaseAdmin()
-      .from('leads')
-      .select(selectFields, { count: 'exact' })
+    let selectFields = `id, business_name, website_url, phone, email, address, city, category, score, analysis, created_at, last_seen_at`
+
+    // Quando filtriamo per servizi/match, servono i sotto-oggetti di website_analysis
+    // per la detection completa (gdpr/mobile/social, non presenti nella forma legacy).
+    // Li selezioniamo via JSON-path solo se la colonna esiste (DB potenzialmente non migrato).
+    const hasWaColumn = serviceFilterActive
+      ? await leadsHasColumn(getSupabaseAdmin(), 'website_analysis')
+      : false
+    if (serviceFilterActive && hasWaColumn) {
+      selectFields += `, wa_seo:website_analysis->seo, wa_gdpr:website_analysis->gdpr, wa_tracking:website_analysis->tracking, wa_mobile:website_analysis->mobile, wa_performance:website_analysis->performance, wa_images:website_analysis->images, wa_social:website_analysis->social, wa_hasSSL:website_analysis->hasSSL, wa_overall_score:website_analysis->overallScore`
+    }
+
+    // Con filtro servizi attivo NON usiamo il count del DB: il totale reale dipende
+    // dalla detection in-process, quindi lo calcoliamo dopo aver filtrato il working-set.
+    let query = serviceFilterActive
+      ? getSupabaseAdmin().from('leads').select(selectFields)
+      : getSupabaseAdmin().from('leads').select(selectFields, { count: 'exact' })
     
     // Filtro per lead sbloccati dall'utente
     if (showOnlyUnlocked) {
@@ -336,7 +397,7 @@ export async function GET(request: NextRequest) {
     // Applica ordinamento dinamico
     let orderColumn = 'score'
     let orderAscending = true
-    
+
     switch (sortBy) {
       case 'score':
         orderColumn = 'score'
@@ -358,22 +419,149 @@ export async function GET(request: NextRequest) {
         orderColumn = 'score'
         orderAscending = true
     }
-    
+
+    // Helper: arricchisce i lead della pagina con lo stato CRM (solo utenti PRO+).
+    const enrichWithCrm = async (pageLeads: any[]): Promise<any[]> => {
+      if (!isProOrHigher(userProfile.plan) || !pageLeads || pageLeads.length === 0) {
+        return pageLeads
+      }
+      try {
+        const leadIds = pageLeads.map((lead: any) => lead.id)
+        const { data: crmActivities, error: crmError } = await getSupabaseAdmin()
+          .from('crm_entries')
+          .select('lead_id, status, updated_at, follow_up_date, note')
+          .in('lead_id', leadIds)
+          .eq('user_id', user.id)
+
+        if (crmError) {
+          console.warn('Errore recupero stati CRM (continuando senza):', crmError)
+          return pageLeads
+        }
+        const crmMap = new Map(crmActivities?.map(crm => [crm.lead_id, crm]) || [])
+        const mapCRMStatus = (dbStatus: string | null) => {
+          if (!dbStatus) return 'new'
+          switch (dbStatus) {
+            case 'to_contact': return 'new'
+            case 'in_negotiation': return 'in_negotiation'
+            case 'closed_positive': return 'won'
+            case 'closed_negative': return 'lost'
+            case 'on_hold': return 'contacted'
+            case 'follow_up': return 'contacted'
+            default: return 'new'
+          }
+        }
+        return pageLeads.map((lead: any) => ({
+          ...lead,
+          crm_status: mapCRMStatus(crmMap.get(lead.id)?.status),
+          last_contact_date: null,
+          next_follow_up: crmMap.get(lead.id)?.follow_up_date,
+          crm_notes: crmMap.get(lead.id)?.note
+        }))
+      } catch (crmIntegrationError) {
+        console.warn('Errore integrazione CRM (continuando senza):', crmIntegrationError)
+        return pageLeads
+      }
+    }
+
+    const startTime = Date.now()
+
+    // =========================================================================
+    // PERCORSO A: filtro "Servizi Richiesti" / match attivo.
+    // La detection (detectServices) non è esprimibile in SQL, quindi:
+    //  1) carichiamo un working-set ordinato (limitato per performance);
+    //  2) calcoliamo i servizi e il match in-process;
+    //  3) filtriamo, contiamo e impaginiamo qui → totale/totalPages corretti.
+    // =========================================================================
+    if (serviceFilterActive) {
+      query = query.order(orderColumn, { ascending: orderAscending })
+      if (orderColumn !== 'created_at') {
+        query = query.order('created_at', { ascending: false })
+      }
+      query = query.limit(SERVICE_FILTER_WORKING_SET)
+
+      const { data: workingSet, error } = await query
+      if (error) {
+        console.error('Errore nel recupero lead (service filter):', error)
+        return NextResponse.json(
+          { success: false, error: 'Errore nel recupero dei lead' },
+          { status: 500 }
+        )
+      }
+
+      const userServices = (userProfile.services_offered || []) as ServiceType[]
+      const budgetOpts = {
+        userMinBudget: userProfile.preferred_min_budget ?? undefined,
+        userMaxBudget: userProfile.preferred_max_budget ?? undefined
+      }
+
+      const matched = (workingSet || []).filter((lead: any) => {
+        const detected = detectServices(buildDetectionInput(lead))
+        const detectedTypes = detected.services.map(s => s.type)
+
+        // Filtro per tipi di servizio: il lead deve avere almeno uno dei servizi scelti.
+        if (serviceTypes.length > 0) {
+          if (!serviceTypes.some(t => detectedTypes.includes(t))) return false
+        }
+
+        // Filtro match minimo e/o "solo compatibili" rispetto ai servizi dell'utente.
+        if (minMatchScore > 0 || onlyMatching) {
+          if (userServices.length === 0) {
+            // Utente senza servizi configurati: non può filtrare per match → passa.
+            return true
+          }
+          const match = calculateMatch(detected, userServices, budgetOpts)
+          if (onlyMatching && match.matchedServices.length === 0) return false
+          if (minMatchScore > 0 && match.score < minMatchScore) return false
+        }
+        return true
+      })
+
+      const total = matched.length
+      const pageSlice = matched.slice(offset, offset + limit).map(stripDetectionFields)
+      const pageLeads = await enrichWithCrm(pageSlice)
+      const queryTime = Date.now() - startTime
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          leads: pageLeads,
+          user_profile: {
+            role: userProfile.role,
+            plan: userProfile.plan,
+            credits_remaining: userProfile.credits_remaining
+          },
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+          },
+          performance: {
+            query_time_ms: queryTime,
+            results_count: pageLeads.length,
+            // Segnaliamo se il working-set è stato troncato (potrebbero esistere
+            // altri lead corrispondenti oltre il limite analizzato).
+            working_set_truncated: (workingSet?.length || 0) >= SERVICE_FILTER_WORKING_SET
+          }
+        }
+      })
+    }
+
+    // =========================================================================
+    // PERCORSO B (default): paginazione efficiente lato DB con count esatto.
+    // =========================================================================
     query = query
       .range(offset, offset + limit - 1)
       .order(orderColumn, { ascending: orderAscending })
-    
+
     // Ordinamento secondario per consistenza
     if (orderColumn !== 'created_at') {
       query = query.order('created_at', { ascending: false })
     }
-    
-    // ⚡ PERFORMANCE TIMING
-    const startTime = Date.now()
+
     const { data: leads, error, count } = await query
     const queryTime = Date.now() - startTime
-    
-    
+
     if (error) {
       console.error('Errore nel recupero lead:', error)
       return NextResponse.json(
@@ -381,63 +569,9 @@ export async function GET(request: NextRequest) {
         { status: 500 }
       )
     }
-    
-    // ⚡ OTTIMIZZAZIONE: Filtraggio campi già fatto nella query SELECT
-    let filteredLeads = leads // Non serve più filtrare, già fatto nella SELECT
-    
-    // 🔥 INTEGRAZIONE CRM: Per utenti PRO, aggiungere stato CRM
-    if (isProOrHigher(userProfile.plan) && leads && leads.length > 0) {
-      try {
-        const leadIds = leads.map((lead: any) => lead.id)
-        
-        // Query stato CRM per tutti i lead
-        const { data: crmActivities, error: crmError } = await getSupabaseAdmin()
-          .from('crm_entries')
-          .select(`
-            lead_id,
-            status,
-            updated_at,
-            follow_up_date,
-            note
-          `)
-          .in('lead_id', leadIds)
-          .eq('user_id', user.id)
-        
-        if (crmError) {
-          console.warn('Errore recupero stati CRM (continuando senza):', crmError)
-        } else {
-          // Mappa stati CRM ai lead
-          const crmMap = new Map(
-            crmActivities?.map(crm => [crm.lead_id, crm]) || []
-          )
-          
-          // Funzione per mappare stati DB a stati frontend
-          const mapCRMStatus = (dbStatus: string | null) => {
-            if (!dbStatus) return 'new'
-            switch (dbStatus) {
-              case 'to_contact': return 'new'
-              case 'in_negotiation': return 'in_negotiation'
-              case 'closed_positive': return 'won'
-              case 'closed_negative': return 'lost'
-              case 'on_hold': return 'contacted'
-              case 'follow_up': return 'contacted'
-              default: return 'new'
-            }
-          }
-          
-          filteredLeads = leads.map((lead: any) => ({
-            ...lead,
-            crm_status: mapCRMStatus(crmMap.get(lead.id)?.status),
-            last_contact_date: null, // Non disponibile in crm_entries
-            next_follow_up: crmMap.get(lead.id)?.follow_up_date,
-            crm_notes: crmMap.get(lead.id)?.note
-          }))
-        }
-      } catch (crmIntegrationError) {
-        console.warn('Errore integrazione CRM (continuando senza):', crmIntegrationError)
-      }
-    }
-    
+
+    const filteredLeads = await enrichWithCrm(leads || [])
+
     return NextResponse.json({
       success: true,
       data: {

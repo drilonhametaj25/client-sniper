@@ -45,8 +45,6 @@ import ViewSwitcher, { ViewType } from '@/components/ViewSwitcher'
 import LeadCard, { LeadCardCompact } from '@/components/LeadCard'
 import { TinderStack } from '@/components/mobile/tinder'
 import type { ServiceType } from '@/lib/types/services'
-import { detectServices } from '@/lib/utils/service-detection'
-import { calculateMatch } from '@/lib/utils/match-calculation'
 import FirstTimeUserModal from '@/components/FirstTimeUserModal'
 import EmailTemplatePreview from '@/components/EmailTemplatePreview'
 import { useOnboarding } from '@/contexts/OnboardingContext'
@@ -216,7 +214,7 @@ export default function ClientDashboard() {
       
       // ⚡ CACHE semplice per evitare richieste duplicate
       const filtersHash = JSON.stringify(advancedFilters)
-      const cacheKey = `leads-${page}-${filterCategory}-${filterCity}-${filterRole}-${searchTerm}-${showOnlyUnlocked}-${filtersHash}-${sortBy}-${sortOrder}`
+      const cacheKey = `leads-${page}-${filterCategory}-${filterCity}-${filterRole}-${searchTerm}-${showOnlyUnlocked}-${showOnlyMatching}-${filtersHash}-${sortBy}-${sortOrder}`
       if (useCache && localStorage.getItem(cacheKey)) {
         try {
           const cached = JSON.parse(localStorage.getItem(cacheKey)!)
@@ -269,6 +267,10 @@ export default function ClientDashboard() {
         ...(advancedFilters.crmFilters.onlyUncontacted && { onlyUncontacted: '1' }),
         ...(advancedFilters.crmFilters.followUpOverdue && { followUpOverdue: '1' }),
         ...(advancedFilters.crmFilters.crmStatus !== 'all' && { crmStatus: advancedFilters.crmFilters.crmStatus }),
+        // Filtri "Servizi Richiesti" / match — calcolati server-side per paginazione corretta
+        ...(advancedFilters.serviceTypes?.length > 0 && { serviceTypes: advancedFilters.serviceTypes.join(',') }),
+        ...(advancedFilters.minMatchScore > 0 && { minMatchScore: advancedFilters.minMatchScore.toString() }),
+        ...(showOnlyMatching && { onlyMatching: '1' }),
         sortBy: sortBy,
         sortOrder: sortOrder
       })
@@ -404,56 +406,11 @@ export default function ClientDashboard() {
         }
       }
 
-      // Filtri servizi - disponibili per tutti
-      if (advancedFilters.serviceTypes && advancedFilters.serviceTypes.length > 0) {
-        const analysis = lead.website_analysis || lead.analysis
-        if (!analysis) return false
-
-        // Calcola i servizi rilevati per questo lead
-        const detectedServicesResult = detectServices(analysis)
-        const detectedServiceTypes = detectedServicesResult.services.map(s => s.type)
-
-        // Verifica che almeno uno dei servizi filtrati sia presente
-        const hasMatchingService = advancedFilters.serviceTypes.some(
-          serviceType => detectedServiceTypes.includes(serviceType)
-        )
-        if (!hasMatchingService) return false
-      }
-
-      // Filtro match score minimo (esplicito da UI)
-      if (advancedFilters.minMatchScore && advancedFilters.minMatchScore > 0) {
-        const userServicesOffered = (user?.services_offered || []) as ServiceType[]
-        if (userServicesOffered.length === 0) {
-          // Se l'utente non ha configurato servizi, non può filtrare per match
-          // ma lasciamo passare tutti
-        } else {
-          const analysis = lead.website_analysis || lead.analysis
-          if (!analysis) return false
-
-          const detectedServicesResult = detectServices(analysis)
-          const matchResult = calculateMatch(detectedServicesResult, userServicesOffered)
-
-          if (matchResult.score < advancedFilters.minMatchScore) return false
-        }
-      }
-
-      // FILTRO OPZIONALE: Se utente ha configurato servizi E ha attivato il filtro, nascondi lead con 0 match
-      // Questo filtro si applica solo quando showOnlyMatching è true
-      if (showOnlyMatching) {
-        const userServicesForAutoFilter = (user?.services_offered || []) as ServiceType[]
-        if (userServicesForAutoFilter.length > 0) {
-          const analysis = lead.website_analysis || lead.analysis
-          if (analysis) {
-            const detectedServicesResult = detectServices(analysis)
-            const matchResult = calculateMatch(detectedServicesResult, userServicesForAutoFilter)
-
-            // Escludi lead che NON hanno NESSUN servizio in comune con l'utente
-            if (matchResult.matchedServices.length === 0) {
-              return false
-            }
-          }
-        }
-      }
+      // Filtri "Servizi Richiesti", match minimo e "solo compatibili" sono ora
+      // calcolati SERVER-SIDE da /api/leads (serviceTypes / minMatchScore /
+      // onlyMatching). Qui non vanno più riapplicati: la detection lato client userebbe
+      // solo la `analysis` legacy e scarterebbe per errore lead che il server ha già
+      // matchato tramite website_analysis, oltre a falsare la paginazione.
 
       return true
     })
@@ -580,7 +537,7 @@ export default function ClientDashboard() {
     }, 300) // Debounce di 300ms
     
     return () => clearTimeout(timeoutId)
-  }, [filterCategory, filterCity, filterRole, searchTerm, showOnlyUnlocked, advancedFilters, sortBy, sortOrder])
+  }, [filterCategory, filterCity, filterRole, searchTerm, showOnlyUnlocked, showOnlyMatching, advancedFilters, sortBy, sortOrder])
 
   // Stato per indicatore di ricerca
   const [isSearching, setIsSearching] = useState(false)

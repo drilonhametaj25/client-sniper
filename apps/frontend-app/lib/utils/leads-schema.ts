@@ -29,3 +29,23 @@ export async function leadsHasStatusColumn(supabase: any): Promise<boolean> {
     return false
   }
 }
+
+// Cache positiva per colonna: stesso principio di leadsHasStatusColumn ma generico.
+// Utile per colonne opzionali come `website_analysis` (struttura moderna completa),
+// che potrebbe non esistere su DB non ancora migrati. In quel caso il chiamante
+// usa un fallback (es. la colonna legacy `analysis`).
+const confirmedColumns = new Set<string>()
+
+export async function leadsHasColumn(supabase: any, column: string): Promise<boolean> {
+  if (confirmedColumns.has(column)) return true
+  try {
+    const { error } = await supabase.from('leads').select(column).limit(1)
+    if (!error) {
+      confirmedColumns.add(column)
+      return true
+    }
+    return false
+  } catch {
+    return false
+  }
+}

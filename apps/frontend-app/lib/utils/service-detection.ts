@@ -484,6 +484,92 @@ function processStructuredIssues(analysis: AnalysisData): DetectedIssue[] {
 }
 
 /**
+ * Normalizza un oggetto analysis nel formato strutturato atteso dai detector.
+ *
+ * I lead salvati nel DB (e restituiti da /api/leads) espongono la forma "legacy"
+ * compatta (LegacyAnalysis: has_website, missing_meta_tags, has_tracking_pixel,
+ * broken_images, gtm_installed, website_load_time, overall_score), mentre i
+ * detector lavorano sulla forma moderna annidata (seo/tracking/performance/...).
+ * Senza questa conversione i detector non trovano nessun sotto-oggetto e
+ * rilevano solo "analytics"/"social" per OGNI lead, rendendo di fatto inutile il
+ * filtro "Servizi Richiesti" (qualunque altro servizio → 0 risultati).
+ *
+ * Dai campi legacy possiamo derivare in modo affidabile: seo, analytics,
+ * performance, development e design. gdpr/mobile/social non sono presenti nella
+ * forma compatta: per questi assumiamo valori "presenti/sconosciuti" così da non
+ * inventare difetti (falsi positivi). Per i lead che hanno la forma moderna
+ * completa (website_analysis) restano disponibili tutti gli 8 servizi.
+ */
+function normalizeAnalysisShape(raw: any): AnalysisData {
+  if (!raw || typeof raw !== 'object') return {}
+
+  // Già in formato moderno (ha i sotto-oggetti annidati): nessuna conversione.
+  if (raw.seo || raw.tracking || raw.mobile || raw.gdpr) {
+    return raw as AnalysisData
+  }
+
+  // Riconosci la forma legacy compatta; se non lo è, restituisci invariato.
+  const isLegacy =
+    'missing_meta_tags' in raw ||
+    'has_tracking_pixel' in raw ||
+    'has_website' in raw ||
+    'overall_score' in raw
+  if (!isLegacy) return raw as AnalysisData
+
+  const missing: string[] = Array.isArray(raw.missing_meta_tags)
+    ? raw.missing_meta_tags.map((t: any) => String(t).toLowerCase())
+    : []
+  const isMissing = (...keys: string[]) => keys.some(k => missing.includes(k))
+
+  const hasTracking = raw.has_tracking_pixel === true
+  const hasGtm = raw.gtm_installed === true
+  const loadTimeMs = typeof raw.website_load_time === 'number' ? raw.website_load_time : 0
+  const brokenImages = raw.broken_images === true
+  const overall = raw.has_website === false
+    ? 0 // sito assente → opportunità di sviluppo/redesign completo
+    : (typeof raw.overall_score === 'number' ? raw.overall_score : undefined)
+
+  return {
+    seo: {
+      hasTitle: !isMissing('title'),
+      hasMetaDescription: !isMissing('meta-description', 'meta_description', 'metadescription', 'description'),
+      hasH1: !isMissing('h1'),
+      hasCanonical: !isMissing('canonical'),
+      // Non disponibili nella forma legacy: assumiamo presenti per basare il
+      // rilevamento SEO solo sui meta tag realmente mancanti.
+      hasH2: true,
+      hasStructuredData: true,
+      hasSitemap: true,
+      hasRobotsTxt: true
+    },
+    tracking: {
+      googleAnalytics: hasTracking,
+      hasGoogleAnalytics: hasTracking,
+      googleTagManager: hasGtm,
+      hasGoogleTagManager: hasGtm,
+      facebookPixel: hasTracking,
+      hasFacebookPixel: hasTracking,
+      // Sconosciuti: assumiamo presenti per non gonfiare il difetto "analytics".
+      hotjar: true,
+      clarity: true
+    },
+    performance: {
+      loadTime: loadTimeMs
+    },
+    images: {
+      broken: brokenImages ? 1 : 0,
+      withoutAlt: 0,
+      oversized: 0,
+      total: 0
+    },
+    // Non rilevabili dalla forma legacy: evitiamo falsi positivi su social.
+    social: { hasAnySocial: true },
+    content: { hasSocialLinks: true },
+    overallScore: overall
+  }
+}
+
+/**
  * Funzione principale: Rileva i servizi necessari per un lead
  */
 export function detectServices(analysis: any): DetectedServices {
@@ -495,8 +581,9 @@ export function detectServices(analysis: any): DetectedServices {
     }
   }
 
-  // Normalizza analysis (potrebbe essere in website_analysis)
-  const analysisData: AnalysisData = analysis.website_analysis || analysis
+  // Normalizza analysis: preferisci la forma moderna (website_analysis) e
+  // converti la forma legacy compatta nello schema annidato atteso dai detector.
+  const analysisData: AnalysisData = normalizeAnalysisShape(analysis.website_analysis || analysis)
 
   // Raccogli tutti i problemi rilevati
   const allIssues: DetectedIssue[] = [
