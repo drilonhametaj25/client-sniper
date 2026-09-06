@@ -9,6 +9,7 @@ import { getBasePlanType, isProOrHigher, isStarterOrHigher } from '@/lib/utils/p
 import { leadsHasStatusColumn, leadsHasColumn } from '@/lib/utils/leads-schema'
 import { detectServices } from '@/lib/utils/service-detection'
 import { calculateMatch } from '@/lib/utils/match-calculation'
+import { getUnlockedSet } from '@/lib/api/paywall'
 import type { ServiceType } from '@/lib/types/services'
 
 // Limite del working-set quando è attivo un filtro per servizi/match: questi filtri
@@ -150,6 +151,7 @@ export async function GET(request: NextRequest) {
           role: 'client',
           plan: 'free',
           credits_remaining: 1,
+          status: 'active',
           created_at: new Date().toISOString()
         })
         .select('id, role, plan, credits_remaining, services_offered, preferred_min_budget, preferred_max_budget')
@@ -300,8 +302,8 @@ export async function GET(request: NextRequest) {
       query = query.or(`business_name.ilike.%${search}%,city.ilike.%${search}%`)
     }
     
-    // 🔥 FILTRI CRM - solo per utenti PRO
-    if (isProOrHigher(userProfile.plan) && (onlyUncontacted || followUpOverdue || (crmStatus && crmStatus !== 'all'))) {
+    // 🔥 FILTRI CRM - per utenti Starter+ (allineato al gate di /api/crm)
+    if (isStarterOrHigher(userProfile.plan) && (onlyUncontacted || followUpOverdue || (crmStatus && crmStatus !== 'all'))) {
       // Ottieni tutti i lead con stati CRM per questo utente
       const { data: crmData, error: crmError } = await getSupabaseAdmin()
         .from('crm_entries')
@@ -420,9 +422,32 @@ export async function GET(request: NextRequest) {
         orderAscending = true
     }
 
-    // Helper: arricchisce i lead della pagina con lo stato CRM (solo utenti PRO+).
+    // 🔒 PAYWALL: i contatti (phone/email) escono dal server SOLO per i lead
+    // sbloccati dall'utente. Per gli altri restituiamo i flag has_phone/has_email
+    // così le card possono dire "contatto disponibile" senza rivelarlo.
+    const maskContacts = async (pageLeads: any[]): Promise<any[]> => {
+      if (!pageLeads || pageLeads.length === 0) return pageLeads
+      const unlockedSet = await getUnlockedSet(
+        getSupabaseAdmin(),
+        user.id,
+        pageLeads.map((l: any) => l.id)
+      )
+      return pageLeads.map((lead: any) => {
+        const unlocked = unlockedSet.has(lead.id)
+        return {
+          ...lead,
+          has_phone: !!lead.phone,
+          has_email: !!lead.email,
+          phone: unlocked ? lead.phone : null,
+          email: unlocked ? lead.email : null,
+          is_unlocked: unlocked
+        }
+      })
+    }
+
+    // Helper: arricchisce i lead della pagina con lo stato CRM (utenti Starter+).
     const enrichWithCrm = async (pageLeads: any[]): Promise<any[]> => {
-      if (!isProOrHigher(userProfile.plan) || !pageLeads || pageLeads.length === 0) {
+      if (!isStarterOrHigher(userProfile.plan) || !pageLeads || pageLeads.length === 0) {
         return pageLeads
       }
       try {
@@ -518,7 +543,7 @@ export async function GET(request: NextRequest) {
 
       const total = matched.length
       const pageSlice = matched.slice(offset, offset + limit).map(stripDetectionFields)
-      const pageLeads = await enrichWithCrm(pageSlice)
+      const pageLeads = await maskContacts(await enrichWithCrm(pageSlice))
       const queryTime = Date.now() - startTime
 
       return NextResponse.json({
@@ -570,7 +595,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const filteredLeads = await enrichWithCrm(leads || [])
+    const filteredLeads = await maskContacts(await enrichWithCrm(leads || []))
 
     return NextResponse.json({
       success: true,

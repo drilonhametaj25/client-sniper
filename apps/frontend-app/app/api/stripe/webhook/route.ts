@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 import { klaviyoServer } from '@/lib/services/klaviyo-server'
+import { getBasePlanType } from '@/lib/utils/plan-helpers'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-08-16',
@@ -440,6 +441,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     .update({
       plan: planId,
       credits_remaining: credits,
+      proposals_remaining: credits, // sync transitorio (colonna in dismissione)
       stripe_customer_id: session.customer as string,
       stripe_subscription_id: session.subscription as string,
       credits_reset_date: nextResetDate.toISOString()
@@ -551,6 +553,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
       .from('users')
       .update({
         credits_remaining: credits,
+        proposals_remaining: credits, // sync transitorio (colonna in dismissione)
         credits_reset_date: nextResetDate.toISOString()
       })
       .eq('id', userId)
@@ -751,6 +754,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       .update({
         plan: planName,
         credits_remaining: credits,
+        proposals_remaining: credits, // sync transitorio (colonna in dismissione)
         stripe_customer_id: subscription.customer as string,
         stripe_subscription_id: subscription.id,
         status: 'active'
@@ -839,10 +843,12 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     if (planChanged) {
       console.log(`🔄 Cambio piano rilevato: ${previousPlan} → ${newPlan}`)
 
-      // Determina se è upgrade o downgrade
+      // Determina se è upgrade o downgrade.
+      // I nomi reali dei piani sono starter_monthly/agency_annual/...: vanno
+      // normalizzati al tipo base, altrimenti indexOf restituisce sempre -1.
       const planOrder = ['free', 'starter', 'pro', 'agency']
-      const previousIndex = planOrder.indexOf(previousPlan || 'free')
-      const newIndex = planOrder.indexOf(newPlan!)
+      const previousIndex = planOrder.indexOf(getBasePlanType(previousPlan || 'free'))
+      const newIndex = planOrder.indexOf(getBasePlanType(newPlan!))
       const isUpgrade = newIndex > previousIndex
 
       // Aggiorna il piano e i crediti
@@ -851,6 +857,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
         .update({
           plan: newPlan,
           credits_remaining: newCredits,
+          proposals_remaining: newCredits, // sync transitorio (colonna in dismissione)
           status: newStatus
         })
         .eq('id', userId)

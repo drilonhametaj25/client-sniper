@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { getDaysUntilReset, formatResetDate } from '@/lib/auth'
 import { isProOrHigher, getBasePlanType } from '@/lib/utils/plan-helpers'
+import { hasCredits } from '@/lib/utils/credits-display'
 import { createPortal } from 'react-dom'
 import { LeadStatusBadge } from '@/components/LeadStatusBadge'
 import { LeadWithCRM, CRMStatusType } from '@/lib/types/crm'
@@ -733,44 +734,6 @@ export default function ClientDashboard() {
     return (user as any)?.proposals_remaining ?? user?.credits_remaining ?? 0
   }
 
-  // Funzione per consumare una proposta
-  const consumeProposal = async (action: string, leadId?: string): Promise<boolean> => {
-    if (!user) return false
-
-    try {
-      const currentProposals = (user as any)?.proposals_remaining ?? user?.credits_remaining ?? 0
-      const { data, error } = await supabase
-        .from('users')
-        .update({
-          proposals_remaining: Math.max(0, currentProposals - 1)
-        })
-        .eq('id', user.id)
-        .select()
-
-      if (error) {
-        console.error('Errore consumo proposta:', error)
-        return false
-      }
-
-      // Log dell'azione per audit
-      await supabase
-        .from('credit_usage_log')
-        .insert({
-          user_id: user.id,
-          action: action,
-          lead_id: leadId || null,
-          credits_consumed: 1,
-          credits_remaining: Math.max(0, currentProposals - 1),
-          created_at: new Date().toISOString()
-        })
-
-      return true
-    } catch (error) {
-      console.error('Errore nel consumo proposta:', error)
-      return false
-    }
-  }
-
   // Funzione per aggiornare solo le proposte senza toccare il profilo completo
   const refreshProposals = async () => {
     try {
@@ -802,7 +765,9 @@ export default function ClientDashboard() {
     if (!user) return
 
     const remainingProposals = getAvailableProposals()
-    if (remainingProposals <= 0) {
+    // hasCredits gestisce anche -1 = illimitato (prima gli utenti Agency
+    // venivano bloccati da "remainingProposals <= 0")
+    if (!hasCredits(remainingProposals)) {
       alert('Non hai più crediti disponibili. Aggiorna il tuo piano per continuare.')
       router.push('/upgrade')
       return
@@ -810,9 +775,6 @@ export default function ClientDashboard() {
 
     // Salva la posizione corrente dello scroll
     setScrollPosition(window.scrollY)
-
-    // ⚡ AGGIORNAMENTO OTTIMISTICO: Scala proposte SUBITO per feedback istantaneo
-    decrementCredits(1)
 
     // Genera la proposta usando l'API REST
     try {
@@ -859,11 +821,13 @@ export default function ClientDashboard() {
       // Imposta il lead come ultimo sbloccato per l'effetto visivo
       setLastUnlockedLeadId(leadId)
       
-      // Aggiorna solo le proposte senza ricaricare tutto il profilo
-      if (userProfile) {
+      // Aggiorna il saldo con il valore restituito dal server (verità unica:
+      // la RPC atomica consume_credit), niente più decrementi ottimistici locali
+      if (userProfile && typeof data.credits_remaining === 'number') {
         setUserProfile(prev => prev ? {
           ...prev,
-          proposals_remaining: Math.max(0, prev.proposals_remaining - 1)
+          proposals_remaining: data.credits_remaining,
+          credits_remaining: data.credits_remaining
         } : null)
       }
     } catch (error) {
@@ -2124,16 +2088,11 @@ export default function ClientDashboard() {
                         // Per ora solo logga lo skip - in futuro potrebbe salvare preferenza
                         console.log('Lead skipped:', leadId)
                       }}
-                      onArchive={async (leadId) => {
-                        // Archivia il lead
-                        try {
-                          await supabase
-                            .from('leads')
-                            .update({ status: 'archived' })
-                            .eq('id', leadId)
-                        } catch (error) {
-                          console.error('Errore archiviazione:', error)
-                        }
+                      onArchive={(leadId) => {
+                        // L'archiviazione lato client era un no-op silenzioso
+                        // (nessuna policy UPDATE su leads + violazione del CHECK
+                        // di status): rimossa in attesa di una vera feature.
+                        console.log('Lead archive richiesto (non supportato):', leadId)
                       }}
                       onRefresh={() => loadLeadsFromAPI(1, false)}
                     />

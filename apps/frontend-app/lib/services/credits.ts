@@ -61,8 +61,9 @@ export async function decrementUserCredits({
     // 3. Aggiorna crediti utente
     const { error: updateError } = await getSupabaseAdmin()
       .from('users')
-      .update({ 
+      .update({
         credits_remaining: newCreditsRemaining,
+        proposals_remaining: newCreditsRemaining, // sync transitorio (colonna in dismissione)
         updated_at: new Date().toISOString()
       })
       .eq('id', userId)
@@ -71,15 +72,15 @@ export async function decrementUserCredits({
       return { success: false, error: 'Errore aggiornamento crediti' }
     }
 
-    // 4. Logga la transazione
+    // 4. Logga la transazione (tabella reale: credit_usage_logs)
     const { error: logError } = await getSupabaseAdmin()
-      .from('credit_usage_log')
+      .from('credit_usage_logs')
       .insert({
         user_id: userId,
         action,
-        lead_id: leadId || null,
-        credits_consumed: creditsConsumed,
+        credits_used: creditsConsumed,
         credits_remaining: newCreditsRemaining,
+        details: { lead_id: leadId || null, ...(metadata || {}) },
         created_at: new Date().toISOString()
       })
 
@@ -170,8 +171,9 @@ export async function addUserCredits({
     // 2. Aggiorna crediti
     const { error: updateError } = await getSupabaseAdmin()
       .from('users')
-      .update({ 
+      .update({
         credits_remaining: newCreditsRemaining,
+        proposals_remaining: newCreditsRemaining, // sync transitorio (colonna in dismissione)
         updated_at: new Date().toISOString()
       })
       .eq('id', userId)
@@ -180,14 +182,15 @@ export async function addUserCredits({
       return { success: false, error: 'Errore aggiornamento crediti' }
     }
 
-    // 3. Logga la transazione (crediti negativi = aggiunta)
+    // 3. Logga la transazione (tabella reale: credit_usage_logs; negativo = aggiunta)
     const { error: logError } = await getSupabaseAdmin()
-      .from('credit_usage_log')
+      .from('credit_usage_logs')
       .insert({
         user_id: userId,
         action,
-        credits_consumed: -creditsToAdd, // Negativo per indicare aggiunta
+        credits_used: -creditsToAdd, // Negativo per indicare aggiunta
         credits_remaining: newCreditsRemaining,
+        details: metadata || {},
         created_at: new Date().toISOString()
       })
 

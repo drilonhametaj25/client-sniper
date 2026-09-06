@@ -114,6 +114,7 @@ async function runCreditsReset() {
           .from('users')
           .update({
             credits_remaining: newCredits,
+            proposals_remaining: newCredits, // sync transitorio (colonna in dismissione)
             credits_reset_date: nextResetDate.toISOString()
           })
           .eq('id', user.id)

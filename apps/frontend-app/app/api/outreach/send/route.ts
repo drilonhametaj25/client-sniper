@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { OutreachEmailGenerator, EMAIL_TEMPLATES } from '@/lib/outreach-email-generator'
+import { isLeadUnlocked, getUnlockedSet } from '@/lib/api/paywall'
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://trovami.pro'
@@ -74,8 +75,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
+    // Client service-role per le operazioni DB (il ruolo anon non può più
+    // leggere i lead: paywall server-side)
+    const admin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     // Verifica che l'utente abbia un piano che permette outreach
-    const { data: profile } = await supabase
+    const { data: profile } = await admin
       .from('users')
       .select('plan, email')
       .eq('id', user.id)
@@ -92,9 +100,9 @@ export async function POST(request: NextRequest) {
 
     // Determina se è invio singolo o bulk
     if (body.leadIds && Array.isArray(body.leadIds)) {
-      return handleBulkSend(body as BulkSendRequest, user.id, supabase)
+      return handleBulkSend(body as BulkSendRequest, user.id, admin)
     } else if (body.leadId) {
-      return handleSingleSend(body as SendEmailRequest, user.id, supabase)
+      return handleSingleSend(body as SendEmailRequest, user.id, admin)
     } else {
       return NextResponse.json({ error: 'Missing leadId or leadIds' }, { status: 400 })
     }
@@ -110,6 +118,14 @@ async function handleSingleSend(
   supabase: any
 ) {
   const { leadId, templateId, customSubject, customBody, variables } = body
+
+  // 🔒 PAYWALL: si può contattare solo un lead sbloccato
+  if (!(await isLeadUnlocked(supabase, userId, leadId))) {
+    return NextResponse.json(
+      { error: 'Sblocca il lead prima di contattarlo' },
+      { status: 403 }
+    )
+  }
 
   // Carica il lead
   const { data: leadData, error: leadError } = await supabase
@@ -243,11 +259,21 @@ async function handleBulkSend(
     )
   }
 
+  // 🔒 PAYWALL: nel bulk si contattano solo i lead sbloccati dall'utente
+  const unlockedSet = await getUnlockedSet(supabase, userId, leadIds)
+  const allowedIds = leadIds.filter(id => unlockedSet.has(id))
+  if (allowedIds.length === 0) {
+    return NextResponse.json(
+      { error: 'Nessuno dei lead selezionati è sbloccato. Sblocca i lead prima di contattarli.' },
+      { status: 403 }
+    )
+  }
+
   // Carica tutti i lead
   const { data: leadsData, error: leadsError } = await supabase
     .from('leads')
     .select('*')
-    .in('id', leadIds)
+    .in('id', allowedIds)
 
   if (leadsError || !leadsData) {
     return NextResponse.json({ error: 'Error loading leads' }, { status: 500 })

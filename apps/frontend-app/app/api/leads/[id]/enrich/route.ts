@@ -13,6 +13,7 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { enrichLeadFull } from '@/lib/enrichment/lead-enrichment'
+import { isLeadUnlocked } from '@/lib/api/paywall'
 
 function getSupabaseAdmin() {
   return createClient(
@@ -38,6 +39,15 @@ export async function GET(
     const { data: { user }, error: authError } = await admin.auth.getUser(token)
     if (authError || !user) {
       return NextResponse.json({ error: 'Token non valido' }, { status: 401 })
+    }
+
+    // 🔒 PAYWALL: l'arricchimento (email verificate incluse) è riservato a chi
+    // ha sbloccato il lead
+    if (!(await isLeadUnlocked(admin, user.id, leadId))) {
+      return NextResponse.json(
+        { error: 'Sblocca il lead per accedere all\'arricchimento contatti' },
+        { status: 403 }
+      )
     }
 
     // Carica il lead

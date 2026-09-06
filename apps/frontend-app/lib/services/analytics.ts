@@ -60,9 +60,11 @@ export class AnalyticsService {
     try {
       // SISTEMATO: Usa sempre query dirette per evitare errori di viste mancanti
       // SISTEMATO: Conta tutti i lead usando count() invece di select() per evitare il limite di 1000
+      // select('id') e non '*': phone/email non sono più leggibili dal client
+      // (paywall a livello di colonna) e '*' farebbe fallire anche i count
       const { count: totalLeads, error: leadsCountError } = await this.supabase
         .from('leads')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact', head: true })
 
       if (leadsCountError) {
         console.error('Error counting leads:', leadsCountError)
@@ -84,12 +86,12 @@ export class AnalyticsService {
       
       const { count: currentWeekLeads, error: currentWeekError } = await this.supabase
         .from('leads')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact', head: true })
         .gte('created_at', oneWeekAgo.toISOString())
 
       const { count: previousWeekLeads, error: previousWeekError } = await this.supabase
         .from('leads')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact', head: true })
         .gte('created_at', twoWeeksAgo.toISOString())
         .lt('created_at', oneWeekAgo.toISOString())
 

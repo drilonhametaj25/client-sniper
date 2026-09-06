@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { isLeadUnlocked } from '@/lib/api/paywall'
 
 // Interfacce per i preventivi (portate dal PricingEngine)
 interface ServiceQuotation {
@@ -371,8 +372,21 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Carica il lead
-    const { data: lead, error: leadError } = await supabase
+    const admin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    // 🔒 PAYWALL: il preventivo è riservato a chi ha sbloccato il lead
+    if (!(await isLeadUnlocked(admin, user.id, leadId))) {
+      return NextResponse.json(
+        { error: 'Sblocca il lead per generare il preventivo' },
+        { status: 403 }
+      )
+    }
+
+    // Carica il lead (client admin: i contatti non sono più leggibili dal ruolo authenticated)
+    const { data: lead, error: leadError } = await admin
       .from('leads')
       .select('*')
       .eq('id', leadId)

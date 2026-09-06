@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { hasCredits } from "@/lib/utils/credits-display";
 import { WebsiteAnalysis, EnhancedWebsiteAnalysis } from "@/lib/types/analysis";
 import { TourTarget } from "@/components/onboarding/TourTarget";
 import {
@@ -128,10 +129,12 @@ export default function LeadDetailPage() {
         (ul: any) => ul.lead_id === leadId
       );
 
-      // Carica il lead
+      // Carica il lead con colonne esplicite: phone/email NON sono più leggibili
+      // dal ruolo authenticated (paywall a livello di colonna nel DB), quindi
+      // select("*") fallirebbe. I contatti si leggono dalla vista dedicata.
       const { data: leadData, error: leadError } = await supabase
         .from("leads")
-        .select("*")
+        .select("id, business_name, website_url, address, city, category, score, analysis, website_analysis, needed_roles, issues, origin, confidence_score, status, reachability_verdict, created_at, last_seen_at")
         .eq("id", leadId)
         .single();
 
@@ -139,25 +142,40 @@ export default function LeadDetailPage() {
         setError("Lead non trovato");
         return;
       }
-      
-      // Logica di accesso corretta:
-      // 1. Admin può vedere tutto
-      // 2. Se l'utente ha già sbloccato il lead, può vederlo
-      // 3. Se non è sbloccato ma ha crediti, può sbloccarlo
-      // 4. Altrimenti errore
-      if (user?.role !== "admin") {
-        if (!isAlreadyUnlocked) {
-          // Se non è già sbloccato, verifica che l'utente abbia crediti sufficienti
-          if (!user || (user.credits_remaining || 0) <= 0) {
-            setError("Crediti insufficienti per visualizzare i dettagli del lead");
-            return;
-          }
-          // Se ha crediti, procede a consumarli più avanti
-        }
-        // Se è già sbloccato o ha crediti, può procedere
+
+      // Contatti: SOLO per i lead sbloccati, tramite la vista my_unlocked_contacts
+      // (unico canale client-side autorizzato a leggere phone/email)
+      let contacts: { phone?: string | null; email?: string | null } = {};
+      if (isAlreadyUnlocked) {
+        const { data: contactRow } = await supabase
+          .from("my_unlocked_contacts")
+          .select("phone, email")
+          .eq("lead_id", leadId)
+          .maybeSingle();
+        contacts = contactRow || {};
       }
 
-      setLead(leadData);
+      // Logica di accesso:
+      // 1. Admin può vedere tutto (senza contatti finché non sblocca)
+      // 2. Lead già sbloccato: visibile con contatti
+      // 3. Non sbloccato: serve conferma ESPLICITA prima di consumare un credito
+      //    (prima la pagina consumava 1 credito al semplice caricamento!)
+      if (user?.role !== "admin" && !isAlreadyUnlocked) {
+        if (!user || !hasCredits((user as any).proposals_remaining ?? user.credits_remaining)) {
+          setError("Crediti insufficienti per visualizzare i dettagli del lead");
+          return;
+        }
+        const confirmed = window.confirm(
+          "Vuoi sbloccare questo lead per 1 credito?\n" +
+          "Avrai accesso a contatti e analisi completa."
+        );
+        if (!confirmed) {
+          router.back();
+          return;
+        }
+      }
+
+      setLead({ ...leadData, phone: contacts.phone ?? null, email: contacts.email ?? null } as any);
 
       // Carica l'analisi se disponibile - priorità alla struttura moderna
       const analysisData = leadData.website_analysis || leadData.analysis;
@@ -168,8 +186,8 @@ export default function LeadDetailPage() {
         setNormalizedData(normalized);
       }
 
-      // Consuma 1 credito solo se non già sbloccato
-      if (!isAlreadyUnlocked && !creditConsumed) {
+      // Consuma 1 credito solo se non già sbloccato (dopo conferma esplicita)
+      if (!isAlreadyUnlocked && !creditConsumed && user?.role !== "admin") {
         await consumeCredit();
       } else if (isAlreadyUnlocked) {
         setCreditConsumed(true); // Marca come già consumato per evitare doppi consumi
@@ -212,6 +230,8 @@ export default function LeadDetailPage() {
       }
 
       setCreditConsumed(true);
+      // L'API di unlock restituisce i contatti: mergiali nel lead visualizzato
+      setLead(prev => prev ? { ...prev, phone: data.phone ?? prev.phone, email: data.email ?? prev.email } : prev);
       await refreshProfile();
     } catch (error) {
       console.error("Errore consumo credito:", error);

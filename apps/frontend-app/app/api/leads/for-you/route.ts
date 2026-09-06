@@ -22,6 +22,7 @@ import { detectServices } from '@/lib/utils/service-detection'
 import { leadsHasStatusColumn } from '@/lib/utils/leads-schema'
 import { UserProfile, UserBehaviorSummary } from '@/lib/types/onboarding'
 import { ServiceType } from '@/lib/types/services'
+import { getCitiesByRegion } from '@/lib/data/italian-cities'
 
 function getSupabaseAdmin() {
   return createClient(
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest) {
 
       // Lead già sbloccati dall'utente (per escluderli dai Top 5)
       getSupabaseAdmin()
-        .from('lead_unlocks')
+        .from('user_unlocked_leads')
         .select('lead_id')
         .eq('user_id', user.id)
     ])
@@ -220,30 +221,43 @@ export async function GET(request: NextRequest) {
         .filter(l => l.relevance.score >= 90)
         .slice(0, 8),
 
-      // High budget
+      // High budget: lead con budget stimato alto E compatibile col range dell'utente
+      // (prima confrontava contro preferred_max_budget * 1.2, cioè mostrava lead
+      // SOPRA il massimo dichiarato dall'utente — al contrario)
       high_budget: leadsWithRelevance
         .filter(l => {
           const services = detectServices(l.lead.analysis)
-          const minBudget = userData?.preferred_max_budget || 3000
-          return services.totalBudget.max >= minBudget * 1.2
+          const userMin = userData?.preferred_min_budget ?? 0
+          const userMax = userData?.preferred_max_budget ?? Number.POSITIVE_INFINITY
+          return (
+            services.totalBudget.max >= Math.max(userMin, 2000) &&
+            services.totalBudget.min <= userMax
+          )
         })
         .slice(0, 6),
 
-      // Near you (stessa città o regione)
+      // Near you (stessa città, o città appartenente a una regione preferita)
       near_you: profile?.preferredCities?.length || profile?.preferredRegions?.length
-        ? leadsWithRelevance
-            .filter(l => {
-              const leadCity = (l.lead.city || '').toLowerCase()
-              const cityMatch = profile!.preferredCities.some(c =>
-                leadCity.includes(c.toLowerCase())
+        ? (() => {
+            // Città delle regioni preferite (mapping reale città→regione,
+            // il vecchio substring(0,4) su nomi città non matchava mai)
+            const regionCities = new Set(
+              (profile!.preferredRegions || []).flatMap(r =>
+                getCitiesByRegion(r).map(c => c.name.toLowerCase())
               )
-              // Simple region check
-              const regionMatch = profile!.preferredRegions.some(r =>
-                leadCity.includes(r.toLowerCase().substring(0, 4))
-              )
-              return cityMatch || regionMatch
-            })
-            .slice(0, 6)
+            )
+            return leadsWithRelevance
+              .filter(l => {
+                const leadCity = (l.lead.city || '').toLowerCase()
+                const cityMatch = profile!.preferredCities.some(c =>
+                  leadCity.includes(c.toLowerCase())
+                )
+                const regionMatch = regionCities.size > 0 &&
+                  Array.from(regionCities).some(rc => leadCity.includes(rc))
+                return cityMatch || regionMatch
+              })
+              .slice(0, 6)
+          })()
         : [],
 
       // New today (ultime 24h) - ESCLUDI i Top 5 per evitare duplicati

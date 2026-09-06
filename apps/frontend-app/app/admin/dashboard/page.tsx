@@ -165,9 +165,11 @@ export default function AdminDashboard() {
       setLoadingData(true)
 
       // Carica leads
+      // Colonne esplicite: phone/email non sono leggibili dal client (paywall
+      // a livello di colonna), select('*') fallirebbe anche per gli admin
       let query = supabase
         .from('leads')
-        .select('*')
+        .select('id, business_name, website_url, city, category, score, needed_roles, analysis, created_at, updated_at, last_seen_at')
         .order('updated_at', { ascending: false })
         .limit(100)
 
@@ -182,7 +184,7 @@ export default function AdminDashboard() {
       // Carica statistiche con query separate per garantire dati in tempo reale
       await loadStats()
 
-      setLeads(leadsData || [])
+      setLeads((leadsData || []) as any)
 
     } catch (error) {
       console.error('Errore caricamento dashboard:', error)
@@ -201,9 +203,9 @@ export default function AdminDashboard() {
         { data: avgData },
         { count: leadsToday }
       ] = await Promise.all([
-        supabase.from('leads').select('*', { count: 'exact', head: true }),
+        supabase.from('leads').select('id', { count: 'exact', head: true }),
         supabase.from('leads').select('score'),
-        supabase.from('leads').select('*', { count: 'exact', head: true })
+        supabase.from('leads').select('id', { count: 'exact', head: true })
           .gte('created_at', new Date().toISOString().split('T')[0])
       ])
 
