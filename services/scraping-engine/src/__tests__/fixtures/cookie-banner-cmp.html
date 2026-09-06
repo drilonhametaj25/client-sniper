@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<!--
+  Golden fixture: nessun banner cookie nel DOM, ma la pagina carica un CMP
+  (Iubenda) da CDN. La RICHIESTA di rete verso cdn.iubenda.com viene emessa
+  anche se il caricamento fallisce: e' quella che l'analyzer intercetta.
+  Atteso: gdpr.hasCookieBanner === true via rilevamento CMP di rete.
+-->
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Farmacia Centrale - Napoli</title>
+  <meta name="description" content="Farmacia Centrale di Napoli: farmaci, omeopatia e consigli del farmacista dal 1950.">
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; font-size: 16px; color: #222222; background: #ffffff; }
+    @media (max-width: 600px) { body { font-size: 16px; } }
+  </style>
+  <script src="https://cdn.iubenda.com/cs/iubenda_cs.js"></script>
+</head>
+<body>
+  <main id="main">
+    <h1>Farmacia Centrale di Napoli</h1>
+    <p>Da tre generazioni al servizio della salute dei napoletani, con
+       preparazioni galeniche e consegna a domicilio.</p>
+  </main>
+</body>
+</html>

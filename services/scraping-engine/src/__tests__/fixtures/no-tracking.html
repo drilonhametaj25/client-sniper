@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<!--
+  Golden fixture: pagina completa e ben fatta ma SENZA alcun sistema di
+  tracciamento. La pagina non fa alcuna richiesta esterna, quindi il rendering
+  arriva a networkidle e l'assenza di tracker e' CONFERMATA (non "unverifiable").
+  Atteso: issues.high contiene SOLO 'Nessun sistema di tracciamento installato'
+  e nessun altro difetto fabbricato.
+-->
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panificio Bianchi - Pane artigianale a Torino</title>
+  <meta name="description" content="Panificio Bianchi a Torino: pane a lievitazione naturale, focacce e dolci sfornati ogni mattina dal 1962.">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 16px; line-height: 1.5; color: #222222; background: #ffffff; }
+    img { max-width: 100%; height: auto; }
+    a, button { display: inline-block; min-width: 48px; min-height: 44px; padding: 12px 16px; font-size: 16px; color: #7a3b06; background: transparent; border: 0; cursor: pointer; }
+    header, nav, main, section, footer { max-width: 100%; padding: 10px; }
+    @media (max-width: 600px) {
+      nav a { display: block; width: 100%; }
+    }
+  </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Bakery",
+    "name": "Panificio Bianchi",
+    "telephone": "+390115556677",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "Corso Vittorio 22",
+      "addressLocality": "Torino",
+      "postalCode": "10121",
+      "addressCountry": "IT"
+    }
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Vai al contenuto</a>
+
+  <header>
+    <nav aria-label="Navigazione principale">
+      <a href="#prodotti">Prodotti</a>
+      <a href="#recensioni">Recensioni</a>
+      <a href="#contatti">Contatti</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <h1>Panificio Bianchi: pane a lievitazione naturale a Torino</h1>
+    <p>Ogni notte impastiamo con lievito madre e farine macinate a pietra.
+       Al mattino trovi pane caldo, focacce e dolci della tradizione piemontese.</p>
+    <p><time datetime="{{TODAY_ISO}}">Aggiornato il {{TODAY_ISO}}</time></p>
+
+    <section id="prodotti">
+      <h2>I nostri prodotti</h2>
+      <p>Pagnotte integrali, grissini stirati a mano, torte di nocciole e la
+         nostra focaccia dolce del sabato.</p>
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" width="320" height="200" alt="Banco del panificio con pagnotte appena sfornate">
+    </section>
+
+    <section id="casi-studio">
+      <h2>Casi studio</h2>
+      <p>Forniamo ogni giorno dodici ristoranti del centro con pane su misura:
+         un progetto nato nel 2019 e cresciuto con il passaparola.</p>
+    </section>
+
+    <section id="recensioni">
+      <h2>Recensioni dei clienti</h2>
+      <p>"Il pane piu' buono del quartiere, profuma di una volta." - Anna T.</p>
+    </section>
+
+    <section id="faq">
+      <h2>Domande frequenti</h2>
+      <p>Fate consegne a domicilio? Si', dal lunedi' al sabato entro le 12:30.</p>
+    </section>
+
+    <section id="contatti">
+      <h2>Contatti</h2>
+      <p>Orari: Lun-Sab 7:00 - 13:30</p>
+      <p>
+        <a href="tel:+390115556677">Chiamaci</a>
+        <a href="mailto:forno@panificiobianchi.it">Scrivici</a>
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    <p>
+      <a href="/privacy-policy">Privacy Policy</a>
+      <a href="/termini-e-condizioni">Termini e condizioni</a>
+    </p>
+    <p>&copy; {{CURRENT_YEAR}} Panificio Bianchi - Corso Vittorio 22, Torino</p>
+  </footer>
+</body>
+</html>

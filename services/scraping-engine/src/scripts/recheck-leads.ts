@@ -7,23 +7,28 @@
  * i cui dati non sono affidabili, mantenendo gli account utente.
  *
  * Uso:
- *   tsx src/scripts/recheck-leads.ts            # solo i lead con needs_recheck = true
- *   tsx src/scripts/recheck-leads.ts --all      # TUTTI i lead con un sito web
- *   tsx src/scripts/recheck-leads.ts --all --limit 200
+ *   tsx src/scripts/recheck-leads.ts                 # priorità: needs_recheck, poi last_verified_at più vecchio
+ *   tsx src/scripts/recheck-leads.ts --all           # TUTTI i lead con un sito web
+ *   tsx src/scripts/recheck-leads.ts --limit 300     # limite (usato dal workflow notturno)
+ *   tsx src/scripts/recheck-leads.ts --rescore-only  # SOLO ri-scoring offline (nessun re-scrape):
+ *                                                    # ricalcola opportunity score v2 dalle analisi
+ *                                                    # già salvate — backfill di migliaia di lead in minuti
  *
  * Variabili d'ambiente: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  */
 
 import 'dotenv/config'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { EnhancedWebsiteAnalyzer } from '../analyzers/enhanced-website-analyzer'
 import { decideLeadPublication } from '../utils/confidence'
+import { computeOpportunityScore } from '../scoring/opportunity-score'
 
 interface LeadRow {
   id: string
   business_name: string
   website_url: string | null
   phone: string | null
+  email?: string | null
 }
 
 const BATCH_SIZE = 25
@@ -32,9 +37,81 @@ const DELAY_BETWEEN_LEADS_MS = 800
 function parseArgs() {
   const args = process.argv.slice(2)
   const all = args.includes('--all')
+  const rescoreOnly = args.includes('--rescore-only')
   const limitIdx = args.indexOf('--limit')
   const limit = limitIdx >= 0 ? parseInt(args[limitIdx + 1] || '0', 10) || 0 : 0
-  return { all, limit }
+  return { all, limit, rescoreOnly }
+}
+
+/**
+ * Ri-scoring OFFLINE: ricalcola l'opportunity score v2 dalle website_analysis
+ * già in database, senza re-scrape. Ideale per il backfill iniziale.
+ */
+async function rescoreOnly(supabase: SupabaseClient, limit: number) {
+  console.log(`🧮 Ri-scoring offline (v2)${limit ? ` — limite ${limit}` : ''}`)
+  let processed = 0
+  let errors = 0
+  const pageSize = 200
+
+  for (let offset = 0; ; offset += pageSize) {
+    if (limit && processed >= limit) break
+
+    const { data: leads, error } = await supabase
+      .from('leads')
+      .select('id, business_name, website_url, phone, email, website_analysis, score_version')
+      .not('website_analysis', 'is', null)
+      .neq('score_version', 2)
+      .order('created_at', { ascending: true })
+      .range(0, pageSize - 1) // sempre la prima pagina: le righe processate escono dal filtro (score_version=2)
+
+    if (error) {
+      console.error('❌ Errore lettura lead:', error.message)
+      break
+    }
+    if (!leads || leads.length === 0) break
+
+    for (const lead of leads as any[]) {
+      if (limit && processed >= limit) break
+      try {
+        const analysis = lead.website_analysis
+        const opportunity = computeOpportunityScore(analysis, {
+          hasWebsite: !!lead.website_url,
+          phone: lead.phone,
+          email: lead.email,
+          rating: null,
+          reviewsCount: null
+        }, {
+          confirmedAbsence: analysis?.reachabilityVerdict === 'offline_confirmed' ||
+            analysis?.websiteStatus === 'parked'
+        })
+
+        const { error: updErr } = await supabase
+          .from('leads')
+          .update({
+            score: opportunity.score,
+            score_version: 2,
+            needed_roles: opportunity.neededRoles.length > 0 ? opportunity.neededRoles : undefined,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', lead.id)
+
+        if (updErr) {
+          errors++
+          if (errors <= 10) console.error(`  ⚠️ ${lead.business_name}: ${updErr.message}`)
+        } else {
+          processed++
+          if (processed % 100 === 0) console.log(`  ... ${processed} ri-scorati`)
+        }
+      } catch (e) {
+        errors++
+      }
+    }
+
+    if (leads.length < pageSize) break
+  }
+
+  console.log(`\n📊 Ri-scoring completato. Processati: ${processed} | Errori: ${errors}`)
+  process.exit(errors > processed ? 1 : 0)
 }
 
 function phoneTail(phone?: string | null): string {
@@ -56,7 +133,7 @@ function verifyOwnership(lead: LeadRow, analysis: any): boolean | null {
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 async function main() {
-  const { all, limit } = parseArgs()
+  const { all, limit, rescoreOnly: rescoreMode } = parseArgs()
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -66,9 +143,15 @@ async function main() {
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey)
+
+  if (rescoreMode) {
+    await rescoreOnly(supabase, limit)
+    return
+  }
+
   const analyzer = new EnhancedWebsiteAnalyzer()
 
-  console.log(`🔁 Ri-analisi lead — modalità: ${all ? 'TUTTI' : 'solo needs_recheck'}${limit ? `, limite ${limit}` : ''}`)
+  console.log(`🔁 Ri-analisi lead — modalità: ${all ? 'TUTTI' : 'needs_recheck + più vecchi'}${limit ? `, limite ${limit}` : ''}`)
 
   let processed = 0
   let published = 0

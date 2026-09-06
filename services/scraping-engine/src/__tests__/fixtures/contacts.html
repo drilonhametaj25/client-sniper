@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<!--
+  Golden fixture: estrazione contatti da fonti affidabili.
+  Telefono da link tel: e JSON-LD, email da mailto:, social da link Instagram
+  e Facebook. Atteso: phoneNumbers contiene '+390212345678', emailAddresses
+  contiene 'info@studiorossi.it', socialLinks contiene entrambi i profili e
+  buildSocialFromLinks trova 2 profili (facebook + instagram).
+-->
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Studio Rossi - Commercialisti a Milano</title>
+  <meta name="description" content="Studio Rossi: consulenza fiscale e societaria per PMI a Milano. Contattaci per un appuntamento.">
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; font-size: 16px; color: #222222; background: #ffffff; }
+    a { display: inline-block; min-height: 44px; padding: 12px 16px; color: #14417b; }
+    @media (max-width: 600px) { body { font-size: 16px; } }
+  </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ProfessionalService",
+    "name": "Studio Rossi",
+    "telephone": "+390212345678",
+    "email": "info@studiorossi.it"
+  }
+  </script>
+</head>
+<body>
+  <main id="main">
+    <h1>Studio Rossi: commercialisti a Milano</h1>
+    <p>Assistiamo piccole e medie imprese in materia fiscale, societaria e del lavoro.</p>
+
+    <section id="contatti">
+      <h2>Contatti</h2>
+      <p>
+        <a href="tel:+390212345678">Chiamaci in studio</a>
+        <a href="mailto:info@studiorossi.it">Scrivici una mail</a>
+      </p>
+      <p>
+        <a href="https://www.instagram.com/studiorossi/">Instagram</a>
+        <a href="https://www.facebook.com/studiorossi">Facebook</a>
+      </p>
+    </section>
+  </main>
+</body>
+</html>

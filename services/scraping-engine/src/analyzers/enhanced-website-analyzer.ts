@@ -1610,7 +1610,11 @@ export class EnhancedWebsiteAnalyzer {
       if (analysisData.security.vulnerabilities?.hasMixedContent) {
         issues.medium.push('Mixed content (HTTP/HTTPS)')
       }
-      if (analysisData.security.ssl?.daysToExpiry < 30) {
+      // daysToExpiry può essere null (analisi passiva senza ispezione TLS):
+      // null < 30 è true in JS e fabbricava "Certificato SSL in scadenza
+      // (null giorni)" su OGNI sito. Segnala solo con un numero reale.
+      if (typeof analysisData.security.ssl?.daysToExpiry === 'number' &&
+          analysisData.security.ssl.daysToExpiry < 30) {
         issues.high.push(`Certificato SSL in scadenza (${analysisData.security.ssl.daysToExpiry} giorni)`)
       }
     }

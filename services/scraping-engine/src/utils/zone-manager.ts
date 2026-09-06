@@ -115,8 +115,12 @@ export class ZoneManager {
 
   /**
    * Completa l'elaborazione di una zona e aggiorna le statistiche
+   *
+   * @param extractionSuspect true quando lo 0 lead è probabilmente causato da una
+   *   rottura globale dell'estrazione (es. selettori Google Maps cambiati) e NON
+   *   da una zona realmente vuota: in quel caso lo score NON viene penalizzato.
    */
-  async completeZoneProcessing(zoneId: string, leadCount: number, success: boolean): Promise<boolean> {
+  async completeZoneProcessing(zoneId: string, leadCount: number, success: boolean, extractionSuspect: boolean = false): Promise<boolean> {
     try {
       const zone = await this.getZoneById(zoneId)
       if (!zone) {
@@ -129,6 +133,9 @@ export class ZoneManager {
         if (leadCount > 0) {
           // Aumenta score se ha trovato lead
           newScore = Math.min(zone.score + (leadCount * 5), 1000)
+        } else if (extractionSuspect) {
+          // Probabile rottura globale dei selettori: non è colpa della zona
+          this.logger.warn(`⚠️ Zona ${zoneId} NON penalizzata: estrazione sospetta (probabile rottura selettori)`)
         } else {
           // Diminuisce leggermente se non trova nulla
           newScore = Math.max(zone.score - 10, 0)

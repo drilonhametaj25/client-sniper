@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<!--
+  Golden fixture: dati strutturati JSON-LD con @graph.
+  Il LocalBusiness e' annidato dentro @graph (formato usato da Yoast/WordPress):
+  l'analyzer deve trovarlo ricorsivamente. Atteso: seo.hasStructuredData true,
+  nessun difetto 'Mancano i dati strutturati', telefono estratto dal JSON-LD.
+-->
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ristorante Da Mario - Cucina romana</title>
+  <meta name="description" content="Ristorante Da Mario a Roma: cucina romana tradizionale, carbonara e cacio e pepe dal 1978.">
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; font-size: 16px; color: #222222; background: #ffffff; }
+    @media (max-width: 600px) { body { font-size: 16px; } }
+  </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "http://127.0.0.1/structured-data.html#website",
+        "name": "Ristorante Da Mario",
+        "url": "http://127.0.0.1/structured-data.html"
+      },
+      {
+        "@type": "LocalBusiness",
+        "@id": "http://127.0.0.1/structured-data.html#business",
+        "name": "Ristorante Da Mario",
+        "telephone": "+390655501234",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Via del Corso 100",
+          "addressLocality": "Roma",
+          "postalCode": "00186",
+          "addressCountry": "IT"
+        }
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <main id="main">
+    <h1>Ristorante Da Mario</h1>
+    <p>Cucina romana autentica nel cuore della capitale: carbonara, amatriciana
+       e cacio e pepe preparate come una volta.</p>
+  </main>
+</body>
+</html>

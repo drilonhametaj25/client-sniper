@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!--
+  Golden fixture: immagini lazy che NON si caricano mai.
+  Le immagini con loading="lazy" o data-src che restano a 0px NON devono
+  essere contate come "rotte" (falso positivo sistematico sui siti moderni).
+  Atteso: images.broken === 0, images.total === 4, images.withoutAlt === 0.
+-->
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Galleria fotografica - Studio Verdi</title>
+  <meta name="description" content="La galleria fotografica dello Studio Verdi con immagini caricate in modalita' lazy.">
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; font-size: 16px; color: #222222; background: #ffffff; }
+    img { max-width: 100%; height: auto; }
+    @media (max-width: 600px) { body { font-size: 16px; } }
+  </style>
+</head>
+<body>
+  <main id="main">
+    <h1>La nostra galleria fotografica</h1>
+    <p>Le immagini qui sotto usano il caricamento differito: quelle fuori
+       viewport o con sorgente mancante non devono risultare "rotte".</p>
+
+    <img src="/missing-image-1.jpg" loading="lazy" width="320" height="200" alt="Fotografia del progetto uno caricata in differita">
+    <img src="/missing-image-2.jpg" loading="lazy" width="320" height="200" alt="Fotografia del progetto due caricata in differita">
+    <img data-src="/missing-image-3.jpg" width="320" height="200" alt="Fotografia del progetto tre gestita da lazy loader JS">
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" width="320" height="200" alt="Fotografia reale caricata immediatamente dal fixture">
+  </main>
+</body>
+</html>

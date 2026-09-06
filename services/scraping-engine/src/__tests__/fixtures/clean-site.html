@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<!--
+  Golden fixture: sito "tecnicamente pulito".
+  Deve produrre ZERO difetti fabbricati: ha title, meta description, H1,
+  viewport, CSS responsive, tracking GA (tag + richiesta di rete), cookie
+  banner visibile, privacy policy, contatti tel/mailto, JSON-LD LocalBusiness,
+  immagini con alt, landmark accessibili, contenuti freschi.
+  I placeholder {{CURRENT_YEAR}} e {{TODAY_ISO}} vengono sostituiti dal server
+  di test per mantenere il fixture stabile nel tempo.
+-->
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Idraulica Rossi Milano - Pronto intervento idraulico</title>
+  <meta name="description" content="Idraulica Rossi a Milano: pronto intervento idraulico 24 ore, riparazioni, caldaie e ristrutturazione bagni. Preventivo gratuito.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="http://127.0.0.1/clean-site.html">
+  <meta property="og:title" content="Idraulica Rossi Milano">
+  <meta property="og:description" content="Pronto intervento idraulico a Milano, 24 ore su 24.">
+  <meta name="twitter:card" content="summary">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 16px; line-height: 1.5; color: #222222; background: #ffffff; }
+    img { max-width: 100%; height: auto; }
+    a, button { display: inline-block; min-width: 48px; min-height: 44px; padding: 12px 16px; font-size: 16px; color: #0a5c36; background: transparent; border: 0; cursor: pointer; }
+    header, nav, main, section, footer { max-width: 100%; padding: 10px; }
+    #cookie-banner { position: fixed; bottom: 0; left: 0; right: 0; background: #eef2ee; color: #222222; padding: 10px 16px; z-index: 100; }
+    #cookie-banner button { background: #0a5c36; color: #ffffff; }
+    @media (max-width: 600px) {
+      nav a { display: block; width: 100%; }
+      body { font-size: 16px; }
+    }
+  </style>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-TEST123456"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-TEST123456');
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "name": "Idraulica Rossi",
+    "telephone": "+390212345678",
+    "email": "info@idraulicarossi.it",
+    "url": "http://127.0.0.1/clean-site.html",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "Via Roma 10",
+      "addressLocality": "Milano",
+      "postalCode": "20121",
+      "addressCountry": "IT"
+    }
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Vai al contenuto</a>
+
+  <header>
+    <nav aria-label="Navigazione principale">
+      <a href="#chi-siamo">Chi siamo</a>
+      <a href="#servizi">Servizi</a>
+      <a href="#contatti">Contatti</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <h1>Idraulica Rossi: pronto intervento idraulico a Milano</h1>
+    <p>Da oltre vent'anni la nostra squadra risolve perdite, allagamenti e guasti alle caldaie
+       in tutta Milano e provincia. Interveniamo entro un'ora, con preventivo chiaro e garanzia
+       scritta su ogni riparazione.</p>
+    <p><time datetime="{{TODAY_ISO}}">Aggiornato il {{TODAY_ISO}}</time></p>
+
+    <section id="servizi">
+      <h2>I nostri servizi</h2>
+      <p>Riparazione perdite, sostituzione caldaie, ristrutturazione bagni, manutenzione
+         programmata per condomini e aziende.</p>
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" width="320" height="200" alt="Tecnico idraulico al lavoro su una caldaia a Milano">
+    </section>
+
+    <section id="casi-studio">
+      <h2>Casi studio</h2>
+      <p>Rifacimento completo dell'impianto idrico di un condominio di 24 unità in zona Isola,
+         completato in dieci giorni lavorativi senza interruzioni del servizio.</p>
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" width="320" height="200" alt="Cantiere del rifacimento impianto idrico in un condominio">
+    </section>
+
+    <section id="recensioni">
+      <h2>Recensioni dei clienti</h2>
+      <p>"Puntuali e onesti: hanno riparato la perdita in un'ora." - Maria B.</p>
+      <p>"Preventivo rispettato al centesimo, bagno bellissimo." - Luca P.</p>
+    </section>
+
+    <section id="faq">
+      <h2>Domande frequenti</h2>
+      <p>Quanto costa un intervento urgente? L'uscita e la diagnosi costano 60 euro, sempre
+         comunicati prima di partire.</p>
+    </section>
+
+    <section id="contatti">
+      <h2>Contatti</h2>
+      <p>Orari: Lun-Ven 8:00 - 19:00, Sab 9:00 - 13:00</p>
+      <p>
+        <a href="tel:+390212345678">Chiamaci ora</a>
+        <a href="mailto:info@idraulicarossi.it">Scrivici una mail</a>
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    <p>
+      <a href="/privacy-policy">Privacy Policy</a>
+      <a href="/termini-e-condizioni">Termini e condizioni</a>
+      <a href="https://www.facebook.com/idraulicarossi">Facebook</a>
+      <a href="https://www.instagram.com/idraulicarossi/">Instagram</a>
+    </p>
+    <p>&copy; {{CURRENT_YEAR}} Idraulica Rossi - Via Roma 10, 20121 Milano</p>
+  </footer>
+
+  <div id="cookie-banner">
+    <span>Utilizziamo i cookie per migliorare la tua esperienza sul sito.</span>
+    <button type="button">Accetta</button>
+  </div>
+</body>
+</html>

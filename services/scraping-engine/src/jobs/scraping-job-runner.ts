@@ -6,6 +6,7 @@
 import { ZoneManager, Zone } from '../utils/zone-manager'
 import { GoogleMapsScraper } from '../scrapers/google-maps-improved'
 import { Logger } from '../utils/logger'
+import { recordZone, recordSave, increment, getSummary, reset as resetRunMetrics } from '../utils/run-metrics'
 import { BusinessData } from '../scrapers/google-maps'
 import { BusinessLead } from '../types/LeadAnalysis'
 import { LeadGenerator } from '../lead-generator'
@@ -62,7 +63,10 @@ export class ScrapingJobRunner {
   async runDistributedScraping(maxZones: number = 10): Promise<void> {
     try {
       this.logger.info(`🚀 Avvio scraping distribuito - Max ${maxZones} zone`)
-      
+
+      // Azzera le metriche del run (in modalità cron lo stesso processo esegue più cicli)
+      resetRunMetrics()
+
       // Reset eventuali zone bloccate
       await this.zoneManager.resetStuckZones()
       
@@ -156,13 +160,20 @@ export class ScrapingJobRunner {
       const businessData = await this.runScraper(zone)
       
       if (businessData.length === 0) {
-        this.logger.info(`⚠️ Nessun business trovato per ${zone.location_name}`)
+        // Se anche il totale run-level è 0, la causa è probabilmente una rottura
+        // globale dell'estrazione (selettori Google Maps cambiati) e non una zona
+        // realmente vuota: in quel caso NON penalizzare lo score della zona.
+        const extractionSuspect = getSummary().businessesFound === 0
+        recordZone(zone.location_name, 0, 0)
+        this.logger.info(`⚠️ Nessun business trovato per ${zone.location_name}${extractionSuspect ? ' (estrazione sospetta: 0 business in tutto il run)' : ''}`)
         job.leadsFound = 0
         job.status = 'completed'
         job.endTime = new Date()
-        await this.zoneManager.completeZoneProcessing(zone.id, 0, true)
+        await this.zoneManager.completeZoneProcessing(zone.id, 0, true, extractionSuspect)
         return
       }
+
+      increment('businessesWithWebsite', businessData.filter(b => !!b.website).length)
 
       this.logger.info(`🔍 Analisi di ${businessData.length} business trovati per ${zone.location_name}`)
 
@@ -189,6 +200,7 @@ export class ScrapingJobRunner {
             target_category: zone.category
           })
         } catch (error) {
+          increment('analysisFailures')
           this.logger.debug(`⚠️ Errore analisi ${business.name}:`, error)
           // Usa analisi base per business con errori
           const fallbackAnalysis = this.createFallbackAnalysis(business.website || '', 10)
@@ -210,14 +222,16 @@ export class ScrapingJobRunner {
         website: analyzedBusinesses[0]?.website
       })
       
-      // IMPORTANTE: Il LeadGenerator.generateLeads() si aspetta BusinessData[], 
+      // IMPORTANTE: Il LeadGenerator.generateLeads() si aspetta BusinessData[],
       // ma noi abbiamo analyzedBusinesses con websiteAnalysis già popolata.
       // Chiamiamo direttamente saveLeads() invece di generateLeads()
-      await this.leadGenerator!.saveLeads(analyzedBusinesses)
-      this.logger.debug(`✅ Salvati ${analyzedBusinesses.length} lead nel database`)
-      
+      const saveResult = await this.leadGenerator!.saveLeads(analyzedBusinesses)
+      recordSave(saveResult.saved, saveResult.errors, saveResult.quarantined)
+      recordZone(zone.location_name, businessData.length, saveResult.saved)
+      this.logger.debug(`✅ Salvati ${saveResult.saved}/${analyzedBusinesses.length} lead nel database (${saveResult.errors} errori, ${saveResult.quarantined} in quarantena)`)
+
       const savedLeads = analyzedBusinesses // Per compatibilità con il resto del codice
-      
+
       job.leadsFound = savedLeads.length
       job.status = 'completed'
       job.endTime = new Date()
@@ -232,6 +246,7 @@ export class ScrapingJobRunner {
       job.error = error instanceof Error ? error.message : 'Errore sconosciuto'
       job.endTime = new Date()
 
+      increment('zonesFailed')
       this.logger.error(`❌ Errore scraping zona ${zone.location_name}:`, error)
 
       // Completa l'elaborazione della zona con errore

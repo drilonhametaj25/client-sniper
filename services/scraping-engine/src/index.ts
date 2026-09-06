@@ -9,6 +9,7 @@ import cron from 'node-cron'
 import { Orchestrator } from './orchestrator'
 import { Logger } from './utils/logger'
 import { DatabaseMigrator } from './utils/database-migrator'
+import { getSummary } from './utils/run-metrics'
 
 // Carica variabili d'ambiente
 dotenv.config({ path: resolve(__dirname, '../.env') })
@@ -16,6 +17,57 @@ dotenv.config() // Carica anche .env nella directory corrente
 
 const logger = new Logger('Main')
 const orchestrator = new Orchestrator()
+
+/**
+ * Logga il riepilogo metriche di fine run (linea strutturata nel JSONL + tabella
+ * leggibile su stdout) e verifica la condizione di allarme rottura selettori.
+ *
+ * Allarme: zonesProcessed >= 3 e businessesFound === 0 -> quasi certamente i
+ * selettori offuscati di Google Maps sono cambiati e l'estrazione ritorna vuoto
+ * ovunque. In quel caso process.exitCode = 1 così la GitHub Action diventa rossa.
+ *
+ * @returns true se l'allarme è scattato
+ */
+function reportRunSummary(): boolean {
+  const summary = getSummary()
+
+  // Linea strutturata finale (finisce anche nel file logs/run-*.jsonl)
+  logger.info('📊 RUN_SUMMARY', summary)
+
+  // Tabella leggibile per i log di GitHub Actions
+  const rows: Array<[string, number]> = [
+    ['Zone processate', summary.zonesProcessed],
+    ['Zone fallite', summary.zonesFailed],
+    ['Business trovati', summary.businessesFound],
+    ['Business con sito', summary.businessesWithWebsite],
+    ['Lead salvati', summary.leadsSaved],
+    ['Lead in quarantena', summary.leadsQuarantined],
+    ['Errori salvataggio', summary.saveErrors],
+    ['Analisi fallite', summary.analysisFailures]
+  ]
+  const labelWidth = Math.max(...rows.map(([label]) => label.length))
+  console.log('')
+  console.log('══════════════ RIEPILOGO RUN ══════════════')
+  for (const [label, value] of rows) {
+    console.log(`  ${label.padEnd(labelWidth)} : ${value}`)
+  }
+  if (summary.zones.length > 0) {
+    console.log('  ─────────── Dettaglio zone ───────────')
+    for (const z of summary.zones) {
+      console.log(`  ${z.zone}: trovati=${z.found}, salvati=${z.saved}`)
+    }
+  }
+  console.log('═══════════════════════════════════════════')
+  console.log('')
+
+  if (summary.zonesProcessed >= 3 && summary.businessesFound === 0) {
+    logger.error(`🚨 ALLARME: 0 business estratti su ${summary.zonesProcessed} zone — probabile rottura dei selettori Google Maps`)
+    process.exitCode = 1
+    return true
+  }
+
+  return false
+}
 
 async function main() {
   logger.info('🚀 Avvio ClientSniper Scraping Engine (Sistema Distribuito)')
@@ -58,6 +110,11 @@ async function main() {
     logger.info('📊 Esecuzione scraping distribuito manuale...')
     try {
       await orchestrator.runDistributedScraping()
+      const alarmTriggered = reportRunSummary()
+      if (alarmTriggered) {
+        // Exit code 1: la GitHub Action diventa rossa invece di "successo" silenzioso
+        process.exit(1)
+      }
       logger.info('✅ Scraping manuale completato')
       process.exit(0)
     } catch (error) {
@@ -71,6 +128,7 @@ async function main() {
     logger.info('⏰ Avvio ciclo scraping distribuito programmato')
     try {
       await orchestrator.runDistributedScraping()
+      reportRunSummary() // In modalità cron logga solo il riepilogo/allarme, senza terminare
       logger.info('✅ Ciclo scraping distribuito completato')
     } catch (error) {
       logger.error('❌ Errore durante il ciclo scraping:', error)

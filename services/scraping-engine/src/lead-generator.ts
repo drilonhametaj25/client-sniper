@@ -13,7 +13,10 @@ import { BusinessLead } from './types/LeadAnalysis';
 import { EnhancedWebsiteAnalyzer, EnhancedWebsiteAnalysis } from './analyzers/enhanced-website-analyzer';
 import { decideLeadPublication } from './utils/confidence';
 import type { LeadConfidenceDecision } from './utils/confidence';
+import { Logger } from './utils/logger';
 import { createHash } from 'crypto';
+import { computeUniqueKey, computeContentHash } from './utils/lead-identity';
+import { computeOpportunityScore } from './scoring/opportunity-score';
 
 // Interfaccia per business con analisi moderna
 export interface AnalyzedBusiness extends BusinessData {
@@ -35,10 +38,12 @@ export interface LegacyAnalysis {
 export class LeadGenerator {
   private analyzer: EnhancedWebsiteAnalyzer;
   private supabase: SupabaseClient;
+  private logger: Logger;
 
   constructor(supabaseClient: SupabaseClient) {
     this.analyzer = new EnhancedWebsiteAnalyzer();
     this.supabase = supabaseClient;
+    this.logger = new Logger('LeadGenerator');
   }
 
   /**
@@ -199,65 +204,160 @@ export class LeadGenerator {
   }
 
   /**
-   * Salva i lead nel database
+   * Salva i lead nel database con UPSERT su unique_key.
+   * Semantica di merge (freschezza dati):
+   * - riga nuova -> insert
+   * - riga esistente con content_hash IDENTICO -> aggiorna solo
+   *   last_seen_at/last_verified_at (nessun cambiamento reale)
+   * - riga esistente con hash diverso -> upsert completo (analisi/score
+   *   aggiornati); id e created_at non vengono mai toccati
+   * Prima: INSERT cieco -> il vincolo unique rigettava ogni re-scrape e i
+   * lead non venivano MAI aggiornati (freschezza zero).
+   *
+   * Ritorna i conteggi effettivi: {saved, errors, quarantined} così il chiamante
+   * (scraping-job-runner) può registrare le metriche reali del run.
    */
-  async saveLeads(businesses: AnalyzedBusiness[]): Promise<void> {
+  async saveLeads(businesses: AnalyzedBusiness[]): Promise<{ saved: number; errors: number; quarantined: number }> {
     console.log(`Tentativo di salvare ${businesses.length} lead nel database`);
-    
-    for (const business of businesses) {
+
+    let saved = 0;
+    let errors = 0;
+    let quarantined = 0;
+    let unchanged = 0;
+
+    // Serializza tutto prima, così possiamo confrontare gli hash in una query
+    const payloads = businesses.map(business => {
       try {
-        const leadData = this.serializeForDatabase(business);
-        
-        console.log(`Salvando lead: ${business.name}`, {
-          website: business.website,
-          score: leadData.score,
-          hasWebsiteAnalysis: !!business.websiteAnalysis,
-          hasLegacyAnalysis: !!business.analysis
-        });
+        return { business, leadData: this.serializeForDatabase(business) };
+      } catch (error) {
+        errors++;
+        console.error(`Errore nella serializzazione del lead ${business.name}:`, error);
+        return null;
+      }
+    }).filter((p): p is { business: AnalyzedBusiness; leadData: any } => p !== null);
+
+    // Stato attuale delle righe con le stesse chiavi
+    const keys = payloads.map(p => p.leadData.unique_key);
+    const existingByKey = new Map<string, { id: string; content_hash: string | null }>();
+    if (keys.length > 0) {
+      const { data: existingRows, error: readError } = await this.supabase
+        .from('leads')
+        .select('id, unique_key, content_hash')
+        .in('unique_key', keys);
+      if (readError) {
+        console.error('Errore lettura lead esistenti (procedo con upsert):', readError);
+      } else {
+        for (const row of existingRows || []) {
+          existingByKey.set(row.unique_key, { id: row.id, content_hash: row.content_hash });
+        }
+      }
+    }
+
+    const nowIso = new Date().toISOString();
+
+    for (const { business, leadData } of payloads) {
+      try {
+        const existing = existingByKey.get(leadData.unique_key);
+
+        if (existing && existing.content_hash === leadData.content_hash) {
+          // Nessun cambiamento osservato: bump di freschezza e basta
+          const { error } = await this.supabase
+            .from('leads')
+            .update({ last_seen_at: nowIso, last_verified_at: nowIso })
+            .eq('id', existing.id);
+          if (error) {
+            errors++;
+            console.error(`Errore bump freschezza ${business.name}:`, error);
+          } else {
+            unchanged++;
+          }
+          continue;
+        }
 
         const { error } = await this.supabase
           .from('leads')
-          .insert([leadData]);
+          .upsert([{ ...leadData, last_seen_at: nowIso }], { onConflict: 'unique_key' });
 
         if (error) {
+          errors++;
           console.error(`Errore nel salvataggio del lead ${business.name}:`, error);
         } else {
-          console.log(`Lead salvato con successo: ${business.name}`);
+          saved++;
+          if (leadData.status === 'quarantine') quarantined++;
         }
       } catch (error) {
+        errors++;
         console.error(`Errore nel processamento del lead ${business.name}:`, error);
       }
     }
+
+    if (unchanged > 0) {
+      console.log(`♻️ ${unchanged} lead invariati: aggiornata solo la freschezza (last_seen_at)`);
+    }
+
+    // Se più del 20% degli insert è fallito, segnala a livello error:
+    // probabile problema sistemico (schema, permessi, rete) e non lead singoli.
+    if (businesses.length > 0 && errors / businesses.length > 0.2) {
+      this.logger.error(`❌ Salvataggio lead degradato: ${errors}/${businesses.length} scritture fallite (>20%)`);
+    }
+
+    return { saved: saved + unchanged, errors, quarantined };
   }
 
   /**
    * Serializza un business per il database
    */
   private serializeForDatabase(business: AnalyzedBusiness): any {
-    const score = this.calculateScore(business);
-    
-    // Genera unique_key per evitare duplicati
-    const uniqueKey = this.generateUniqueKey(business);
-    
-    // Genera content_hash per rilevare cambiamenti
-    const contentHash = this.generateContentHash(business);
-    
-    console.log(`Generato unique_key per ${business.name}: "${uniqueKey}"`);
-    console.log(`Generato content_hash per ${business.name}: "${contentHash}"`);
-    
-    if (!uniqueKey) {
-      console.error(`ERRORE: unique_key vuoto per business:`, {
-        name: business.name,
-        website: business.website,
-        source: business.source,
-        address: business.address
-      });
-    }
-    
-    // Decisione di pubblicazione: combina raggiungibilità (Fase 1), proprietà del
-    // sito e affidabilità dei contatti (Fase 3). I lead a bassa confidenza vanno in
-    // quarantena e NON vengono mostrati agli utenti, finché non sono ri-verificati.
+    const analysis = business.websiteAnalysis || null;
+
+    // OPPORTUNITY SCORE v2: 0-100, ALTO = migliore opportunità.
+    // (Il vecchio score era un "health score" del sito con convenzione opposta.)
+    const opportunity = computeOpportunityScore(analysis, {
+      hasWebsite: !!business.website,
+      phone: business.phone,
+      email: (business as any).email,
+      rating: business.rating,
+      reviewsCount: business.reviews_count
+    }, {
+      confirmedAbsence: !business.website
+        || analysis?.reachabilityVerdict === 'offline_confirmed'
+        || analysis?.websiteStatus === 'parked'
+    });
+
+    // Identità deterministica (lead-identity): dominio+città -> telefono -> nome
+    const uniqueKey = computeUniqueKey({
+      source: business.source || 'google_maps',
+      name: business.name,
+      website: business.website,
+      phone: business.phone,
+      city: business.city
+    });
+
+    // Hash dei soli fatti osservati (NIENTE timestamp): re-scrape identico =
+    // stesso hash = solo bump di freschezza
+    const confirmedIssues = [
+      ...(analysis?.issues?.critical || []),
+      ...(analysis?.issues?.high || [])
+    ];
+    const contentHash = computeContentHash({
+      website: business.website,
+      phone: business.phone,
+      address: business.address,
+      category: business.category,
+      hasWebsite: !!business.website,
+      confirmedIssues,
+      technicalHealth: analysis?.technicalHealth ?? null
+    });
+
+    // Decisione di pubblicazione: combina raggiungibilità, proprietà del sito,
+    // affidabilità dei contatti E affidabilità dell'analisi. I lead a bassa
+    // confidenza vanno in quarantena e NON vengono mostrati agli utenti.
     const confidence = this.computeLeadConfidence(business);
+
+    // needed_roles: dal nuovo scoring; fallback al vecchio estrattore se vuoto
+    const neededRoles = opportunity.neededRoles.length > 0
+      ? opportunity.neededRoles
+      : this.getSuggestedRoles(business);
 
     return {
       unique_key: uniqueKey,
@@ -268,7 +368,8 @@ export class LeadGenerator {
       address: business.address || null,
       city: business.city || null,
       category: business.category || null,
-      score,
+      score: opportunity.score,
+      score_version: 2,
       origin: 'scraping',
       source: business.source || 'google_maps',
       // Confidenza e stato di pubblicazione
@@ -276,19 +377,19 @@ export class LeadGenerator {
       confidence_score: confidence?.score ?? 100,
       needs_recheck: confidence?.needsRecheck ?? false,
       quarantine_reasons: confidence?.reasons || [],
-      reachability_verdict: business.websiteAnalysis?.reachabilityVerdict || null,
+      reachability_verdict: analysis?.reachabilityVerdict || null,
       last_verified_at: new Date().toISOString(),
       // Struttura moderna completa
-      website_analysis: business.websiteAnalysis,
+      website_analysis: analysis,
       // Struttura legacy per compatibilità
       analysis: business.analysis,
       // Campi moderni estratti
       issues: this.extractIssues(business),
       opportunities: this.extractOpportunities(business),
-      needed_roles: this.getSuggestedRoles(business),
-      // Dati social se disponibili
-      social_presence: business.websiteAnalysis?.social || null,
-      created_at: new Date().toISOString()
+      needed_roles: neededRoles
+      // NB: niente created_at (default DB) né id: l'upsert non deve toccarli.
+      // social_presence viene dal nuovo campo social (link dal sito)
+      , social_presence: analysis?.social || null
     };
   }
 
@@ -580,51 +681,6 @@ export class LeadGenerator {
     return Array.from(new Set(roles));
   }
 
-  /**
-   * Genera un hash del contenuto per rilevare cambiamenti
-   */
-  private generateContentHash(business: AnalyzedBusiness): string {
-    const contentData = {
-      name: business.name || '',
-      website: business.website || '',
-      phone: business.phone || '',
-      address: business.address || '',
-      category: business.category || '',
-      // Include anche alcuni dati dell'analisi per rilevare cambiamenti
-      hasWebsite: business.websiteAnalysis ? true : false,
-      score: this.calculateScore(business),
-      // Include timestamp per garantire unicità
-      timestamp: Date.now()
-    };
-    
-    const dataString = JSON.stringify(contentData);
-    return createHash('sha256').update(dataString).digest('hex');
-  }
-
-  /**
-   * Genera una chiave univoca per il business per evitare duplicati
-   */
-  private generateUniqueKey(business: AnalyzedBusiness): string {
-    const source = business.source || 'google_maps';
-    const name = business.name || 'unknown';
-    const website = business.website || '';
-    const address = business.address || '';
-    
-    // Se ha un sito web, usa quello come identificatore principale
-    if (website) {
-      try {
-        const domain = new URL(website).hostname.replace('www.', '');
-        return `${source}_${domain}_${name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`;
-      } catch {
-        // Se l'URL non è valido, usa il sito web grezzo
-        return `${source}_${website.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}_${name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`;
-      }
-    }
-    
-    // Altrimenti usa nome + indirizzo + fonte
-    const cleanName = name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-    const cleanAddress = address.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase().substring(0, 50);
-    
-    return `${source}_${cleanName}_${cleanAddress}`;
-  }
+  // NB: unique_key e content_hash ora vivono in utils/lead-identity.ts
+  // (formule deterministiche condivise con gli script di dedup/backfill).
 }

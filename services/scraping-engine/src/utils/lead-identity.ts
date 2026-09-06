@@ -16,8 +16,8 @@
 import { createHash } from 'crypto'
 
 export interface LeadIdentityInput {
-  source?: string
-  name?: string
+  source?: string | null
+  name?: string | null
   website?: string | null
   phone?: string | null
   address?: string | null

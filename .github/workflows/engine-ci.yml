@@ -1,0 +1,50 @@
+# CI del motore di analisi (services/scraping-engine)
+# Esegue type-check e la golden-fixture test suite (Vitest + Playwright) su
+# ogni push/PR che tocca il motore: protegge l'engine dalle regressioni,
+# in particolare dalla ricomparsa di difetti fabbricati sui siti puliti.
+
+name: Engine CI
+
+on:
+  pull_request:
+    paths:
+      - 'services/scraping-engine/**'
+      - '.github/workflows/engine-ci.yml'
+  push:
+    paths:
+      - 'services/scraping-engine/**'
+      - '.github/workflows/engine-ci.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: services/scraping-engine
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm install
+        working-directory: .
+
+      - name: Install scraping engine dependencies
+        run: npm install
+
+      - name: Install Playwright chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Run golden-fixture test suite
+        run: npm test
