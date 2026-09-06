@@ -983,6 +983,8 @@ export class GoogleMapsScraper {
       priority,
       opportunities,
       suggestedRoles: suggestedRoles as any, // Cast per retrocompatibilità
+      rating: business.rating || undefined,
+      reviewsCount: business.reviewsCount || undefined,
       scrapedAt: new Date(),
       lastAnalyzed: websiteAnalysis ? new Date() : undefined
     }

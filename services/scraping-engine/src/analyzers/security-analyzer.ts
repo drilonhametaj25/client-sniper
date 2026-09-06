@@ -1,9 +1,10 @@
 /**
  * Security Analyzer per Client Sniper
  * Analizza la sicurezza di un sito web: headers, SSL, vulnerabilità comuni
+ * NB: analisi passiva su HTML/headers già scaricati — nessuna richiesta attiva
+ * verso il sito target (il probing di file sensibili è stato rimosso: dava
+ * falsi "esposti" su ogni SPA con catch-all routing ed era intrusivo).
  */
-
-import axios from 'axios'
 
 export interface SecurityHeadersAnalysis {
   hasCSP: boolean                    // Content-Security-Policy
@@ -67,25 +68,6 @@ const SECURITY_HEADERS = {
   'permissions-policy': { weight: 10, name: 'Permissions-Policy' }
 } as const
 
-// Sensitive files that should not be exposed
-const SENSITIVE_PATHS = [
-  '/.git/config',
-  '/.env',
-  '/.htaccess',
-  '/wp-config.php.bak',
-  '/wp-config.php~',
-  '/phpinfo.php',
-  '/web.config',
-  '/.svn/entries',
-  '/server-status',
-  '/server-info',
-  '/.DS_Store',
-  '/Thumbs.db',
-  '/backup.sql',
-  '/database.sql',
-  '/.idea/workspace.xml'
-]
-
 // Known vulnerable jQuery versions
 const VULNERABLE_JQUERY_VERSIONS = [
   { version: '1.', severity: 'high', description: 'jQuery 1.x has multiple XSS vulnerabilities' },
@@ -106,14 +88,19 @@ export class SecurityAnalyzer {
 
   /**
    * Analizza la sicurezza completa di un sito
+   * @param hasSSLProbe risultato del sondaggio HTTPS reale (probeHttps del
+   *        WebsiteStatusChecker). Se fornito, ha la precedenza sulla stringa
+   *        URL: un sito raggiunto su http:// ma con https funzionante NON è
+   *        più "grade F / gravi problemi di sicurezza".
    */
   async analyzeSecurityFromHtml(
     url: string,
     html: string,
-    headers: Record<string, string>
+    headers: Record<string, string>,
+    hasSSLProbe?: boolean
   ): Promise<SecurityAnalysis> {
     const securityHeaders = this.analyzeSecurityHeaders(headers)
-    const ssl = this.analyzeSSL(url, headers)
+    const ssl = this.analyzeSSL(url, headers, hasSSLProbe)
     const vulnerabilities = await this.analyzeVulnerabilities(url, html, headers)
 
     // Calculate overall score
@@ -188,8 +175,9 @@ export class SecurityAnalyzer {
   /**
    * Analizza SSL/HTTPS
    */
-  analyzeSSL(url: string, headers: Record<string, string>): SSLAnalysis {
-    const hasSSL = url.startsWith('https://')
+  analyzeSSL(url: string, headers: Record<string, string>, hasSSLProbe?: boolean): SSLAnalysis {
+    // Il sondaggio reale dell'endpoint https vince sulla stringa URL
+    const hasSSL = hasSSLProbe ?? url.startsWith('https://')
 
     // Basic SSL analysis from URL and headers
     // Note: Full SSL analysis would require TLS library which is complex to implement
@@ -255,14 +243,14 @@ export class SecurityAnalyzer {
     const xPoweredBy = headers['x-powered-by'] || headers['X-Powered-By'] || null
     const hasXPoweredBy = !!xPoweredBy
 
-    // Check sensitive files (async)
-    const { hasExposed, exposedFiles } = await this.checkSensitiveFiles(url)
-
+    // Probing file sensibili RIMOSSO: HTTP 200 su /.git o /.env non prova nulla
+    // (le SPA con catch-all routing rispondono 200 a tutto) e sondare server di
+    // terzi è invasivo. Non affermiamo mai "file sensibili esposti".
     return {
       hasOutdatedJquery,
       jqueryVersion,
-      hasExposedSensitiveFiles: hasExposed,
-      exposedFiles,
+      hasExposedSensitiveFiles: false,
+      exposedFiles: [],
       hasMixedContent,
       hasServerVersionExposed,
       serverVersion: serverHeader,
@@ -301,46 +289,14 @@ export class SecurityAnalyzer {
   private checkMixedContent(url: string, html: string): boolean {
     if (!url.startsWith('https://')) return false
 
-    // Check for http:// in src and href attributes
+    // Solo RISORSE caricate via http:// (src / url()): un semplice <a href>
+    // verso un sito esterno http non è mixed content e non va segnalato.
     const httpPatterns = [
       /src=["']http:\/\//i,
-      /href=["']http:\/\/(?!.*\.css)/i, // Exclude external links
       /url\(["']?http:\/\//i
     ]
 
     return httpPatterns.some(pattern => pattern.test(html))
-  }
-
-  /**
-   * Check for exposed sensitive files
-   */
-  private async checkSensitiveFiles(baseUrl: string): Promise<{ hasExposed: boolean; exposedFiles: string[] }> {
-    const exposedFiles: string[] = []
-
-    // Only check a few critical files to avoid too many requests
-    const criticalPaths = SENSITIVE_PATHS.slice(0, 5)
-
-    for (const path of criticalPaths) {
-      try {
-        const testUrl = new URL(path, baseUrl).toString()
-        const response = await axios.head(testUrl, {
-          timeout: 3000,
-          validateStatus: () => true,
-          maxRedirects: 0
-        })
-
-        if (response.status === 200) {
-          exposedFiles.push(path)
-        }
-      } catch {
-        // File doesn't exist or error, which is good
-      }
-    }
-
-    return {
-      hasExposed: exposedFiles.length > 0,
-      exposedFiles
-    }
   }
 
   /**

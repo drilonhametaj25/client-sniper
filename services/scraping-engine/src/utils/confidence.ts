@@ -93,6 +93,7 @@ const CONFIDENCE_PENALTIES = {
   noContactData: 20,                // nessun contatto utile (telefono/email)
   contactDataSuspected: 15,         // contatti estratti con bassa affidabilità
   manyUnverifiableSignals: 15,      // troppi segnali tecnici non verificabili
+  lowAnalysisReliability: 45,       // l'analisi stessa è fallita in gran parte: i "difetti" potrebbero essere artefatti
 } as const
 
 /**
@@ -107,6 +108,10 @@ export function decideLeadPublication(input: {
   hasReliableContact?: boolean
   hasSuspectedContact?: boolean
   unverifiableSignalsCount?: number
+  /** overallConfidence (0-100) dell'analisi browser (AnalysisReliability) */
+  analysisReliability?: number
+  /** metodo con cui è riuscita l'analisi browser */
+  analysisMethod?: 'full' | 'partial' | 'fallback' | 'unavailable'
 }): LeadConfidenceDecision {
   let score = 100
   const reasons: string[] = []
@@ -148,6 +153,22 @@ export function decideLeadPublication(input: {
   if ((input.unverifiableSignalsCount ?? 0) >= 4) {
     score -= CONFIDENCE_PENALTIES.manyUnverifiableSignals
     reasons.push('Diversi segnali tecnici non verificabili in modo affidabile')
+  }
+
+  // 5) Affidabilità dell'analisi browser: se gran parte dei moduli è fallita,
+  // i "difetti" trovati potrebbero essere artefatti dell'analisi stessa.
+  // Prima questa informazione veniva calcolata (AnalysisReliability) ma MAI
+  // letta prima di pubblicare: era la fonte principale dei lead con difetti finti.
+  const unreliableMethod =
+    input.analysisMethod === 'fallback' || input.analysisMethod === 'unavailable'
+  const lowReliability =
+    typeof input.analysisReliability === 'number' && input.analysisReliability < 75
+  if (unreliableMethod || lowReliability) {
+    score -= CONFIDENCE_PENALTIES.lowAnalysisReliability
+    reasons.push(
+      `Analisi tecnica inaffidabile (metodo: ${input.analysisMethod ?? 'n/d'}, confidenza: ${input.analysisReliability ?? 'n/d'}%)`
+    )
+    needsRecheck = true
   }
 
   score = Math.max(0, Math.min(100, score))

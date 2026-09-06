@@ -5,6 +5,7 @@
 
 import { Page } from 'playwright'
 import axios from 'axios'
+import * as cheerio from 'cheerio'
 
 export interface BlogAnalysis {
   exists: boolean
@@ -183,15 +184,20 @@ export class ContentQualityAnalyzer {
       }
     }
 
-    // 3. If blog found, analyze it
+    // 3. If blog found, analyze it via axios + cheerio.
+    // MAI page.goto qui: navigare la pagina live distruggeva il contesto degli
+    // altri moduli di analisi in corso.
     if (blogUrl) {
       try {
-        await page.goto(blogUrl, { waitUntil: 'domcontentloaded', timeout: 10000 })
-        exists = true
+        const blogResponse = await axios.get(blogUrl, {
+          timeout: 10000,
+          validateStatus: () => true,
+          maxRedirects: 3
+        })
 
-        // Extract blog posts info
-        const blogData = await page.evaluate(() => {
-          const posts: { title: string; date: string | null; url: string }[] = []
+        if (blogResponse.status === 200 && typeof blogResponse.data === 'string') {
+          exists = true
+          const $ = cheerio.load(blogResponse.data)
 
           // Common blog post selectors
           const articleSelectors = [
@@ -205,47 +211,36 @@ export class ContentQualityAnalyzer {
             '.news-item'
           ]
 
+          const posts: { title: string; date: string | null; url: string }[] = []
           for (const selector of articleSelectors) {
-            const articles = document.querySelectorAll(selector)
+            const articles = $(selector)
             if (articles.length > 0) {
-              articles.forEach((article, index) => {
-                if (index >= 10) return // Limit to 10 posts
-
-                const titleEl = article.querySelector('h1, h2, h3, .title, .entry-title')
-                const linkEl = article.querySelector('a')
-                const dateEl = article.querySelector('time, .date, .post-date, [datetime]')
-
-                posts.push({
-                  title: titleEl?.textContent?.trim() || '',
-                  date: dateEl?.getAttribute('datetime') || dateEl?.textContent?.trim() || null,
-                  url: linkEl?.getAttribute('href') || ''
-                })
+              postCount = articles.length
+              articles.slice(0, 10).each((_i, el) => {
+                const $el = $(el)
+                const title = $el.find('h1, h2, h3, .title, .entry-title').first().text().trim()
+                const dateEl = $el.find('time, .date, .post-date, [datetime]').first()
+                const date = dateEl.attr('datetime') || dateEl.text().trim() || null
+                const url = $el.find('a').first().attr('href') || ''
+                posts.push({ title, date, url })
               })
               break
             }
           }
 
-          return {
-            posts,
-            postCount: document.querySelectorAll(articleSelectors.join(', ')).length
+          // Parse dates and create previews
+          for (const post of posts) {
+            let parsedDate: Date | null = null
+            if (post.date) {
+              parsedDate = this.parseDate(post.date)
+            }
+            recentPosts.push({
+              title: post.title,
+              date: parsedDate,
+              url: post.url ? new URL(post.url, blogUrl).toString() : ''
+            })
           }
-        })
-
-        postCount = blogData.postCount
-
-        // Parse dates and create previews
-        for (const post of blogData.posts) {
-          let parsedDate: Date | null = null
-          if (post.date) {
-            parsedDate = this.parseDate(post.date)
-          }
-          recentPosts.push({
-            title: post.title,
-            date: parsedDate,
-            url: post.url ? new URL(post.url, blogUrl).toString() : ''
-          })
         }
-
       } catch {
         // Blog page couldn't be loaded
       }

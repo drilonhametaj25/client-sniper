@@ -148,6 +148,10 @@ export interface BusinessLead {
   // Ruoli professionali che potrebbero aiutare
   suggestedRoles: ('web-developer' | 'seo-specialist' | 'designer' | 'marketing-specialist' | 'legal-consultant')[]
   
+  // Dati Google Business Profile (segnali di solidità del business)
+  rating?: number
+  reviewsCount?: number
+
   // Metadati
   scrapedAt: Date
   lastAnalyzed?: Date

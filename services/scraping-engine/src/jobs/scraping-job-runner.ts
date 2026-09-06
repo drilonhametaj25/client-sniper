@@ -5,8 +5,6 @@
 
 import { ZoneManager, Zone } from '../utils/zone-manager'
 import { GoogleMapsScraper } from '../scrapers/google-maps-improved'
-import { YelpScraper } from '../scrapers/yelp'
-import { PagineGialleScraper } from '../scrapers/pagine-gialle'
 import { Logger } from '../utils/logger'
 import { BusinessData } from '../scrapers/google-maps'
 import { BusinessLead } from '../types/LeadAnalysis'
@@ -28,14 +26,15 @@ export class ScrapingJobRunner {
   private logger: Logger
   private zoneManager: ZoneManager
   private leadGenerator: LeadGenerator | null = null
-  private analyzer: EnhancedWebsiteAnalyzer
   private runningJobs: Map<string, ScrapingJob> = new Map()
-  private maxConcurrentJobs: number = 3
+  // 2 zone in parallelo: i runner GitHub Actions hanno 2 core; con 3+ zone i
+  // browser si contendevano la CPU e i timeout venivano registrati come
+  // "sito offline" (falsi lead "senza sito")
+  private maxConcurrentJobs: number = 2
 
   constructor() {
     this.logger = new Logger('ScrapingJobRunner')
     this.zoneManager = new ZoneManager()
-    this.analyzer = new EnhancedWebsiteAnalyzer()
   }
 
   /**
@@ -169,13 +168,18 @@ export class ScrapingJobRunner {
 
       // Inizializza il LeadGenerator se necessario
       await this.initializeLeadGenerator()
-      
+
+      // Un analyzer PER ZONA: prima un'unica istanza era condivisa tra le zone
+      // concorrenti e il cleanup() di una zona chiudeva il browser che un'altra
+      // stava ancora usando (oltre a condividere stato mutabile interno).
+      const analyzer = new EnhancedWebsiteAnalyzer()
+
       // Analizza i business e genera i lead
       const analyzedBusinesses = []
       for (const business of businessData) {
         try {
-          const websiteAnalysis = business.website ? 
-            await this.analyzer.analyzeWebsite(business.website) : 
+          const websiteAnalysis = business.website ?
+            await analyzer.analyzeWebsite(business.website) :
             null
 
           analyzedBusinesses.push({
@@ -266,14 +270,17 @@ export class ScrapingJobRunner {
     switch (zone.source) {
       case 'google_maps':
         const googleScraper = new GoogleMapsScraper()
-        // Converti il target nel formato richiesto dal nuovo scraper
+        // Converti il target nel formato richiesto dal nuovo scraper.
+        // enableSiteAnalysis: false -> l'analisi del sito la fa SOLO questo
+        // job runner (prima ogni sito veniva analizzato DUE volte: una nel
+        // scraper — e poi buttata — e una qui: doppio tempo, doppio ban risk)
         const googleOptions = {
           query: zone.category,
           location: zone.location_name,
           category: zone.category,
           maxResults: 20,
           delayBetweenRequests: 1500,
-          enableSiteAnalysis: true
+          enableSiteAnalysis: false
         }
         const googleResult = await googleScraper.scrape(googleOptions)
 
@@ -285,31 +292,14 @@ export class ScrapingJobRunner {
           address: lead.contacts.address,
           city: lead.city,
           category: lead.category,
-          rating: undefined, // Non disponibile nel nuovo formato
-          reviews_count: undefined,
+          rating: lead.rating,
+          reviews_count: lead.reviewsCount,
           source: 'google_maps'
         }))
 
-      case 'yelp':
-        const yelpScraper = new YelpScraper()
-        const yelpTarget = {
-          query: zone.category,
-          location: zone.location_name,
-          category: zone.category,
-          maxResults: 20
-        }
-        return await yelpScraper.scrape(yelpTarget)
-
-      case 'pagine_gialle':
-        const pgScraper = new PagineGialleScraper()
-        const pgTarget = {
-          query: zone.category,
-          location: zone.location_name,
-          category: zone.category,
-          maxResults: 20
-        }
-        return await pgScraper.scrape(pgTarget)
-
+      // NB: gli scraper Yelp e Pagine Gialle sono stati rimossi: erano rotti
+      // dal primo giorno (API Puppeteer su Playwright -> crash immediato) e
+      // le zone sono comunque filtrate su google_maps dal ZoneManager.
       default:
         throw new Error(`Scraper non supportato: ${zone.source}`)
     }

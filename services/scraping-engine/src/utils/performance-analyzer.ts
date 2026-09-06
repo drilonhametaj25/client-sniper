@@ -1,9 +1,11 @@
 /**
- * Analizzatore di performance avanzato per siti web
- * Misura TTFB, LCP, FID, CLS, dimensioni e velocità di caricamento
- * Utilizza Lighthouse API quando disponibile o metriche Playwright
- * 
- * Utilizzato dal Website Analyzer per valutazioni di performance complete
+ * Analizzatore di performance per siti web
+ * Misura TTFB, LCP, INP, CLS e dimensioni REALI dalla Resource Timing API
+ * del caricamento ORIGINALE della pagina: NON naviga mai la pagina
+ * (la ri-navigazione distruggeva il contesto degli altri moduli di analisi)
+ * e non stima/fabbrica dimensioni.
+ *
+ * Utilizzato dall'EnhancedWebsiteAnalyzer, DOPO il page.goto principale.
  * Parte del modulo services/scraping-engine
  */
 
@@ -56,82 +58,30 @@ export interface ResourceInfo {
 }
 
 export class PerformanceAnalyzer {
-  private navigationStart: number = 0
-  private resources: ResourceInfo[] = []
-  
   /**
-   * Analizza le performance di una pagina
+   * Analizza le performance della pagina GIÀ CARICATA.
+   * REGOLA: non naviga mai, non modifica header/viewport, non ha stato interno.
+   * Tutte le metriche vengono dal caricamento originale (Navigation/Resource
+   * Timing API + PerformanceObserver buffered).
+   *
+   * @param failedRequests numero di risposte >=400 osservate dal chiamante
+   *                       (la Resource Timing API non espone gli status code)
    */
-  async analyzePerformance(page: Page, url: string): Promise<PerformanceMetrics> {
-    console.log(`🚀 Analisi performance per: ${url}`)
-    
-    // Inizializza tracking delle risorse
-    this.setupResourceTracking(page)
-    
-    // Naviga e misura timing
-    const startTime = Date.now()
-    this.navigationStart = startTime
-    
+  async analyzePerformance(page: Page, url: string, failedRequests: number = 0): Promise<PerformanceMetrics> {
     try {
-      // Configura context per evitare blocchi anti-bot
-      await page.context().addInitScript(() => {
-        // Rimuove webdriver property per evitare detection
-        delete (window as any).webdriver
-      })
-      
-      // Headers realistici
-      await page.setExtraHTTPHeaders({
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'it-IT,it;q=0.9,en;q=0.8',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'DNT': '1',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1'
-      })
-      
-      console.log(`⏱️ Tentativo navigazione a: ${url}`)
-      const response = await page.goto(url, { 
-        waitUntil: 'domcontentloaded', // Meno restrittivo di networkidle
-        timeout: 30000  // Timeout più generoso per siti lenti
-      })
-      
-      if (!response) {
-        throw new Error('Risposta nulla dal server - possibile blocco anti-bot')
-      }
-      
-      const statusCode = response.status()
-      console.log(`📡 Risposta HTTP: ${statusCode}`)
-      
-      if (statusCode >= 500) {
-        throw new Error(`HTTP ${statusCode}: Errore server - ${response.statusText()}`)
-      }
-      
-      if (statusCode >= 400) {
-        console.log(`⚠️ HTTP ${statusCode} per ${url} - continuo analisi limitata`)
-        // Non bloccare per 4xx, potrebbe essere un redirect o auth
-      }
-      
-      // Attendi completamento rendering con fallback
-      try {
-        await page.waitForTimeout(3000) // Più tempo per rendering
-        await page.waitForLoadState('networkidle', { timeout: 10000 })
-      } catch (loadError) {
-        console.log(`⚠️ Timeout attesa caricamento, continuo con analisi parziale`)
-      }
-      
-      // Raccoglie metriche timing
+      // Raccoglie metriche timing dal caricamento originale
       const timingMetrics = await this.collectTimingMetrics(page)
-      
-      // Raccoglie Core Web Vitals
+
+      // Raccoglie Core Web Vitals (observer buffered: leggono eventi già accaduti)
       const coreWebVitals = await this.collectCoreWebVitals(page)
-      
-      // Analizza risorse
-      const resourceMetrics = this.analyzeResources()
-      
+
+      // Risorse REALI dalla Resource Timing API (transferSize/encodedBodySize)
+      const resourceMetrics = await this.collectResourceMetrics(page)
+      resourceMetrics.failedRequests = failedRequests
+
       // Calcola punteggi
       const scores = this.calculatePerformanceScores(timingMetrics, resourceMetrics, coreWebVitals)
-      
+
       // Genera raccomandazioni
       const { issues, recommendations } = this.generateRecommendations(timingMetrics, resourceMetrics, coreWebVitals)
       
@@ -163,36 +113,12 @@ export class PerformanceAnalyzer {
         performanceIssues: issues,
         recommendations
       }
-      
+
     } catch (error) {
       console.error('Errore durante analisi performance:', error)
-      
+
       return this.getDefaultMetrics()
     }
-  }
-
-  /**
-   * Setup tracking delle risorse di rete
-   */
-  private setupResourceTracking(page: Page): void {
-    this.resources = []
-    
-    page.on('request', request => {
-      // Traccia richieste in uscita
-    })
-    
-    page.on('response', response => {
-      const request = response.request()
-      
-      this.resources.push({
-        url: response.url(),
-        type: this.categorizeResource(response.url(), request.resourceType()),
-        size: 0, // Sarà aggiornato se disponibile
-        duration: 0, // Timing non disponibile in Playwright Response
-        fromCache: response.fromServiceWorker() || response.status() === 304,
-        failed: response.status() >= 400
-      })
-    })
   }
 
   /**
@@ -370,28 +296,49 @@ export class PerformanceAnalyzer {
   }
 
   /**
-   * Analizza le risorse caricate
+   * Risorse REALI dalla Resource Timing API del caricamento originale.
+   * transferSize = byte effettivamente trasferiti (0 se servito da cache);
+   * niente più dimensioni fabbricate con "conteggio × costante".
    */
-  private analyzeResources(): Partial<PerformanceMetrics> {
-    const totalResources = this.resources.length
-    const failedRequests = this.resources.filter(r => r.failed).length
-    const cachedRequests = this.resources.filter(r => r.fromCache).length
-    
-    // Stima dimensioni per tipo
-    const imageResources = this.resources.filter(r => r.type === 'image')
-    const jsResources = this.resources.filter(r => r.type === 'script')
-    const cssResources = this.resources.filter(r => r.type === 'stylesheet')
-    
-    return {
-      totalResources,
-      requestCount: totalResources,
-      failedRequests,
-      cachedRequests,
-      totalSize: this.estimateTotalSize(),
-      imageSize: imageResources.length * 50000, // Stima 50KB per immagine
-      jsSize: jsResources.length * 30000, // Stima 30KB per script
-      cssSize: cssResources.length * 20000 // Stima 20KB per CSS
-    }
+  private async collectResourceMetrics(page: Page): Promise<Partial<PerformanceMetrics>> {
+    const data = await page.evaluate(() => {
+      const entries = performance.getEntriesByType('resource') as PerformanceResourceTiming[]
+      let totalSize = 0
+      let imageSize = 0
+      let jsSize = 0
+      let cssSize = 0
+      let cached = 0
+
+      for (const e of entries) {
+        const size = e.transferSize || e.encodedBodySize || 0
+        totalSize += size
+
+        // transferSize 0 con body decodificato = servita dalla cache
+        if (e.transferSize === 0 && e.decodedBodySize > 0) cached++
+
+        const it = (e as any).initiatorType || ''
+        const name = e.name || ''
+        if (it === 'img' || /\.(png|jpe?g|webp|gif|svg|avif|ico)(\?|$)/i.test(name)) {
+          imageSize += size
+        } else if (it === 'script' || /\.m?js(\?|$)/i.test(name)) {
+          jsSize += size
+        } else if (it === 'link' || /\.css(\?|$)/i.test(name)) {
+          cssSize += size
+        }
+      }
+
+      return {
+        totalResources: entries.length,
+        requestCount: entries.length,
+        totalSize,
+        imageSize,
+        jsSize,
+        cssSize,
+        cachedRequests: cached
+      }
+    })
+
+    return data
   }
 
   /**
@@ -499,35 +446,6 @@ export class PerformanceAnalyzer {
     }
     
     return { issues, recommendations }
-  }
-
-  /**
-   * Categorizza il tipo di risorsa
-   */
-  private categorizeResource(url: string, type: string): string {
-    if (type === 'image') return 'image'
-    if (type === 'stylesheet') return 'stylesheet'
-    if (type === 'script') return 'script'
-    if (type === 'font') return 'font'
-    if (url.includes('.mp4') || url.includes('.webm')) return 'video'
-    if (url.includes('.pdf')) return 'document'
-    return 'other'
-  }
-
-  /**
-   * Stima la dimensione totale delle risorse
-   */
-  private estimateTotalSize(): number {
-    // Stima approssimativa basata sul numero e tipo di risorse
-    return this.resources.reduce((total, resource) => {
-      switch (resource.type) {
-        case 'image': return total + 50000 // 50KB media
-        case 'script': return total + 30000 // 30KB media
-        case 'stylesheet': return total + 20000 // 20KB media
-        case 'font': return total + 40000 // 40KB media
-        default: return total + 10000 // 10KB media
-      }
-    }, 0)
   }
 
   /**

@@ -9,6 +9,7 @@
  */
 
 import { chromium, Browser, Page } from 'playwright'
+import axios from 'axios'
 import { SocialAnalyzer } from './social-analyzer'
 import { WebsiteStatusChecker, WebsiteStatus } from '../utils/website-status-checker'
 import { TechStackDetector, TechStackInfo } from '../utils/tech-stack-detector'
@@ -314,24 +315,19 @@ export class EnhancedWebsiteAnalyzer {
         return this.createFailedAnalysis(url, statusResult, startTime)
       }
       
-      // Step 2: Analisi con browser
-      const browserAnalysis = await this.performBrowserAnalysis(statusResult.finalUrl)
-      // Step 2b: Analisi social
-      let social: any = null
-      try {
-        const browser = await chromium.launch({ headless: true })
-        const page = await browser.newPage()
-        await page.goto(statusResult.finalUrl, { waitUntil: 'networkidle', timeout: 30000 })
-        const socialAnalyzer = new SocialAnalyzer()
-        social = await socialAnalyzer.analyzeSocials(page)
-        await page.close()
-        await browser.close()
-      } catch (e) {
-        social = { profiles: [], summary: ['Errore analisi social'] }
-      }
+      // Step 2: Analisi con browser (il probe HTTPS reale viene passato al
+      // security analyzer: mai più "grade F" per un sito http:// con https ok)
+      const browserAnalysis = await this.performBrowserAnalysis(statusResult.finalUrl, statusResult.hasSSL)
+
+      // Step 2b: Presenza social dai LINK trovati in homepage (già estratti dal
+      // modulo content). Lo scraping dei profili con un Chromium dedicato è stato
+      // RIMOSSO: follower/engagement erano quasi sempre vuoti (login wall di
+      // Meta/LinkedIn) e costava minuti per sito.
+      const social = this.buildSocialFromLinks(browserAnalysis.content?.socialLinks || [])
       
-      // Step 3: Calcola punteggi e opportunità
-      const scores = this.calculateScores(browserAnalysis)
+      // Step 3: Calcola punteggi e opportunità (i moduli falliti sono esclusi)
+      const failedSet = new Set(browserAnalysis.reliability?.failedModules || [])
+      const scores = this.calculateScores(browserAnalysis, failedSet)
       const opportunities = this.identifyOpportunities(browserAnalysis, scores)
 
       // Step 3b: Arricchimento da fonti pubbliche gratuite (età dominio, MX/provider email).
@@ -350,7 +346,14 @@ export class EnhancedWebsiteAnalyzer {
         isAccessible: true,
         httpStatusCode: statusResult.httpCode,
         reachabilityVerdict: statusResult.verdict,
-        leadConfidence: decideLeadPublication({ reachability: 'online' }),
+        // La decisione di pubblicazione ora considera anche l'affidabilità
+        // dell'analisi: se i moduli sono in gran parte falliti, quarantena +
+        // ri-verifica invece di pubblicare difetti potenzialmente finti.
+        leadConfidence: decideLeadPublication({
+          reachability: 'online',
+          analysisReliability: browserAnalysis.reliability?.overallConfidence,
+          analysisMethod: browserAnalysis.reliability?.analysisMethod
+        }),
         // hasSSL dal sondaggio reale dell'endpoint https (non dalla stringa URL):
         // niente più falso "manca HTTPS" sui siti http:// con redirect a https.
         hasSSL: statusResult.hasSSL ?? statusResult.finalUrl.startsWith('https://'),
@@ -395,10 +398,23 @@ export class EnhancedWebsiteAnalyzer {
   }
 
   /**
-   * Analisi dettagliata con browser - versione migliorata con tracking affidabilità
+   * Analisi dettagliata con browser - architettura a DUE CORSIE.
+   *
+   * REGOLA FONDAMENTALE: dopo l'unico page.goto(url), la pagina live non viene
+   * MAI più navigata. In passato 4 moduli (sitemap, robots, performance, blog)
+   * navigavano la pagina condivisa mentre gli altri stavano ancora leggendo il
+   * DOM -> "Execution context was destroyed" -> default tutti-false -> lead
+   * pieni di difetti FINTI. Era la causa radice della cattiva qualità.
+   *
+   * - Corsia 1 (pagina live): moduli DOM eseguiti in SEQUENZA (mobile per
+   *   ultimo perché ridimensiona il viewport).
+   * - Corsia 2 (HTTP puro, in parallelo): sitemap/robots via axios con
+   *   validazione del contenuto, tech stack e security su HTML/headers.
    */
-  private async performBrowserAnalysis(url: string): Promise<Partial<EnhancedWebsiteAnalysis> & { reliability?: AnalysisReliability }> {
-    const browserId = `analyzer-${Date.now()}`;
+  private async performBrowserAnalysis(url: string, hasSSLProbe?: boolean): Promise<Partial<EnhancedWebsiteAnalysis> & { reliability?: AnalysisReliability }> {
+    // Chiave costante: il BrowserManager può finalmente riusare il browser
+    // (prima la chiave conteneva Date.now() e ogni analisi lanciava un Chromium)
+    const browserId = 'enhanced-analyzer';
     const analysisStartTime = Date.now()
     const { browser, context } = await this.browserManager.getBrowser(browserId);
     const page = await context.newPage();
@@ -421,6 +437,13 @@ export class EnhancedWebsiteAnalyzer {
       const networkRequests: string[] = []
       page.on('request', (req) => {
         try { networkRequests.push(req.url()) } catch { /* noop */ }
+      })
+
+      // Conteggio risposte fallite: serve alle metriche performance (la
+      // Resource Timing API non espone gli status code)
+      let failedResponses = 0
+      page.on('response', (res) => {
+        try { if (res.status() >= 400) failedResponses++ } catch { /* noop */ }
       })
 
       // Carica pagina
@@ -450,44 +473,72 @@ export class EnhancedWebsiteAnalyzer {
 
       // Raccogli HTML e metadata
       const htmlContent = await page.content()
-      const pageTitle = await page.title()
+      const responseHeaders = response.headers() as Record<string, string>
+      const baseUrl = new URL(page.url()).origin
 
-      // Analisi parallele con tracking errori individuali
-      const moduleResults = await Promise.allSettled([
-        this.analyzeSEO(page, htmlContent),
-        this.analyzeImages(page),
-        this.analyzeTracking(page, htmlContent, networkRequests, renderReliable),
-        this.analyzeGDPR(page, htmlContent, networkRequests, renderReliable),
-        this.analyzeMobileCompatibility(page),
-        this.analyzeContent(page, htmlContent),
-        this.performanceAnalyzer.analyzePerformance(page, url),
-        this.techDetector.detectTechStack(htmlContent, response.headers() as Record<string, string>),
-        this.securityAnalyzer.analyzeSecurityFromHtml(url, htmlContent, response.headers() as Record<string, string>),
-        this.contentQualityAnalyzer.analyzeContentQuality(page, url, htmlContent),
-        this.accessibilityAnalyzer.analyzeAccessibility(page, url)
+      // ===== CORSIA 2: HTTP puro, parte subito e gira in parallelo =====
+      // Nessuno di questi tocca la pagina live.
+      const lane2Promise = Promise.allSettled([
+        this.checkSitemap(baseUrl),
+        this.checkRobotsTxt(baseUrl),
+        Promise.resolve(this.techDetector.detectTechStack(htmlContent, responseHeaders)),
+        this.securityAnalyzer.analyzeSecurityFromHtml(url, htmlContent, responseHeaders, hasSSLProbe)
       ])
 
-      // Estrai risultati con tracking fallimenti
-      const moduleNames = ['seo', 'images', 'tracking', 'gdpr', 'mobile', 'content', 'performance', 'techStack', 'security', 'contentQuality', 'accessibility']
+      // ===== CORSIA 1: pagina live, SEQUENZIALE =====
+      // Ogni modulo ha il suo try/catch; un fallimento viene registrato e il
+      // modulo viene ESCLUSO da issues e scoring (niente più default all-false
+      // spacciati per difetti reali).
+      const runModule = async <T>(name: string, def: T, fn: () => Promise<T>): Promise<T> => {
+        try {
+          return await fn()
+        } catch (e) {
+          failedModules.push(name)
+          const msg = e instanceof Error ? e.message : String(e)
+          warnings.push(`Modulo ${name} fallito: ${msg.substring(0, 100)}`)
+          return def
+        }
+      }
 
-      const seoAnalysis = this.extractResultOrDefault(moduleResults[0], 'seo', this.getDefaultSEO(), failedModules, warnings)
-      const imagesAnalysis = this.extractResultOrDefault(moduleResults[1], 'images', this.getDefaultImages(), failedModules, warnings)
-      const trackingAnalysis = this.extractResultOrDefault(moduleResults[2], 'tracking', this.getDefaultTracking(), failedModules, warnings)
-      const gdprAnalysis = this.extractResultOrDefault(moduleResults[3], 'gdpr', this.getDefaultGDPR(), failedModules, warnings)
-      const mobileAnalysis = this.extractResultOrDefault(moduleResults[4], 'mobile', this.getDefaultMobile(), failedModules, warnings)
-      const contentAnalysis = this.extractResultOrDefault(moduleResults[5], 'content', this.getDefaultContent(), failedModules, warnings)
-      const performanceMetrics = this.extractResultOrDefault(moduleResults[6], 'performance', this.performanceAnalyzer['getDefaultMetrics'](), failedModules, warnings)
-      const techStackInfo = this.extractResultOrDefault(moduleResults[7], 'techStack', this.getDefaultTechStack(), failedModules, warnings)
-      const securityAnalysis = moduleResults[8].status === 'fulfilled' ? moduleResults[8].value : null
-      const contentQualityAnalysis = moduleResults[9].status === 'fulfilled' ? moduleResults[9].value : null
-      const accessibilityAnalysis = moduleResults[10].status === 'fulfilled' ? moduleResults[10].value : null
+      const seoAnalysis = await runModule('seo', this.getDefaultSEO(), () => this.analyzeSEO(page, htmlContent))
+      const imagesAnalysis = await runModule('images', this.getDefaultImages(), () => this.analyzeImages(page))
+      const trackingAnalysis = await runModule<EnhancedWebsiteAnalysis['tracking']>('tracking', this.getDefaultTracking(), () => this.analyzeTracking(page, htmlContent, networkRequests, renderReliable))
+      const gdprAnalysis = await runModule<EnhancedWebsiteAnalysis['gdpr']>('gdpr', this.getDefaultGDPR(), () => this.analyzeGDPR(page, htmlContent, networkRequests, renderReliable))
+      const contentAnalysis = await runModule('content', this.getDefaultContent(), () => this.analyzeContent(page, htmlContent))
+      const accessibilityAnalysis = await runModule<AccessibilityAnalysis | null>('accessibility', null, () => this.accessibilityAnalyzer.analyzeAccessibility(page, url))
+      // Performance: legge Navigation/Resource Timing del caricamento ORIGINALE
+      const performanceMetrics = await runModule('performance', this.performanceAnalyzer['getDefaultMetrics'](), () => this.performanceAnalyzer.analyzePerformance(page, url, failedResponses))
+      // Content quality: usa la pagina solo in lettura (il blog viene scaricato via axios)
+      const contentQualityAnalysis = await runModule<ContentQualityAnalysis | null>('contentQuality', null, () => this.contentQualityAnalyzer.analyzeContentQuality(page, url, htmlContent))
+      // Mobile per ULTIMO: ridimensiona il viewport, poi lo ripristina
+      const mobileAnalysis = await runModule('mobile', this.getDefaultMobile(), () => this.analyzeMobileCompatibility(page))
+      try { await page.setViewportSize({ width: 1920, height: 1080 }) } catch { /* noop */ }
+
+      // Attendi la corsia 2 e integra i risultati
+      const [sitemapResult, robotsResult, techStackResult, securityResult] = await lane2Promise
+
+      if (sitemapResult.status === 'fulfilled') seoAnalysis.hasSitemap = sitemapResult.value
+      if (robotsResult.status === 'fulfilled') seoAnalysis.hasRobotsTxt = robotsResult.value
+
+      let techStackInfo: TechStackInfo = this.getDefaultTechStack() as TechStackInfo
+      if (techStackResult.status === 'fulfilled') {
+        techStackInfo = techStackResult.value
+      } else {
+        failedModules.push('techStack')
+        warnings.push('Modulo techStack fallito')
+      }
+
+      const securityAnalysis = securityResult.status === 'fulfilled' ? securityResult.value : null
 
       // Moduli opzionali falliti (non critici)
-      if (moduleResults[8].status === 'rejected') partialModules.push('security')
-      if (moduleResults[9].status === 'rejected') partialModules.push('contentQuality')
-      if (moduleResults[10].status === 'rejected') partialModules.push('accessibility')
+      if (securityResult.status === 'rejected') partialModules.push('security')
+      if (contentQualityAnalysis === null && !failedModules.includes('contentQuality')) partialModules.push('contentQuality')
+      if (accessibilityAnalysis === null && !failedModules.includes('accessibility')) partialModules.push('accessibility')
 
-      // Identifica problemi
+      // I moduli falliti NON generano difetti né entrano nello scoring
+      const failedSet = new Set(failedModules)
+
+      // Identifica problemi (solo dai moduli riusciti)
       const issues = this.identifyIssues({
         seo: seoAnalysis,
         images: imagesAnalysis,
@@ -499,7 +550,7 @@ export class EnhancedWebsiteAnalyzer {
         security: securityAnalysis,
         contentQuality: contentQualityAnalysis,
         accessibility: accessibilityAnalysis
-      })
+      }, failedSet)
 
       // Calcola confidence score
       const coreModulesCount = 8 // seo, images, tracking, gdpr, mobile, content, performance, techStack
@@ -552,25 +603,6 @@ export class EnhancedWebsiteAnalyzer {
       await page.close()
       await this.browserManager.releaseBrowser(browserId)
     }
-  }
-
-  /**
-   * Helper per estrarre risultato da Promise.allSettled con tracking errori
-   */
-  private extractResultOrDefault<T>(
-    result: PromiseSettledResult<T>,
-    moduleName: string,
-    defaultValue: T,
-    failedModules: string[],
-    warnings: string[]
-  ): T {
-    if (result.status === 'fulfilled') {
-      return result.value
-    }
-    failedModules.push(moduleName)
-    const errorMsg = result.reason instanceof Error ? result.reason.message : String(result.reason)
-    warnings.push(`Modulo ${moduleName} fallito: ${errorMsg.substring(0, 100)}`)
-    return defaultValue
   }
 
   /**
@@ -627,13 +659,16 @@ export class EnhancedWebsiteAnalyzer {
       }
     })
     
-    // Verifica sitemap e robots.txt
-    const [hasSitemap, hasRobotsTxt] = await Promise.all([
-      this.checkSitemap(page),
-      this.checkRobotsTxt(page)
-    ])
+    // Sitemap/robots vengono verificati nella corsia HTTP (axios) e integrati
+    // dal chiamante: qui mettiamo solo un placeholder. In passato venivano
+    // controllati navigando la PAGINA LIVE -> distruggevano il contesto di
+    // tutti gli altri moduli in corso.
+    const hasSitemap = false
+    const hasRobotsTxt = false
 
     // Verifica structured data con parsing JSON-LD MIGLIORATO
+    // (ora gira sulla homepage REALE: prima girava dopo la navigazione a
+    // robots.txt ed era deterministicamente false su ogni sito)
     const structuredDataResult = await this.analyzeStructuredData(page, html)
 
     return {
@@ -806,17 +841,23 @@ export class EnhancedWebsiteAnalyzer {
         if (!img.alt || img.alt.trim() === '') {
           withoutAlt++
         }
-        
-        // Broken images (basic check)
-        if (!img.complete || img.naturalHeight === 0) {
+
+        // Broken images: SOLO immagini che hanno FINITO di caricare con 0px.
+        // Le immagini lazy (loading="lazy" o data-src) fuori viewport risultano
+        // legittimamente incomplete: contarle come "rotte" era un falso positivo
+        // sistematico sui siti moderni.
+        const isLazy = img.loading === 'lazy' ||
+                       img.getAttribute('data-src') !== null ||
+                       img.getAttribute('data-lazy-src') !== null
+        if (!isLazy && img.complete && img.naturalWidth === 0 && img.src) {
           broken++
         }
-        
+
         // Oversized (basic check - se width è molto più grande del display)
         if (img.naturalWidth > 2000) {
           oversized++
         }
-        
+
         // Format detection
         const src = img.src || img.getAttribute('data-src') || ''
         const format = src.split('.').pop()?.toLowerCase()
@@ -1206,28 +1247,39 @@ export class EnhancedWebsiteAnalyzer {
 
       const hasCookieBanner = hasCookieBannerElement
       
-      // Privacy policy link
+      // Privacy policy link: richiede un HREF reale verso una pagina privacy
+      // (il solo testo "privacy" matchava anche il cookie banner stesso o
+      // boilerplate qualsiasi -> falsi "ha la privacy policy")
+      const isRealLink = (href: string) =>
+        href.length > 0 && !href.endsWith('#') && !href.startsWith('javascript:')
       const privacyLinks = Array.from(document.querySelectorAll('a'))
         .filter(link => {
           const text = link.textContent?.toLowerCase() || ''
           const href = link.href?.toLowerCase() || ''
-          return text.includes('privacy') || 
-                 text.includes('policy') ||
-                 href.includes('privacy')
+          if (!isRealLink(href)) return false
+          return href.includes('privacy') ||
+                 href.includes('informativa') ||
+                 (text.includes('privacy') && (href.includes('policy') || href.includes('privacy') || href.includes('legal')))
         })
-      
-      // Terms of service
+
+      // Terms of service: stesso principio (href reale)
       const termsLinks = Array.from(document.querySelectorAll('a'))
         .filter(link => {
           const text = link.textContent?.toLowerCase() || ''
-          return text.includes('terms') || 
-                 text.includes('conditions') ||
-                 text.includes('termini')
+          const href = link.href?.toLowerCase() || ''
+          if (!isRealLink(href)) return false
+          return href.includes('terms') || href.includes('termini') || href.includes('condizioni') ||
+                 ((text.includes('termini') || text.includes('terms')) && href.length > 0)
         })
-      
-      // Contact info
-      const bodyText = document.body?.textContent || ''
-      const hasContactInfo = /contact|contatt|email|phone|telefono/i.test(bodyText)
+
+      // Contact info: link/canali di contatto ESPLICITI, non parole nel testo
+      // (la regex su bodyText passava su praticamente ogni sito italiano)
+      const hasContactInfo =
+        !!document.querySelector('a[href^="tel:"], a[href^="mailto:"]') ||
+        Array.from(document.querySelectorAll('a')).some(a => {
+          const href = a.href?.toLowerCase() || ''
+          return isRealLink(href) && (href.includes('/contatt') || href.includes('/contact'))
+        })
       
       return {
         hasCookieBanner,
@@ -1266,10 +1318,12 @@ export class EnhancedWebsiteAnalyzer {
     const cookieBannerConfidence: SignalConfidence =
       hasCookieBanner || renderReliable ? 'confirmed' : 'unverifiable'
 
-    // Ricerca P.IVA nel contenuto
+    // Ricerca P.IVA nel contenuto (checksum reale, affidabile)
     const contacts = this.contactParser.parseContacts(html)
     const hasVatNumber = contacts.vatNumbers.length > 0
-    const hasBusinessAddress = contacts.addresses.length > 0
+    // hasBusinessAddress: il parser indirizzi non è mai stato implementato
+    // (restituiva sempre []) -> non affermiamo nulla su questo campo.
+    const hasBusinessAddress = false
 
     // Calcola punteggio GDPR
     let gdprScore = 0
@@ -1377,52 +1431,95 @@ export class EnhancedWebsiteAnalyzer {
   }
 
   /**
-   * Analisi contenuto
+   * Analisi contenuto.
+   * Contatti estratti da fonti AFFIDABILI: link tel:/mailto:, JSON-LD
+   * (telephone/email) e testo VISIBILE. In passato il parser girava
+   * sull'HTML grezzo e raccoglieva timestamp, ID di tracking e nomi di file
+   * come "numeri di telefono" -> il confronto di ownership sbagliava e
+   * metteva in quarantena lead buoni.
    */
   private async analyzeContent(page: Page, html: string): Promise<EnhancedWebsiteAnalysis['content']> {
-    const contacts = this.contactParser.parseContacts(html)
-    
-    const contentData = await page.evaluate(() => {
-      const text = document.body.textContent || ''
-      const wordCount = text.split(/\s+/).filter(word => word.length > 0).length
-      
-      // Contact form
+    const extracted = await page.evaluate(() => {
+      const telHrefs = Array.from(document.querySelectorAll('a[href^="tel:"], a[href^="TEL:"]'))
+        .map(a => (a.getAttribute('href') || '').replace(/^tel:/i, '').trim())
+        .filter(Boolean)
+      const mailtoHrefs = Array.from(document.querySelectorAll('a[href^="mailto:"], a[href^="MAILTO:"]'))
+        .map(a => (a.getAttribute('href') || '').replace(/^mailto:/i, '').split('?')[0].trim())
+        .filter(Boolean)
+
+      // JSON-LD: telephone/email dichiarati dallo schema dell'attività
+      const ldPhones: string[] = []
+      const ldEmails: string[] = []
+      document.querySelectorAll('script[type="application/ld+json"]').forEach(s => {
+        try {
+          const walk = (o: any) => {
+            if (!o || typeof o !== 'object') return
+            if (typeof o.telephone === 'string') ldPhones.push(o.telephone.trim())
+            if (typeof o.email === 'string') ldEmails.push(o.email.trim())
+            Object.values(o).forEach(v => { if (v && typeof v === 'object') walk(v) })
+          }
+          walk(JSON.parse(s.textContent || 'null'))
+        } catch { /* JSON-LD non valido */ }
+      })
+
+      const socialHrefs = Array.from(document.querySelectorAll('a[href]'))
+        .map(a => (a as HTMLAnchorElement).href)
+        .filter(h => /facebook\.com\/|instagram\.com\/|linkedin\.com\/|twitter\.com\/|x\.com\/|youtube\.com\/|tiktok\.com\/|pinterest\.com\/|t\.me\/|wa\.me\/|threads\.net\//i.test(h))
+
+      // innerText = solo testo VISIBILE (esclude script, stili, attributi)
+      const visibleText = (document.body as HTMLElement)?.innerText || ''
+
+      const wordCount = visibleText.split(/\s+/).filter(word => word.length > 0).length
       const hasContactForm = !!document.querySelector('form input[type="email"], form input[name*="email"], form input[name*="contact"]')
-      
-      // Map embedded
       const hasMapEmbedded = !!document.querySelector('iframe[src*="maps.google"], iframe[src*="openstreetmap"]')
-      
-      // Business hours
-      const hasBusinessHours = /\b(lun|mar|mer|gio|ven|sab|dom|mon|tue|wed|thu|fri|sat|sun)\b.*\b\d{1,2}:\d{2}\b/i.test(text)
-      
+      const hasBusinessHours = /\b(lun|mar|mer|gio|ven|sab|dom|mon|tue|wed|thu|fri|sat|sun)\b.*\b\d{1,2}:\d{2}\b/i.test(visibleText)
+
       return {
+        telHrefs,
+        mailtoHrefs,
+        ldPhones,
+        ldEmails,
+        socialHrefs,
+        visibleText: visibleText.substring(0, 200000),
         wordCount,
         hasContactForm,
         hasMapEmbedded,
         hasBusinessHours
       }
     })
-    
+
+    // Il parser gira SOLO sul testo visibile; tel:/mailto:/JSON-LD hanno priorità
+    const textContacts = this.contactParser.parseContacts(extracted.visibleText)
+    const phones = [...new Set([...extracted.telHrefs, ...extracted.ldPhones, ...textContacts.phones])]
+    const emails = [...new Set([
+      ...extracted.mailtoHrefs.map(e => e.toLowerCase()),
+      ...extracted.ldEmails.map(e => e.toLowerCase()),
+      ...textContacts.emails.map(e => e.toLowerCase())
+    ])]
+    const socialLinks = [...new Set([...extracted.socialHrefs, ...textContacts.socialMedia])]
+
+    const contentData = extracted
+
     // Calcola punteggio contenuto
     let contentScore = 0
     if (contentData.wordCount > 200) contentScore += 20
     if (contentData.wordCount > 500) contentScore += 20
-    if (contacts.phones.length > 0) contentScore += 15
-    if (contacts.emails.length > 0) contentScore += 15
-    if (contacts.socialMedia.length > 0) contentScore += 10
+    if (phones.length > 0) contentScore += 15
+    if (emails.length > 0) contentScore += 15
+    if (socialLinks.length > 0) contentScore += 10
     if (contentData.hasContactForm) contentScore += 10
     if (contentData.hasMapEmbedded) contentScore += 5
     if (contentData.hasBusinessHours) contentScore += 5
-    
+
     return {
       wordCount: contentData.wordCount,
       hasContactForm: contentData.hasContactForm,
-      hasPhoneNumbers: contacts.phones.length > 0,
-      phoneNumbers: contacts.phones,
-      hasEmailAddresses: contacts.emails.length > 0,
-      emailAddresses: contacts.emails,
-      hasSocialLinks: contacts.socialMedia.length > 0,
-      socialLinks: contacts.socialMedia,
+      hasPhoneNumbers: phones.length > 0,
+      phoneNumbers: phones,
+      hasEmailAddresses: emails.length > 0,
+      emailAddresses: emails,
+      hasSocialLinks: socialLinks.length > 0,
+      socialLinks,
       hasMapEmbedded: contentData.hasMapEmbedded,
       hasBusinessHours: contentData.hasBusinessHours,
       contentQualityScore: Math.min(contentScore, 100)
@@ -1430,35 +1527,38 @@ export class EnhancedWebsiteAnalyzer {
   }
 
   /**
-   * Identifica problemi tecnici
+   * Identifica problemi tecnici.
+   * @param failed moduli la cui analisi è FALLITA: non generano difetti
+   *        (un default all-false non è una prova che il difetto esista)
    */
-  private identifyIssues(analysisData: any): EnhancedWebsiteAnalysis['issues'] {
+  private identifyIssues(analysisData: any, failed: Set<string> = new Set()): EnhancedWebsiteAnalysis['issues'] {
     const issues = {
       critical: [] as string[],
       high: [] as string[],
       medium: [] as string[],
       low: [] as string[]
     }
-    
+
     // Critical issues
-    if (!analysisData.seo.hasTitle) {
+    if (!failed.has('seo') && !analysisData.seo.hasTitle) {
       issues.critical.push('Manca il tag title')
     }
-    if (analysisData.performance.speedScore < 30) {
+    if (!failed.has('performance') && analysisData.performance.speedScore < 30) {
       issues.critical.push('Prestazioni molto scarse')
     }
-    if (!analysisData.mobile.isMobileFriendly) {
+    if (!failed.has('mobile') && !analysisData.mobile.isMobileFriendly) {
       issues.critical.push('Non ottimizzato per mobile')
     }
-    
+
     // High priority issues
-    if (!analysisData.seo.hasMetaDescription) {
+    if (!failed.has('seo') && !analysisData.seo.hasMetaDescription) {
       issues.high.push('Manca la meta description')
     }
     // "Nessun tracciamento" è un DIFETTO solo se siamo sicuri dell'assenza
     // (detectionConfidence === 'confirmed'). Con rendering incompleto non lo affermiamo,
     // così evitiamo i falsi positivi su tracker caricati via GTM o in ritardo.
     if (
+      !failed.has('tracking') &&
       !analysisData.tracking.googleAnalytics &&
       !analysisData.tracking.googleTagManager &&
       analysisData.tracking.detectionConfidence !== 'unverifiable'
@@ -1467,29 +1567,30 @@ export class EnhancedWebsiteAnalyzer {
     }
     // "Tracking senza consenso" solo se c'è tracking E siamo sicuri che manchi il banner.
     if (
+      !failed.has('gdpr') && !failed.has('tracking') &&
       !analysisData.gdpr.hasCookieBanner &&
       analysisData.tracking.trackingScore > 0 &&
       analysisData.gdpr.cookieBannerConfidence !== 'unverifiable'
     ) {
       issues.high.push('Tracking senza consenso GDPR')
     }
-    
+
     // Medium priority issues
-    if (!analysisData.seo.hasH1) {
+    if (!failed.has('seo') && !analysisData.seo.hasH1) {
       issues.medium.push('Manca il tag H1')
     }
-    if (analysisData.images.withoutAlt > 0) {
+    if (!failed.has('images') && analysisData.images.withoutAlt > 0) {
       issues.medium.push(`${analysisData.images.withoutAlt} immagini senza attributo alt`)
     }
-    if (!analysisData.gdpr.hasPrivacyPolicy) {
+    if (!failed.has('gdpr') && !analysisData.gdpr.hasPrivacyPolicy) {
       issues.medium.push('Manca la privacy policy')
     }
-    
+
     // Low priority issues
-    if (!analysisData.seo.hasSitemap) {
+    if (!failed.has('seo') && !analysisData.seo.hasSitemap) {
       issues.low.push('Sitemap non trovata')
     }
-    if (!analysisData.seo.hasStructuredData) {
+    if (!failed.has('seo') && !analysisData.seo.hasStructuredData) {
       issues.low.push('Mancano i dati strutturati')
     }
 
@@ -1674,39 +1775,52 @@ export class EnhancedWebsiteAnalyzer {
   }
 
   /**
-   * Calcola punteggi finali (aggiornato con nuovi analyzer)
+   * Calcola punteggi finali.
+   * I moduli FALLITI vengono ESCLUSI e i pesi rinormalizzati sui moduli
+   * disponibili: prima un modulo fallito contribuiva un 50 "neutro" (o un
+   * default all-false), trascinando ogni punteggio verso valori inventati.
    */
-  private calculateScores(analysisData: any): Pick<EnhancedWebsiteAnalysis, 'overallScore' | 'businessValue' | 'technicalHealth'> {
-    // Security score (fallback a 50 se non disponibile)
-    const securityScore = analysisData.security?.overallSecurityScore ?? 50
+  private calculateScores(
+    analysisData: any,
+    failed: Set<string> = new Set()
+  ): Pick<EnhancedWebsiteAnalysis, 'overallScore' | 'businessValue' | 'technicalHealth'> {
+    // Media pesata sui soli componenti disponibili (peso rinormalizzato)
+    const weightedAverage = (parts: Array<{ value: number | null; weight: number }>): number => {
+      const available = parts.filter(p => p.value !== null && p.value !== undefined && !Number.isNaN(p.value))
+      const totalWeight = available.reduce((sum, p) => sum + p.weight, 0)
+      if (totalWeight === 0) return 0
+      return Math.round(available.reduce((sum, p) => sum + (p.value as number) * p.weight, 0) / totalWeight)
+    }
 
-    // Accessibility score (fallback a 50 se non disponibile)
-    const accessibilityScore = analysisData.accessibility?.wcagScore ?? 50
+    const val = (module: string, value: number | undefined | null): number | null =>
+      failed.has(module) || value === undefined || value === null ? null : value
 
-    // Content quality score from new analyzer (fallback a content score originale)
-    const contentQualityScore = analysisData.contentQuality?.contentScore ??
-                                 analysisData.content?.contentQualityScore ?? 50
+    const securityScore = analysisData.security?.overallSecurityScore ?? null
+    const accessibilityScore = failed.has('accessibility') ? null : (analysisData.accessibility?.wcagScore ?? null)
+    const contentQualityScore = failed.has('contentQuality')
+      ? val('content', analysisData.content?.contentQualityScore)
+      : (analysisData.contentQuality?.contentScore ?? val('content', analysisData.content?.contentQualityScore))
 
-    // Technical Health (media pesata di vari aspetti - aggiornata con security)
-    const technicalHealth = Math.round(
-      (analysisData.performance.speedScore * 0.25) +
-      (analysisData.mobile.mobileScore * 0.20) +
-      ((analysisData.seo.hasTitle && analysisData.seo.hasMetaDescription ? 80 : 40) * 0.15) +
-      (analysisData.tracking.trackingScore * 0.10) +
-      (analysisData.gdpr.gdprScore * 0.10) +
-      (securityScore * 0.10) +
-      (accessibilityScore * 0.10)
-    )
+    // Technical Health
+    const technicalHealth = weightedAverage([
+      { value: val('performance', analysisData.performance?.speedScore), weight: 0.25 },
+      { value: val('mobile', analysisData.mobile?.mobileScore), weight: 0.20 },
+      { value: failed.has('seo') ? null : (analysisData.seo.hasTitle && analysisData.seo.hasMetaDescription ? 80 : 40), weight: 0.15 },
+      { value: val('tracking', analysisData.tracking?.trackingScore), weight: 0.10 },
+      { value: val('gdpr', analysisData.gdpr?.gdprScore), weight: 0.10 },
+      { value: securityScore, weight: 0.10 },
+      { value: accessibilityScore, weight: 0.10 }
+    ])
 
-    // Business Value (quanto il sito è efficace per il business - aggiornato con content quality)
-    const businessValue = Math.round(
-      (contentQualityScore * 0.25) +
-      (analysisData.tracking.trackingScore * 0.20) +
-      (analysisData.gdpr.gdprScore * 0.15) +
-      (analysisData.mobile.mobileScore * 0.20) +
-      (accessibilityScore * 0.10) +
-      (securityScore * 0.10)
-    )
+    // Business Value
+    const businessValue = weightedAverage([
+      { value: contentQualityScore, weight: 0.25 },
+      { value: val('tracking', analysisData.tracking?.trackingScore), weight: 0.20 },
+      { value: val('gdpr', analysisData.gdpr?.gdprScore), weight: 0.15 },
+      { value: val('mobile', analysisData.mobile?.mobileScore), weight: 0.20 },
+      { value: accessibilityScore, weight: 0.10 },
+      { value: securityScore, weight: 0.10 }
+    ])
 
     // Overall Score (media pesata dei punteggi)
     const overallScore = Math.round((technicalHealth * 0.6) + (businessValue * 0.4))
@@ -1719,34 +1833,94 @@ export class EnhancedWebsiteAnalyzer {
   }
 
   /**
-   * Verifica sitemap
+   * Verifica sitemap via HTTP con VALIDAZIONE del contenuto.
+   * Un HTTP 200 da solo non basta: le SPA con catch-all routing rispondono 200
+   * (con la loro index.html) a qualunque path.
    */
-  private async checkSitemap(page: Page): Promise<boolean> {
+  private async checkSitemap(baseUrl: string): Promise<boolean> {
     try {
-      const currentUrl = page.url()
-      const baseUrl = new URL(currentUrl).origin
-      const sitemapUrl = `${baseUrl}/sitemap.xml`
-      
-      const response = await page.goto(sitemapUrl, { timeout: 5000 })
-      return response ? response.status() === 200 : false
+      const response = await axios.get(`${baseUrl}/sitemap.xml`, {
+        timeout: 5000,
+        validateStatus: () => true,
+        maxRedirects: 3,
+        responseType: 'text',
+        transformResponse: [(d) => d]
+      })
+      if (response.status !== 200) return false
+      const body = typeof response.data === 'string' ? response.data : ''
+      return /<\s*(urlset|sitemapindex)\b/i.test(body)
     } catch {
       return false
     }
   }
 
   /**
-   * Verifica robots.txt
+   * Verifica robots.txt via HTTP con VALIDAZIONE del contenuto (vedi sopra).
    */
-  private async checkRobotsTxt(page: Page): Promise<boolean> {
+  private async checkRobotsTxt(baseUrl: string): Promise<boolean> {
     try {
-      const currentUrl = page.url()
-      const baseUrl = new URL(currentUrl).origin
-      const robotsUrl = `${baseUrl}/robots.txt`
-      
-      const response = await page.goto(robotsUrl, { timeout: 5000 })
-      return response ? response.status() === 200 : false
+      const response = await axios.get(`${baseUrl}/robots.txt`, {
+        timeout: 5000,
+        validateStatus: () => true,
+        maxRedirects: 3,
+        responseType: 'text',
+        transformResponse: [(d) => d]
+      })
+      if (response.status !== 200) return false
+      const contentType = String(response.headers['content-type'] || '')
+      const body = typeof response.data === 'string' ? response.data : ''
+      return !/html/i.test(contentType) && /user-agent\s*:/i.test(body)
     } catch {
       return false
+    }
+  }
+
+  /**
+   * Costruisce il risultato "social" dai link trovati in homepage.
+   * Niente follower/engagement: non sono osservabili in modo affidabile da
+   * headless (login wall) e non vanno inventati.
+   */
+  private buildSocialFromLinks(socialLinks: string[]): SocialAnalysisResult {
+    const profiles: SocialAnalysisResult['profiles'] = []
+    const seenPlatforms = new Set<string>()
+
+    for (const link of socialLinks) {
+      for (const platform of SocialAnalyzer.knownPlatforms) {
+        if (platform.pattern.test(link) && !seenPlatforms.has(platform.name)) {
+          seenPlatforms.add(platform.name)
+          profiles.push({
+            platform: platform.name,
+            url: link,
+            found: true,
+            isActive: false,
+            postFrequency: 'unknown'
+          })
+        }
+      }
+    }
+
+    const summary = profiles.length > 0
+      ? [`${profiles.length} profili social collegati dal sito`]
+      : ['Nessun profilo social collegato dal sito']
+
+    return {
+      profiles,
+      summary,
+      reputation: {
+        avgRating: 0,
+        totalReviews: 0,
+        platforms: [],
+        sentiment: 'neutral',
+        responseRate: 0
+      },
+      brandHealth: 0,
+      socialOpportunities: profiles.length === 0
+        ? ['Aggiungere e collegare i profili social al sito']
+        : [],
+      activeProfileCount: 0,
+      dormantProfileCount: 0,
+      totalFollowers: 0,
+      avgEngagementRate: 0
     }
   }
 

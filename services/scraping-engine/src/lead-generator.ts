@@ -354,7 +354,11 @@ export class LeadGenerator {
       reachability: analysis?.reachabilityVerdict,
       websiteOwnershipVerified: ownership,
       hasReliableContact,
-      unverifiableSignalsCount
+      unverifiableSignalsCount,
+      // Gating sull'affidabilità dell'analisi: se i moduli sono in gran parte
+      // falliti, i "difetti" potrebbero essere artefatti -> quarantena + recheck
+      analysisReliability: (analysis as any)?.reliability?.overallConfidence,
+      analysisMethod: (analysis as any)?.reliability?.analysisMethod
     })
   }
 
