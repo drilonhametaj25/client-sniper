@@ -1,6 +1,6 @@
 /**
  * Activity Timeline Component
- * Mostra timeline attivita' recenti: lead sbloccati, status CRM cambiati, ecc.
+ * Mostra timeline attività recenti: lead sbloccati, status CRM cambiati, ecc.
  */
 
 'use client'
@@ -148,12 +148,12 @@ export function ActivityTimeline() {
         })
       }
 
-      // Ordina per timestamp (piu' recente prima)
+      // Ordina per timestamp (più recente prima)
       allActivities.sort((a, b) =>
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       )
 
-      // Prendi solo le prime 15 attivita'
+      // Prendi solo le prime 15 attività
       setActivities(allActivities.slice(0, 15))
     } catch (err) {
       console.error('Activity timeline error:', err)
@@ -179,7 +179,7 @@ export function ActivityTimeline() {
     return date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
   }
 
-  // Ottieni icona per tipo attivita'
+  // Ottieni icona per tipo attività
   const getActivityIcon = (activity: Activity) => {
     if (activity.type === 'unlock') {
       return <Unlock className="w-4 h-4 text-blue-500" />
@@ -242,7 +242,7 @@ export function ActivityTimeline() {
       {/* Timeline */}
       {activities.length === 0 ? (
         <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-          Nessuna attivita' recente
+          Nessuna attività recente
         </p>
       ) : (
         <div className="relative">

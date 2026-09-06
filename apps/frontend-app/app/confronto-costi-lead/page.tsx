@@ -4,7 +4,6 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { TrendingUp, Target, Users, CheckCircle, ArrowRight, DollarSign, Clock, Zap, Shield } from 'lucide-react'
 import LeadCostComparison from '@/components/LeadCostComparison'
-import UpgradeUrgencyBanner from '@/components/UpgradeUrgencyBanner'
 
 // Componente del calcolatore interattivo
 function InteractiveCalculator() {
@@ -367,13 +366,6 @@ export default function ConfrontoCostiLeadPage() {
         </div>
       </section>
 
-      {/* Upgrade Urgency Banner */}
-      <div className="bg-gradient-to-r from-green-50 to-blue-50 border-t border-b border-green-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <UpgradeUrgencyBanner variant="full" />
-        </div>
-      </div>
-
       {/* Statistiche Shock */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-6xl mx-auto">
@@ -386,35 +378,6 @@ export default function ConfrontoCostiLeadPage() {
             </p>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8 mb-12">
-            <div className="text-center p-8 bg-red-50 rounded-2xl border-2 border-red-200">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="w-8 h-8 text-red-600" />
-              </div>
-              <div className="text-4xl font-bold text-red-600 mb-2">+127%</div>
-              <h3 className="text-lg font-semibold mb-2">Aumento CPC Google Ads</h3>
-              <p className="text-gray-600 text-sm">Negli ultimi 3 anni nel settore web design</p>
-            </div>
-            
-            <div className="text-center p-8 bg-orange-50 rounded-2xl border-2 border-orange-200">
-              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <DollarSign className="w-8 h-8 text-orange-600" />
-              </div>
-              <div className="text-4xl font-bold text-orange-600 mb-2">€125</div>
-              <h3 className="text-lg font-semibold mb-2">Costo Medio per Lead</h3>
-              <p className="text-gray-600 text-sm">Facebook Ads settore B2B tech</p>
-            </div>
-            
-            <div className="text-center p-8 bg-yellow-50 rounded-2xl border-2 border-yellow-200">
-              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-8 h-8 text-yellow-600" />
-              </div>
-              <div className="text-4xl font-bold text-yellow-600 mb-2">156h</div>
-              <h3 className="text-lg font-semibold mb-2">Tempo Medio Setup</h3>
-              <p className="text-gray-600 text-sm">Per una campagna ads efficace</p>
-            </div>
-          </div>
-
           <div className="bg-gradient-to-r from-red-100 to-orange-100 rounded-2xl p-8 border-2 border-red-200">
             <h3 className="text-2xl font-bold text-gray-900 mb-4 text-center">
               ⚠️ Il Problema delle Piattaforme Tradizionali
@@ -433,7 +396,7 @@ export default function ConfrontoCostiLeadPage() {
                 <h4 className="font-semibold text-gray-900 mb-2">Facebook Ads</h4>
                 <ul className="space-y-1 text-gray-700">
                   <li>• Targeting sempre meno preciso</li>
-                  <li>• Costi in crescita del 89%</li>
+                  <li>• Costi in costante crescita</li>
                   <li>• Blocco frequente account</li>
                   <li>• Conversioni B2B limitate</li>
                 </ul>
@@ -550,30 +513,7 @@ export default function ConfrontoCostiLeadPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-12 items-center mb-16">
-            {/* Vantaggi economici */}
-            <div className="bg-white rounded-3xl p-8 shadow-xl">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">ROI Massimizzato</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-green-50 rounded-xl">
-                  <span className="text-gray-700">Costo per lead</span>
-                  <span className="text-xl font-bold text-green-600">€2.50</span>
-                </div>
-                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl">
-                  <span className="text-gray-700">Valore servizio medio</span>
-                  <span className="text-xl font-bold text-blue-600">€1.800</span>
-                </div>
-                <div className="flex items-center justify-between p-4 bg-purple-50 rounded-xl">
-                  <span className="text-gray-700">Tasso conversione</span>
-                  <span className="text-xl font-bold text-purple-600">35%</span>
-                </div>
-                <div className="flex items-center justify-between p-4 bg-orange-50 rounded-xl border-2 border-orange-200">
-                  <span className="text-gray-900 font-semibold">ROI per lead</span>
-                  <span className="text-2xl font-bold text-orange-600">25.200%</span>
-                </div>
-              </div>
-            </div>
-
+          <div className="max-w-3xl mx-auto mb-16">
             {/* Esempi servizi */}
             <div>
               <h3 className="text-2xl font-bold text-gray-900 mb-6">Servizi Suggeriti Automaticamente</h3>

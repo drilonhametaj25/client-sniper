@@ -3,7 +3,6 @@ import Link from 'next/link'
 import Script from 'next/script'
 import { Target, BarChart3, Users, Zap, ArrowRight, CheckCircle } from 'lucide-react'
 import LeadCostComparison from '@/components/LeadCostComparison'
-import UpgradeUrgencyBanner from '@/components/UpgradeUrgencyBanner'
 
 export const metadata: Metadata = {
   title: 'Lead Generation per Agenzie Web: Strategie e Strumenti 2025 | TrovaMi',
@@ -101,13 +100,6 @@ export default function LeadGenerationAgenzie() {
         </div>
       </section>
 
-      {/* Upgrade Urgency Banner */}
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-t border-b border-purple-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <UpgradeUrgencyBanner variant="compact" />
-        </div>
-      </div>
-
       {/* Problemi delle Agenzie */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-6xl mx-auto">
@@ -163,7 +155,7 @@ export default function LeadGenerationAgenzie() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="max-w-3xl mx-auto">
             <div>
               <h3 className="text-3xl font-bold mb-6">Come Funziona per le Agenzie</h3>
               <div className="space-y-6">
@@ -207,73 +199,6 @@ export default function LeadGenerationAgenzie() {
                 </div>
               </div>
             </div>
-            
-            <div className="bg-gradient-to-br from-purple-600 to-blue-600 rounded-3xl p-8 text-white">
-              <h4 className="text-2xl font-bold mb-6">Risultati Tipici per Agenzie</h4>
-              <div className="space-y-4">
-                <div className="flex items-center">
-                  <CheckCircle className="w-6 h-6 mr-3" />
-                  <span>300% aumento lead qualificati</span>
-                </div>
-                <div className="flex items-center">
-                  <CheckCircle className="w-6 h-6 mr-3" />
-                  <span>70% riduzione tempo prospecting</span>
-                </div>
-                <div className="flex items-center">
-                  <CheckCircle className="w-6 h-6 mr-3" />
-                  <span>50% migliore tasso conversione</span>
-                </div>
-                <div className="flex items-center">
-                  <CheckCircle className="w-6 h-6 mr-3" />
-                  <span>ROI 800% primo anno</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Case Study */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-6">Case Study: Agenzia Web Milano</h2>
-            <p className="text-xl text-gray-600">
-              Come un'agenzia di 5 persone ha raddoppiato il fatturato in 6 mesi
-            </p>
-          </div>
-          
-          <div className="bg-white rounded-3xl p-8 shadow-lg">
-            <div className="grid md:grid-cols-2 gap-8">
-              <div>
-                <h3 className="text-xl font-bold mb-4 text-red-600">Prima di TrovaMi</h3>
-                <ul className="space-y-2 text-gray-600">
-                  <li>• 2-3 lead/mese da referral</li>
-                  <li>• 20% tasso di conversione</li>
-                  <li>• 60h/mese per prospecting</li>
-                  <li>• Fatturato: €15k/mese</li>
-                </ul>
-              </div>
-              
-              <div>
-                <h3 className="text-xl font-bold mb-4 text-green-600">Dopo TrovaMi</h3>
-                <ul className="space-y-2 text-gray-600">
-                  <li>• 25-30 lead/mese qualificati</li>
-                  <li>• 45% tasso di conversione</li>
-                  <li>• 5h/mese per prospecting</li>
-                  <li>• Fatturato: €32k/mese</li>
-                </ul>
-              </div>
-            </div>
-            
-            <div className="mt-8 p-6 bg-blue-50 rounded-2xl">
-              <blockquote className="text-lg italic text-gray-700">
-                "TrovaMi ha completamente trasformato il nostro business. Invece di sperare che arrivino clienti, 
-                ora abbiamo un flusso costante di lead qualificati. Il team può concentrarsi su quello che sa fare meglio: 
-                creare siti web straordinari."
-              </blockquote>
-              <div className="mt-4 font-semibold">— Marco R., Founder WebStudio Milano</div>
-            </div>
           </div>
         </div>
       </section>
@@ -310,7 +235,7 @@ export default function LeadGenerationAgenzie() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-12 items-center mb-16">
+          <div className="max-w-3xl mx-auto mb-16">
             {/* Lista servizi */}
             <div>
               <h3 className="text-2xl font-bold text-gray-900 mb-6">Servizi Suggeriti per Ogni Lead</h3>
@@ -356,31 +281,6 @@ export default function LeadGenerationAgenzie() {
                 </div>
               </div>
             </div>
-
-            {/* Statistiche di conversione */}
-            <div className="bg-white rounded-3xl p-8 shadow-xl">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">Risultati delle Agenzie PRO</h3>
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Tasso di conversione</span>
-                  <span className="text-2xl font-bold text-green-600">+340%</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Valore medio proposta</span>
-                  <span className="text-2xl font-bold text-blue-600">€2.800</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Tempo per preventivo</span>
-                  <span className="text-2xl font-bold text-orange-600">-85%</span>
-                </div>
-                <div className="pt-4 border-t border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-900 font-semibold">Fatturato medio mensile</span>
-                    <span className="text-3xl font-bold text-purple-600">€18k</span>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
 
           <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-3xl p-8 text-white text-center">
@@ -415,7 +315,6 @@ export default function LeadGenerationAgenzie() {
             Scala la Tua Agenzia con Lead Generation Automatica
           </h2>
           <p className="text-xl text-purple-100 mb-8 max-w-2xl mx-auto">
-            Unisciti a centinaia di agenzie che hanno già trasformato il loro business development. 
             Inizia con 1 lead di prova gratuito e vedi la differenza.
           </p>
           <Link 

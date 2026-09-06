@@ -113,7 +113,7 @@ export default function HomePage() {
               {/* Desktop Navigation */}
               <nav className="hidden md:flex items-center space-x-8">
                 <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">
-                  Funzionalita
+                  Funzionalità
                 </a>
                 <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors">
                   Prezzi
@@ -147,7 +147,7 @@ export default function HomePage() {
                   onClick={() => setMobileMenuOpen(false)}
                   className="block px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
                 >
-                  Funzionalita
+                  Funzionalità
                 </a>
                 <a
                   href="#pricing"
@@ -520,7 +520,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto">
             <NewsletterForm
-              title="Ricevi Proposte Gratuite ogni Mese"
+              title="Strategie e Opportunità ogni Mese"
               description="Iscriviti alla newsletter per ricevere opportunità selezionate e strategie di acquisizione clienti direttamente nella tua inbox"
               source="homepage_cta"
               className="mx-auto"

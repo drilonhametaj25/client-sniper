@@ -2,7 +2,6 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import { Target, CheckCircle, Users, BarChart3, ArrowRight } from 'lucide-react'
 import LeadCostComparison from '@/components/LeadCostComparison'
-import UpgradeUrgencyBanner from '@/components/UpgradeUrgencyBanner'
 
 export const metadata: Metadata = {
   title: 'Come Trovare Clienti per la Tua Agenzia Web nel 2025 | TrovaMi',
@@ -51,13 +50,6 @@ export default function ComeTrovareClientiPage() {
           </div>
         </div>
       </section>
-
-      {/* Upgrade Urgency Banner */}
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-t border-b border-blue-200">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <UpgradeUrgencyBanner variant="compact" />
-        </div>
-      </div>
 
       {/* Contenuto Articolo */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">

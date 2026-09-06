@@ -12,7 +12,8 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { getDaysUntilReset, formatResetDate } from '@/lib/auth'
 import { isProOrHigher, getBasePlanType } from '@/lib/utils/plan-helpers'
-import { hasCredits } from '@/lib/utils/credits-display'
+import { hasCredits, formatCredits, isUnlimitedCredits } from '@/lib/utils/credits-display'
+import { useToast } from '@/components/ToastProvider'
 import { createPortal } from 'react-dom'
 import { LeadStatusBadge } from '@/components/LeadStatusBadge'
 import { LeadWithCRM, CRMStatusType } from '@/lib/types/crm'
@@ -103,6 +104,7 @@ interface Settings {
 
 export default function ClientDashboard() {
   const { user, loading, refreshProfile, decrementCredits } = useAuth()
+  const { success: toastSuccess, error: toastError } = useToast()
   const router = useRouter()
   const { startTour } = useOnboarding()
   const [leads, setLeads] = useState<Lead[]>([])
@@ -768,7 +770,7 @@ export default function ClientDashboard() {
     // hasCredits gestisce anche -1 = illimitato (prima gli utenti Agency
     // venivano bloccati da "remainingProposals <= 0")
     if (!hasCredits(remainingProposals)) {
-      alert('Non hai più crediti disponibili. Aggiorna il tuo piano per continuare.')
+      toastError('Crediti esauriti', 'Aggiorna il tuo piano per continuare.')
       router.push('/upgrade')
       return
     }
@@ -781,7 +783,7 @@ export default function ClientDashboard() {
       // Ottieni la sessione per il token
       const session = await supabase.auth.getSession()
       if (!session.data.session) {
-        alert('Errore di autenticazione. Ricarica la pagina.')
+        toastError('Errore di autenticazione', 'Ricarica la pagina.')
         return
       }
 
@@ -798,7 +800,7 @@ export default function ClientDashboard() {
 
       if (!response.ok) {
         console.error('Errore API unlock:', data.error)
-        alert(data.error || 'Errore nel sbloccare il lead. Riprova.')
+        toastError('Sblocco non riuscito', data.error || 'Riprova tra qualche istante.')
         return
       }
 
@@ -832,7 +834,7 @@ export default function ClientDashboard() {
       }
     } catch (error) {
       console.error('Errore generale:', error)
-      alert('Errore nello sbloccare il lead. Riprova.')
+      toastError('Errore nello sblocco', 'Riprova tra qualche istante.')
     }
   }
 
@@ -846,7 +848,7 @@ export default function ClientDashboard() {
       // Ottieni il token corrente
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.access_token) {
-        alert('Sessione scaduta, effettua nuovamente il login')
+        toastError('Sessione scaduta', 'Effettua nuovamente il login.')
         return
       }
 
@@ -878,11 +880,11 @@ export default function ClientDashboard() {
         // Mostra feedback positivo (senza alert per UX migliore)
         console.log(`Status CRM aggiornato con successo a "${newStatus}"`)
       } else {
-        alert(`Errore: ${result.error}`)
+        toastError('Errore', result.error)
       }
     } catch (error) {
       console.error('Errore aggiornamento CRM:', error)
-      alert('Errore durante l\'aggiornamento dello stato CRM')
+      toastError('Errore aggiornamento CRM', 'Riprova tra qualche istante.')
     } finally {
       setUpdatingCRM(null)
     }
@@ -1172,29 +1174,27 @@ export default function ClientDashboard() {
     return services.slice(0, 3) // Max 3 servizi
   }
 
+  // Nota: le "probabilità di conversione" percentuali sono state rimosse —
+  // erano numeri inventati, non supportati da alcun dato reale
   const getConversionTips = (score: number) => {
     if (score <= 30) {
       return [
         'Sito con problemi critici - cliente molto ricettivo',
-        'Probabilità di conversione: 85%',
         'Approccio: Urgenza e soluzioni immediate'
       ]
     } else if (score <= 50) {
       return [
         'Evidenti opportunità di miglioramento',
-        'Probabilità di conversione: 70%', 
         'Approccio: Mostra ROI concreto'
       ]
     } else if (score <= 70) {
       return [
         'Potenziale di crescita identificato',
-        'Probabilità di conversione: 55%',
         'Approccio: Focus su competitività'
       ]
     } else {
       return [
         'Opportunità di ottimizzazione minori',
-        'Probabilità di conversione: 35%',
         'Approccio: Manutenzione e crescita'
       ]
     }
@@ -1412,20 +1412,20 @@ export default function ClientDashboard() {
               </div>
             </div>
 
-            {/* Proposte Rimanenti */}
+            {/* Crediti rimanenti (-1 = piano illimitato, non è un errore!) */}
             <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Crediti</p>
-                  <p className={`text-2xl font-bold mb-1 ${remainingProposals <= 1 ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
-                    {remainingProposals}
+                  <p className={`text-2xl font-bold mb-1 ${!isUnlimitedCredits(remainingProposals) && remainingProposals <= 1 ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
+                    {formatCredits(remainingProposals)}
                   </p>
                   <p className="text-xs text-gray-500">1 credito = 1 lead sbloccato</p>
-                  {remainingProposals <= 1 && getBasePlanType(user?.plan || '') !== 'free' &&  (
+                  {!isUnlimitedCredits(remainingProposals) && remainingProposals <= 1 && getBasePlanType(user?.plan || '') !== 'free' &&  (
                     <p className="text-xs text-red-500 font-medium">Crediti in esaurimento!</p>
                   )}
                 </div>
-                <CreditCard className={`h-8 w-8 ${remainingProposals <= 1 ? 'text-red-500' : 'text-blue-500'}`} />
+                <CreditCard className={`h-8 w-8 ${!isUnlimitedCredits(remainingProposals) && remainingProposals <= 1 ? 'text-red-500' : 'text-blue-500'}`} />
               </div>
               {remainingProposals === 0 && (
                 <button
@@ -1980,16 +1980,16 @@ export default function ClientDashboard() {
             )}
 
             {/* Nuovo Sistema Filtri Avanzati - Nascosto per nuovi utenti */}
-            {!isNewUser && (
-              <AdvancedFilters
-                isOpen={showAdvancedFilters}
-                onToggle={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                filters={advancedFilters}
-                onFiltersChange={(filters: AdvancedFiltersState) => setAdvancedFilters(filters)}
-                leadCount={leads.length}
-                userPlan={userProfile?.plan}
-              />
-            )}
+            {/* Filtri avanzati visibili a TUTTI, anche ai nuovi utenti:
+                il filtro per servizi è il cuore del prodotto, non va nascosto */}
+            <AdvancedFilters
+              isOpen={showAdvancedFilters}
+              onToggle={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              filters={advancedFilters}
+              onFiltersChange={(filters: AdvancedFiltersState) => setAdvancedFilters(filters)}
+              leadCount={leads.length}
+              userPlan={userProfile?.plan}
+            />
           </TourTarget>
 
           {/* Lista Lead */}
@@ -2155,7 +2155,7 @@ export default function ClientDashboard() {
           {totalPages > 1 && (
             <div className="mt-8 flex items-center justify-between">
               <div className="text-sm text-gray-600 dark:text-gray-400">
-                Showing {((currentPage - 1) * LEADS_PER_PAGE) + 1} to {Math.min(currentPage * LEADS_PER_PAGE, totalLeads)} of {totalLeads} leads
+                {((currentPage - 1) * LEADS_PER_PAGE) + 1}–{Math.min(currentPage * LEADS_PER_PAGE, totalLeads)} di {totalLeads} lead
               </div>
               
               <div className="flex items-center space-x-2">
@@ -2164,7 +2164,7 @@ export default function ClientDashboard() {
                   disabled={currentPage === 1}
                   className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                 >
-                  Previous
+                  Precedente
                 </button>
                 
                 <div className="flex items-center space-x-1">
@@ -2193,7 +2193,7 @@ export default function ClientDashboard() {
                   disabled={currentPage === totalPages}
                   className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                 >
-                  Next
+                  Successiva
                 </button>
               </div>
             </div>

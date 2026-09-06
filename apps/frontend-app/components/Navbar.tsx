@@ -16,6 +16,7 @@ import ThemeToggle from './theme/ThemeToggle'
 import TourControlMenu from './onboarding/TourControlMenu'
 import NotificationCenter from './NotificationCenter'
 import { isStarterOrHigher } from '@/lib/utils/plan-helpers'
+import { formatCredits } from '@/lib/utils/credits-display'
 
 // Tools disponibili per il dropdown
 const toolsMenu = [
@@ -101,7 +102,45 @@ export default function Navbar() {
     )
   }
 
-  if (!user) return null
+  // Header pubblico per visitatori anonimi (prima: return null → /blog, /terms,
+  // /tools erano vicoli ciechi senza navigazione né link alla home)
+  if (!user) {
+    return (
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Target className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-xl font-bold text-gray-900">TrovaMi</span>
+            </Link>
+
+            <div className="hidden sm:flex items-center space-x-6">
+              <Link href="/tools" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                Tool gratuiti
+              </Link>
+              <Link href="/blog" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                Blog
+              </Link>
+              <Link href="/pricing" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                Prezzi
+              </Link>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <Link href="/login" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                Accedi
+              </Link>
+              <Button variant="primary" onClick={() => router.push('/register')}>
+                Registrati
+              </Button>
+            </div>
+          </div>
+        </div>
+      </nav>
+    )
+  }
 
   // Navigazione dinamica basata su ruolo e pagina corrente
   const navigation = isAdmin ? [
@@ -246,7 +285,7 @@ export default function Navbar() {
                   >
                     <Coins className="h-4 w-4 text-yellow-500" />
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {user.credits_remaining}
+                      {formatCredits((user as any).proposals_remaining ?? user.credits_remaining)}
                     </span>
                     <Plus className="h-3 w-3 text-yellow-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </Link>

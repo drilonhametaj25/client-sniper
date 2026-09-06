@@ -374,10 +374,10 @@ function CreditsPageContent() {
                 <TrendingUp className="w-6 h-6 text-green-600 dark:text-green-400" />
               </div>
               <h4 className="font-medium text-gray-900 dark:text-white mb-2">
-                Risparmia di piu'
+                Risparmia di più
               </h4>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Pacchetti piu' grandi = prezzo per credito piu' basso.
+                Pacchetti più grandi = prezzo per credito più basso.
               </p>
             </div>
             <div className="text-center">
@@ -397,7 +397,7 @@ function CreditsPageContent() {
         {/* Upgrade CTA */}
         <div className="mt-8 text-center">
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            Usi spesso la piattaforma? Un piano mensile potrebbe convenire di piu'.
+            Usi spesso la piattaforma? Un piano mensile potrebbe convenire di più.
           </p>
           <Link
             href="/upgrade"

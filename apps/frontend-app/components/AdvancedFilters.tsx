@@ -29,6 +29,7 @@ import {
   Briefcase
 } from 'lucide-react'
 import { SERVICE_CONFIGS, type ServiceType } from '@/lib/types/services'
+import { isStarterOrHigher } from '@/lib/utils/plan-helpers'
 
 export interface AdvancedFiltersState {
   scoreRange: {
@@ -62,11 +63,12 @@ interface AdvancedFiltersProps {
   userPlan?: string // 'free' | 'starter' | 'pro' | 'agency' etc.
 }
 
-// Helper per determinare se un piano ha accesso ai dettagli avanzati
+// Helper per determinare se un piano ha accesso ai dettagli avanzati.
+// Gate unico da plan-helpers, allineato a Starter+ (i paganti sono su starter_*).
 const hasAdvancedAccess = (plan?: string): boolean => {
   if (!plan) return false
-  const basePlan = plan.replace('_annual', '').replace('_monthly', '')
-  return ['pro', 'agency', 'admin'].includes(basePlan)
+  if (plan === 'admin') return true
+  return isStarterOrHigher(plan)
 }
 
 const DEFAULT_FILTERS: AdvancedFiltersState = {

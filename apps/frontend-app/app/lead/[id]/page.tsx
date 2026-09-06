@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { hasCredits } from "@/lib/utils/credits-display";
+import { useToast } from "@/components/ToastProvider";
 import { WebsiteAnalysis, EnhancedWebsiteAnalysis } from "@/lib/types/analysis";
 import { TourTarget } from "@/components/onboarding/TourTarget";
 import {
@@ -91,6 +92,7 @@ interface Lead {
 
 export default function LeadDetailPage() {
   const { user, refreshProfile } = useAuth();
+  const { error: toastError } = useToast();
   const router = useRouter();
   const params = useParams();
   const leadId = params.id as string;
@@ -207,7 +209,7 @@ export default function LeadDetailPage() {
       // Ottieni la sessione per il token
       const session = await supabase.auth.getSession()
       if (!session.data.session) {
-        alert('Errore di autenticazione. Ricarica la pagina.')
+        toastError('Errore di autenticazione', 'Ricarica la pagina.')
         return
       }
 
@@ -225,7 +227,7 @@ export default function LeadDetailPage() {
 
       if (!response.ok) {
         console.error('Errore API unlock:', data.error);
-        alert(data.error || 'Errore nel sbloccare il lead. Riprova.');
+        toastError('Sblocco non riuscito', data.error || 'Riprova tra qualche istante.');
         return;
       }
 

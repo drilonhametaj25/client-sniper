@@ -144,7 +144,7 @@ export default function AccessibilityCheckPage() {
             <span className="text-gray-600">Accessibility Audit</span>
           </Link>
           <Link
-            href="/signup"
+            href="/register"
             className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition text-sm"
           >
             Registrati Gratis
@@ -312,7 +312,7 @@ export default function AccessibilityCheckPage() {
               </p>
               <div className="flex gap-4 justify-center">
                 <Link
-                  href="/signup"
+                  href="/register"
                   className="bg-white text-purple-600 px-6 py-3 rounded-lg font-semibold hover:bg-purple-50 transition"
                 >
                   Inizia Gratis
@@ -357,7 +357,7 @@ export default function AccessibilityCheckPage() {
 
         {/* Info Box */}
         <div className="mt-12 bg-purple-50 rounded-xl p-6 border border-purple-100">
-          <h3 className="font-bold text-purple-900 mb-2">Perche l'accessibilita e importante?</h3>
+          <h3 className="font-bold text-purple-900 mb-2">Perché l'accessibilità è importante?</h3>
           <p className="text-purple-800 text-sm mb-4">
             Oltre 1 miliardo di persone nel mondo hanno disabilita. Un sito accessibile:
           </p>

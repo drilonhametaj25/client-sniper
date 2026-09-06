@@ -513,20 +513,8 @@ export default function LeadCard({
                     Copia email
                   </button>
                 )}
-                <button
-                  onClick={() => setShowMenu(false)}
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                >
-                  <Flag className="w-4 h-4" />
-                  Segnala errore
-                </button>
-                <button
-                  onClick={() => setShowMenu(false)}
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                >
-                  <Archive className="w-4 h-4" />
-                  Archivia
-                </button>
+                {/* "Segnala errore" e "Archivia" rimossi: erano bottoni morti
+                    (chiudevano solo il menu senza fare nulla) */}
                 {isUnlocked && onMarkContacted && (
                   <button
                     onClick={() => {

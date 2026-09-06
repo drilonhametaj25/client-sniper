@@ -11,6 +11,7 @@ import {
   Target,
   Shield,
 } from "lucide-react";
+import { isStarterOrHigher } from "@/lib/utils/plan-helpers";
 
 interface NavItem {
   name: string;
@@ -28,7 +29,9 @@ export default function MobileBottomNav() {
 
   const isAdmin = user.role === "admin";
   const isAdminRoute = pathname.startsWith("/admin");
-  const isPro = user.plan === "pro" || user.plan === "agency";
+  // Gate unico da plan-helpers: i nomi reali sono starter_monthly/pro_annual/...
+  // (l'exact-match "pro" non era mai vero → CRM/Analytics invisibili a tutti)
+  const hasPaidAccess = isStarterOrHigher(user.plan || "free");
 
   // Navigation items based on role and plan
   const navItems: NavItem[] = isAdmin && isAdminRoute
@@ -41,13 +44,12 @@ export default function MobileBottomNav() {
       ]
     : [
         { name: "Dashboard", href: "/dashboard", icon: Home },
-        { name: "Analisi", href: "/tools/manual-scan", icon: Target },
-        ...(isPro
+        ...(hasPaidAccess
           ? [
               { name: "CRM", href: "/crm", icon: FolderOpen },
               { name: "Analytics", href: "/analytics", icon: BarChart },
             ]
-          : []),
+          : [{ name: "Analisi", href: "/tools/seo-checker", icon: Target }]),
         { name: "Account", href: "/settings", icon: User },
       ];
 

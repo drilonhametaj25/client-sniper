@@ -181,7 +181,7 @@ export default function LeadDigitalServices({ lead }: LeadDigitalServicesProps) 
             Passa al piano Starter o superiore per vedere servizi personalizzati per questo lead
           </p>
           <a 
-            href="/settings/subscription"
+            href="/upgrade"
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
           >
             Upgrade Piano

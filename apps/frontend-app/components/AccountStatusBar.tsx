@@ -1,10 +1,10 @@
 /**
- * AccountStatusBar - Barra stato proposte utente
+ * AccountStatusBar - Barra stato crediti utente
  *
- * Mostra le proposte rimanenti in base al piano:
- * - FREE: "1 proposta disponibile questa settimana"
- * - STARTER: "18/25 proposte rimaste questo mese"
- * - AGENCY: "Piano Agency — proposte illimitate"
+ * Mostra i crediti rimanenti in base al piano:
+ * - FREE: "1 credito di prova disponibile"
+ * - STARTER: "18/25 crediti rimasti questo mese"
+ * - AGENCY: "Crediti illimitati"
  *
  * Include:
  * - Progress bar visuale
@@ -17,6 +17,7 @@
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
 import { Zap, TrendingUp, Crown, RefreshCw, ChevronRight } from 'lucide-react'
+import { getBasePlanType } from '@/lib/utils/plan-helpers'
 
 interface AccountStatusBarProps {
   className?: string
@@ -107,7 +108,7 @@ export default function AccountStatusBar({
 
         {showUpgradeButton && !isUnlimited && (
           <Link
-            href="/pricing"
+            href="/upgrade"
             className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
           >
             Upgrade
@@ -173,7 +174,7 @@ export default function AccountStatusBar({
           <div className="flex-shrink-0">
             {isDepleted ? (
               <Link
-                href="/pricing"
+                href="/upgrade"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm font-medium rounded-xl transition-colors"
               >
                 <TrendingUp className="w-4 h-4" />
@@ -182,7 +183,7 @@ export default function AccountStatusBar({
               </Link>
             ) : isLow ? (
               <Link
-                href="/pricing"
+                href="/upgrade"
                 className="inline-flex items-center gap-2 px-4 py-2 border border-orange-300 dark:border-orange-700 text-orange-600 dark:text-orange-400 text-sm font-medium rounded-xl hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
               >
                 Upgrade
@@ -190,7 +191,7 @@ export default function AccountStatusBar({
               </Link>
             ) : !isUnlimited ? (
               <Link
-                href="/pricing"
+                href="/upgrade"
                 className="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
               >
                 Vedi piani
@@ -206,56 +207,39 @@ export default function AccountStatusBar({
 
 // Helper: Icona piano
 function PlanIcon({ plan }: { plan: string }) {
-  if (plan.includes('agency')) {
+  const base = getBasePlanType(plan)
+  if (base === 'agency') {
     return <Crown className="w-5 h-5 text-purple-600 dark:text-purple-400" />
   }
-  if (plan.includes('starter')) {
+  if (base === 'starter' || base === 'pro') {
     return <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
   }
   return <Zap className="w-5 h-5 text-gray-500 dark:text-gray-400" />
 }
 
-// Helper: Configurazione piano
+// Helper: Configurazione piano.
+// Usa getBasePlanType: i nomi reali sono free/starter_monthly/starter_annual/
+// pro_monthly/pro_annual/agency_monthly/agency_annual (prima i Pro paganti e i
+// nomi non mappati finivano nel fallback "Piano Free").
 function getPlanConfig(plan: string): {
   label: string
   maxProposals: number
   isUnlimited: boolean
   resetType: 'weekly' | 'monthly' | 'never'
 } {
-  const configs: Record<string, ReturnType<typeof getPlanConfig>> = {
-    free: {
-      label: 'Piano Free',
-      maxProposals: 1,
-      isUnlimited: false,
-      resetType: 'never'
-    },
-    starter_monthly: {
-      label: 'Piano Starter',
-      maxProposals: 25,
-      isUnlimited: false,
-      resetType: 'monthly'
-    },
-    starter_annual: {
-      label: 'Piano Starter (Annuale)',
-      maxProposals: 25,
-      isUnlimited: false,
-      resetType: 'monthly'
-    },
-    agency_monthly: {
-      label: 'Piano Agency',
-      maxProposals: -1,
-      isUnlimited: true,
-      resetType: 'never'
-    },
-    agency_annual: {
-      label: 'Piano Agency (Annuale)',
-      maxProposals: -1,
-      isUnlimited: true,
-      resetType: 'never'
-    }
-  }
+  const base = getBasePlanType(plan)
+  const annualSuffix = plan.includes('_annual') ? ' (Annuale)' : ''
 
-  return configs[plan] || configs.free
+  switch (base) {
+    case 'starter':
+      return { label: `Piano Starter${annualSuffix}`, maxProposals: 25, isUnlimited: false, resetType: 'monthly' }
+    case 'pro':
+      return { label: `Piano Pro${annualSuffix}`, maxProposals: 100, isUnlimited: false, resetType: 'monthly' }
+    case 'agency':
+      return { label: `Piano Agency${annualSuffix}`, maxProposals: -1, isUnlimited: true, resetType: 'never' }
+    default:
+      return { label: 'Piano Free', maxProposals: 1, isUnlimited: false, resetType: 'never' }
+  }
 }
 
 // Helper: Messaggio stato

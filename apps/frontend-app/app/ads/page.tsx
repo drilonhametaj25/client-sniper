@@ -2,7 +2,7 @@
 
 // Landing page ottimizzata per le Ads - /ads
 // Progettata per massimizzare la conversione con promessa chiara e CTA unica
-// Include proof sociali, testimonianze e comparativa prezzi
+// Include comparativa prezzi, esempi di lead e FAQ
 // Utilizzata per campagne Google/Facebook Ads
 
 import Link from "next/link";
@@ -20,9 +20,6 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
-import TestimonialCarousel from "@/components/TestimonialCarousel";
-import SocialProofStats from "@/components/SocialProofStats";
-import UrgencyScarcity from "@/components/UrgencyScarcity";
 import AdsLandingFAQ from "@/components/AdsLandingFAQ";
 import NewPlanSelector from "@/components/NewPlanSelector";
 import {
@@ -152,9 +149,6 @@ export default function AdsLandingPage() {
               Nessuna carta di credito richiesta
             </div>
           </div>
-
-          {/* Social Proof Numerico */}
-          <SocialProofStats />
         </div>
       </section>
 
@@ -343,7 +337,7 @@ export default function AdsLandingPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              Esempi di Lead Reali
+              Esempi di Lead
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Ecco alcuni esempi di lead che potresti trovare con TrovaMi
@@ -500,23 +494,6 @@ export default function AdsLandingPage() {
         </div>
       </section>
 
-      {/* Testimonianze */}
-      <section className="py-20 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              Cosa Dicono i Nostri Clienti
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Storie di successo di agenzie e freelancer che hanno scelto
-              TrovaMi
-            </p>
-          </div>
-
-          <TestimonialCarousel />
-        </div>
-      </section>
-
       {/* FAQ Section */}
       <AdsLandingFAQ />
 
@@ -536,7 +513,7 @@ export default function AdsLandingPage() {
             </h2>
             <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
               Inizia subito con 1 lead di prova gratuito. Nessuna carta di credito
-              richiesta. Scopri perché centinaia di agenzie scelgono TrovaMi.
+              richiesta.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">

@@ -1,7 +1,7 @@
 /**
  * Score Distribution Component
  * Mostra distribuzione qualita' lead per fascia di score
- * 0-30 = Alta opportunita', 31-60 = Media, 61-100 = Bassa
+ * 0-30 = Alta opportunità, 31-60 = Media, 61-100 = Bassa
  */
 
 'use client'
@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 
 interface ScoreData {
-  high: number // 0-30 (alta opportunita')
+  high: number // 0-30 (alta opportunità)
   medium: number // 31-60
   low: number // 61-100
   total: number
@@ -270,7 +270,7 @@ export function ScoreDistribution() {
       {data.low > data.high && (
         <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
           <p className="text-sm text-yellow-700 dark:text-yellow-300">
-            <strong>Suggerimento:</strong> Cerca lead con score piu' basso per maggiori opportunita'.
+            <strong>Suggerimento:</strong> Cerca lead con score più basso per maggiori opportunità.
           </p>
         </div>
       )}
