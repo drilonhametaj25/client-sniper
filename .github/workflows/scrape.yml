@@ -63,9 +63,9 @@ jobs:
       - name: Run scraping engine
         run: npm run scrape
         env:
-          # Database configuration - hardcoded per test
-          SUPABASE_URL: https://qoguevatzujrorgmqnfo.supabase.co
-          SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvZ3VldmF0enVqcm9yZ21xbmZvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MDgzNzI2MCwiZXhwIjoyMDY2NDEzMjYwfQ.DFKTg-vUTTSiQQXZ_Zd8IK9Hd3XT9XsIBzoR6RizavQ
+          # Database configuration (da GitHub Secrets)
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           
           # Scraping configuration
           SCRAPE_MODE: ${{ github.event.inputs.scrape_mode || 'incremental' }}

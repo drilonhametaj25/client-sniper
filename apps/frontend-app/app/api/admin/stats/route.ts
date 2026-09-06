@@ -2,10 +2,12 @@
  * API per statistiche amministrative generali
  * Utilizzato nel pannello admin per mostrare metrics di sistema
  * Endpoint: GET /api/admin/stats
+ * Richiede: utente autenticato con role='admin' (oltre al middleware globale)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { authenticateUser } from '@/lib/auth-middleware';
 
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
@@ -20,25 +22,35 @@ function getSupabaseAdmin() {
 
 export async function GET(request: NextRequest) {
   try {
-    // Verifica cookies di autenticazione
-    const headers = request.headers;
-    
-    // Ottieni statistiche generali
-    const { data: users, error: usersError } = await getSupabaseAdmin()
+    const { user, error: authError } = await authenticateUser(request)
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 })
+    }
+
+    const admin = getSupabaseAdmin()
+
+    const { data: profile } = await admin
       .from('users')
-      .select('*');
+      .select('role')
+      .eq('id', user.id)
+      .single()
 
-    if (usersError) throw usersError;
+    if (profile?.role !== 'admin') {
+      return NextResponse.json({ error: 'Accesso riservato agli admin' }, { status: 403 })
+    }
 
-    const { data: leads, error: leadsError } = await getSupabaseAdmin()
-      .from('leads') 
-      .select('*');
+    // Conteggi senza caricare le tabelle in memoria
+    const [usersCount, leadsCount] = await Promise.all([
+      admin.from('users').select('*', { count: 'exact', head: true }),
+      admin.from('leads').select('*', { count: 'exact', head: true }),
+    ])
 
-    if (leadsError) throw leadsError;
+    if (usersCount.error) throw usersCount.error
+    if (leadsCount.error) throw leadsCount.error
 
     return NextResponse.json({
-      users_count: users?.length || 0,
-      leads_count: leads?.length || 0,
+      users_count: usersCount.count ?? 0,
+      leads_count: leadsCount.count ?? 0,
       timestamp: new Date().toISOString()
     });
 

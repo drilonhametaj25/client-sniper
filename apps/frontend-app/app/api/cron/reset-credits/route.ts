@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { requireCronSecret, unauthorizedCronResponse } from '@/lib/api/cron-auth'
 
 function getSupabase() {
   return createClient(
@@ -14,34 +15,20 @@ function getSupabase() {
   )
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    // 🔐 SECURITY: Verifica auth header per cron job
-    const authHeader = request.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET || 'development-secret'
-    
-    // Vercel Cron Jobs includono un header speciale
-    const vercelCronSecret = request.headers.get('authorization')
-    const isVercelCron = request.headers.get('user-agent')?.includes('vercel-cron')
-    
-    // Accetta sia Bearer token che Vercel cron
-    const isAuthorized = 
-      authHeader === `Bearer ${cronSecret}` ||
-      (isVercelCron && vercelCronSecret === cronSecret) ||
-      authHeader === cronSecret // Per compatibilità diretta
-    
-    if (!isAuthorized) {
-      console.log('❌ Unauthorized cron request')
-      console.log('Auth header:', authHeader)
-      console.log('User agent:', request.headers.get('user-agent'))
-      console.log('Is Vercel cron:', isVercelCron)
-      
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+// Vercel Cron invoca GET; GitHub Actions/manuale usano POST.
+// Entrambi richiedono Authorization: Bearer CRON_SECRET (fail-closed).
+export async function GET(request: NextRequest) {
+  if (!requireCronSecret(request)) return unauthorizedCronResponse()
+  return runCreditsReset()
+}
 
+export async function POST(request: NextRequest) {
+  if (!requireCronSecret(request)) return unauthorizedCronResponse()
+  return runCreditsReset()
+}
+
+async function runCreditsReset() {
+  try {
     console.log('\n🔄 STARTING AUTOMATIC CREDITS RESET')
     console.log(`Timestamp: ${new Date().toISOString()}`)
 
@@ -210,51 +197,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// 🔄 GET endpoint per verificare stato reset
-export async function GET(request: NextRequest) {
-  try {
-    // 📊 PREVIEW: Mostra utenti che necessiterebbero reset
-    const now = new Date()
-    const { data: usersToReset, error } = await getSupabase()
-      .from('users')
-      .select(`
-        id, 
-        email, 
-        plan, 
-        credits_remaining, 
-        credits_reset_date,
-        stripe_subscription_id
-      `)
-      .not('credits_reset_date', 'is', null)
-      .lte('credits_reset_date', now.toISOString())
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    const stripeManagedUsers = usersToReset?.filter(u => u.stripe_subscription_id) || []
-    const nonStripeUsers = usersToReset?.filter(u => !u.stripe_subscription_id) || []
-
-    return NextResponse.json({
-      timestamp: now.toISOString(),
-      total_eligible_for_reset: usersToReset?.length || 0,
-      stripe_managed_users: stripeManagedUsers.length,
-      non_stripe_users: nonStripeUsers.length,
-      users_to_be_processed: nonStripeUsers.length,
-      preview: nonStripeUsers.slice(0, 5).map(u => ({
-        id: u.id,
-        email: u.email,
-        plan: u.plan,
-        current_credits: u.credits_remaining,
-        reset_date: u.credits_reset_date
-      }))
-    })
-
-  } catch (error) {
-    console.error('Error in credits reset preview:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
-}

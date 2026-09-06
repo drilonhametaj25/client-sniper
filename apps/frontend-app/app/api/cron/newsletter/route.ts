@@ -23,6 +23,7 @@ import {
   getUserWeeklyStats,
   getUserGamification
 } from '@/lib/services/newsletter-personalization'
+import { requireCronSecret, unauthorizedCronResponse } from '@/lib/api/cron-auth'
 
 function getSupabase() {
   return createClient(
@@ -45,10 +46,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  // Supporto per Vercel Cron
-  const isVercelCron = request.headers.get('user-agent')?.includes('vercel-cron')
-
-  if (isVercelCron) {
+  // Vercel Cron invia Authorization: Bearer CRON_SECRET
+  if (requireCronSecret(request)) {
     return runNewsletterCron(request)
   }
 
@@ -66,17 +65,8 @@ async function runNewsletterCron(request: NextRequest): Promise<NextResponse> {
   const startTime = Date.now()
 
   try {
-    // Verifica autorizzazione
-    const authHeader = request.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET || 'development-secret'
-    const isVercelCron = request.headers.get('user-agent')?.includes('vercel-cron')
-
-    const isAuthorized =
-      authHeader === `Bearer ${cronSecret}` ||
-      isVercelCron ||
-      authHeader === cronSecret
-
-    if (!isAuthorized) {
+    // Verifica autorizzazione (Bearer CRON_SECRET, constant-time, fail-closed)
+    if (!requireCronSecret(request)) {
       console.warn('⚠️ Newsletter cron: Accesso non autorizzato')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }

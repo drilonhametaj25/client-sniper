@@ -4,6 +4,7 @@
 // ⚠️ Aggiornare le variabili d'ambiente in .env.local
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 let supabaseInstance: SupabaseClient | null = null
 
@@ -17,13 +18,22 @@ function getSupabaseClient() {
     throw new Error('Variabili d\'ambiente Supabase mancanti')
   }
 
-  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true
-    }
-  })
+  if (typeof window !== 'undefined') {
+    // Browser: sessione nei COOKIE (necessario perché middleware.ts e le API
+    // route possano vedere la sessione). Non usare createClient puro qui:
+    // salverebbe la sessione solo in localStorage, invisibile al server.
+    supabaseInstance = createClientComponentClient()
+  } else {
+    // Server (poche route legacy importano questo modulo): client anonimo
+    // senza persistenza di sessione.
+    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false
+      }
+    })
+  }
 
   return supabaseInstance
 }

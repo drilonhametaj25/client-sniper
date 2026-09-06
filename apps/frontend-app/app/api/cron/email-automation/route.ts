@@ -17,6 +17,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { smtpEmail } from '@/lib/services/smtp-email'
+import { requireCronSecret, unauthorizedCronResponse } from '@/lib/api/cron-auth'
 
 function getSupabase() {
   return createClient(
@@ -54,11 +55,8 @@ function shouldSendSearchAlert(frequency: string, lastSentAt: string | null): bo
 
 // GET handler - supporta sia Vercel cron che status check
 export async function GET(request: NextRequest) {
-  // Se è una chiamata Vercel cron, esegui l'automazione
-  const isVercelCron = request.headers.get('user-agent')?.includes('vercel-cron')
-
-  if (isVercelCron) {
-    // Esegui la stessa logica del POST
+  // Vercel Cron invia Authorization: Bearer CRON_SECRET
+  if (requireCronSecret(request)) {
     return runEmailAutomation(request)
   }
 
@@ -74,17 +72,8 @@ export async function GET(request: NextRequest) {
 // Funzione condivisa per l'automazione email
 async function runEmailAutomation(request: NextRequest) {
   try {
-    // Verifica autorizzazione
-    const authHeader = request.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET || 'development-secret'
-    const isVercelCron = request.headers.get('user-agent')?.includes('vercel-cron')
-
-    const isAuthorized =
-      authHeader === `Bearer ${cronSecret}` ||
-      isVercelCron ||
-      authHeader === cronSecret
-
-    if (!isAuthorized) {
+    // Verifica autorizzazione (Bearer CRON_SECRET, constant-time, fail-closed)
+    if (!requireCronSecret(request)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

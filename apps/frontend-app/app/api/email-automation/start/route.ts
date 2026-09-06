@@ -13,6 +13,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { startSequence, SEQUENCES } from '@/lib/services/email-sequences'
+import { requireCronSecret } from '@/lib/api/cron-auth'
 
 function getSupabase() {
   return createClient(
@@ -28,10 +29,9 @@ export async function POST(request: NextRequest) {
 
     // Verifica autorizzazione
     const authHeader = request.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET || 'development-secret'
 
-    // Se è una chiamata interna (dal server) o ha il cron secret
-    const isInternalCall = internal === true && authHeader === `Bearer ${cronSecret}`
+    // Chiamata interna (dal server) autenticata col CRON_SECRET (fail-closed)
+    const isInternalCall = internal === true && requireCronSecret(request)
 
     if (!isInternalCall) {
       // Verifica che sia un utente autenticato
