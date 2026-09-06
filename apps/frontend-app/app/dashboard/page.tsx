@@ -131,6 +131,19 @@ export default function ClientDashboard() {
   const [showFilters, setShowFilters] = useState(false)
   const [showOnlyUnlocked, setShowOnlyUnlocked] = useState(false) // Filtro per proposte generate
   const [showOnlyMatching, setShowOnlyMatching] = useState(false) // Filtro per lead compatibili con i servizi utente
+
+  // DEFAULT del prodotto: chi ha configurato i servizi vede i lead COMPATIBILI.
+  // "Trova lead per ciò che vendo" è la value prop centrale: non va cercata
+  // nei filtri, è lo stato di partenza (disattivabile con un click).
+  const matchingDefaultApplied = useRef(false)
+  useEffect(() => {
+    if (matchingDefaultApplied.current) return
+    const services = (user as any)?.services_offered as string[] | undefined
+    if (services && services.length > 0) {
+      matchingDefaultApplied.current = true
+      setShowOnlyMatching(true)
+    }
+  }, [user])
   const [showWelcomeModal, setShowWelcomeModal] = useState(false) // Modal per nuovi utenti
 
   // Filtri avanzati - sostituiti con sistema unificato
