@@ -14,6 +14,7 @@ import { getDaysUntilReset, formatResetDate } from '@/lib/auth'
 import { isProOrHigher, getBasePlanType } from '@/lib/utils/plan-helpers'
 import { hasCredits, formatCredits, isUnlimitedCredits } from '@/lib/utils/credits-display'
 import { useToast } from '@/components/ToastProvider'
+import { isHighOpportunity } from '@/lib/utils/opportunity'
 import { createPortal } from 'react-dom'
 import { LeadStatusBadge } from '@/components/LeadStatusBadge'
 import { LeadWithCRM, CRMStatusType } from '@/lib/types/crm'
@@ -1221,13 +1222,6 @@ export default function ClientDashboard() {
     return 'text-green-600 bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
   }
 
-  const getScoreLabel = (score: number) => {
-    if (score <= 30) return 'Critico'
-    if (score <= 50) return 'Alto Potenziale'
-    if (score <= 70) return 'Buone Opportunità'
-    return 'Basso Potenziale'
-  }
-
   // === BULK SELECTION HELPERS ===
   const toggleLeadSelection = (leadId: string) => {
     setSelectedLeads(prev =>
@@ -1326,8 +1320,9 @@ export default function ClientDashboard() {
 
   // Opzioni di ordinamento
   const sortOptions = [
-    { value: 'score', label: 'Punteggio (peggiore prima)', order: 'asc' },
-    { value: 'score', label: 'Punteggio (migliore prima)', order: 'desc' },
+    // v1: score basso = sito con più problemi = opportunità MIGLIORE
+    { value: 'score', label: 'Opportunità (migliore prima)', order: 'asc' },
+    { value: 'score', label: 'Opportunità (peggiore prima)', order: 'desc' },
     { value: 'created_at', label: 'Data inserimento (più recenti)', order: 'desc' },
     { value: 'created_at', label: 'Data inserimento (meno recenti)', order: 'asc' },
     { value: 'last_seen_at', label: 'Ultimo aggiornamento (più recenti)', order: 'desc' },
@@ -1364,8 +1359,11 @@ export default function ClientDashboard() {
   // Check se utente è nuovo (ha 1 proposta = non ha mai usato il tool)
   const isNewUser = userProfile?.proposals_remaining === 1 && userProfile?.plan === 'free'
 
-  // Lead consigliati per nuovi utenti (primi 3 lead con score alto)
-  const recommendedLeads = isNewUser ? leads.filter(l => l.score >= 50).slice(0, 3) : []
+  // Lead consigliati per nuovi utenti: le migliori OPPORTUNITÀ (prima il
+  // filtro era score >= 50, cioè i siti più sani = i lead PEGGIORI)
+  const recommendedLeads = isNewUser
+    ? leads.filter(l => isHighOpportunity(l.score, (l as any).score_version)).slice(0, 3)
+    : []
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 pt-24">
@@ -1592,7 +1590,7 @@ export default function ClientDashboard() {
                         💡 Perché questo lead?
                       </p>
                       <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                        Score {lead.score} = sito con problemi tecnici risolvibili
+                        Opportunità {isHighOpportunity(lead.score, (lead as any).score_version) ? 'alta' : 'media'}: sito con problemi tecnici risolvibili
                       </p>
                     </div>
 

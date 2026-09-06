@@ -185,6 +185,12 @@ export async function GET(request: NextRequest) {
     // Questo permette di mostrare informazioni REALI nelle card bloccate (contatti disponibili, problemi tecnici)
     let selectFields = `id, business_name, website_url, phone, email, address, city, category, score, analysis, created_at, last_seen_at`
 
+    // score_version (se la colonna esiste): serve alla UI per interpretare lo
+    // score (v1 = health score invertito, v2 = opportunity score)
+    if (await leadsHasColumn(getSupabaseAdmin(), 'score_version')) {
+      selectFields += ', score_version'
+    }
+
     // Quando filtriamo per servizi/match, servono i sotto-oggetti di website_analysis
     // per la detection completa (gdpr/mobile/social, non presenti nella forma legacy).
     // Li selezioniamo via JSON-path solo se la colonna esiste (DB potenzialmente non migrato).

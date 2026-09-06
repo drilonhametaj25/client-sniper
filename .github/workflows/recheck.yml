@@ -1,0 +1,69 @@
+# Ri-verifica notturna dei lead esistenti (freschezza dati)
+# - Priorità: needs_recheck=true, poi last_verified_at più vecchio
+# - Ricalcola analisi, opportunity score (v2) e formato JSONB canonico
+# Parte del progetto TrovaMi - services/scraping-engine
+
+name: Recheck Leads
+
+on:
+  schedule:
+    # Ogni notte alle 02:30 UTC
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Numero massimo di lead da ri-verificare'
+        required: false
+        default: '300'
+      rescore_only:
+        description: 'Solo ri-scoring offline (nessun re-scrape)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+jobs:
+  recheck:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: services/scraping-engine
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: |
+          cd ../../
+          npm install
+
+      - name: Install scraping engine dependencies
+        run: npm install
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run recheck
+        run: npm run recheck-leads -- --limit ${{ github.event.inputs.limit || '300' }} ${{ github.event.inputs.rescore_only == 'true' && '--rescore-only' || '' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NODE_ENV: production
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recheck-logs-${{ github.run_number }}
+          path: services/scraping-engine/logs/
+          retention-days: 7

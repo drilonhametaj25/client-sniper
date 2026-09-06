@@ -55,6 +55,7 @@ import {
   type CrmStatus
 } from '@/lib/utils/lead-card-helpers'
 import { detectServices } from '@/lib/utils/service-detection'
+import { getOpportunity } from '@/lib/utils/opportunity'
 import { calculateMatch, getMatchColor, getMatchIcon } from '@/lib/utils/match-calculation'
 import { SERVICE_CONFIGS, type ServiceType, formatBudget } from '@/lib/types/services'
 import {
@@ -157,7 +158,7 @@ export default function LeadCard({
         {/* Criticality badge */}
         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${criticality.bgColor} ${criticality.textColor}`}>
           <CriticalityIcon className="w-3 h-3" />
-          {criticality.label} ({lead.score})
+          {criticality.label}
         </span>
 
         {/* Location */}
@@ -224,23 +225,30 @@ export default function LeadCard({
           })()}
         </div>
 
-        {/* Score prominente */}
-        <div className="text-right flex-shrink-0">
-          <div className={`text-3xl font-bold ${criticality.textColor}`}>
-            {lead.score}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">opportunità</div>
-          {/* Progress bar */}
-          <div className="w-20 h-2 bg-gray-200 dark:bg-gray-700 rounded-full mt-1 overflow-hidden">
-            <div
-              className={`h-full ${getScoreBarColor(lead.score)} transition-all duration-300`}
-              style={{ width: `${100 - lead.score}%` }}
-            />
-          </div>
-          <div className="text-xs text-gray-400 mt-1">
-            {lead.score <= 30 ? 'Alta' : lead.score <= 60 ? 'Media' : 'Bassa'}
-          </div>
-        </div>
+        {/* Opportunità prominente (semantica unica via getOpportunity:
+            prima mostrava lo score v1 grezzo etichettato "opportunità",
+            dove 15 = ottimo lead ma sembrava un valore basso) */}
+        {(() => {
+          const opportunity = getOpportunity(lead.score, (lead as any).score_version)
+          return (
+            <div className="text-right flex-shrink-0">
+              <div className={`text-3xl font-bold ${opportunity.textClass}`}>
+                {opportunity.value}
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">opportunità</div>
+              {/* Progress bar */}
+              <div className="w-20 h-2 bg-gray-200 dark:bg-gray-700 rounded-full mt-1 overflow-hidden">
+                <div
+                  className={`h-full ${getScoreBarColor(lead.score)} transition-all duration-300`}
+                  style={{ width: `${opportunity.value}%` }}
+                />
+              </div>
+              <div className="text-xs text-gray-400 mt-1">
+                {opportunity.value >= 70 ? 'Alta' : opportunity.value >= 40 ? 'Media' : 'Bassa'}
+              </div>
+            </div>
+          )
+        })()}
       </div>
 
       {/* ===== CONTACT INFO (se sbloccato) ===== */}
@@ -594,7 +602,7 @@ export function LeadCardCompact({
 
         {/* Avatar/Initial */}
         <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold flex-shrink-0 ${criticality.bgColor} ${criticality.textColor}`}>
-          {isUnlocked ? (lead.business_name?.charAt(0) || '?') : lead.score}
+          {isUnlocked ? (lead.business_name?.charAt(0) || '?') : getOpportunity(lead.score, (lead as any).score_version).value}
         </div>
 
         {/* Name & Category - SEMPRE VISIBILE */}
@@ -616,9 +624,9 @@ export function LeadCardCompact({
           </div>
         </div>
 
-        {/* Score badge */}
+        {/* Badge opportunità (0-100, alto = meglio) */}
         <span className={`px-2 py-1 rounded-lg text-sm font-bold flex-shrink-0 ${criticality.bgColor} ${criticality.textColor}`}>
-          {lead.score}
+          {getOpportunity(lead.score, (lead as any).score_version).value}
         </span>
 
         {/* Match score badge */}
