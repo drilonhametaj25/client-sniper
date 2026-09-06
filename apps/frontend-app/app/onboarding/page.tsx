@@ -21,11 +21,10 @@ import {
   type OnboardingV2Data
 } from '@/lib/types/onboarding-v2'
 
-// Step Components (V2)
-import StepWelcome from './components/StepWelcome'
-import StepSpecialization from './components/StepSpecialization'
+// Step Components (3 step: servizi → zona → riepilogo)
+import StepServices from './components/StepServices'
 import StepLocationSimple from './components/StepLocationSimple'
-import StepBranding from './components/StepBranding'
+import StepRecap from './components/StepRecap'
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -146,8 +145,9 @@ export default function OnboardingPage() {
       // Refresh profilo utente
       await refreshProfile()
 
-      // Redirect alla dashboard con messaggio di benvenuto
-      router.push('/dashboard?welcome=true')
+      // Redirect alla dashboard: il filtro "Solo per i miei servizi" troverà
+      // subito i lead compatibili con i servizi appena configurati
+      router.push('/dashboard?onboarded=1')
     } catch (err) {
       console.error('Errore completamento onboarding:', err)
       setError(err instanceof Error ? err.message : 'Errore sconosciuto')
@@ -178,62 +178,58 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Progress bar (solo dopo step 1) */}
-      {currentStep > 1 && (
-        <div className="w-full bg-gray-200 dark:bg-gray-700 h-1">
-          <div
-            className="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-500"
-            style={{ width: `${((currentStep - 1) / (totalSteps - 1)) * 100}%` }}
-          />
-        </div>
-      )}
+      {/* Progress bar */}
+      <div className="w-full bg-gray-200 dark:bg-gray-700 h-1">
+        <div
+          className="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-500"
+          style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+        />
+      </div>
 
-      {/* Step indicator (solo dopo step 1) */}
-      {currentStep > 1 && (
-        <div className="py-4 px-6 flex items-center justify-center gap-2">
-          {ONBOARDING_STEPS.slice(1).map((step, idx) => {
-            const stepNum = idx + 2
-            const isActive = currentStep === stepNum
-            const isCompleted = currentStep > stepNum
+      {/* Step indicator */}
+      <div className="py-4 px-6 flex items-center justify-center gap-2">
+        {ONBOARDING_STEPS.map((step, idx) => {
+          const stepNum = idx + 1
+          const isActive = currentStep === stepNum
+          const isCompleted = currentStep > stepNum
 
-            return (
-              <div key={step.id} className="flex items-center">
-                <div
-                  className={`
-                    w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all
-                    ${isActive
-                      ? 'bg-blue-600 text-white'
-                      : isCompleted
-                        ? 'bg-green-500 text-white'
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                    }
-                  `}
-                >
-                  {isCompleted ? (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    stepNum - 1
-                  )}
-                </div>
-
-                {idx < ONBOARDING_STEPS.length - 2 && (
-                  <div
-                    className={`
-                      w-12 h-0.5 mx-1
-                      ${currentStep > stepNum
-                        ? 'bg-green-500'
-                        : 'bg-gray-200 dark:bg-gray-700'
-                      }
-                    `}
-                  />
+          return (
+            <div key={step.id} className="flex items-center">
+              <div
+                className={`
+                  w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all
+                  ${isActive
+                    ? 'bg-blue-600 text-white'
+                    : isCompleted
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                  }
+                `}
+              >
+                {isCompleted ? (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  stepNum
                 )}
               </div>
-            )
-          })}
-        </div>
-      )}
+
+              {idx < ONBOARDING_STEPS.length - 1 && (
+                <div
+                  className={`
+                    w-12 h-0.5 mx-1
+                    ${currentStep > stepNum
+                      ? 'bg-green-500'
+                      : 'bg-gray-200 dark:bg-gray-700'
+                    }
+                  `}
+                />
+              )}
+            </div>
+          )
+        })}
+      </div>
 
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center py-8 px-4">
@@ -247,10 +243,9 @@ export default function OnboardingPage() {
 
           {/* Step Content */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-10">
-            {currentStep === 1 && <StepWelcome {...stepProps} />}
-            {currentStep === 2 && <StepSpecialization {...stepProps} />}
-            {currentStep === 3 && <StepLocationSimple {...stepProps} />}
-            {currentStep === 4 && <StepBranding {...stepProps} />}
+            {currentStep === 1 && <StepServices {...stepProps} />}
+            {currentStep === 2 && <StepLocationSimple {...stepProps} />}
+            {currentStep === 3 && <StepRecap {...stepProps} />}
           </div>
         </div>
       </div>

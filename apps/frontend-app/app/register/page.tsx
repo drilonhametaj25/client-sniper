@@ -220,10 +220,11 @@ function RegisterPageContent() {
         })
       }
 
-      // Se piano gratuito, vai alla dashboard
+      // Se piano gratuito, vai all'onboarding (60 secondi: cosa vendi + dove
+      // lavori) così la dashboard mostra subito lead compatibili
       if (selectedPlan === 'free') {
         success('Account creato!', 'Controlla la tua email per confermare l\'account')
-        router.push('/dashboard')
+        router.push('/onboarding')
         return
       }
 

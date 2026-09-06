@@ -18,7 +18,24 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import type { SaveOnboardingRequest } from '@/lib/types/onboarding-v2'
+import type { SaveOnboardingRequest, Specialization } from '@/lib/types/onboarding-v2'
+import type { ServiceType } from '@/lib/types/services'
+
+const VALID_SERVICES: ServiceType[] = [
+  'seo', 'gdpr', 'analytics', 'mobile', 'performance', 'development', 'design', 'social'
+]
+
+// Deriva il campo legacy specialization dai servizi (non più chiesto all'utente)
+const SERVICE_TO_SPECIALIZATION: Record<ServiceType, Specialization> = {
+  development: 'web_development',
+  mobile: 'web_development',
+  performance: 'web_development',
+  seo: 'seo',
+  design: 'design',
+  social: 'social',
+  analytics: 'marketing',
+  gdpr: 'other'
+}
 
 function getSupabaseAdmin() {
   return createClient(
@@ -45,10 +62,13 @@ export async function POST(request: NextRequest) {
     // Ottieni dati dal body
     const body: SaveOnboardingRequest = await request.json()
 
-    // Validazione base
-    if (!body.specialization || body.specialization.length === 0) {
+    // Validazione: services_offered è il campo che guida il matching
+    const services = (body.services_offered || []).filter(
+      (s): s is ServiceType => VALID_SERVICES.includes(s as ServiceType)
+    )
+    if (services.length === 0) {
       return NextResponse.json(
-        { success: false, message: 'Seleziona almeno una specializzazione' },
+        { success: false, message: 'Seleziona almeno un servizio' },
         { status: 400 }
       )
     }
@@ -60,9 +80,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Prepara dati per update
+    // Prepara dati per update.
+    // ⚠️ services_offered è ciò che il matching legge davvero (filtro "Solo per
+    // i miei servizi", % match, sezione Per Te). Prima il wizard scriveva solo
+    // specialization, che nessun matching leggeva: onboarding inutile.
     const updateData: Record<string, any> = {
-      specialization: body.specialization,
+      services_offered: services,
+      specialization: [...new Set(services.map(s => SERVICE_TO_SPECIALIZATION[s]))],
       operating_city: body.operating_city?.trim() || null,
       is_remote_nationwide: body.is_remote_nationwide || false,
       onboarding_completed_at: new Date().toISOString()
@@ -88,7 +112,7 @@ export async function POST(request: NextRequest) {
       .from('users')
       .update(updateData)
       .eq('id', user.id)
-      .select('id, email, specialization, operating_city, is_remote_nationwide')
+      .select('id, email, services_offered, specialization, operating_city, is_remote_nationwide')
       .single()
 
     if (updateError) {
@@ -100,9 +124,8 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`[Onboarding V2] Completato per user ${user.id}:`, {
-      specialization: body.specialization,
-      city: body.operating_city || 'remote',
-      hasLogo: !!body.company_logo_url
+      services: services,
+      city: body.operating_city || 'remote'
     })
 
     return NextResponse.json({
@@ -141,7 +164,7 @@ export async function GET() {
     const supabaseAdmin = getSupabaseAdmin()
     const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
-      .select('onboarding_completed_at, specialization, operating_city, is_remote_nationwide')
+      .select('onboarding_completed_at, services_offered, specialization, operating_city, is_remote_nationwide')
       .eq('id', user.id)
       .single()
 
@@ -157,6 +180,7 @@ export async function GET() {
     return NextResponse.json({
       completed: isCompleted,
       data: isCompleted ? {
+        services_offered: userData.services_offered || [],
         specialization: userData.specialization,
         operating_city: userData.operating_city,
         is_remote_nationwide: userData.is_remote_nationwide

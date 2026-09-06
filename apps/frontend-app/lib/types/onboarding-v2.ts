@@ -1,11 +1,12 @@
 /**
- * Tipi per il nuovo onboarding semplificato a 4 step
+ * Tipi per l'onboarding a 3 step (~60 secondi)
  *
- * Step 1: Benvenuto (nessun dato)
- * Step 2: Specializzazione
- * Step 3: Zona
- * Step 4: Branding (opzionale)
+ * Step 1: Cosa vendi (services_offered — il campo che guida il matching!)
+ * Step 2: Dove lavori (operating_city / tutta Italia)
+ * Step 3: Riepilogo → dashboard con filtro pre-applicato
  */
+
+import type { ServiceType } from './services'
 
 // Specializzazioni disponibili
 export type Specialization =
@@ -56,14 +57,17 @@ export const SPECIALIZATION_CONFIG: Record<Specialization, {
 
 // Dati raccolti durante l'onboarding
 export interface OnboardingV2Data {
-  // Step 2: Specializzazione
+  // Step 1: Cosa vendi — scrive users.services_offered (guida il matching)
+  services_offered: ServiceType[]
+
+  // Legacy: derivato lato server da services_offered (non più chiesto all'utente)
   specialization: Specialization[]
 
-  // Step 3: Zona
+  // Step 2: Zona
   operating_city: string
   is_remote_nationwide: boolean
 
-  // Step 4: Branding (tutti opzionali)
+  // Branding (non più nel wizard: si imposta da /settings)
   company_name?: string
   company_logo_url?: string
   company_phone?: string
@@ -72,6 +76,7 @@ export interface OnboardingV2Data {
 
 // Stato iniziale
 export const INITIAL_ONBOARDING_DATA: OnboardingV2Data = {
+  services_offered: [],
   specialization: [],
   operating_city: '',
   is_remote_nationwide: false,
@@ -92,27 +97,21 @@ export interface OnboardingStep {
 export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 1,
-    title: 'Benvenuto',
-    subtitle: 'Scopri come TrovaMi ti aiuta a trovare clienti',
+    title: 'Cosa vendi',
+    subtitle: 'Seleziona i servizi che offri',
     isOptional: false
   },
   {
     id: 2,
-    title: 'Cosa offri',
-    subtitle: 'Seleziona i tuoi servizi',
-    isOptional: false
-  },
-  {
-    id: 3,
     title: 'Dove lavori',
     subtitle: 'La tua zona operativa',
     isOptional: false
   },
   {
-    id: 4,
-    title: 'Il tuo brand',
-    subtitle: 'Personalizza le proposte (opzionale)',
-    isOptional: true
+    id: 3,
+    title: 'Pronto',
+    subtitle: 'I tuoi primi clienti ti aspettano',
+    isOptional: false
   }
 ]
 
@@ -126,22 +125,17 @@ export interface StepProps {
 }
 
 // Validazione step
+export function validateStep1(data: OnboardingV2Data): boolean {
+  return data.services_offered.length > 0
+}
+
 export function validateStep2(data: OnboardingV2Data): boolean {
-  return data.specialization.length > 0
-}
-
-export function validateStep3(data: OnboardingV2Data): boolean {
   return data.operating_city.trim().length > 0 || data.is_remote_nationwide
-}
-
-export function validateStep4(_data: OnboardingV2Data): boolean {
-  // Step 4 è sempre valido (tutto opzionale)
-  return true
 }
 
 // API request/response types
 export interface SaveOnboardingRequest {
-  specialization: Specialization[]
+  services_offered: ServiceType[]
   operating_city: string
   is_remote_nationwide: boolean
   company_name?: string

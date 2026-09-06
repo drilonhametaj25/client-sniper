@@ -10,7 +10,7 @@
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight, MapPin, Globe, AlertCircle } from 'lucide-react'
 import type { StepProps } from '@/lib/types/onboarding-v2'
-import { validateStep3 } from '@/lib/types/onboarding-v2'
+import { validateStep2 } from '@/lib/types/onboarding-v2'
 
 export default function StepLocationSimple({
   data,
@@ -20,7 +20,7 @@ export default function StepLocationSimple({
 }: StepProps) {
   const [showError, setShowError] = useState(false)
 
-  const isValid = validateStep3(data)
+  const isValid = validateStep2(data)
 
   const handleCityChange = (value: string) => {
     onUpdate({ operating_city: value })
