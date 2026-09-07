@@ -23,13 +23,14 @@ export interface AuthResult {
 export async function authenticateUser(request: NextRequest): Promise<AuthResult> {
   try {
     let user = null
-    
+
     // Prima prova con il cookie (Next.js route handler)
+    // ⚠️ getUser() e NON getSession(): il cookie va verificato contro l'auth server
     const supabase = createRouteHandlerClient({ cookies })
-    let sessionResult = await supabase.auth.getSession()
+    const cookieResult = await supabase.auth.getUser()
 
     // Se la sessione del cookie non è valida, prova con l'header Authorization
-    if (sessionResult.error || !sessionResult.data.session?.user) {
+    if (cookieResult.error || !cookieResult.data.user) {
       const authHeader = request.headers.get('authorization')
       
       if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -72,8 +73,8 @@ export async function authenticateUser(request: NextRequest): Promise<AuthResult
         }
       }
     } else {
-      user = sessionResult.data.session.user
-      
+      user = cookieResult.data.user
+
       // Usa il client con cookie se la sessione è valida
       return { user, dbClient: supabase }
     }

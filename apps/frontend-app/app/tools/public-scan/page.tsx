@@ -148,35 +148,35 @@ export default function PublicScanPage() {
   }
 
   const getScoreColor = (score: number) => {
-    if (score >= 70) return 'text-green-600'
-    if (score >= 40) return 'text-yellow-600'
-    return 'text-red-600'
+    if (score >= 70) return 'text-green-600 dark:text-green-400'
+    if (score >= 40) return 'text-yellow-600 dark:text-yellow-400'
+    return 'text-red-600 dark:text-red-400'
   }
 
   const getScoreBgColor = (score: number) => {
-    if (score >= 70) return 'bg-green-50 border-green-200'
-    if (score >= 40) return 'bg-yellow-50 border-yellow-200'
-    return 'bg-red-50 border-red-200'
+    if (score >= 70) return 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
+    if (score >= 40) return 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
+    return 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
   }
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
         {/* Header */}
-        <header className="bg-white shadow-sm border-b" role="banner">
+        <header className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700" role="banner">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
               <Link href="/" className="flex items-center space-x-3" aria-label="Torna alla homepage di TrovaMi">
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                   <Search className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold text-gray-900">TrovaMi</span>
+                <span className="text-xl font-bold text-gray-900 dark:text-white">TrovaMi</span>
               </Link>
               
               <nav className="flex items-center space-x-4" aria-label="Navigazione principale">
                 <Link 
                   href="/login"
-                  className="text-gray-600 hover:text-gray-900 transition-colors"
+                  className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
                 >
                   Accedi
                 </Link>

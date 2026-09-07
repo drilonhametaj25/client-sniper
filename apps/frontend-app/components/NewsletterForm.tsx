@@ -94,14 +94,14 @@ export default function NewsletterForm({
 
   if (variant === 'compact') {
     return (
-      <div className={`bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 ${className}`}>
+      <div className={`bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-6 ${className}`}>
         <div className="flex items-center mb-4">
-          {showIcon && <Mail className="h-5 w-5 text-blue-600 mr-2" />}
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          {showIcon && <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-2" />}
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
         </div>
         
         {status === 'success' ? (
-          <div className="flex items-center text-green-600">
+          <div className="flex items-center text-green-600 dark:text-green-400">
             <Check className="h-5 w-5 mr-2" />
             <span className="text-sm">{message}</span>
           </div>
@@ -113,7 +113,7 @@ export default function NewsletterForm({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={placeholder}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="flex-1 px-3 py-2 border border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 required
               />
               <button
@@ -126,7 +126,7 @@ export default function NewsletterForm({
             </div>
             
             {status === 'error' && (
-              <div className="flex items-center text-red-600 text-xs">
+              <div className="flex items-center text-red-600 dark:text-red-400 text-xs">
                 <AlertCircle className="h-4 w-4 mr-1" />
                 {message}
               </div>
@@ -141,7 +141,7 @@ export default function NewsletterForm({
     return (
       <div className={className}>
         {status === 'success' ? (
-          <div className="flex items-center justify-center text-green-600 py-4">
+          <div className="flex items-center justify-center text-green-600 dark:text-green-400 py-4">
             <Check className="h-5 w-5 mr-2" />
             <span>{message}</span>
           </div>
@@ -152,7 +152,7 @@ export default function NewsletterForm({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder={placeholder}
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="flex-1 px-4 py-3 border border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
             <button
@@ -171,7 +171,7 @@ export default function NewsletterForm({
         )}
         
         {status === 'error' && (
-          <div className="flex items-center text-red-600 text-sm mt-2">
+          <div className="flex items-center text-red-600 dark:text-red-400 text-sm mt-2">
             <AlertCircle className="h-4 w-4 mr-1" />
             {message}
           </div>
@@ -182,24 +182,24 @@ export default function NewsletterForm({
 
   // Default variant
   return (
-    <div className={`bg-white rounded-2xl p-8 shadow-lg border border-gray-200 ${className}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg border border-gray-200 dark:border-gray-700 ${className}`}>
       <div className="text-center mb-6">
         {showIcon && (
           <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Mail className="w-8 h-8 text-white" />
           </div>
         )}
-        <h3 className="text-2xl font-bold text-gray-900 mb-2">{title}</h3>
-        <p className="text-gray-600">{description}</p>
+        <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{title}</h3>
+        <p className="text-gray-600 dark:text-gray-300">{description}</p>
       </div>
 
       {status === 'success' ? (
         <div className="text-center">
-          <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Check className="w-8 h-8 text-green-600" />
+          <div className="w-16 h-16 bg-green-50 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
           </div>
-          <h4 className="text-lg font-semibold text-green-600 mb-2">Iscrizione Completata!</h4>
-          <p className="text-gray-600">{message}</p>
+          <h4 className="text-lg font-semibold text-green-600 dark:text-green-400 mb-2">Iscrizione Completata!</h4>
+          <p className="text-gray-600 dark:text-gray-300">{message}</p>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -209,14 +209,14 @@ export default function NewsletterForm({
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               placeholder="Nome (opzionale)"
-              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-3 border border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder={placeholder}
-              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-3 border border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
           </div>
@@ -240,13 +240,13 @@ export default function NewsletterForm({
           </button>
 
           {status === 'error' && (
-            <div className="flex items-center justify-center text-red-600 text-sm">
+            <div className="flex items-center justify-center text-red-600 dark:text-red-400 text-sm">
               <AlertCircle className="h-4 w-4 mr-1" />
               {message}
             </div>
           )}
 
-          <p className="text-xs text-gray-500 text-center">
+          <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
             Iscrivendoti accetti di ricevere email con lead gratuiti e consigli. 
             Puoi cancellare l'iscrizione in qualsiasi momento.
           </p>

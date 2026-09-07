@@ -39,7 +39,7 @@ export default function AdsLandingPage() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50/30 overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 overflow-hidden">
       {/* Analytics Tracking */}
       <AdsLandingTracking />
 
@@ -68,13 +68,13 @@ export default function AdsLandingPage() {
       />
 
       {/* Header con Navigation minima */}
-      <header className="relative z-50 bg-white/80 backdrop-blur-sm border-b border-gray-200/50">
+      <header className="relative z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50">
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <Link href="/" className="flex items-center">
                 <Target className="h-8 w-8 text-blue-600" />
-                <span className="ml-2 text-xl font-bold text-gray-900">
+                <span className="ml-2 text-xl font-bold text-gray-900 dark:text-white">
                   TrovaMi
                 </span>
               </Link>
@@ -106,15 +106,15 @@ export default function AdsLandingPage() {
       <section className="relative py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
           {/* Badge urgency */}
-          <div className="inline-flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium mb-6">
+          <div className="inline-flex items-center px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-full text-sm font-medium mb-6">
             <Zap className="h-4 w-4 mr-2" />Prova Gratuita - Nessuna Carta di
             Credito
           </div>
 
           {/* Headline principale */}
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
             Trova Clienti Già Pronti a
-            <span className="text-blue-600 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <span className="text-blue-600 bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
               {" "}
               Comprare
             </span>
@@ -122,10 +122,10 @@ export default function AdsLandingPage() {
           </h1>
 
           {/* Sottotitolo con valore */}
-          <p className="text-xl sm:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
+          <p className="text-xl sm:text-2xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
             Scopri aziende con problemi tecnici sui loro siti web e convertile
             in clienti.
-            <span className="font-semibold text-gray-900">
+            <span className="font-semibold text-gray-900 dark:text-white">
               {" "}
               Lead qualificati a partire da 0,33€
             </span>{" "}
@@ -144,7 +144,7 @@ export default function AdsLandingPage() {
               <ArrowRight className="h-5 w-5 ml-2" />
             </Link>
 
-            <div className="flex items-center text-gray-600 text-sm">
+            <div className="flex items-center text-gray-600 dark:text-gray-400 text-sm">
               <Shield className="h-4 w-4 mr-2" />
               Nessuna carta di credito richiesta
             </div>
@@ -153,13 +153,13 @@ export default function AdsLandingPage() {
       </section>
 
       {/* Comparativa Prezzi - Sezione centrale */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-white dark:bg-gray-900">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
               Confronto Costi per Lead
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
               Scopri quanto puoi risparmiare rispetto alle tradizionali campagne
               pubblicitarie
             </p>
@@ -167,7 +167,7 @@ export default function AdsLandingPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* TrovaMi - Highlighted */}
-            <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 border-2 border-blue-200 shadow-lg">
+            <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-2xl p-8 border-2 border-blue-200 dark:border-blue-800 shadow-lg">
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                 <div className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium">
                   TrovaMi
@@ -175,33 +175,33 @@ export default function AdsLandingPage() {
               </div>
 
               <div className="text-center mt-4">
-                <div className="text-3xl font-bold text-blue-600 mb-2">
+                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">
                   0,33€ - 0,76€
                 </div>
-                <div className="text-gray-600 mb-4">per lead qualificato</div>
+                <div className="text-gray-600 dark:text-gray-400 mb-4">per lead qualificato</div>
 
                 <div className="flex items-center justify-center mb-4">
-                  <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                  <span className="text-sm font-medium text-green-600">
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mr-2" />
+                  <span className="text-sm font-medium text-green-600 dark:text-green-400">
                     Contatto reale profilato
                   </span>
                 </div>
 
-                <ul className="text-sm text-gray-600 space-y-2">
+                <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
                   <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mr-2" />
                     Analisi SEO completa
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mr-2" />
                     Contatti e P.IVA
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mr-2" />
                     Problemi identificati
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mr-2" />
                     Pronto al contatto
                   </li>
                 </ul>
@@ -209,26 +209,26 @@ export default function AdsLandingPage() {
             </div>
 
             {/* Google Ads */}
-            <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-sm">
               <div className="text-center">
-                <div className="text-lg font-semibold text-gray-900 mb-2">
+                <div className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                   Google Ads
                 </div>
-                <div className="text-3xl font-bold text-red-600 mb-2">
+                <div className="text-3xl font-bold text-red-600 dark:text-red-400 mb-2">
                   5€ - 20€
                 </div>
-                <div className="text-gray-600 mb-4">
+                <div className="text-gray-600 dark:text-gray-400 mb-4">
                   per click (no contatto)
                 </div>
 
                 <div className="flex items-center justify-center mb-4">
-                  <Target className="h-5 w-5 text-red-600 mr-2" />
-                  <span className="text-sm font-medium text-red-600">
+                  <Target className="h-5 w-5 text-red-600 dark:text-red-400 mr-2" />
+                  <span className="text-sm font-medium text-red-600 dark:text-red-400">
                     Solo traffico
                   </span>
                 </div>
 
-                <ul className="text-sm text-gray-600 space-y-2">
+                <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
                   <li>• Nessun contatto diretto</li>
                   <li>• Click da bot possibili</li>
                   <li>• Nessuna qualificazione</li>
@@ -238,24 +238,24 @@ export default function AdsLandingPage() {
             </div>
 
             {/* Facebook Ads */}
-            <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-sm">
               <div className="text-center">
-                <div className="text-lg font-semibold text-gray-900 mb-2">
+                <div className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                   Facebook Ads
                 </div>
-                <div className="text-3xl font-bold text-orange-600 mb-2">
+                <div className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-2">
                   2€ - 8€
                 </div>
-                <div className="text-gray-600 mb-4">per lead generico</div>
+                <div className="text-gray-600 dark:text-gray-400 mb-4">per lead generico</div>
 
                 <div className="flex items-center justify-center mb-4">
-                  <Users className="h-5 w-5 text-orange-600 mr-2" />
-                  <span className="text-sm font-medium text-orange-600">
+                  <Users className="h-5 w-5 text-orange-600 dark:text-orange-400 mr-2" />
+                  <span className="text-sm font-medium text-orange-600 dark:text-orange-400">
                     Bassa qualità
                   </span>
                 </div>
 
-                <ul className="text-sm text-gray-600 space-y-2">
+                <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
                   <li>• Lead generici</li>
                   <li>• Poca profilazione</li>
                   <li>• Spesso non interessati</li>
@@ -265,24 +265,24 @@ export default function AdsLandingPage() {
             </div>
 
             {/* Agenzie */}
-            <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-sm">
               <div className="text-center">
-                <div className="text-lg font-semibold text-gray-900 mb-2">
+                <div className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                   Agenzie Lead
                 </div>
-                <div className="text-3xl font-bold text-red-600 mb-2">
+                <div className="text-3xl font-bold text-red-600 dark:text-red-400 mb-2">
                   10€ - 50€
                 </div>
-                <div className="text-gray-600 mb-4">per lead freddo</div>
+                <div className="text-gray-600 dark:text-gray-400 mb-4">per lead freddo</div>
 
                 <div className="flex items-center justify-center mb-4">
-                  <BarChart3 className="h-5 w-5 text-red-600 mr-2" />
-                  <span className="text-sm font-medium text-red-600">
+                  <BarChart3 className="h-5 w-5 text-red-600 dark:text-red-400 mr-2" />
+                  <span className="text-sm font-medium text-red-600 dark:text-red-400">
                     Spesso rivenduti
                   </span>
                 </div>
 
-                <ul className="text-sm text-gray-600 space-y-2">
+                <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
                   <li>• Lead freddi</li>
                   <li>• Rivenduti a più agenzie</li>
                   <li>• Qualità non garantita</li>
@@ -293,32 +293,32 @@ export default function AdsLandingPage() {
           </div>
 
           {/* Calcolo Risparmio */}
-          <div className="mt-16 bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl p-8 text-center">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
+          <div className="mt-16 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-2xl p-8 text-center">
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
               Calcolo Risparmio
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
               <div>
-                <div className="text-lg text-gray-600 mb-2">
+                <div className="text-lg text-gray-600 dark:text-gray-300 mb-2">
                   Con Google Ads (100 lead)
                 </div>
-                <div className="text-3xl font-bold text-red-600">1.250€</div>
-                <div className="text-sm text-gray-500">
+                <div className="text-3xl font-bold text-red-600 dark:text-red-400">1.250€</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">
                   (12,50€ per lead medio)
                 </div>
               </div>
               <div>
-                <div className="text-lg text-gray-600 mb-2">
+                <div className="text-lg text-gray-600 dark:text-gray-300 mb-2">
                   Con TrovaMi (100 lead)
                 </div>
-                <div className="text-3xl font-bold text-green-600">49€</div>
-                <div className="text-sm text-gray-500">
+                <div className="text-3xl font-bold text-green-600 dark:text-green-400">49€</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">
                   (Piano Pro: 0,49€ per lead)
                 </div>
               </div>
             </div>
-            <div className="mt-6 p-4 bg-green-100 rounded-lg">
-              <div className="text-xl font-bold text-green-800">
+            <div className="mt-6 p-4 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <div className="text-xl font-bold text-green-800 dark:text-green-300">
                 Risparmio: 1.201€ (96% in meno!)
               </div>
             </div>
@@ -333,159 +333,159 @@ export default function AdsLandingPage() {
       </section>
 
       {/* Esempi Lead Reali - Proof Section */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-gray-50 dark:bg-gray-900">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
               Esempi di Lead
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
               Ecco alcuni esempi di lead che potresti trovare con TrovaMi
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Lead Example 1 */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="flex items-center mb-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Globe className="h-6 w-6 text-blue-600" />
+                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                  <Globe className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div className="ml-4">
-                  <h3 className="font-semibold text-gray-900">
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
                     Studio Legale Milano
                   </h3>
-                  <p className="text-sm text-gray-600">Settore: Legale</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Settore: Legale</p>
                 </div>
               </div>
 
               <div className="space-y-3">
                 <div className="flex items-center text-sm">
                   <span className="w-2 h-2 bg-red-500 rounded-full mr-3"></span>
-                  <span className="text-gray-600">
+                  <span className="text-gray-600 dark:text-gray-300">
                     Sito lento (4.2s caricamento)
                   </span>
                 </div>
                 <div className="flex items-center text-sm">
                   <span className="w-2 h-2 bg-red-500 rounded-full mr-3"></span>
-                  <span className="text-gray-600">Meta tag mancanti</span>
+                  <span className="text-gray-600 dark:text-gray-300">Meta tag mancanti</span>
                 </div>
                 <div className="flex items-center text-sm">
                   <span className="w-2 h-2 bg-orange-500 rounded-full mr-3"></span>
-                  <span className="text-gray-600">Nessun pixel tracking</span>
+                  <span className="text-gray-600 dark:text-gray-300">Nessun pixel tracking</span>
                 </div>
               </div>
 
-              <div className="mt-4 p-3 bg-green-50 rounded-lg">
-                <div className="text-sm font-medium text-green-800">
+              <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <div className="text-sm font-medium text-green-800 dark:text-green-300">
                   Contatto Completo
                 </div>
-                <div className="text-xs text-green-600">
+                <div className="text-xs text-green-600 dark:text-green-400">
                   Email, telefono, P.IVA inclusi
                 </div>
               </div>
 
               <div className="mt-4 text-center">
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                   Score: 23/100
                 </div>
-                <div className="text-sm text-gray-600">Ottimo candidato</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Ottimo candidato</div>
               </div>
             </div>
 
             {/* Lead Example 2 */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="flex items-center mb-4">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <Target className="h-6 w-6 text-green-600" />
+                <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                  <Target className="h-6 w-6 text-green-600 dark:text-green-400" />
                 </div>
                 <div className="ml-4">
-                  <h3 className="font-semibold text-gray-900">
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
                     Agenzia Viaggi Roma
                   </h3>
-                  <p className="text-sm text-gray-600">Settore: Turismo</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Settore: Turismo</p>
                 </div>
               </div>
 
               <div className="space-y-3">
                 <div className="flex items-center text-sm">
                   <span className="w-2 h-2 bg-red-500 rounded-full mr-3"></span>
-                  <span className="text-gray-600">
+                  <span className="text-gray-600 dark:text-gray-300">
                     Immagini rotte (12 errori)
                   </span>
                 </div>
                 <div className="flex items-center text-sm">
                   <span className="w-2 h-2 bg-red-500 rounded-full mr-3"></span>
-                  <span className="text-gray-600">Non mobile-friendly</span>
+                  <span className="text-gray-600 dark:text-gray-300">Non mobile-friendly</span>
                 </div>
                 <div className="flex items-center text-sm">
                   <span className="w-2 h-2 bg-orange-500 rounded-full mr-3"></span>
-                  <span className="text-gray-600">SSL non configurato</span>
+                  <span className="text-gray-600 dark:text-gray-300">SSL non configurato</span>
                 </div>
               </div>
 
-              <div className="mt-4 p-3 bg-green-50 rounded-lg">
-                <div className="text-sm font-medium text-green-800">
+              <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <div className="text-sm font-medium text-green-800 dark:text-green-300">
                   Contatto Completo
                 </div>
-                <div className="text-xs text-green-600">
+                <div className="text-xs text-green-600 dark:text-green-400">
                   Email, telefono, P.IVA inclusi
                 </div>
               </div>
 
               <div className="mt-4 text-center">
-                <div className="text-2xl font-bold text-orange-600">
+                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                   Score: 31/100
                 </div>
-                <div className="text-sm text-gray-600">Candidato ideale</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Candidato ideale</div>
               </div>
             </div>
 
             {/* Lead Example 3 */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="flex items-center mb-4">
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                  <Users className="h-6 w-6 text-purple-600" />
+                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
+                  <Users className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div className="ml-4">
-                  <h3 className="font-semibold text-gray-900">
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
                     Ristorante Napoli
                   </h3>
-                  <p className="text-sm text-gray-600">Settore: Ristorazione</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Settore: Ristorazione</p>
                 </div>
               </div>
 
               <div className="space-y-3">
                 <div className="flex items-center text-sm">
                   <span className="w-2 h-2 bg-red-500 rounded-full mr-3"></span>
-                  <span className="text-gray-600">Nessuna presenza social</span>
+                  <span className="text-gray-600 dark:text-gray-300">Nessuna presenza social</span>
                 </div>
                 <div className="flex items-center text-sm">
                   <span className="w-2 h-2 bg-red-500 rounded-full mr-3"></span>
-                  <span className="text-gray-600">Menu non aggiornato</span>
+                  <span className="text-gray-600 dark:text-gray-300">Menu non aggiornato</span>
                 </div>
                 <div className="flex items-center text-sm">
                   <span className="w-2 h-2 bg-orange-500 rounded-full mr-3"></span>
-                  <span className="text-gray-600">
+                  <span className="text-gray-600 dark:text-gray-300">
                     Prenotazioni non funzionanti
                   </span>
                 </div>
               </div>
 
-              <div className="mt-4 p-3 bg-green-50 rounded-lg">
-                <div className="text-sm font-medium text-green-800">
+              <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <div className="text-sm font-medium text-green-800 dark:text-green-300">
                   Contatto Completo
                 </div>
-                <div className="text-xs text-green-600">
+                <div className="text-xs text-green-600 dark:text-green-400">
                   Email, telefono, P.IVA inclusi
                 </div>
               </div>
 
               <div className="mt-4 text-center">
-                <div className="text-2xl font-bold text-red-600">
+                <div className="text-2xl font-bold text-red-600 dark:text-red-400">
                   Score: 18/100
                 </div>
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
                   Urgente miglioramento
                 </div>
               </div>

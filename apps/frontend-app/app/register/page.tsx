@@ -58,7 +58,7 @@ interface Plan {
 export default function RegisterPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
       </div>
     }>
@@ -437,16 +437,16 @@ function RegisterPageContent() {
 
             {/* CTA Section */}
             <section className="text-center mb-16">
-              <p className="text-gray-600 mb-4">
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
                 Hai già un account?{' '}
                 <Link
                   href="/login"
-                  className="text-blue-600 hover:text-blue-700 font-medium"
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
                 >
                   Accedi qui
                 </Link>
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Tutti i piani includono una garanzia di rimborso entro 30 giorni
               </p>
             </section>
@@ -583,14 +583,14 @@ function RegisterPageContent() {
                 <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                   <Check className="w-5 h-5 text-white" />
                 </div>
-                <span className="ml-2 text-sm font-medium text-blue-600">Piano</span>
+                <span className="ml-2 text-sm font-medium text-blue-600 dark:text-blue-400">Piano</span>
               </div>
               <div className="w-12 h-0.5 bg-blue-600"></div>
               <div className="flex items-center">
                 <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                   <span className="text-white font-semibold text-sm">2</span>
                 </div>
-                <span className="ml-2 text-sm font-medium text-blue-600">Dati</span>
+                <span className="ml-2 text-sm font-medium text-blue-600 dark:text-blue-400">Dati</span>
               </div>
             </div>
           </div>
@@ -698,47 +698,47 @@ function RegisterPageContent() {
                             <li className={`text-xs flex items-center ${password.length >= 8 ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`}>
                               <div className={`w-3 h-3 rounded-full mr-2 flex items-center justify-center ${password.length >= 8 ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-200 dark:bg-gray-700'}`}>
                                 {password.length >= 8 ? (
-                                  <Check className="w-2 h-2 text-green-600" />
+                                  <Check className="w-2 h-2 text-green-600 dark:text-green-400" />
                                 ) : (
                                   <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
                                 )}
                               </div>
                               Almeno 8 caratteri
                             </li>
-                            <li className={`text-xs flex items-center ${/[A-Z]/.test(password) ? 'text-green-600' : 'text-gray-600'}`}>
-                              <div className={`w-3 h-3 rounded-full mr-2 flex items-center justify-center ${/[A-Z]/.test(password) ? 'bg-green-100' : 'bg-gray-200'}`}>
+                            <li className={`text-xs flex items-center ${/[A-Z]/.test(password) ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                              <div className={`w-3 h-3 rounded-full mr-2 flex items-center justify-center ${/[A-Z]/.test(password) ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-200 dark:bg-gray-700'}`}>
                                 {/[A-Z]/.test(password) ? (
-                                  <Check className="w-2 h-2 text-green-600" />
+                                  <Check className="w-2 h-2 text-green-600 dark:text-green-400" />
                                 ) : (
                                   <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
                                 )}
                               </div>
                               Una lettera maiuscola (A-Z)
                             </li>
-                            <li className={`text-xs flex items-center ${/[a-z]/.test(password) ? 'text-green-600' : 'text-gray-600'}`}>
-                              <div className={`w-3 h-3 rounded-full mr-2 flex items-center justify-center ${/[a-z]/.test(password) ? 'bg-green-100' : 'bg-gray-200'}`}>
+                            <li className={`text-xs flex items-center ${/[a-z]/.test(password) ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                              <div className={`w-3 h-3 rounded-full mr-2 flex items-center justify-center ${/[a-z]/.test(password) ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-200 dark:bg-gray-700'}`}>
                                 {/[a-z]/.test(password) ? (
-                                  <Check className="w-2 h-2 text-green-600" />
+                                  <Check className="w-2 h-2 text-green-600 dark:text-green-400" />
                                 ) : (
                                   <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
                                 )}
                               </div>
                               Una lettera minuscola (a-z)
                             </li>
-                            <li className={`text-xs flex items-center ${/\d/.test(password) ? 'text-green-600' : 'text-gray-600'}`}>
-                              <div className={`w-3 h-3 rounded-full mr-2 flex items-center justify-center ${/\d/.test(password) ? 'bg-green-100' : 'bg-gray-200'}`}>
+                            <li className={`text-xs flex items-center ${/\d/.test(password) ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                              <div className={`w-3 h-3 rounded-full mr-2 flex items-center justify-center ${/\d/.test(password) ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-200 dark:bg-gray-700'}`}>
                                 {/\d/.test(password) ? (
-                                  <Check className="w-2 h-2 text-green-600" />
+                                  <Check className="w-2 h-2 text-green-600 dark:text-green-400" />
                                 ) : (
                                   <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
                                 )}
                               </div>
                               Un numero (0-9)
                             </li>
-                            <li className={`text-xs flex items-center ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? 'text-green-600' : 'text-gray-600'}`}>
-                              <div className={`w-3 h-3 rounded-full mr-2 flex items-center justify-center ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? 'bg-green-100' : 'bg-gray-200'}`}>
+                            <li className={`text-xs flex items-center ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                              <div className={`w-3 h-3 rounded-full mr-2 flex items-center justify-center ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-200 dark:bg-gray-700'}`}>
                                 {/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? (
-                                  <Check className="w-2 h-2 text-green-600" />
+                                  <Check className="w-2 h-2 text-green-600 dark:text-green-400" />
                                 ) : (
                                   <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
                                 )}

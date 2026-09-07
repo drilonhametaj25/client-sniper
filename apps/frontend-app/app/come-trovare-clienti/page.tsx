@@ -21,21 +21,21 @@ export const metadata: Metadata = {
 
 export default function ComeTrovareClientiPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center px-4 py-2 bg-blue-50 border border-blue-200 rounded-full text-blue-700 text-sm font-medium mb-8">
+            <div className="inline-flex items-center px-4 py-2 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-full text-blue-700 dark:text-blue-300 text-sm font-medium mb-8">
               <Target className="w-4 h-4 mr-2" />
               Guida Completa 2025
             </div>
             
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
               Come Trovare <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">Clienti</span> per la Tua Agenzia Web
             </h1>
             
-            <p className="text-xl text-gray-600 mb-8 leading-relaxed">
+            <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 leading-relaxed">
               Scopri le <strong>strategie più efficaci del 2025</strong> per trovare clienti qualificati per la tua agenzia web, 
               attività di freelance o consulenza digitale. Metodi comprovati e tecnologie innovative.
             </p>
@@ -69,7 +69,7 @@ export default function ComeTrovareClientiPage() {
             Invece di contattare chiunque, ti concentri su prospect che hanno problemi tecnici evidenti.
           </p>
           
-          <div className="bg-blue-50 border-l-4 border-blue-500 p-6 my-8">
+          <div className="bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-500 p-6 my-8">
             <p className="mb-0">
               💡 <strong>Consiglio Pro:</strong> TrovaMi analizza automaticamente migliaia di siti web e identifica quelli con problemi di SEO, 
               performance e tracking. Ogni lead ha un punteggio di priorità basato sui problemi riscontrati.
@@ -141,13 +141,13 @@ export default function ComeTrovareClientiPage() {
       </section>
 
       {/* Lead Cost Comparison */}
-      <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
+      <section className="py-16 bg-gradient-to-b from-gray-50 to-white dark:from-gray-800/50 dark:to-gray-900">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
               Confronto <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">Costi per Lead</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
               Vedi la differenza economica tra i diversi metodi di acquisizione clienti
             </p>
           </div>

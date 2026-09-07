@@ -152,10 +152,10 @@ function UpgradePageContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Caricamento...</p>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">Caricamento...</p>
         </div>
       </div>
     )
@@ -166,21 +166,21 @@ function UpgradePageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">Piano e crediti</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Piano e crediti</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
                 Ciao, {user.email}
               </span>
               <button
                 onClick={() => router.push('/dashboard')}
-                className="text-sm text-blue-600 hover:text-blue-700"
+                className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
               >
                 Torna alla Dashboard
               </button>
@@ -194,13 +194,13 @@ function UpgradePageContent() {
 
         {/* Banner esito acquisto pacchetto */}
         {purchaseStatus === 'success' && (
-          <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center">
+          <div className="mb-8 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-xl flex items-center">
             <CheckCircle className="w-6 h-6 text-green-500 mr-3 flex-shrink-0" />
             <div>
-              <p className="font-medium text-green-800">
+              <p className="font-medium text-green-800 dark:text-green-300">
                 Acquisto completato con successo!
               </p>
-              <p className="text-sm text-green-600">
+              <p className="text-sm text-green-600 dark:text-green-400">
                 {purchasedCredits} crediti sono stati aggiunti al tuo account.
               </p>
             </div>
@@ -208,13 +208,13 @@ function UpgradePageContent() {
         )}
 
         {purchaseStatus === 'cancelled' && (
-          <div className="mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-xl flex items-center">
+          <div className="mb-8 p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-xl flex items-center">
             <AlertCircle className="w-6 h-6 text-yellow-500 mr-3 flex-shrink-0" />
             <div>
-              <p className="font-medium text-yellow-800">
+              <p className="font-medium text-yellow-800 dark:text-yellow-300">
                 Acquisto annullato
               </p>
-              <p className="text-sm text-yellow-600">
+              <p className="text-sm text-yellow-600 dark:text-yellow-400">
                 Non è stato effettuato alcun addebito. Puoi riprovare quando vuoi.
               </p>
             </div>
@@ -222,11 +222,11 @@ function UpgradePageContent() {
         )}
 
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
             Scala il tuo business con più lead
           </h2>
-          <p className="text-xl text-gray-600 mb-6">
-            Piano attuale: <span className="font-semibold capitalize text-blue-600">
+          <p className="text-xl text-gray-600 dark:text-gray-300 mb-6">
+            Piano attuale: <span className="font-semibold capitalize text-blue-600 dark:text-blue-400">
               {user?.plan ? (
                 user.plan.includes('_')
                   ? `${getBasePlanType(user.plan)} (${user.plan.includes('monthly') ? 'Mensile' : 'Annuale'})`
@@ -234,17 +234,17 @@ function UpgradePageContent() {
               ) : 'free'}
             </span>
           </p>
-          <div className="bg-gray-50 rounded-lg p-4 inline-block">
-            <p className="text-gray-700">
-              Crediti rimanenti: <span className="font-semibold text-2xl text-blue-600">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 inline-block">
+            <p className="text-gray-700 dark:text-gray-300">
+              Crediti rimanenti: <span className="font-semibold text-2xl text-blue-600 dark:text-blue-400">
                 {user?.credits_remaining || 0}
               </span>
             </p>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               1 credito = 1 lead sbloccato
             </p>
           </div>
-          <p className="text-gray-600 mt-6 max-w-2xl mx-auto">
+          <p className="text-gray-600 dark:text-gray-400 mt-6 max-w-2xl mx-auto">
             L'abbonamento ricarica i crediti ogni mese; i pacchetti sono una tantum e non scadono.
           </p>
         </div>
@@ -258,21 +258,21 @@ function UpgradePageContent() {
         {/* Pacchetti crediti una tantum */}
         <div id="pacchetti" className="mt-16 scroll-mt-24">
           <div className="text-center mb-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
               Pacchetti crediti
             </h3>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
               Ti servono crediti extra senza cambiare piano? Compra un pacchetto una tantum:
               i crediti non scadono mai.
             </p>
           </div>
 
           {packError && (
-            <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center max-w-3xl mx-auto">
+            <div className="mb-8 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl flex items-center max-w-3xl mx-auto">
               <AlertCircle className="w-6 h-6 text-red-500 mr-3 flex-shrink-0" />
               <div>
-                <p className="font-medium text-red-800">Errore</p>
-                <p className="text-sm text-red-600">{packError}</p>
+                <p className="font-medium text-red-800 dark:text-red-300">Errore</p>
+                <p className="text-sm text-red-600 dark:text-red-400">{packError}</p>
               </div>
             </div>
           )}
@@ -280,17 +280,17 @@ function UpgradePageContent() {
           {packsLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
               {[0, 1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-80 bg-gray-100 border border-gray-200 rounded-2xl animate-pulse" />
+                <div key={i} className="h-80 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl animate-pulse" />
               ))}
             </div>
           ) : packs.length === 0 ? (
             !packError && (
               <div className="text-center py-12">
-                <Coins className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h4 className="text-lg font-medium text-gray-900 mb-2">
+                <Coins className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
                   Pacchetti non disponibili
                 </h4>
-                <p className="text-gray-600">
+                <p className="text-gray-600 dark:text-gray-300">
                   I pacchetti crediti non sono al momento disponibili. Riprova più tardi.
                 </p>
               </div>
@@ -305,10 +305,10 @@ function UpgradePageContent() {
                 return (
                   <div
                     key={pack.id}
-                    className={`relative bg-white rounded-2xl border-2 transition-all duration-300 hover:shadow-xl overflow-hidden ${
+                    className={`relative bg-white dark:bg-gray-800 rounded-2xl border-2 transition-all duration-300 hover:shadow-xl overflow-hidden ${
                       isPopular
-                        ? 'border-blue-500 ring-4 ring-blue-100'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-blue-500 ring-4 ring-blue-100 dark:ring-blue-900/50'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                     }`}
                   >
                     {/* Discount Badge */}
@@ -334,32 +334,32 @@ function UpgradePageContent() {
                       </div>
 
                       {/* Name */}
-                      <h4 className="text-xl font-bold text-center text-gray-900 mb-2">
+                      <h4 className="text-xl font-bold text-center text-gray-900 dark:text-white mb-2">
                         {pack.name}
                       </h4>
 
                       {/* Credits */}
                       <div className="text-center mb-4">
-                        <span className="text-4xl font-bold text-gray-900">
+                        <span className="text-4xl font-bold text-gray-900 dark:text-white">
                           {pack.credits}
                         </span>
-                        <span className="text-gray-600 ml-2">crediti</span>
+                        <span className="text-gray-600 dark:text-gray-400 ml-2">crediti</span>
                       </div>
 
                       {/* Price */}
                       <div className="text-center mb-4">
-                        <span className="text-2xl font-bold text-gray-900">
+                        <span className="text-2xl font-bold text-gray-900 dark:text-white">
                           {pack.price}
                         </span>
-                        <span className="text-gray-600 ml-1">EUR</span>
+                        <span className="text-gray-600 dark:text-gray-400 ml-1">EUR</span>
                       </div>
 
                       {/* Price per credit */}
                       <div className="text-center mb-6">
                         <span className={`text-sm font-medium ${
                           pack.discount_percentage >= 30
-                            ? 'text-green-600'
-                            : 'text-gray-600'
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-gray-600 dark:text-gray-400'
                         }`}>
                           {pack.pricePerCredit} EUR/credito
                         </span>
@@ -367,15 +367,15 @@ function UpgradePageContent() {
 
                       {/* Features */}
                       <ul className="space-y-2 mb-6">
-                        <li className="flex items-center text-sm text-gray-600">
+                        <li className="flex items-center text-sm text-gray-600 dark:text-gray-300">
                           <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
                           Nessuna scadenza
                         </li>
-                        <li className="flex items-center text-sm text-gray-600">
+                        <li className="flex items-center text-sm text-gray-600 dark:text-gray-300">
                           <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
                           Uso immediato
                         </li>
-                        <li className="flex items-center text-sm text-gray-600">
+                        <li className="flex items-center text-sm text-gray-600 dark:text-gray-300">
                           <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
                           Pagamento una tantum
                         </li>
@@ -388,7 +388,7 @@ function UpgradePageContent() {
                         className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center ${
                           isPopular
                             ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                            : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                            : 'bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white'
                         } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
                         {purchasing === pack.id ? (
@@ -412,52 +412,52 @@ function UpgradePageContent() {
         </div>
 
         {/* Benefits Section */}
-        <div className="mt-16 bg-white rounded-lg shadow-lg p-8">
-          <h3 className="text-2xl font-bold text-gray-900 text-center mb-8">
+        <div className="mt-16 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-8">
             Perché passare a TrovaMi Premium?
           </h3>
 
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center">
-              <div className="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="bg-blue-100 dark:bg-blue-900/30 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-2">
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                 Risparmia tempo prezioso
               </h4>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-300">
                 Invece di ore di ricerca manuale, ottieni lead qualificati in pochi click.
                 Più tempo per la vendita, meno tempo per la ricerca.
               </p>
             </div>
 
             <div className="text-center">
-              <div className="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="bg-green-100 dark:bg-green-900/30 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-2">
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                 Lead già qualificati
               </h4>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-300">
                 Ogni lead ha problemi tecnici reali identificati dal nostro sistema.
                 Sai già cosa proporre al primo contatto.
               </p>
             </div>
 
             <div className="text-center">
-              <div className="bg-purple-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="bg-purple-100 dark:bg-purple-900/30 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                 </svg>
               </div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-2">
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                 Organizzazione completa
               </h4>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-300">
                 CRM integrato per gestire tutti i lead: note, follow-up, allegati,
                 timeline e stati personalizzati per non perdere nessuna opportunità.
               </p>
@@ -465,21 +465,21 @@ function UpgradePageContent() {
           </div>
 
           {/* ROI Section */}
-          <div className="mt-12 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6">
-            <h4 className="text-xl font-semibold text-gray-900 text-center mb-4">
+          <div className="mt-12 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 rounded-lg p-6">
+            <h4 className="text-xl font-semibold text-gray-900 dark:text-white text-center mb-4">
               Calcolo del valore
             </h4>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900 mb-2">1 credito</div>
-                <div className="text-sm text-gray-600">= 1 lead sbloccato con analisi completa</div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">1 credito</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">= 1 lead sbloccato con analisi completa</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-blue-600 mb-2">1 cliente</div>
-                <div className="text-sm text-gray-600">Acquisito ripaga il piano</div>
+                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">1 cliente</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Acquisito ripaga il piano</div>
               </div>
             </div>
-            <p className="text-center text-gray-600 mt-4">
+            <p className="text-center text-gray-600 dark:text-gray-400 mt-4">
               Se converti anche solo 1 lead in cliente, hai già recuperato l'investimento
             </p>
           </div>
@@ -487,49 +487,49 @@ function UpgradePageContent() {
 
         {/* FAQ Section */}
         <div className="mt-16">
-          <h3 className="text-2xl font-bold text-gray-900 text-center mb-8">
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-8">
             Domande Frequenti
           </h3>
 
           <div className="max-w-3xl mx-auto space-y-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h4 className="font-semibold text-gray-900 mb-2">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
                 Che differenza c'è tra abbonamento e pacchetti crediti?
               </h4>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-300">
                 L'abbonamento ricarica i crediti ogni mese al prezzo più conveniente.
                 I pacchetti crediti sono acquisti una tantum: li compri solo quando ti servono
                 e non scadono mai. Puoi anche combinarli.
               </p>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
-              <h4 className="font-semibold text-gray-900 mb-2">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
                 Come funziona il CRM integrato?
               </h4>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-300">
                 I piani premium includono un CRM completo per gestire i tuoi lead: puoi aggiungere note,
                 impostare follow-up, caricare allegati, tracciare la timeline delle attività e
                 organizzare i contatti per stato (da contattare, in negoziazione, chiuso, ecc.).
               </p>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
-              <h4 className="font-semibold text-gray-900 mb-2">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
                 Che tipo di problemi tecnici identificate?
               </h4>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-300">
                 Il nostro sistema identifica: SEO scadente, performance lente, problemi di sicurezza,
                 design obsoleto, mancanza di pixel di tracking, errori tecnici. Hai già l'argomento
                 perfetto per il primo contatto.
               </p>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
-              <h4 className="font-semibold text-gray-900 mb-2">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
                 Posso cancellare in qualsiasi momento?
               </h4>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-300">
                 Sì, puoi cancellare la tua sottoscrizione in qualsiasi momento.
                 Continuerai ad avere accesso fino alla fine del periodo di fatturazione.
                 I crediti dei pacchetti una tantum restano tuoi anche senza abbonamento.
@@ -545,7 +545,7 @@ function UpgradePageContent() {
 export default function UpgradePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     }>

@@ -258,7 +258,7 @@ export default function PlanSelector({
       <div className="py-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Caricamento piani...</p>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">Caricamento piani...</p>
         </div>
       </div>
     )
@@ -268,22 +268,22 @@ export default function PlanSelector({
     <div className="py-12">
       {/* Header */}
       <div className="text-center mb-12">
-        <h2 className="text-3xl font-bold text-gray-900 mb-4">
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
           Scegli il tuo piano TrovaMi
         </h2>
-        <p className="text-lg text-gray-600 mb-8">
+        <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
           Trova clienti potenziali analizzando siti web con problemi tecnici
         </p>
         
         {/* Toggle mensile/annuale */}
         <div className="flex items-center justify-center mb-8">
-          <span className={`mr-3 ${!isAnnual ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+          <span className={`mr-3 ${!isAnnual ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
             Mensile
           </span>
           <button
             onClick={() => setIsAnnual(!isAnnual)}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              isAnnual ? 'bg-blue-600' : 'bg-gray-200'
+              isAnnual ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
             }`}
           >
             <span
@@ -292,11 +292,11 @@ export default function PlanSelector({
               }`}
             />
           </button>
-          <span className={`ml-3 ${isAnnual ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+          <span className={`ml-3 ${isAnnual ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
             Annuale
           </span>
           {isAnnual && (
-            <span className="ml-2 bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
+            <span className="ml-2 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs font-medium px-2 py-1 rounded-full">
               Risparmi 2 mesi
             </span>
           )}
@@ -308,10 +308,10 @@ export default function PlanSelector({
         {plans.map((plan) => (
           <div
             key={plan.id}
-            className={`relative rounded-2xl p-8 transition-all duration-200 hover:shadow-xl ${
+            className={`relative rounded-2xl p-8 transition-all duration-200 hover:shadow-xl dark:bg-gray-800 ${
               plan.isPopular
                 ? 'border-2 border-blue-500 shadow-xl scale-105'
-                : 'border border-gray-200 shadow-lg'
+                : 'border border-gray-200 dark:border-gray-700 shadow-lg'
             } ${
               selectedPlan === plan.id
                 ? 'ring-2 ring-blue-500'
@@ -337,29 +337,29 @@ export default function PlanSelector({
             )}
 
             <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold text-gray-900">{plan.displayName}</h3>
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{plan.displayName}</h3>
               
               {/* Prezzo */}
               <div className="mt-4">
                 <div className="flex items-center justify-center">
                   {hasDiscount(plan) && (
-                    <span className="text-lg text-gray-400 line-through mr-2">
+                    <span className="text-lg text-gray-400 dark:text-gray-500 line-through mr-2">
                       €{getOriginalPrice(plan)}
                     </span>
                   )}
-                  <span className="text-4xl font-bold text-gray-900">
+                  <span className="text-4xl font-bold text-gray-900 dark:text-white">
                     €{getCurrentPrice(plan)}
                   </span>
                 </div>
                 {plan.id !== 'free' && (
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     {isAnnual ? '/anno' : '/mese'}
                   </p>
                 )}
                 
                 {/* Sconto badge */}
                 {hasDiscount(plan) && (
-                  <div className="mt-2 inline-flex items-center px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                  <div className="mt-2 inline-flex items-center px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full text-xs font-medium">
                     <Award className="w-3 h-3 mr-1" />
                     -{getDiscountPercentage(plan)}% Early Adopter
                   </div>
@@ -367,14 +367,14 @@ export default function PlanSelector({
 
                 {/* Savings per piano annuale */}
                 {isAnnual && plan.savings > 0 && (
-                  <p className="text-sm text-green-600 mt-2 font-medium">
+                  <p className="text-sm text-green-600 dark:text-green-400 mt-2 font-medium">
                     Risparmi €{plan.savings}/anno
                   </p>
                 )}
               </div>
 
               {/* Descrizione breve */}
-              <p className="text-sm text-gray-600 mt-3">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
                 {plan.id === 'free' ?
                   '1 lead di prova alla registrazione' :
                   `${plan.credits} lead/${isAnnual ? 'anno' : 'mese'} + ${plan.replacements} sostituzioni gratuite`
@@ -387,7 +387,7 @@ export default function PlanSelector({
               {plan.features.map((feature, index) => (
                 <li key={index} className="flex items-start">
                   <Check className="w-5 h-5 text-green-500 shrink-0 mt-0.5 mr-3" />
-                  <span className="text-sm text-gray-700">{feature}</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{feature}</span>
                 </li>
               ))}
             </ul>
@@ -400,8 +400,8 @@ export default function PlanSelector({
                 plan.isPopular
                   ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl'
                   : plan.id === 'free'
-                  ? 'bg-gray-100 hover:bg-gray-200 text-gray-900'
-                  : 'bg-gray-900 hover:bg-gray-800 text-white'
+                  ? 'bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white'
+                  : 'bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-700 dark:hover:bg-gray-600'
               } ${processingPlan === plan.id ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {processingPlan === plan.id ? (
@@ -419,7 +419,7 @@ export default function PlanSelector({
             {/* Garanzie per piani a pagamento */}
             {plan.id !== 'free' && (
               <div className="mt-4 text-center">
-                <p className="text-xs text-gray-500 flex items-center justify-center">
+                <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center">
                   <Clock className="w-3 h-3 mr-1" />
                   Cancellazione in qualsiasi momento
                 </p>
@@ -431,42 +431,42 @@ export default function PlanSelector({
 
       {/* FAQ sezione */}
       <div className="mt-16 text-center">
-        <h3 className="text-xl font-semibold text-gray-900 mb-4">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
           Domande Frequenti
         </h3>
         <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto text-left">
           <div>
-            <h4 className="font-medium text-gray-900 mb-2">
+            <h4 className="font-medium text-gray-900 dark:text-white mb-2">
               Cosa sono le sostituzioni gratuite?
             </h4>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Se un lead non è valido o già contattato, puoi richiedere una sostituzione gratuita. 
               Ogni piano include un numero limitato di sostituzioni al mese.
             </p>
           </div>
           <div>
-            <h4 className="font-medium text-gray-900 mb-2">
+            <h4 className="font-medium text-gray-900 dark:text-white mb-2">
               Posso cambiare piano in qualsiasi momento?
             </h4>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Sì, puoi fare upgrade o downgrade del piano in qualsiasi momento. 
               I cambiamenti si applicano dal prossimo ciclo di fatturazione.
             </p>
           </div>
           <div>
-            <h4 className="font-medium text-gray-900 mb-2">
+            <h4 className="font-medium text-gray-900 dark:text-white mb-2">
               I lead sono esclusivi?
             </h4>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               No, i lead sono condivisi tra gli utenti. Tuttavia, utilizziamo algoritmi 
               per distribuirli in modo equo e ridurre la sovrapposizione.
             </p>
           </div>
           <div>
-            <h4 className="font-medium text-gray-900 mb-2">
+            <h4 className="font-medium text-gray-900 dark:text-white mb-2">
               Cosa significa "Early Adopter"?
             </h4>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Sono prezzi scontati per i primi utenti della piattaforma. 
               I prezzi potrebbero aumentare in futuro, ma il tuo piano manterrà il prezzo scontato.
             </p>

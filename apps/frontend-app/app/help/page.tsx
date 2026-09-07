@@ -315,14 +315,14 @@ export default function HelpCenter() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="bg-white border-b">
+      <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700">
         <div className="max-w-6xl mx-auto px-4 py-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
             Centro Assistenza
           </h1>
-          <p className="text-lg text-gray-600 mb-8">
+          <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
             Trova risposte alle tue domande e guide per utilizzare al meglio TrovaMi
           </p>
 
@@ -334,7 +334,7 @@ export default function HelpCenter() {
                 placeholder="Cerca nelle FAQ..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
               />
               <svg 
                 className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" 
@@ -354,8 +354,8 @@ export default function HelpCenter() {
           
           {/* Sidebar categorie */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm p-6 sticky top-6">
-              <h3 className="font-semibold text-gray-900 mb-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 sticky top-6">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
                 Categorie
               </h3>
               <nav className="space-y-2">
@@ -365,8 +365,8 @@ export default function HelpCenter() {
                     onClick={() => setActiveCategory(category.id)}
                     className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
                       activeCategory === category.id
-                        ? 'bg-blue-100 text-blue-700 font-medium'
-                        : 'text-gray-600 hover:bg-gray-100'
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                     }`}
                   >
                     <span className="mr-2">{category.icon}</span>
@@ -376,8 +376,8 @@ export default function HelpCenter() {
               </nav>
 
               {/* Quick actions */}
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <h4 className="font-medium text-gray-900 mb-3">
+              <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <h4 className="font-medium text-gray-900 dark:text-white mb-3">
                   Serve altro aiuto?
                 </h4>
                 <div className="space-y-3">
@@ -389,7 +389,7 @@ export default function HelpCenter() {
                   </a>
                   <a 
                     href="mailto:support@trovami.pro"
-                    className="block w-full text-center px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors text-sm"
+                    className="block w-full text-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
                   >
                     Email Diretta
                   </a>
@@ -400,28 +400,28 @@ export default function HelpCenter() {
 
           {/* FAQ Content */}
           <div className="lg:col-span-3">
-            <div className="bg-white rounded-lg shadow-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
               {/* Results header */}
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-xl font-semibold text-gray-900">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                   {searchQuery ? `Risultati per "${searchQuery}"` : 
                    activeCategory === 'all' ? 'Tutte le FAQ' : 
                    categories.find(c => c.id === activeCategory)?.name}
                 </h2>
-                <p className="text-gray-600 mt-1">
+                <p className="text-gray-600 dark:text-gray-400 mt-1">
                   {filteredFAQs.length} {filteredFAQs.length === 1 ? 'risultato' : 'risultati'}
                 </p>
               </div>
 
               {/* FAQ List */}
-              <div className="divide-y divide-gray-200">
+              <div className="divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredFAQs.length === 0 ? (
                   <div className="p-8 text-center">
                     <div className="text-4xl mb-4">🤔</div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
                       Nessun risultato trovato
                     </h3>
-                    <p className="text-gray-600 mb-4">
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">
                       Prova a cercare con termini diversi o seleziona un'altra categoria.
                     </p>
                     <button
@@ -429,7 +429,7 @@ export default function HelpCenter() {
                         setSearchQuery('')
                         setActiveCategory('all')
                       }}
-                      className="text-blue-600 hover:text-blue-800 font-medium"
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
                     >
                       Mostra tutte le FAQ
                     </button>
@@ -441,7 +441,7 @@ export default function HelpCenter() {
                         onClick={() => toggleFAQ(faq.id)}
                         className="w-full text-left flex justify-between items-start group"
                       >
-                        <h3 className="text-lg font-medium text-gray-900 group-hover:text-blue-600 transition-colors pr-4">
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors pr-4">
                           {faq.question}
                         </h3>
                         <svg 
@@ -461,7 +461,7 @@ export default function HelpCenter() {
                           <div className="prose prose-gray max-w-none">
                             {faq.answer.split('\n').map((paragraph, index) => (
                               paragraph.trim() && (
-                                <p key={index} className="text-gray-700 leading-7 mb-3">
+                                <p key={index} className="text-gray-700 dark:text-gray-300 leading-7 mb-3">
                                   {paragraph.trim()}
                                 </p>
                               )
@@ -476,11 +476,11 @@ export default function HelpCenter() {
             </div>
 
             {/* Contact CTA */}
-            <div className="mt-8 bg-blue-50 rounded-lg p-6 text-center">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 text-center">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                 Non hai trovato quello che cercavi?
               </h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
                 Il nostro team di supporto è sempre pronto ad aiutarti con qualsiasi domanda.
               </p>
               <a 
@@ -500,7 +500,7 @@ export default function HelpCenter() {
         <div className="mt-12 flex justify-center">
           <a 
             href="/" 
-            className="text-blue-600 hover:text-blue-800 font-medium"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
           >
             ← Torna alla Homepage
           </a>

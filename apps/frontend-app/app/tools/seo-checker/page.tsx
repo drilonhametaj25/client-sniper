@@ -177,13 +177,13 @@ export default function SEOCheckerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50/30 dark:from-gray-900 dark:via-green-950/30 dark:to-gray-900">
       {/* Header */}
       <header className="border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
-              <Target className="w-8 h-8 text-blue-600" />
+              <Target className="w-8 h-8 text-blue-600 dark:text-blue-400" />
               <span className="text-xl font-bold text-gray-900 dark:text-white">TrovaMi</span>
             </Link>
             <div className="flex items-center gap-4">
@@ -234,7 +234,7 @@ export default function SEOCheckerPage() {
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder="esempio.com"
-                  className="w-full pl-12 pr-4 py-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg"
+                  className="w-full pl-12 pr-4 py-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg dark:text-white dark:placeholder-gray-400"
                   disabled={loading || (usage !== null && !usage.canAnalyze)}
                 />
               </div>
@@ -433,14 +433,14 @@ export default function SEOCheckerPage() {
                   <Code className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-purple-600">
+                  <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400">
                     Tech Stack Detector
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Scopri le tecnologie di un sito web
                   </p>
                 </div>
-                <ArrowRight className="w-5 h-5 text-gray-400 ml-auto group-hover:text-purple-600" />
+                <ArrowRight className="w-5 h-5 text-gray-400 ml-auto group-hover:text-purple-600 dark:group-hover:text-purple-400" />
               </div>
             </Link>
             <Link
@@ -452,14 +452,14 @@ export default function SEOCheckerPage() {
                   <Activity className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-blue-600">
+                  <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
                     Analisi Completa Sito
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     SEO, performance e problemi tecnici
                   </p>
                 </div>
-                <ArrowRight className="w-5 h-5 text-gray-400 ml-auto group-hover:text-blue-600" />
+                <ArrowRight className="w-5 h-5 text-gray-400 ml-auto group-hover:text-blue-600 dark:group-hover:text-blue-400" />
               </div>
             </Link>
           </div>

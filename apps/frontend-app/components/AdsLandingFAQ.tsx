@@ -61,10 +61,10 @@ export default function AdsLandingFAQ() {
 
   const getCategoryColor = (category: FAQItem['category']) => {
     const colors = {
-      pricing: 'text-green-600 bg-green-50',
-      quality: 'text-blue-600 bg-blue-50',
-      usage: 'text-purple-600 bg-purple-50',
-      support: 'text-orange-600 bg-orange-50'
+      pricing: 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/30',
+      quality: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30',
+      usage: 'text-purple-600 bg-purple-50 dark:text-purple-400 dark:bg-purple-900/30',
+      support: 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-900/30'
     }
     return colors[category] || colors.usage
   }
@@ -80,16 +80,16 @@ export default function AdsLandingFAQ() {
   }
 
   return (
-    <section className="py-20 bg-gray-50">
+    <section className="py-20 bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <div className="flex items-center justify-center mb-4">
-            <HelpCircle className="h-8 w-8 text-blue-600 mr-3" />
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
+            <HelpCircle className="h-8 w-8 text-blue-600 dark:text-blue-400 mr-3" />
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
               Domande Frequenti
             </h2>
           </div>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
             Risposte immediate ai dubbi più comuni sui nostri lead
           </p>
         </div>
@@ -98,32 +98,32 @@ export default function AdsLandingFAQ() {
           {faqData.map((item, index) => (
             <div
               key={index}
-              className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
             >
               <button
                 onClick={() => toggleItem(index)}
-                className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+                className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
               >
                 <div className="flex items-center flex-1">
                   <div className={`px-3 py-1 rounded-full text-xs font-medium mr-4 ${getCategoryColor(item.category)}`}>
                     {getCategoryLabel(item.category)}
                   </div>
-                  <span className="text-lg font-semibold text-gray-900 flex-1">
+                  <span className="text-lg font-semibold text-gray-900 dark:text-white flex-1">
                     {item.question}
                   </span>
                 </div>
                 <div className="ml-4 flex-shrink-0">
                   {openItems.has(index) ? (
-                    <ChevronUp className="h-5 w-5 text-gray-600" />
+                    <ChevronUp className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                   ) : (
-                    <ChevronDown className="h-5 w-5 text-gray-600" />
+                    <ChevronDown className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                   )}
                 </div>
               </button>
               
               {openItems.has(index) && (
-                <div className="px-6 pb-4 border-t border-gray-100">
-                  <div className="pt-4 text-gray-700 leading-relaxed">
+                <div className="px-6 pb-4 border-t border-gray-100 dark:border-gray-700">
+                  <div className="pt-4 text-gray-700 dark:text-gray-300 leading-relaxed">
                     {item.answer}
                   </div>
                 </div>
@@ -134,11 +134,11 @@ export default function AdsLandingFAQ() {
 
         {/* CTA dopo le FAQ */}
         <div className="mt-16 text-center">
-          <div className="bg-blue-50 rounded-2xl p-8 border border-blue-200">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-8 border border-blue-200 dark:border-blue-800">
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
               Altre domande?
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
               Il nostro team è qui per aiutarti. Contattaci o inizia subito con una prova gratuita.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -150,7 +150,7 @@ export default function AdsLandingFAQ() {
               </a>
               <a
                 href="mailto:support@trovami.pro"
-                className="inline-flex items-center px-6 py-3 border border-blue-600 text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors"
+                className="inline-flex items-center px-6 py-3 border border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400 font-semibold rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
               >
                 Contatta il Supporto
               </a>

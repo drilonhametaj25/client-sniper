@@ -18,7 +18,7 @@ export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       
       {/* Schema Markup per SEO */}
       <script
@@ -100,25 +100,25 @@ export default function HomePage() {
 
       {/* Header per utenti non loggati */}
       {!user && (
-        <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200/50">
+        <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                   <Target className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold text-gray-900">TrovaMi</span>
+                <span className="text-xl font-bold text-gray-900 dark:text-white">TrovaMi</span>
               </div>
 
               {/* Desktop Navigation */}
               <nav className="hidden md:flex items-center space-x-8">
-                <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">
+                <a href="#features" className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">
                   Funzionalità
                 </a>
-                <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors">
+                <a href="#pricing" className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">
                   Prezzi
                 </a>
-                <Link href="/login" className="text-gray-600 hover:text-gray-900 transition-colors">
+                <Link href="/login" className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">
                   Accedi
                 </Link>
                 <Link
@@ -132,7 +132,7 @@ export default function HomePage() {
               {/* Mobile menu button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden p-2 text-gray-600 hover:text-gray-900 transition-colors"
+                className="md:hidden p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
                 aria-label="Menu"
               >
                 {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -141,25 +141,25 @@ export default function HomePage() {
 
             {/* Mobile Navigation */}
             {mobileMenuOpen && (
-              <div className="md:hidden border-t border-gray-200/50 py-4 space-y-3">
+              <div className="md:hidden border-t border-gray-200/50 dark:border-gray-700/50 py-4 space-y-3">
                 <a
                   href="#features"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+                  className="block px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 rounded-lg transition-colors"
                 >
                   Funzionalità
                 </a>
                 <a
                   href="#pricing"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+                  className="block px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 rounded-lg transition-colors"
                 >
                   Prezzi
                 </a>
                 <Link
                   href="/login"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+                  className="block px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 rounded-lg transition-colors"
                 >
                   Accedi
                 </Link>
@@ -181,13 +181,13 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-4xl mx-auto">
             {/* Badge di benvenuto */}
-            <div className="inline-flex items-center px-4 py-2 bg-blue-50 border border-blue-200 rounded-full text-blue-700 text-sm font-medium mb-8">
+            <div className="inline-flex items-center px-4 py-2 bg-blue-50 border border-blue-200 rounded-full text-blue-700 text-sm font-medium mb-8 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300">
               <Zap className="w-4 h-4 mr-2" />
               Analisi tecnica avanzata basata su algoritmi proprietari
             </div>
 
             {/* Titolo principale SEO-optimized */}
-            <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
+            <h1 className="text-5xl md:text-7xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
               Trova Clienti nella Tua Zona
               <span className="block">
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800">
@@ -198,9 +198,9 @@ export default function HomePage() {
             </h1>
 
             {/* Sottotitolo ottimizzato per SEO */}
-            <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed">
               <strong>TrovaMi</strong> analizza i siti web delle attività vicino a te, trova i problemi e ti prepara
-              <strong className="text-gray-900"> una proposta commerciale professionale</strong> da mandare in 2 click.
+              <strong className="text-gray-900 dark:text-white"> una proposta commerciale professionale</strong> da mandare in 2 click.
             </p>
 
             {/* CTA Buttons */}
@@ -221,7 +221,7 @@ export default function HomePage() {
               </Link>
               <button
                 onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })}
-                className="inline-flex items-center justify-center px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 text-lg font-semibold rounded-2xl border-2 border-gray-200 hover:border-gray-300 transition-all duration-300"
+                className="inline-flex items-center justify-center px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-white text-lg font-semibold rounded-2xl border-2 border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600 transition-all duration-300"
               >
                 Vedi Come Funziona
               </button>
@@ -230,16 +230,16 @@ export default function HomePage() {
             {/* Stats - Solo dati reali e verificabili */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-8 max-w-2xl mx-auto">
               <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900 mb-2">78+</div>
-                <div className="text-gray-600">Parametri Analizzati</div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">78+</div>
+                <div className="text-gray-600 dark:text-gray-400">Parametri Analizzati</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900 mb-2">1 min</div>
-                <div className="text-gray-600">Per Ogni Analisi</div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">1 min</div>
+                <div className="text-gray-600 dark:text-gray-400">Per Ogni Analisi</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900 mb-2">0€</div>
-                <div className="text-gray-600">Per Iniziare</div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">0€</div>
+                <div className="text-gray-600 dark:text-gray-400">Per Iniziare</div>
               </div>
             </div>
           </div>
@@ -248,17 +248,17 @@ export default function HomePage() {
 
 
       {/* Features Section */}
-      <section id="features" className="py-24 bg-gradient-to-b from-gray-50 to-white">
+      <section id="features" className="py-24 bg-gradient-to-b from-gray-50 to-white dark:from-gray-800/50 dark:to-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-20">
-            <div className="inline-flex items-center px-4 py-2 bg-green-50 border border-green-200 rounded-full text-green-700 text-sm font-medium mb-6">
+            <div className="inline-flex items-center px-4 py-2 bg-green-50 border border-green-200 rounded-full text-green-700 text-sm font-medium mb-6 dark:bg-green-900/30 dark:border-green-800 dark:text-green-300">
               <Shield className="w-4 h-4 mr-2" />
               Tecnologia proprietaria basata su algoritmi deterministici
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
               Come <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-blue-600">Funziona</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
               Sistema di audit digitale automatizzato che analizza oltre 78 parametri tecnici per identificare opportunità di business
             </p>
           </div>
@@ -266,54 +266,54 @@ export default function HomePage() {
           <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
             {/* Feature 1 */}
             <div className="group relative">
-              <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 border border-gray-200/50 hover:shadow-xl transition-all duration-500 group-hover:-translate-y-2">
+              <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-3xl p-8 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-xl transition-all duration-500 group-hover:-translate-y-2">
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                   <Globe className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Ricerca Automatizzata</h3>
-                <p className="text-gray-600 leading-relaxed mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Ricerca Automatizzata</h3>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-6">
                   Sistema di intelligence digitale che monitora directory business e fonti pubbliche per identificare aziende target
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">Business Directory</span>
-                  <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">Geolocalizzazione</span>
-                  <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">Targeting</span>
+                  <span className="px-3 py-1 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-lg text-sm font-medium">Business Directory</span>
+                  <span className="px-3 py-1 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-lg text-sm font-medium">Geolocalizzazione</span>
+                  <span className="px-3 py-1 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-lg text-sm font-medium">Targeting</span>
                 </div>
               </div>
             </div>
             
             {/* Feature 2 */}
             <div className="group relative">
-              <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 border border-gray-200/50 hover:shadow-xl transition-all duration-500 group-hover:-translate-y-2">
+              <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-3xl p-8 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-xl transition-all duration-500 group-hover:-translate-y-2">
                 <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                   <BarChart3 className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Audit Digitale Completo</h3>
-                <p className="text-gray-600 leading-relaxed mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Audit Digitale Completo</h3>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-6">
                   Analisi multi-livello che valuta SEO tecnico, performance, sicurezza, UX e compliance GDPR in tempo reale
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <span className="px-3 py-1 bg-green-50 text-green-700 rounded-lg text-sm font-medium">SEO Tecnico</span>
-                  <span className="px-3 py-1 bg-green-50 text-green-700 rounded-lg text-sm font-medium">Performance</span>
-                  <span className="px-3 py-1 bg-green-50 text-green-700 rounded-lg text-sm font-medium">GDPR Check</span>
+                  <span className="px-3 py-1 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded-lg text-sm font-medium">SEO Tecnico</span>
+                  <span className="px-3 py-1 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded-lg text-sm font-medium">Performance</span>
+                  <span className="px-3 py-1 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded-lg text-sm font-medium">GDPR Check</span>
                 </div>
               </div>
             </div>
             
             {/* Feature 3 */}
             <div className="group relative">
-              <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 border border-gray-200/50 hover:shadow-xl transition-all duration-500 group-hover:-translate-y-2">
+              <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-3xl p-8 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-xl transition-all duration-500 group-hover:-translate-y-2">
                 <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                   <Users className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Lead Intelligence</h3>
-                <p className="text-gray-600 leading-relaxed mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Lead Intelligence</h3>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-6">
                   Scoring proprietario che prioritizza le opportunità in base a criticità tecniche e potenziale di conversione
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium">Scoring 0-100</span>
-                  <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium">Priorità</span>
-                  <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium">Report Tecnico</span>
+                  <span className="px-3 py-1 bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded-lg text-sm font-medium">Scoring 0-100</span>
+                  <span className="px-3 py-1 bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded-lg text-sm font-medium">Priorità</span>
+                  <span className="px-3 py-1 bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded-lg text-sm font-medium">Report Tecnico</span>
                 </div>
               </div>
             </div>
@@ -357,17 +357,17 @@ export default function HomePage() {
       </section>
 
       {/* Sezione Servizi Digitali PRO - NUOVA */}
-      <section className="py-24 bg-gradient-to-br from-purple-50 to-indigo-50">
+      <section className="py-24 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/20 dark:to-indigo-950/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center px-4 py-2 bg-purple-100 border border-purple-200 rounded-full text-purple-700 text-sm font-medium mb-6">
+            <div className="inline-flex items-center px-4 py-2 bg-purple-100 border border-purple-200 rounded-full text-purple-700 text-sm font-medium mb-6 dark:bg-purple-900/30 dark:border-purple-800 dark:text-purple-300">
               <Zap className="w-4 h-4 mr-2" />
               Esclusivo Account PRO
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
               Servizi Digitali <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600">Suggeriti</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
               Per ogni lead analizzato, <strong>gli utenti PRO ricevono suggerimenti specifici</strong> sui servizi digitali da offrire 
               con prezzi consigliati per massimizzare le conversioni
             </p>
@@ -375,47 +375,47 @@ export default function HomePage() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* Esempio Servizio SEO */}
-            <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 border border-purple-200/50 hover:shadow-xl transition-all duration-500">
+            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-3xl p-8 border border-purple-200/50 dark:border-purple-800/50 hover:shadow-xl transition-all duration-500">
               <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-6">
                 <BarChart3 className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Audit SEO Completo</h3>
-              <p className="text-gray-600 mb-4">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Audit SEO Completo</h3>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
                 Analisi tecnica completa con report dettagliato e piano di ottimizzazione
               </p>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Prezzo suggerito:</span>
-                <span className="text-lg font-bold text-green-600">€800 - €1.500</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Prezzo suggerito:</span>
+                <span className="text-lg font-bold text-green-600 dark:text-green-400">€800 - €1.500</span>
               </div>
             </div>
 
             {/* Esempio Servizio Performance */}
-            <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 border border-purple-200/50 hover:shadow-xl transition-all duration-500">
+            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-3xl p-8 border border-purple-200/50 dark:border-purple-800/50 hover:shadow-xl transition-all duration-500">
               <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center mb-6">
                 <Zap className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Ottimizzazione Performance</h3>
-              <p className="text-gray-600 mb-4">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Ottimizzazione Performance</h3>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
                 Miglioramento velocità di caricamento e Core Web Vitals
               </p>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Prezzo suggerito:</span>
-                <span className="text-lg font-bold text-orange-600">€600 - €1.200</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Prezzo suggerito:</span>
+                <span className="text-lg font-bold text-orange-600 dark:text-orange-400">€600 - €1.200</span>
               </div>
             </div>
 
             {/* Esempio Servizio GDPR */}
-            <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 border border-purple-200/50 hover:shadow-xl transition-all duration-500">
+            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-3xl p-8 border border-purple-200/50 dark:border-purple-800/50 hover:shadow-xl transition-all duration-500">
               <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6">
                 <Shield className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Compliance GDPR</h3>
-              <p className="text-gray-600 mb-4">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Compliance GDPR</h3>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
                 Implementazione cookie policy, privacy e conformità normativa
               </p>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Prezzo suggerito:</span>
-                <span className="text-lg font-bold text-blue-600">€400 - €800</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Prezzo suggerito:</span>
+                <span className="text-lg font-bold text-blue-600 dark:text-blue-400">€400 - €800</span>
               </div>
             </div>
           </div>
@@ -503,10 +503,10 @@ export default function HomePage() {
       </section>
 
       {/* FAQ Section */}
-      <StructuredFAQ className="bg-gray-50" />
+      <StructuredFAQ className="bg-gray-50 dark:bg-gray-900" />
 
       {/* Newsletter Section */}
-      <section className="py-24 bg-gradient-to-b from-gray-50 to-white">
+      <section className="py-24 bg-gradient-to-b from-gray-50 to-white dark:from-gray-800/50 dark:to-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto">
             <NewsletterForm

@@ -41,7 +41,9 @@
       "Bash(rm -rf .next)",
       "Bash(npm run *)",
       "Bash(echo \"BUILD_EXIT=$?\")",
-      "Bash(echo \"TSC:$?\")"
+      "Bash(echo \"TSC:$?\")",
+      "Bash(echo \"exit=$?\")",
+      "Bash(echo \"TSC-EXIT:$?\")"
     ]
   }
 }

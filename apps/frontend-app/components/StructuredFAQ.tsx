@@ -88,10 +88,10 @@ export default function StructuredFAQ({ showTitle = true, className = "" }: Stru
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           {showTitle && (
             <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
                 Domande Frequenti
               </h2>
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
                 Tutto quello che devi sapere su TrovaMi e la lead generation automatica
               </p>
             </div>
@@ -101,26 +101,26 @@ export default function StructuredFAQ({ showTitle = true, className = "" }: Stru
             {faqs.map((faq, index) => (
               <div
                 key={index}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
               >
                 <button
                   onClick={() => toggleItem(index)}
-                  className="w-full px-6 py-5 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+                  className="w-full px-6 py-5 text-left flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                   aria-expanded={openItems.has(index)}
                 >
-                  <h3 className="font-semibold text-lg text-gray-900 pr-4">
+                  <h3 className="font-semibold text-lg text-gray-900 dark:text-white pr-4">
                     {faq.question}
                   </h3>
                   {openItems.has(index) ? (
-                    <ChevronUp className="h-5 w-5 text-gray-500 flex-shrink-0" />
+                    <ChevronUp className="h-5 w-5 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                   ) : (
-                    <ChevronDown className="h-5 w-5 text-gray-500 flex-shrink-0" />
+                    <ChevronDown className="h-5 w-5 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                   )}
                 </button>
                 
                 {openItems.has(index) && (
                   <div className="px-6 pb-5">
-                    <p className="text-gray-600 leading-relaxed">
+                    <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
                       {faq.answer}
                     </p>
                   </div>
@@ -130,7 +130,7 @@ export default function StructuredFAQ({ showTitle = true, className = "" }: Stru
           </div>
           
           <div className="mt-12 text-center">
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
               Non trovi la risposta che cerchi?
             </p>
             <a

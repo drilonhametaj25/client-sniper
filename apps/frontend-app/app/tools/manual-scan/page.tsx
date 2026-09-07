@@ -121,9 +121,9 @@ export default function ManualScanPage() {
   }
 
   function getScoreColor(score: number) {
-    if (score >= 80) return 'text-green-600'
-    if (score >= 60) return 'text-yellow-600'
-    return 'text-red-600'
+    if (score >= 80) return 'text-green-600 dark:text-green-400'
+    if (score >= 60) return 'text-yellow-600 dark:text-yellow-400'
+    return 'text-red-600 dark:text-red-400'
   }
 
   function getScoreDescription(score: number) {
@@ -373,7 +373,7 @@ export default function ManualScanPage() {
               {/* Status generale */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className={`text-lg font-semibold ${result.analysis.isAccessible ? 'text-green-600' : 'text-red-600'}`}>
+                  <div className={`text-lg font-semibold ${result.analysis.isAccessible ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                     {result.analysis.isAccessible ? '✅' : '❌'}
                   </div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -385,7 +385,7 @@ export default function ManualScanPage() {
                 </div>
 
                 <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className={`text-lg font-semibold ${result.analysis.performance.loadTime < 3000 ? 'text-green-600' : 'text-red-600'}`}>
+                  <div className={`text-lg font-semibold ${result.analysis.performance.loadTime < 3000 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                     ⚡
                   </div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Performance</div>
@@ -395,7 +395,7 @@ export default function ManualScanPage() {
                 </div>
 
                 <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className={`text-lg font-semibold ${result.analysis.performance.isResponsive ? 'text-green-600' : 'text-red-600'}`}>
+                  <div className={`text-lg font-semibold ${result.analysis.performance.isResponsive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                     📱
                   </div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Mobile</div>
@@ -414,25 +414,25 @@ export default function ManualScanPage() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Titolo</span>
-                      <span className={`text-sm ${result.analysis.seo.hasTitle ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className={`text-sm ${result.analysis.seo.hasTitle ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                         {result.analysis.seo.hasTitle ? `✅ (${result.analysis.seo.titleLength} char)` : '❌ Mancante'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Meta Description</span>
-                      <span className={`text-sm ${result.analysis.seo.hasMetaDescription ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className={`text-sm ${result.analysis.seo.hasMetaDescription ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                         {result.analysis.seo.hasMetaDescription ? `✅ (${result.analysis.seo.metaDescriptionLength} char)` : '❌ Mancante'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Header H1</span>
-                      <span className={`text-sm ${result.analysis.seo.hasH1 ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className={`text-sm ${result.analysis.seo.hasH1 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                         {result.analysis.seo.hasH1 ? `✅ (${result.analysis.seo.h1Count})` : '❌ Mancante'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Dati Strutturati</span>
-                      <span className={`text-sm ${result.analysis.seo.hasStructuredData ? 'text-green-600' : 'text-orange-600'}`}>
+                      <span className={`text-sm ${result.analysis.seo.hasStructuredData ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
                         {result.analysis.seo.hasStructuredData ? '✅ Presenti' : '⚠️ Assenti'}
                       </span>
                     </div>
@@ -445,31 +445,31 @@ export default function ManualScanPage() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Google Analytics</span>
-                      <span className={`text-sm ${result.analysis.tracking.hasGoogleAnalytics ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className={`text-sm ${result.analysis.tracking.hasGoogleAnalytics ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                         {result.analysis.tracking.hasGoogleAnalytics ? '✅ Installato' : '❌ Non rilevato'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Facebook Pixel</span>
-                      <span className={`text-sm ${result.analysis.tracking.hasFacebookPixel ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className={`text-sm ${result.analysis.tracking.hasFacebookPixel ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                         {result.analysis.tracking.hasFacebookPixel ? '✅ Installato' : '❌ Non rilevato'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Google Tag Manager</span>
-                      <span className={`text-sm ${result.analysis.tracking.hasGoogleTagManager ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className={`text-sm ${result.analysis.tracking.hasGoogleTagManager ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                         {result.analysis.tracking.hasGoogleTagManager ? '✅ Installato' : '❌ Non rilevato'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Hotjar</span>
-                      <span className={`text-sm ${result.analysis.tracking.hasHotjar ? 'text-green-600' : 'text-orange-600'}`}>
+                      <span className={`text-sm ${result.analysis.tracking.hasHotjar ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
                         {result.analysis.tracking.hasHotjar ? '✅ Installato' : '⚠️ Non rilevato'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Microsoft Clarity</span>
-                      <span className={`text-sm ${result.analysis.tracking.hasClarityMicrosoft ? 'text-green-600' : 'text-orange-600'}`}>
+                      <span className={`text-sm ${result.analysis.tracking.hasClarityMicrosoft ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
                         {result.analysis.tracking.hasClarityMicrosoft ? '✅ Installato' : '⚠️ Non rilevato'}
                       </span>
                     </div>
@@ -494,13 +494,13 @@ export default function ManualScanPage() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Cookie Banner</span>
-                      <span className={`text-sm ${result.analysis.gdpr.hasCookieBanner ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className={`text-sm ${result.analysis.gdpr.hasCookieBanner ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                         {result.analysis.gdpr.hasCookieBanner ? '✅ Presente' : '❌ Assente'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Privacy Policy</span>
-                      <span className={`text-sm ${result.analysis.gdpr.hasPrivacyPolicy ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className={`text-sm ${result.analysis.gdpr.hasPrivacyPolicy ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                         {result.analysis.gdpr.hasPrivacyPolicy ? '✅ Presente' : '❌ Assente'}
                       </span>
                     </div>
@@ -511,7 +511,7 @@ export default function ManualScanPage() {
                     )}
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Termini di Servizio</span>
-                      <span className={`text-sm ${result.analysis.gdpr.hasTermsOfService ? 'text-green-600' : 'text-orange-600'}`}>
+                      <span className={`text-sm ${result.analysis.gdpr.hasTermsOfService ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
                         {result.analysis.gdpr.hasTermsOfService ? '✅ Presenti' : '⚠️ Assenti'}
                       </span>
                     </div>
@@ -539,7 +539,7 @@ export default function ManualScanPage() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Partita IVA</span>
-                      <span className={`text-sm ${result.analysis.legal.hasVisiblePartitaIva ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className={`text-sm ${result.analysis.legal.hasVisiblePartitaIva ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                         {result.analysis.legal.hasVisiblePartitaIva ? '✅ Visibile' : '❌ Non trovata'}
                       </span>
                     </div>
@@ -550,20 +550,20 @@ export default function ManualScanPage() {
                     )}
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Indirizzo Business</span>
-                      <span className={`text-sm ${result.analysis.legal.hasBusinessAddress ? 'text-green-600' : 'text-orange-600'}`}>
+                      <span className={`text-sm ${result.analysis.legal.hasBusinessAddress ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
                         {result.analysis.legal.hasBusinessAddress ? '✅ Presente' : '⚠️ Non trovato'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Info Contatto</span>
-                      <span className={`text-sm ${result.analysis.legal.hasContactInfo ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className={`text-sm ${result.analysis.legal.hasContactInfo ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                         {result.analysis.legal.hasContactInfo ? '✅ Presenti' : '❌ Mancanti'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Score Conformità</span>
                       <span className={`text-sm font-medium ${result.analysis.legal.complianceScore >= 70 ? 'text-green-600' : 
-                                                                  result.analysis.legal.complianceScore >= 40 ? 'text-orange-600' : 'text-red-600'}`}>
+                                                                  result.analysis.legal.complianceScore >= 40 ? 'text-orange-600 dark:text-orange-400' : 'text-red-600 dark:text-red-400'}`}>
                         {result.analysis.legal.complianceScore}/100
                       </span>
                     </div>
@@ -580,7 +580,7 @@ export default function ManualScanPage() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Presenza Social</span>
-                      <span className={`text-sm ${result.analysis.social.hasAnySocial ? 'text-green-600' : 'text-orange-600'}`}>
+                      <span className={`text-sm ${result.analysis.social.hasAnySocial ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
                         {result.analysis.social.hasAnySocial ? `✅ ${result.analysis.social.socialCount} piattaforme` : '⚠️ Nessuna'}
                       </span>
                     </div>
@@ -624,7 +624,7 @@ export default function ManualScanPage() {
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Tempo Caricamento</span>
                       <span className={`text-sm font-medium ${result.analysis.performance.loadTime < 2000 ? 'text-green-600' : 
-                                                               result.analysis.performance.loadTime < 3000 ? 'text-orange-600' : 'text-red-600'}`}>
+                                                               result.analysis.performance.loadTime < 3000 ? 'text-orange-600 dark:text-orange-400' : 'text-red-600 dark:text-red-400'}`}>
                         {(result.analysis.performance.loadTime / 1000).toFixed(1)}s
                       </span>
                     </div>
@@ -636,13 +636,13 @@ export default function ManualScanPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Immagini Rotte</span>
-                      <span className={`text-sm ${result.analysis.performance.brokenImages === 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className={`text-sm ${result.analysis.performance.brokenImages === 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                         {result.analysis.performance.brokenImages === 0 ? '✅ Nessuna' : `❌ ${result.analysis.performance.brokenImages}`}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Design Responsive</span>
-                      <span className={`text-sm ${result.analysis.performance.isResponsive ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className={`text-sm ${result.analysis.performance.isResponsive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                         {result.analysis.performance.isResponsive ? '✅ Sì' : '❌ No'}
                       </span>
                     </div>

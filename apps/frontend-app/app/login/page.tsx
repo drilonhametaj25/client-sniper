@@ -180,9 +180,9 @@ export default function LoginPage() {
                         onClick={() => setShowPassword(!showPassword)}
                       >
                         {showPassword ? (
-                          <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                          <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
                         ) : (
-                          <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                          <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
                         )}
                       </button>
                     </div>
@@ -193,7 +193,7 @@ export default function LoginPage() {
                   <div className="text-sm">
                     <Link
                       href="/forgot-password"
-                      className="font-medium text-blue-600 hover:text-blue-500 transition-colors"
+                      className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors"
                     >
                       Password dimenticata?
                     </Link>
@@ -215,11 +215,11 @@ export default function LoginPage() {
                   )}
                 </button>
 
-                <div className="text-center pt-4 border-t border-gray-100">
-                  <p className="text-gray-600 mb-3">Non hai ancora un account?</p>
+                <div className="text-center pt-4 border-t border-gray-100 dark:border-gray-700">
+                  <p className="text-gray-600 dark:text-gray-300 mb-3">Non hai ancora un account?</p>
                   <Link
                     href="/register"
-                    className="inline-flex items-center justify-center w-full bg-gray-50 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-100 transition-colors border border-gray-200"
+                    className="inline-flex items-center justify-center w-full bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 px-4 rounded-lg font-medium hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-600"
                   >
                     Crea un account gratuito
                     <ExternalLink className="w-4 h-4 ml-2" />
@@ -230,11 +230,11 @@ export default function LoginPage() {
 
             {/* Features highlight */}
             <div className="mt-8 text-center">
-              <p className="text-sm text-gray-600 mb-4">Una volta loggato potrai:</p>
-              <div className="flex flex-wrap justify-center gap-4 text-xs text-gray-500">
-                <span className="bg-white px-3 py-1 rounded-full border">🎯 Trova lead qualificati</span>
-                <span className="bg-white px-3 py-1 rounded-full border">📊 Analisi siti web complete</span>
-                <span className="bg-white px-3 py-1 rounded-full border">⚡ Risultati in tempo reale</span>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Una volta loggato potrai:</p>
+              <div className="flex flex-wrap justify-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                <span className="bg-white dark:bg-gray-800 px-3 py-1 rounded-full border dark:border-gray-700">🎯 Trova lead qualificati</span>
+                <span className="bg-white dark:bg-gray-800 px-3 py-1 rounded-full border dark:border-gray-700">📊 Analisi siti web complete</span>
+                <span className="bg-white dark:bg-gray-800 px-3 py-1 rounded-full border dark:border-gray-700">⚡ Risultati in tempo reale</span>
               </div>
             </div>
           </div>

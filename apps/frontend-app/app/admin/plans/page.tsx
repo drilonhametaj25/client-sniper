@@ -256,7 +256,7 @@ export default function AdminPlanManagement() {
     return (
       <div className="p-8 text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-        <p className="text-gray-600">Caricamento piani...</p>
+        <p className="text-gray-600 dark:text-gray-400">Caricamento piani...</p>
       </div>
     )
   }
@@ -264,7 +264,7 @@ export default function AdminPlanManagement() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
           Gestione Piani Configurabili
         </h1>
         <button
@@ -279,22 +279,22 @@ export default function AdminPlanManagement() {
       {/* Lista piani esistenti */}
       <div className="grid gap-4">
         {plans.map((plan) => (
-          <div key={plan.name} className="bg-white rounded-lg border p-6">
+          <div key={plan.name} className="bg-white rounded-lg border p-6 dark:bg-gray-800 dark:border-gray-700">
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center space-x-3 mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                     {plan.name}
                   </h3>
                   {!plan.is_visible && (
-                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
+                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-full dark:bg-gray-700 dark:text-gray-300">
                       <EyeOff className="w-3 h-3 mr-1" />
                       Nascosto
                     </span>
                   )}
                   {plan.badge_text && (
                     <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
-                      plan.badge_text.includes('Popular') ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'
+                      plan.badge_text.includes('Popular') ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
                     }`}>
                       {plan.badge_text.includes('Popular') ? <Star className="w-3 h-3 mr-1" /> : <Zap className="w-3 h-3 mr-1" />}
                       {plan.badge_text}
@@ -304,8 +304,8 @@ export default function AdminPlanManagement() {
                 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
                   <div>
-                    <p className="text-sm text-gray-600">Prezzo Mensile</p>
-                    <p className="font-medium">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Prezzo Mensile</p>
+                    <p className="font-medium dark:text-white">
                       €{(plan.price_monthly / 100).toFixed(2)}
                       {plan.original_price_monthly > plan.price_monthly && (
                         <span className="text-sm text-gray-400 line-through ml-2">
@@ -315,22 +315,22 @@ export default function AdminPlanManagement() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Crediti/Mese</p>
-                    <p className="font-medium">{plan.max_credits}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Crediti/Mese</p>
+                    <p className="font-medium dark:text-white">{plan.max_credits}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Sostituzioni/Mese</p>
-                    <p className="font-medium">{plan.max_replacements_monthly}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Sostituzioni/Mese</p>
+                    <p className="font-medium dark:text-white">{plan.max_replacements_monthly}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Max Nicchie</p>
-                    <p className="font-medium">{plan.max_niches === 999 ? 'Illimitate' : plan.max_niches}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Max Nicchie</p>
+                    <p className="font-medium dark:text-white">{plan.max_niches === 999 ? 'Illimitate' : plan.max_niches}</p>
                   </div>
                 </div>
 
-                <p className="text-sm text-gray-600 mb-2">{plan.description}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{plan.description}</p>
                 
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-500 dark:text-gray-400">
                   Features: {plan.features.length} • 
                   Campi visibili: {plan.visible_fields.length} • 
                   Ordine: {plan.sort_order}
@@ -340,14 +340,14 @@ export default function AdminPlanManagement() {
               <div className="flex space-x-2 ml-4">
                 <button
                   onClick={() => startEditPlan(plan)}
-                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-2 rounded-lg transition-colors"
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-2 rounded-lg transition-colors dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200"
                 >
                   <Edit2 className="w-4 h-4" />
                 </button>
                 {plan.name !== 'free' && (
                   <button
                     onClick={() => handleDeletePlan(plan.name)}
-                    className="bg-red-100 hover:bg-red-200 text-red-700 p-2 rounded-lg transition-colors"
+                    className="bg-red-100 hover:bg-red-200 text-red-700 p-2 rounded-lg transition-colors dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-300"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -361,15 +361,15 @@ export default function AdminPlanManagement() {
       {/* Modal di modifica */}
       {editingPlan && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200 sticky top-0 bg-white">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto dark:bg-gray-800 dark:border-gray-700">
+            <div className="p-6 border-b border-gray-200 sticky top-0 bg-white dark:border-gray-700 dark:bg-gray-800">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   {isNewPlan ? 'Nuovo Piano' : `Modifica Piano: ${editingPlan.name}`}
                 </h3>
                 <button
                   onClick={cancelEdit}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   <X className="w-6 h-6" />
                 </button>
@@ -380,7 +380,7 @@ export default function AdminPlanManagement() {
               {/* Informazioni base */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Nome Piano
                   </label>
                   <input
@@ -388,19 +388,19 @@ export default function AdminPlanManagement() {
                     value={editingPlan.name}
                     onChange={(e) => updateEditingPlan('name', e.target.value)}
                     disabled={!isNewPlan}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:disabled:bg-gray-800 dark:disabled:text-gray-400"
                     placeholder="es: starter_monthly"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Ordine Visualizzazione
                   </label>
                   <input
                     type="number"
                     value={editingPlan.sort_order}
                     onChange={(e) => updateEditingPlan('sort_order', parseInt(e.target.value) || 0)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                   />
                 </div>
               </div>
@@ -408,26 +408,26 @@ export default function AdminPlanManagement() {
               {/* Prezzi */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Prezzo Corrente (centesimi)
                   </label>
                   <input
                     type="number"
                     value={editingPlan.price_monthly}
                     onChange={(e) => updateEditingPlan('price_monthly', parseInt(e.target.value) || 0)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                     placeholder="1900 = €19.00"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Prezzo Originale (centesimi)
                   </label>
                   <input
                     type="number"
                     value={editingPlan.original_price_monthly}
                     onChange={(e) => updateEditingPlan('original_price_monthly', parseInt(e.target.value) || 0)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                     placeholder="2900 = €29.00"
                   />
                 </div>
@@ -436,49 +436,49 @@ export default function AdminPlanManagement() {
               {/* Crediti e sostituzioni */}
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Crediti/Mese
                   </label>
                   <input
                     type="number"
                     value={editingPlan.max_credits}
                     onChange={(e) => updateEditingPlan('max_credits', parseInt(e.target.value) || 0)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Sostituzioni/Mese
                   </label>
                   <input
                     type="number"
                     value={editingPlan.max_replacements_monthly}
                     onChange={(e) => updateEditingPlan('max_replacements_monthly', parseInt(e.target.value) || 0)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Max Nicchie (999 = illimitate)
                   </label>
                   <input
                     type="number"
                     value={editingPlan.max_niches}
                     onChange={(e) => updateEditingPlan('max_niches', parseInt(e.target.value) || 1)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                   />
                 </div>
               </div>
 
               {/* Descrizione */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Descrizione
                 </label>
                 <textarea
                   value={editingPlan.description}
                   onChange={(e) => updateEditingPlan('description', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                   rows={2}
                   placeholder="Descrizione mostrata nella pricing table"
                 />
@@ -486,14 +486,14 @@ export default function AdminPlanManagement() {
 
               {/* Badge */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Badge Text
                 </label>
                 <input
                   type="text"
                   value={editingPlan.badge_text}
                   onChange={(e) => updateEditingPlan('badge_text', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                   placeholder="Early Adopter, Most Popular, etc."
                 />
               </div>
@@ -501,26 +501,26 @@ export default function AdminPlanManagement() {
               {/* Stripe Price IDs */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Stripe Price ID Mensile
                   </label>
                   <input
                     type="text"
                     value={editingPlan.stripe_price_id_monthly}
                     onChange={(e) => updateEditingPlan('stripe_price_id_monthly', e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                     placeholder="price_..."
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Stripe Price ID Annuale
                   </label>
                   <input
                     type="text"
                     value={editingPlan.stripe_price_id_annual}
                     onChange={(e) => updateEditingPlan('stripe_price_id_annual', e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                     placeholder="price_..."
                   />
                 </div>
@@ -529,19 +529,19 @@ export default function AdminPlanManagement() {
               {/* Funzionalità booleane */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-3">
-                  <h4 className="font-medium text-gray-900">Funzionalità</h4>
+                  <h4 className="font-medium text-gray-900 dark:text-white">Funzionalità</h4>
                   {[
                     { key: 'has_daily_alerts', label: 'Alert Giornalieri' },
                     { key: 'has_lead_history', label: 'Storico Lead' },
                     { key: 'has_csv_export', label: 'Export CSV' },
                     { key: 'has_statistics', label: 'Statistiche' },
                   ].map(({ key, label }) => (
-                    <label key={key} className="flex items-center">
+                    <label key={key} className="flex items-center dark:text-gray-300">
                       <input
                         type="checkbox"
                         checked={editingPlan[key as keyof Plan] as boolean}
                         onChange={(e) => updateEditingPlan(key as keyof Plan, e.target.checked)}
-                        className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
                       />
                       {label}
                     </label>
@@ -549,22 +549,22 @@ export default function AdminPlanManagement() {
                 </div>
                 
                 <div className="space-y-3">
-                  <h4 className="font-medium text-gray-900">Opzioni</h4>
-                  <label className="flex items-center">
+                  <h4 className="font-medium text-gray-900 dark:text-white">Opzioni</h4>
+                  <label className="flex items-center dark:text-gray-300">
                     <input
                       type="checkbox"
                       checked={editingPlan.is_visible}
                       onChange={(e) => updateEditingPlan('is_visible', e.target.checked)}
-                      className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
                     />
                     Visibile nella Pricing Table
                   </label>
-                  <label className="flex items-center">
+                  <label className="flex items-center dark:text-gray-300">
                     <input
                       type="checkbox"
                       checked={editingPlan.is_annual}
                       onChange={(e) => updateEditingPlan('is_annual', e.target.checked)}
-                      className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
                     />
                     Piano Annuale
                   </label>
@@ -574,7 +574,7 @@ export default function AdminPlanManagement() {
               {/* Features list */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-medium text-gray-900">Features da Mostrare</h4>
+                  <h4 className="font-medium text-gray-900 dark:text-white">Features da Mostrare</h4>
                   <button
                     type="button"
                     onClick={addFeature}
@@ -591,13 +591,13 @@ export default function AdminPlanManagement() {
                         type="text"
                         value={feature}
                         onChange={(e) => updateFeature(index, e.target.value)}
-                        className="flex-1 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="flex-1 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
                         placeholder="Descrizione feature"
                       />
                       <button
                         type="button"
                         onClick={() => removeFeature(index)}
-                        className="text-red-500 hover:text-red-700"
+                        className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -608,15 +608,15 @@ export default function AdminPlanManagement() {
 
               {/* Campi visibili */}
               <div>
-                <h4 className="font-medium text-gray-900 mb-3">Campi Visibili ai Lead</h4>
+                <h4 className="font-medium text-gray-900 dark:text-white mb-3">Campi Visibili ai Lead</h4>
                 <div className="grid grid-cols-4 gap-2">
                   {availableFields.map((field) => (
-                    <label key={field} className="flex items-center text-sm">
+                    <label key={field} className="flex items-center text-sm dark:text-gray-300">
                       <input
                         type="checkbox"
                         checked={editingPlan.visible_fields.includes(field)}
                         onChange={() => toggleVisibleField(field)}
-                        className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
                       />
                       {field.replace('_', ' ')}
                     </label>
@@ -625,11 +625,11 @@ export default function AdminPlanManagement() {
               </div>
             </div>
 
-            <div className="p-6 border-t border-gray-200 sticky bottom-0 bg-white">
+            <div className="p-6 border-t border-gray-200 sticky bottom-0 bg-white dark:border-gray-700 dark:bg-gray-800">
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={cancelEdit}
-                  className="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium transition-colors"
+                  className="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium transition-colors dark:text-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
                 >
                   Annulla
                 </button>

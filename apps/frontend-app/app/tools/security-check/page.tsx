@@ -181,13 +181,13 @@ export default function SecurityCheckPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50/30 dark:from-gray-900 dark:via-red-950/30 dark:to-gray-900">
       {/* Header */}
       <header className="border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
-              <Target className="w-8 h-8 text-blue-600" />
+              <Target className="w-8 h-8 text-blue-600 dark:text-blue-400" />
               <span className="text-xl font-bold text-gray-900 dark:text-white">TrovaMi</span>
             </Link>
             <div className="flex items-center gap-4">
@@ -238,7 +238,7 @@ export default function SecurityCheckPage() {
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder="esempio.com"
-                  className="w-full pl-12 pr-4 py-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent text-lg"
+                  className="w-full pl-12 pr-4 py-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent text-lg dark:text-white dark:placeholder-gray-400"
                   disabled={loading || (usage !== null && !usage.canAnalyze)}
                 />
               </div>
@@ -438,7 +438,7 @@ export default function SecurityCheckPage() {
                   <TrendingUp className="w-6 h-6 text-green-600 dark:text-green-400" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-green-600">
+                  <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400">
                     SEO Checker
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -456,7 +456,7 @@ export default function SecurityCheckPage() {
                   <Code className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-purple-600">
+                  <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400">
                     Tech Detector
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -474,7 +474,7 @@ export default function SecurityCheckPage() {
                   <Activity className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-blue-600">
+                  <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
                     Analisi Completa
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">

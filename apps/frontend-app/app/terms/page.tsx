@@ -13,14 +13,14 @@ export const metadata: Metadata = {
 
 export default function TermsOfService() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="bg-white border-b">
+      <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700">
         <div className="max-w-4xl mx-auto px-4 py-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
             Termini di Servizio
           </h1>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg text-gray-600 dark:text-gray-400">
             Ultimo aggiornamento: 25 Giugno 2025
           </p>
         </div>
@@ -28,11 +28,11 @@ export default function TermsOfService() {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 py-12">
-        <div className="bg-white rounded-lg shadow-sm p-8 space-y-8">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 space-y-8">
           
           {/* Introduzione */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               1. Accettazione dei Termini
             </h2>
             <p className="text-gray-700 leading-7">
@@ -44,7 +44,7 @@ export default function TermsOfService() {
 
           {/* Descrizione servizio */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               2. Descrizione del Servizio
             </h2>
             <p className="text-gray-700 leading-7 mb-4">
@@ -60,21 +60,21 @@ export default function TermsOfService() {
 
           {/* Account utente */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               3. Account Utente e Registrazione
             </h2>
             
-            <h3 className="text-xl font-medium text-gray-800 mb-3">
+            <h3 className="text-xl font-medium text-gray-800 dark:text-gray-100 mb-3">
               3.1 Requisiti di registrazione
             </h3>
-            <ul className="list-disc list-inside text-gray-700 space-y-2 mb-6">
+            <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-6">
               <li>Devi avere almeno 18 anni o l'età della maggiore età nella tua giurisdizione</li>
               <li>Devi fornire informazioni accurate e complete durante la registrazione</li>
               <li>Devi mantenere aggiornate le informazioni del tuo account</li>
               <li>Sei responsabile della sicurezza delle tue credenziali di accesso</li>
             </ul>
 
-            <h3 className="text-xl font-medium text-gray-800 mb-3">
+            <h3 className="text-xl font-medium text-gray-800 dark:text-gray-100 mb-3">
               3.2 Uso dell'account
             </h3>
             <p className="text-gray-700 leading-7">
@@ -86,11 +86,11 @@ export default function TermsOfService() {
 
           {/* Piani e pagamenti */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               4. Piani di Abbonamento e Pagamenti
             </h2>
             
-            <h3 className="text-xl font-medium text-gray-800 mb-3">
+            <h3 className="text-xl font-medium text-gray-800 dark:text-gray-100 mb-3">
               4.1 Piani disponibili
             </h3>
             <div className="bg-gray-50 p-4 rounded-lg mb-4">
@@ -101,7 +101,7 @@ export default function TermsOfService() {
               </ul>
             </div>
 
-            <h3 className="text-xl font-medium text-gray-800 mb-3">
+            <h3 className="text-xl font-medium text-gray-800 dark:text-gray-100 mb-3">
               4.2 Fatturazione e pagamenti
             </h3>
             <ul className="list-disc list-inside text-gray-700 space-y-2">
@@ -115,20 +115,20 @@ export default function TermsOfService() {
 
           {/* Uso accettabile */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               5. Uso Accettabile
             </h2>
             
-            <h3 className="text-xl font-medium text-gray-800 mb-3">
+            <h3 className="text-xl font-medium text-gray-800 dark:text-gray-100 mb-3">
               5.1 Usi consentiti
             </h3>
-            <ul className="list-disc list-inside text-gray-700 space-y-2 mb-6">
+            <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-6">
               <li>Ricerca legittima di potenziali clienti per attività commerciali</li>
               <li>Analisi tecnica di siti web per proposte di miglioramento</li>
               <li>Business development e attività di marketing B2B</li>
             </ul>
 
-            <h3 className="text-xl font-medium text-gray-800 mb-3">
+            <h3 className="text-xl font-medium text-gray-800 dark:text-gray-100 mb-3">
               5.2 Usi vietati
             </h3>
             <ul className="list-disc list-inside text-gray-700 space-y-2">
@@ -143,7 +143,7 @@ export default function TermsOfService() {
 
           {/* Proprietà intellettuale */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               6. Proprietà Intellettuale
             </h2>
             <p className="text-gray-700 leading-7 mb-4">
@@ -158,11 +158,11 @@ export default function TermsOfService() {
 
           {/* Responsabilità */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               7. Limitazione di Responsabilità
             </h2>
             
-            <h3 className="text-xl font-medium text-gray-800 mb-3">
+            <h3 className="text-xl font-medium text-gray-800 dark:text-gray-100 mb-3">
               7.1 Disclaimer
             </h3>
             <p className="text-gray-700 leading-7 mb-4">
@@ -171,7 +171,7 @@ export default function TermsOfService() {
               le tue specifiche esigenze.
             </p>
 
-            <h3 className="text-xl font-medium text-gray-800 mb-3">
+            <h3 className="text-xl font-medium text-gray-800 dark:text-gray-100 mb-3">
               7.2 Limitazioni
             </h3>
             <p className="text-gray-700 leading-7">
@@ -183,7 +183,7 @@ export default function TermsOfService() {
 
           {/* Conformità legale */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               8. Conformità e Responsabilità dell'Utente
             </h2>
             <p className="text-gray-700 leading-7 mb-4">
@@ -200,11 +200,11 @@ export default function TermsOfService() {
 
           {/* Sospensione e terminazione */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               9. Sospensione e Terminazione
             </h2>
             
-            <h3 className="text-xl font-medium text-gray-800 mb-3">
+            <h3 className="text-xl font-medium text-gray-800 dark:text-gray-100 mb-3">
               9.1 Da parte dell'utente
             </h3>
             <p className="text-gray-700 leading-7 mb-4">
@@ -212,7 +212,7 @@ export default function TermsOfService() {
               La cancellazione è effettiva alla fine del periodo di fatturazione corrente.
             </p>
 
-            <h3 className="text-xl font-medium text-gray-800 mb-3">
+            <h3 className="text-xl font-medium text-gray-800 dark:text-gray-100 mb-3">
               9.2 Da parte di TrovaMi
             </h3>
             <p className="text-gray-700 leading-7">
@@ -223,7 +223,7 @@ export default function TermsOfService() {
 
           {/* Modifiche */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               10. Modifiche ai Termini
             </h2>
             <p className="text-gray-700 leading-7">
@@ -235,7 +235,7 @@ export default function TermsOfService() {
 
           {/* Legge applicabile */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               11. Legge Applicabile e Giurisdizione
             </h2>
             <p className="text-gray-700 leading-7">
@@ -246,7 +246,7 @@ export default function TermsOfService() {
 
           {/* Contatti */}
           <section className="bg-blue-50 p-6 rounded-lg">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               12. Contatti per Questioni Legali
             </h2>
             <p className="text-gray-700 leading-7 mb-4">

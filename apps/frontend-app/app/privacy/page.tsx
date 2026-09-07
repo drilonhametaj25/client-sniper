@@ -13,14 +13,14 @@ export const metadata: Metadata = {
 
 export default function PrivacyPolicy() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="bg-white border-b">
+      <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700">
         <div className="max-w-4xl mx-auto px-4 py-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
             Privacy Policy
           </h1>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg text-gray-600 dark:text-gray-400">
             Ultimo aggiornamento: 25 Giugno 2025
           </p>
         </div>
@@ -28,14 +28,14 @@ export default function PrivacyPolicy() {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 py-12">
-        <div className="bg-white rounded-lg shadow-sm p-8 space-y-8">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 space-y-8">
           
           {/* Introduzione */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               1. Introduzione
             </h2>
-            <p className="text-gray-700 leading-7">
+            <p className="text-gray-700 dark:text-gray-300 leading-7">
               TrovaMi ("noi", "nostro" o "la Società") si impegna a proteggere la privacy degli utenti ("tu" o "l'Utente") 
               che utilizzano la nostra piattaforma per la ricerca di lead commerciali. Questa Privacy Policy spiega come 
               raccogliamo, utilizziamo, condividiamo e proteggiamo le tue informazioni personali.
@@ -44,24 +44,24 @@ export default function PrivacyPolicy() {
 
           {/* Dati raccolti */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               2. Informazioni che Raccogliamo
             </h2>
             
-            <h3 className="text-xl font-medium text-gray-800 mb-3">
+            <h3 className="text-xl font-medium text-gray-800 dark:text-gray-100 mb-3">
               2.1 Informazioni fornite dall'utente
             </h3>
-            <ul className="list-disc list-inside text-gray-700 space-y-2 mb-6">
+            <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-6">
               <li>Indirizzo email per la registrazione</li>
               <li>Informazioni di pagamento (tramite Stripe, non conservate sui nostri server)</li>
               <li>Preferenze di utilizzo e impostazioni account</li>
               <li>Comunicazioni con il nostro supporto clienti</li>
             </ul>
 
-            <h3 className="text-xl font-medium text-gray-800 mb-3">
+            <h3 className="text-xl font-medium text-gray-800 dark:text-gray-100 mb-3">
               2.2 Informazioni raccolte automaticamente
             </h3>
-            <ul className="list-disc list-inside text-gray-700 space-y-2">
+            <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2">
               <li>Indirizzo IP e geolocalizzazione approssimativa</li>
               <li>Informazioni sul dispositivo e browser utilizzato</li>
               <li>Dati di utilizzo della piattaforma (pagine visitate, funzioni utilizzate)</li>
@@ -71,10 +71,10 @@ export default function PrivacyPolicy() {
 
           {/* Come utilizziamo i dati */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               3. Come Utilizziamo le Tue Informazioni
             </h2>
-            <ul className="list-disc list-inside text-gray-700 space-y-2">
+            <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2">
               <li>Fornire e migliorare i nostri servizi di ricerca lead</li>
               <li>Gestire il tuo account e le preferenze</li>
               <li>Processare pagamenti e gestire fatturazione</li>
@@ -88,14 +88,14 @@ export default function PrivacyPolicy() {
 
           {/* Condivisione dati */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               4. Condivisione delle Informazioni
             </h2>
-            <p className="text-gray-700 leading-7 mb-4">
+            <p className="text-gray-700 dark:text-gray-300 leading-7 mb-4">
               Non vendiamo, affittiamo o condividiamo le tue informazioni personali con terze parti, 
               eccetto nei seguenti casi:
             </p>
-            <ul className="list-disc list-inside text-gray-700 space-y-2">
+            <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2">
               <li><strong>Fornitori di servizi:</strong> Stripe per pagamenti, Supabase per database, Vercel per hosting</li>
               <li><strong>Obblighi legali:</strong> Quando richiesto da autorità competenti</li>
               <li><strong>Consenso:</strong> Quando hai dato esplicito consenso</li>
@@ -105,10 +105,10 @@ export default function PrivacyPolicy() {
 
           {/* Lead e dati pubblici */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               5. Dati dei Lead e Informazioni Pubbliche
             </h2>
-            <p className="text-gray-700 leading-7">
+            <p className="text-gray-700 dark:text-gray-300 leading-7">
               I lead forniti dalla nostra piattaforma sono raccolti da fonti pubblicamente disponibili 
               (Google Maps, siti web pubblici, directory aziendali). Non accediamo a informazioni private 
               o riservate. Gli utenti sono responsabili dell'uso conforme alle leggi sulla privacy 
@@ -118,10 +118,10 @@ export default function PrivacyPolicy() {
 
           {/* Sicurezza */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               6. Sicurezza dei Dati
             </h2>
-            <p className="text-gray-700 leading-7">
+            <p className="text-gray-700 dark:text-gray-300 leading-7">
               Implementiamo misure di sicurezza tecniche e organizzative appropriate per proteggere 
               le tue informazioni personali contro accesso non autorizzato, alterazione, divulgazione 
               o distruzione. Utilizziamo crittografia HTTPS, autenticazione sicura e controlli di accesso rigorosi.
@@ -130,32 +130,32 @@ export default function PrivacyPolicy() {
 
           {/* Cookie */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               7. Cookie e Tecnologie di Tracciamento
             </h2>
-            <p className="text-gray-700 leading-7 mb-4">
+            <p className="text-gray-700 dark:text-gray-300 leading-7 mb-4">
               Utilizziamo cookie e tecnologie simili per:
             </p>
-            <ul className="list-disc list-inside text-gray-700 space-y-2">
+            <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2">
               <li>Mantenere la sessione di login</li>
               <li>Ricordare le preferenze dell'utente</li>
               <li>Analizzare le performance del sito</li>
               <li>Fornire funzionalità personalizzate</li>
             </ul>
-            <p className="text-gray-700 leading-7 mt-4">
+            <p className="text-gray-700 dark:text-gray-300 leading-7 mt-4">
               Puoi gestire le preferenze dei cookie nelle impostazioni del tuo browser.
             </p>
           </section>
 
           {/* Diritti GDPR */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               8. I Tuoi Diritti (GDPR)
             </h2>
-            <p className="text-gray-700 leading-7 mb-4">
+            <p className="text-gray-700 dark:text-gray-300 leading-7 mb-4">
               Se sei un residente dell'UE, hai i seguenti diritti:
             </p>
-            <ul className="list-disc list-inside text-gray-700 space-y-2">
+            <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2">
               <li><strong>Accesso:</strong> Richiedere una copia dei tuoi dati personali</li>
               <li><strong>Rettifica:</strong> Correggere dati inesatti o incompleti</li>
               <li><strong>Cancellazione:</strong> Richiedere la cancellazione dei tuoi dati</li>
@@ -167,10 +167,10 @@ export default function PrivacyPolicy() {
 
           {/* Ritenzione dati */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               9. Conservazione dei Dati
             </h2>
-            <p className="text-gray-700 leading-7">
+            <p className="text-gray-700 dark:text-gray-300 leading-7">
               Conserviamo le tue informazioni personali solo per il tempo necessario a fornire i nostri servizi 
               e rispettare gli obblighi legali. I dati dell'account vengono eliminati entro 30 giorni dalla 
               cancellazione richiesta dall'utente.
@@ -179,10 +179,10 @@ export default function PrivacyPolicy() {
 
           {/* Modifiche */}
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               10. Modifiche a questa Privacy Policy
             </h2>
-            <p className="text-gray-700 leading-7">
+            <p className="text-gray-700 dark:text-gray-300 leading-7">
               Ci riserviamo il diritto di aggiornare questa Privacy Policy periodicamente. 
               Ti notificheremo eventuali modifiche significative tramite email o avviso sulla piattaforma. 
               L'uso continuato dei nostri servizi dopo le modifiche costituisce accettazione della nuova policy.
@@ -190,14 +190,14 @@ export default function PrivacyPolicy() {
           </section>
 
           {/* Contatti */}
-          <section className="bg-blue-50 p-6 rounded-lg">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+          <section className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
               11. Contattaci
             </h2>
-            <p className="text-gray-700 leading-7 mb-4">
+            <p className="text-gray-700 dark:text-gray-300 leading-7 mb-4">
               Per domande riguardo questa Privacy Policy o per esercitare i tuoi diritti, contattaci:
             </p>
-            <div className="space-y-2 text-gray-700">
+            <div className="space-y-2 text-gray-700 dark:text-gray-300">
               <p><strong>Email:</strong> privacy@trovami.pro</p>
               <p><strong>Indirizzo:</strong> TrovaMi, Via Roma 123, 20121 Milano, Italia</p>
               <p><strong>P.IVA:</strong> 07327360488</p>
@@ -210,13 +210,13 @@ export default function PrivacyPolicy() {
         <div className="mt-8 flex justify-between">
           <a 
             href="/" 
-            className="text-blue-600 hover:text-blue-800 font-medium"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
           >
             ← Torna alla Homepage
           </a>
           <a 
             href="/terms" 
-            className="text-blue-600 hover:text-blue-800 font-medium"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
           >
             Termini di Servizio →
           </a>
