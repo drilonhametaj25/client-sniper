@@ -17,7 +17,7 @@
 import React, { useState, useCallback } from 'react'
 import { Copy, Mail, Phone, MessageCircle, CheckCircle, ExternalLink, MessageSquare } from 'lucide-react'
 import Card from '@/components/ui/Card'
-import { isStarterOrHigher, isProOrHigher } from '@/lib/utils/plan-helpers'
+import { isStarterOrHigher } from '@/lib/utils/plan-helpers'
 
 interface ContactTemplatesProps {
   lead: {
@@ -427,7 +427,7 @@ Grazie e buona giornata!
               <MessageCircle className="h-4 w-4" />
               LinkedIn
             </button>
-            {isProOrHigher(userPlan) && (
+            {isStarterOrHigher(userPlan) && (
               <button
                 onClick={() => setSelectedTemplate('cold_call')}
                 className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
@@ -485,7 +485,7 @@ Grazie e buona giornata!
           </button>
 
           {/* Mailto Integration per PRO con template email */}
-          {isProOrHigher(userPlan) && selectedTemplate === 'email' && lead.email && (
+          {isStarterOrHigher(userPlan) && selectedTemplate === 'email' && lead.email && (
             <button
               onClick={() => openMailto(currentTemplate)}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
@@ -496,7 +496,7 @@ Grazie e buona giornata!
           )}
 
           {/* LinkedIn direct per PRO con LinkedIn template */}
-          {isProOrHigher(userPlan) && selectedTemplate === 'linkedin' && (
+          {isStarterOrHigher(userPlan) && selectedTemplate === 'linkedin' && (
             <button
               onClick={() => window.open('https://www.linkedin.com/messaging', '_blank')}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"

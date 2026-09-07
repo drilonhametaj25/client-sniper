@@ -12,10 +12,11 @@
 
 'use client'
 
-import { useState } from 'react'
-import { Search, X } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Search, X, Bell } from 'lucide-react'
 import AdvancedFilters, { AdvancedFiltersState } from '@/components/AdvancedFilters'
 import ExportCSV from '@/components/leads/ExportCSV'
+import SavedSearchForm from '@/components/SavedSearchForm'
 import { CATEGORY_OPTIONS } from '@/lib/utils/categories'
 import type { LeadsFilterState, LeadSortBy, DashboardLead } from '@/lib/hooks/useLeads'
 
@@ -55,6 +56,16 @@ export default function FiltersBar({
   leadCount
 }: FiltersBarProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [showSavedSearch, setShowSavedSearch] = useState(false)
+
+  // Identità stabile: SavedSearchForm ha un effect su initialFilters e un
+  // object literal nuovo a ogni render lo farebbe scattare in loop
+  const savedSearchInitialFilters = useMemo(() => ({
+    categories: filters.category ? [filters.category] : [],
+    cities: filters.city ? [filters.city] : [],
+    scoreMin: filters.advanced.scoreRange.min,
+    scoreMax: filters.advanced.scoreRange.max
+  }), [filters.category, filters.city, filters.advanced.scoreRange.min, filters.advanced.scoreRange.max])
 
   const toggleClass = (active: boolean) =>
     `px-3 py-2 min-h-[44px] rounded-xl text-sm font-medium transition-colors ${
@@ -140,9 +151,24 @@ export default function FiltersBar({
         >
           Solo sbloccati
         </button>
+        <button
+          onClick={() => setShowSavedSearch(true)}
+          className={toggleClass(false)}
+          title="Salva questa ricerca e ricevi un alert quando arrivano nuovi lead compatibili"
+        >
+          <Bell className="w-4 h-4 inline-block mr-1 -mt-0.5" />
+          Salva ricerca
+        </button>
         <div className="flex-1" />
         <ExportCSV leads={unlockedLeads} plan={plan} />
       </div>
+
+      {/* Ricerche salvate → alert email "nuovi lead per te" (cron già attivo) */}
+      <SavedSearchForm
+        isOpen={showSavedSearch}
+        onClose={() => setShowSavedSearch(false)}
+        initialFilters={savedSearchInitialFilters}
+      />
 
       {/* Tutto il resto dei filtri */}
       <AdvancedFilters
