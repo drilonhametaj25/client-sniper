@@ -61,22 +61,22 @@ export default function LeadGenerationAgenzie() {
         `}
       </Script>
 
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/30">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 dark:from-gray-900 via-white dark:via-gray-900 to-blue-50/30">
       
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center px-4 py-2 bg-purple-50 border border-purple-200 rounded-full text-purple-700 text-sm font-medium mb-8">
+            <div className="inline-flex items-center px-4 py-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-full text-purple-700 dark:text-purple-400 text-sm font-medium mb-8">
               <Users className="w-4 h-4 mr-2" />
               Per Agenzie Web & Digital
             </div>
             
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
               Lead Generation per <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">Agenzie Web</span>
             </h1>
             
-            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-3xl mx-auto leading-relaxed">
               Implementa un <strong>sistema di lead generation automatico</strong> per la tua agenzia web. 
               Trova clienti qualificati, scala il business e aumenta i ricavi con strategie comprovate.
             </p>
@@ -91,7 +91,7 @@ export default function LeadGenerationAgenzie() {
               </Link>
               <Link 
                 href="/confronto-costi-lead" 
-                className="inline-flex items-center px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 text-lg font-semibold rounded-2xl border-2 border-gray-200 hover:border-gray-300 transition-all duration-300"
+                className="inline-flex items-center px-8 py-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-lg font-semibold rounded-2xl border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-300"
               >
                 Confronta i Costi
               </Link>
@@ -101,40 +101,40 @@ export default function LeadGenerationAgenzie() {
       </section>
 
       {/* Problemi delle Agenzie */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white">
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-800">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-4xl font-bold text-center mb-12">
-            Le Sfide del <span className="text-purple-600">Lead Generation</span> per Agenzie
+            Le Sfide del <span className="text-purple-600 dark:text-purple-400">Lead Generation</span> per Agenzie
           </h2>
           
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center p-8 bg-red-50 rounded-2xl">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Target className="w-8 h-8 text-red-600" />
+            <div className="text-center p-8 bg-red-50 dark:bg-red-900/20 rounded-2xl">
+              <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Target className="w-8 h-8 text-red-600 dark:text-red-400" />
               </div>
               <h3 className="text-xl font-bold mb-4">Difficoltà a Scalare</h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-400">
                 I metodi tradizionali (referral, networking) non sono scalabili. 
                 Difficile crescere oltre una certa dimensione.
               </p>
             </div>
             
-            <div className="text-center p-8 bg-orange-50 rounded-2xl">
-              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <BarChart3 className="w-8 h-8 text-orange-600" />
+            <div className="text-center p-8 bg-orange-50 dark:bg-orange-900/20 rounded-2xl">
+              <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <BarChart3 className="w-8 h-8 text-orange-600 dark:text-orange-400" />
               </div>
               <h3 className="text-xl font-bold mb-4">Lead Non Qualificati</h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-400">
                 Molti contatti non hanno budget, autorità decisionale o reale necessità dei servizi.
               </p>
             </div>
             
-            <div className="text-center p-8 bg-yellow-50 rounded-2xl">
-              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Zap className="w-8 h-8 text-yellow-600" />
+            <div className="text-center p-8 bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl">
+              <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Zap className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
               </div>
               <h3 className="text-xl font-bold mb-4">Tempo & Risorse</h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-400">
                 Il team passa troppo tempo a cercare clienti invece di lavorare sui progetti.
               </p>
             </div>
@@ -147,9 +147,9 @@ export default function LeadGenerationAgenzie() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-6">
-              Il Sistema di <span className="text-green-600">Lead Generation Automatico</span>
+              Il Sistema di <span className="text-green-600 dark:text-green-400">Lead Generation Automatico</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
               TrovaMi rivoluziona il way le agenzie trovano clienti, automatizzando l'identificazione 
               di aziende con reali problemi tecnici sui loro siti web.
             </p>
@@ -160,12 +160,12 @@ export default function LeadGenerationAgenzie() {
               <h3 className="text-3xl font-bold mb-6">Come Funziona per le Agenzie</h3>
               <div className="space-y-6">
                 <div className="flex items-start">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mt-1 mr-4">
-                    <span className="text-green-600 font-bold text-sm">1</span>
+                  <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mt-1 mr-4">
+                    <span className="text-green-600 dark:text-green-400 font-bold text-sm">1</span>
                   </div>
                   <div>
                     <h4 className="text-lg font-semibold mb-2">Analisi Automatica Massiva</h4>
-                    <p className="text-gray-600">
+                    <p className="text-gray-600 dark:text-gray-400">
                       La piattaforma scansiona migliaia di siti web locali identificando problemi tecnici, 
                       SEO carente, performance scadenti.
                     </p>
@@ -173,12 +173,12 @@ export default function LeadGenerationAgenzie() {
                 </div>
                 
                 <div className="flex items-start">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mt-1 mr-4">
-                    <span className="text-green-600 font-bold text-sm">2</span>
+                  <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mt-1 mr-4">
+                    <span className="text-green-600 dark:text-green-400 font-bold text-sm">2</span>
                   </div>
                   <div>
                     <h4 className="text-lg font-semibold mb-2">Qualificazione Intelligente</h4>
-                    <p className="text-gray-600">
+                    <p className="text-gray-600 dark:text-gray-400">
                       Ogni lead ha un punteggio basato sulla gravità dei problemi. 
                       Ti concentri solo sui prospect più promettenti.
                     </p>
@@ -186,12 +186,12 @@ export default function LeadGenerationAgenzie() {
                 </div>
                 
                 <div className="flex items-start">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mt-1 mr-4">
-                    <span className="text-green-600 font-bold text-sm">3</span>
+                  <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mt-1 mr-4">
+                    <span className="text-green-600 dark:text-green-400 font-bold text-sm">3</span>
                   </div>
                   <div>
                     <h4 className="text-lg font-semibold mb-2">Outreach Personalizzato</h4>
-                    <p className="text-gray-600">
+                    <p className="text-gray-600 dark:text-gray-400">
                       Con dati specifici sui problemi, puoi creare proposte mirate e 
                       dimostrare valore fin dal primo contatto.
                     </p>
@@ -204,13 +204,13 @@ export default function LeadGenerationAgenzie() {
       </section>
 
       {/* Lead Cost Comparison */}
-      <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
+      <section className="py-16 bg-gradient-to-b from-gray-50 dark:from-gray-900 to-white dark:to-gray-800">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
               Confronta i <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">Costi per Lead</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
               Vedi quanto la tua agenzia può risparmiare con TrovaMi rispetto ai metodi tradizionali
             </p>
           </div>
@@ -219,17 +219,17 @@ export default function LeadGenerationAgenzie() {
       </section>
 
       {/* Servizi Digitali PRO per Agenzie - NUOVA */}
-      <section className="py-20 bg-gradient-to-br from-indigo-50 to-purple-50">
+      <section className="py-20 bg-gradient-to-br from-indigo-50 dark:from-gray-900 to-purple-50 dark:to-gray-800">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center px-4 py-2 bg-indigo-100 border border-indigo-200 rounded-full text-indigo-700 text-sm font-medium mb-6">
+            <div className="inline-flex items-center px-4 py-2 bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-full text-indigo-700 dark:text-indigo-400 text-sm font-medium mb-6">
               <Zap className="w-4 h-4 mr-2" />
               Solo Account PRO
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
               Servizi Digitali <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Personalizzati</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-4xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-4xl mx-auto">
               Ogni lead viene analizzato per <strong>suggerire automaticamente i servizi digitali più appropriati</strong> 
               con prezzi ottimizzati per il mercato locale, aumentando il tasso di conversione delle tue proposte
             </p>
@@ -238,45 +238,45 @@ export default function LeadGenerationAgenzie() {
           <div className="max-w-3xl mx-auto mb-16">
             {/* Lista servizi */}
             <div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">Servizi Suggeriti per Ogni Lead</h3>
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Servizi Suggeriti per Ogni Lead</h3>
               <div className="space-y-4">
                 <div className="flex items-start">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mt-1 mr-4">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mt-1 mr-4">
+                    <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900">Audit SEO Tecnico</h4>
-                    <p className="text-gray-600">€800-€1.500 per analisi completa</p>
+                    <h4 className="font-semibold text-gray-900 dark:text-white">Audit SEO Tecnico</h4>
+                    <p className="text-gray-600 dark:text-gray-400">€800-€1.500 per analisi completa</p>
                   </div>
                 </div>
                 
                 <div className="flex items-start">
-                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mt-1 mr-4">
-                    <CheckCircle className="w-5 h-5 text-orange-600" />
+                  <div className="w-8 h-8 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center mt-1 mr-4">
+                    <CheckCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900">Ottimizzazione Performance</h4>
-                    <p className="text-gray-600">€600-€1.200 per miglioramento velocità</p>
+                    <h4 className="font-semibold text-gray-900 dark:text-white">Ottimizzazione Performance</h4>
+                    <p className="text-gray-600 dark:text-gray-400">€600-€1.200 per miglioramento velocità</p>
                   </div>
                 </div>
                 
                 <div className="flex items-start">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mt-1 mr-4">
-                    <CheckCircle className="w-5 h-5 text-blue-600" />
+                  <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mt-1 mr-4">
+                    <CheckCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900">Compliance GDPR</h4>
-                    <p className="text-gray-600">€400-€800 per implementazione</p>
+                    <h4 className="font-semibold text-gray-900 dark:text-white">Compliance GDPR</h4>
+                    <p className="text-gray-600 dark:text-gray-400">€400-€800 per implementazione</p>
                   </div>
                 </div>
                 
                 <div className="flex items-start">
-                  <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mt-1 mr-4">
-                    <CheckCircle className="w-5 h-5 text-purple-600" />
+                  <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mt-1 mr-4">
+                    <CheckCircle className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900">Redesign Responsivo</h4>
-                    <p className="text-gray-600">€2.000-€5.000 per rifacimento</p>
+                    <h4 className="font-semibold text-gray-900 dark:text-white">Redesign Responsivo</h4>
+                    <p className="text-gray-600 dark:text-gray-400">€2.000-€5.000 per rifacimento</p>
                   </div>
                 </div>
               </div>

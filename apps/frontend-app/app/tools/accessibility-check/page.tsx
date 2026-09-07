@@ -102,7 +102,7 @@ export default function AccessibilityCheckPage() {
       case 'C': return 'text-yellow-500'
       case 'D': return 'text-orange-500'
       case 'F': return 'text-red-500'
-      default: return 'text-gray-500'
+      default: return 'text-gray-500 dark:text-gray-400'
     }
   }
 
@@ -117,31 +117,31 @@ export default function AccessibilityCheckPage() {
 
   const getStatusBg = (status: string) => {
     switch (status) {
-      case 'pass': return 'bg-green-50 border-green-200'
-      case 'warning': return 'bg-yellow-50 border-yellow-200'
-      case 'fail': return 'bg-red-50 border-red-200'
-      default: return 'bg-gray-50 border-gray-200'
+      case 'pass': return 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+      case 'warning': return 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+      case 'fail': return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+      default: return 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700'
     }
   }
 
   const getWcagBadge = (level: string) => {
     switch (level) {
-      case 'A': return 'bg-blue-100 text-blue-800'
-      case 'AA': return 'bg-purple-100 text-purple-800'
-      case 'AAA': return 'bg-indigo-100 text-indigo-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'A': return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+      case 'AA': return 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300'
+      case 'AAA': return 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800'
+      default: return 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 dark:from-gray-900 to-white dark:to-gray-800">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white dark:bg-gray-800 shadow-sm border-b">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <span className="text-2xl font-bold text-purple-600">TrovaMi</span>
+            <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">TrovaMi</span>
             <span className="text-gray-400">|</span>
-            <span className="text-gray-600">Accessibility Audit</span>
+            <span className="text-gray-600 dark:text-gray-400">Accessibility Audit</span>
           </Link>
           <Link
             href="/register"
@@ -155,19 +155,19 @@ export default function AccessibilityCheckPage() {
       <main className="max-w-4xl mx-auto px-4 py-12">
         {/* Hero */}
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
             Accessibility Quick Audit
           </h1>
-          <p className="text-xl text-gray-600 mb-2">
+          <p className="text-xl text-gray-600 dark:text-gray-400 mb-2">
             Verifica l'accessibilità del tuo sito secondo le linee guida WCAG
           </p>
-          <p className="text-gray-500">
+          <p className="text-gray-500 dark:text-gray-400">
             Analisi gratuita - {usage ? `${usage.remaining}/${usage.limit}` : '3'} analisi rimanenti oggi
           </p>
         </div>
 
         {/* Input */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
           <div className="flex gap-4">
             <input
               type="url"
@@ -187,7 +187,7 @@ export default function AccessibilityCheckPage() {
           </div>
 
           {error && (
-            <div className="mt-4 p-4 bg-red-50 text-red-700 rounded-lg">
+            <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg">
               {error}
             </div>
           )}
@@ -197,11 +197,11 @@ export default function AccessibilityCheckPage() {
         {result && (
           <div className="space-y-6">
             {/* Score Card */}
-            <div className="bg-white rounded-xl shadow-lg p-8">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Risultato Analisi</h2>
-                  <p className="text-gray-500 text-sm mt-1">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Risultato Analisi</h2>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
                     {result.finalUrl}
                   </p>
                 </div>
@@ -209,17 +209,17 @@ export default function AccessibilityCheckPage() {
                   <div className={`text-6xl font-bold ${getGradeColor(result.grade)}`}>
                     {result.grade}
                   </div>
-                  <div className="text-gray-500 text-sm">Voto</div>
+                  <div className="text-gray-500 dark:text-gray-400 text-sm">Voto</div>
                 </div>
               </div>
 
               {/* Score Bar */}
               <div className="mb-6">
-                <div className="flex justify-between text-sm text-gray-600 mb-2">
+                <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
                   <span>Punteggio Accessibilita</span>
                   <span className="font-semibold">{result.score}/100</span>
                 </div>
-                <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                   <div
                     className={`h-full transition-all duration-500 ${
                       result.score >= 90 ? 'bg-green-500' :
@@ -234,32 +234,32 @@ export default function AccessibilityCheckPage() {
 
               {/* Summary */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div className="bg-green-50 rounded-lg p-4 text-center">
-                  <div className="text-2xl font-bold text-green-600">{result.summary.passed}</div>
-                  <div className="text-sm text-green-700">Superati</div>
+                <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">{result.summary.passed}</div>
+                  <div className="text-sm text-green-700 dark:text-green-400">Superati</div>
                 </div>
-                <div className="bg-yellow-50 rounded-lg p-4 text-center">
-                  <div className="text-2xl font-bold text-yellow-600">{result.summary.warnings}</div>
-                  <div className="text-sm text-yellow-700">Warning</div>
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{result.summary.warnings}</div>
+                  <div className="text-sm text-yellow-700 dark:text-yellow-400">Warning</div>
                 </div>
-                <div className="bg-red-50 rounded-lg p-4 text-center">
-                  <div className="text-2xl font-bold text-red-600">{result.summary.failed}</div>
-                  <div className="text-sm text-red-700">Falliti</div>
+                <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-red-600 dark:text-red-400">{result.summary.failed}</div>
+                  <div className="text-sm text-red-700 dark:text-red-400">Falliti</div>
                 </div>
-                <div className="bg-blue-50 rounded-lg p-4 text-center">
-                  <div className="text-2xl font-bold text-blue-600">{result.summary.levelA.passed}/{result.summary.levelA.passed + result.summary.levelA.failed}</div>
-                  <div className="text-sm text-blue-700">Livello A</div>
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{result.summary.levelA.passed}/{result.summary.levelA.passed + result.summary.levelA.failed}</div>
+                  <div className="text-sm text-blue-700 dark:text-blue-400">Livello A</div>
                 </div>
-                <div className="bg-purple-50 rounded-lg p-4 text-center">
-                  <div className="text-2xl font-bold text-purple-600">{result.summary.levelAA.passed}/{result.summary.levelAA.passed + result.summary.levelAA.failed}</div>
-                  <div className="text-sm text-purple-700">Livello AA</div>
+                <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{result.summary.levelAA.passed}/{result.summary.levelAA.passed + result.summary.levelAA.failed}</div>
+                  <div className="text-sm text-purple-700 dark:text-purple-400">Livello AA</div>
                 </div>
               </div>
             </div>
 
             {/* Checks Detail */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Dettaglio Controlli WCAG</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Dettaglio Controlli WCAG</h3>
 
               <div className="space-y-3">
                 {result.checks.map((check, index) => (
@@ -271,26 +271,26 @@ export default function AccessibilityCheckPage() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-lg">{getStatusIcon(check.status)}</span>
-                          <span className="font-semibold text-gray-900">{check.name}</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">{check.name}</span>
                           <span className={`text-xs px-2 py-0.5 rounded ${getWcagBadge(check.wcagLevel)}`}>
                             WCAG {check.wcagLevel}
                             {check.wcagCriteria && ` - ${check.wcagCriteria}`}
                           </span>
                         </div>
                         {check.value && (
-                          <div className="text-sm text-gray-600 ml-7">
+                          <div className="text-sm text-gray-600 dark:text-gray-400 ml-7">
                             {check.value}
                           </div>
                         )}
                         {check.details && check.details.length > 0 && (
-                          <div className="text-sm text-gray-500 ml-7 mt-1">
+                          <div className="text-sm text-gray-500 dark:text-gray-400 ml-7 mt-1">
                             {check.details.map((detail, i) => (
                               <span key={i} className="block">{detail}</span>
                             ))}
                           </div>
                         )}
                         {check.recommendation && (
-                          <div className="text-sm text-gray-700 ml-7 mt-2 p-2 bg-white/50 rounded">
+                          <div className="text-sm text-gray-700 dark:text-gray-300 ml-7 mt-2 p-2 bg-white/50 rounded">
                             <span className="font-medium">Raccomandazione:</span> {check.recommendation}
                           </div>
                         )}
@@ -331,24 +331,24 @@ export default function AccessibilityCheckPage() {
         {/* Features when no result */}
         {!result && !loading && (
           <div className="grid md:grid-cols-3 gap-6 mt-12">
-            <div className="bg-white rounded-xl p-6 shadow-sm border">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border">
               <div className="text-3xl mb-3">♿</div>
-              <h3 className="font-bold text-gray-900 mb-2">Controlli WCAG</h3>
-              <p className="text-gray-600 text-sm">
+              <h3 className="font-bold text-gray-900 dark:text-white mb-2">Controlli WCAG</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
                 Verifichiamo conformita ai criteri WCAG 2.1 livello A e AA per garantire l'accessibilita.
               </p>
             </div>
-            <div className="bg-white rounded-xl p-6 shadow-sm border">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border">
               <div className="text-3xl mb-3">🏷️</div>
-              <h3 className="font-bold text-gray-900 mb-2">Semantica HTML</h3>
-              <p className="text-gray-600 text-sm">
+              <h3 className="font-bold text-gray-900 dark:text-white mb-2">Semantica HTML</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
                 Analizziamo heading, landmark ARIA, alt text e struttura semantica della pagina.
               </p>
             </div>
-            <div className="bg-white rounded-xl p-6 shadow-sm border">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border">
               <div className="text-3xl mb-3">⌨️</div>
-              <h3 className="font-bold text-gray-900 mb-2">Navigazione Tastiera</h3>
-              <p className="text-gray-600 text-sm">
+              <h3 className="font-bold text-gray-900 dark:text-white mb-2">Navigazione Tastiera</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
                 Controlliamo skip link, focus visibile e elementi interattivi accessibili.
               </p>
             </div>
@@ -356,12 +356,12 @@ export default function AccessibilityCheckPage() {
         )}
 
         {/* Info Box */}
-        <div className="mt-12 bg-purple-50 rounded-xl p-6 border border-purple-100">
+        <div className="mt-12 bg-purple-50 dark:bg-purple-900/20 rounded-xl p-6 border border-purple-100">
           <h3 className="font-bold text-purple-900 mb-2">Perché l'accessibilità è importante?</h3>
-          <p className="text-purple-800 text-sm mb-4">
+          <p className="text-purple-800 dark:text-purple-300 text-sm mb-4">
             Oltre 1 miliardo di persone nel mondo hanno disabilita. Un sito accessibile:
           </p>
-          <ul className="text-purple-700 text-sm space-y-1">
+          <ul className="text-purple-700 dark:text-purple-400 text-sm space-y-1">
             <li>• Raggiunge un pubblico piu ampio</li>
             <li>• Migliora la SEO (Google premia i siti accessibili)</li>
             <li>• E spesso obbligatorio per legge (Legge Stanca, EAA 2025)</li>
@@ -371,31 +371,31 @@ export default function AccessibilityCheckPage() {
 
         {/* Other Tools */}
         <div className="mt-12">
-          <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">Altri Tool Gratuiti</h3>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center">Altri Tool Gratuiti</h3>
           <div className="grid md:grid-cols-3 gap-4">
             <Link
               href="/tools/seo-checker"
-              className="bg-white rounded-lg p-4 border hover:border-purple-300 hover:shadow-md transition text-center"
+              className="bg-white dark:bg-gray-800 rounded-lg p-4 border hover:border-purple-300 hover:shadow-md transition text-center"
             >
               <div className="text-2xl mb-2">🔍</div>
-              <div className="font-semibold text-gray-900">SEO Checker</div>
-              <div className="text-sm text-gray-500">Analisi SEO on-page</div>
+              <div className="font-semibold text-gray-900 dark:text-white">SEO Checker</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">Analisi SEO on-page</div>
             </Link>
             <Link
               href="/tools/tech-detector"
-              className="bg-white rounded-lg p-4 border hover:border-purple-300 hover:shadow-md transition text-center"
+              className="bg-white dark:bg-gray-800 rounded-lg p-4 border hover:border-purple-300 hover:shadow-md transition text-center"
             >
               <div className="text-2xl mb-2">🔧</div>
-              <div className="font-semibold text-gray-900">Tech Detector</div>
-              <div className="text-sm text-gray-500">Rileva tecnologie usate</div>
+              <div className="font-semibold text-gray-900 dark:text-white">Tech Detector</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">Rileva tecnologie usate</div>
             </Link>
             <Link
               href="/tools/security-check"
-              className="bg-white rounded-lg p-4 border hover:border-purple-300 hover:shadow-md transition text-center"
+              className="bg-white dark:bg-gray-800 rounded-lg p-4 border hover:border-purple-300 hover:shadow-md transition text-center"
             >
               <div className="text-2xl mb-2">🔒</div>
-              <div className="font-semibold text-gray-900">Security Check</div>
-              <div className="text-sm text-gray-500">Verifica sicurezza</div>
+              <div className="font-semibold text-gray-900 dark:text-white">Security Check</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">Verifica sicurezza</div>
             </Link>
           </div>
         </div>

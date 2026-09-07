@@ -161,21 +161,21 @@ export default function AdminReplacementManagement() {
     switch (status) {
       case 'pending':
         return (
-          <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
+          <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 rounded-full">
             <Clock className="w-3 h-3 mr-1" />
             In attesa
           </span>
         )
       case 'approved':
         return (
-          <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+          <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-full">
             <Check className="w-3 h-3 mr-1" />
             Approvata
           </span>
         )
       case 'rejected':
         return (
-          <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">
+          <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded-full">
             <X className="w-3 h-3 mr-1" />
             Rifiutata
           </span>
@@ -187,13 +187,13 @@ export default function AdminReplacementManagement() {
 
   const getPlanBadge = (plan: string) => {
     const colors = {
-      free: 'bg-gray-100 text-gray-800',
-      starter: 'bg-blue-100 text-blue-800',
-      pro: 'bg-purple-100 text-purple-800',
-      agency: 'bg-orange-100 text-orange-800'
+      free: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100',
+      starter: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
+      pro: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300',
+      agency: 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300'
     }
     
-    const color = colors[plan as keyof typeof colors] || 'bg-gray-100 text-gray-800'
+    const color = colors[plan as keyof typeof colors] || 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'
     
     return (
       <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${color}`}>
@@ -206,39 +206,39 @@ export default function AdminReplacementManagement() {
     <div className="space-y-6">
       {/* Header con statistiche */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
           Gestione Sostituzioni Lead
         </h1>
         
         <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg border p-4">
-            <div className="text-2xl font-bold text-gray-900">{statistics.total}</div>
-            <div className="text-sm text-gray-600">Totale Richieste</div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg border p-4">
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{statistics.total}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Totale Richieste</div>
           </div>
-          <div className="bg-white rounded-lg border p-4">
-            <div className="text-2xl font-bold text-yellow-600">{statistics.pending}</div>
-            <div className="text-sm text-gray-600">In Attesa</div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg border p-4">
+            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{statistics.pending}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">In Attesa</div>
           </div>
-          <div className="bg-white rounded-lg border p-4">
-            <div className="text-2xl font-bold text-green-600">{statistics.approved}</div>
-            <div className="text-sm text-gray-600">Approvate</div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg border p-4">
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{statistics.approved}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Approvate</div>
           </div>
-          <div className="bg-white rounded-lg border p-4">
-            <div className="text-2xl font-bold text-red-600">{statistics.rejected}</div>
-            <div className="text-sm text-gray-600">Rifiutate</div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg border p-4">
+            <div className="text-2xl font-bold text-red-600 dark:text-red-400">{statistics.rejected}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Rifiutate</div>
           </div>
         </div>
       </div>
 
       {/* Filtri e ricerca */}
-      <div className="bg-white rounded-lg border p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex items-center space-x-2">
-            <Filter className="w-4 h-4 text-gray-500" />
+            <Filter className="w-4 h-4 text-gray-500 dark:text-gray-400" />
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value as typeof filter)}
-              className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="pending">In Attesa</option>
               <option value="approved">Approvate</option>
@@ -247,38 +247,38 @@ export default function AdminReplacementManagement() {
           </div>
           
           <div className="flex-1 relative">
-            <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 transform -translate-y-1/2" />
+            <Search className="w-4 h-4 text-gray-500 dark:text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
             <input
               type="text"
               placeholder="Cerca per business, email utente o motivo..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
         </div>
       </div>
 
       {/* Lista richieste */}
-      <div className="bg-white rounded-lg border">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border">
         {loading ? (
           <div className="p-8 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-            <p className="text-gray-600">Caricamento richieste...</p>
+            <p className="text-gray-600 dark:text-gray-400">Caricamento richieste...</p>
           </div>
         ) : filteredRequests.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center text-gray-500 dark:text-gray-400">
             <AlertTriangle className="w-8 h-8 mx-auto mb-2" />
             <p>Nessuna richiesta trovata</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-gray-200 dark:divide-gray-700">
             {filteredRequests.map((request) => (
-              <div key={request.id} className="p-6 hover:bg-gray-50">
+              <div key={request.id} className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="text-lg font-medium text-gray-900">
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                         {request.lead_details.business_name}
                       </h3>
                       {getStatusBadge(request.status)}
@@ -287,17 +287,17 @@ export default function AdminReplacementManagement() {
                     
                     <div className="grid grid-cols-2 gap-4 mb-3">
                       <div>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
                           <User className="w-4 h-4 inline mr-1" />
                           {request.user.email}
                         </p>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
                           <Calendar className="w-4 h-4 inline mr-1" />
                           {new Date(request.created_at).toLocaleDateString()}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
                           {request.lead_details.city} • {request.lead_details.category}
                         </p>
                         {request.lead_details.website_url && (
@@ -305,7 +305,7 @@ export default function AdminReplacementManagement() {
                             href={request.lead_details.website_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:text-blue-800 inline-flex items-center"
+                            className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 inline-flex items-center"
                           >
                             {request.lead_details.website_url}
                             <ExternalLink className="w-3 h-3 ml-1" />
@@ -314,19 +314,19 @@ export default function AdminReplacementManagement() {
                       </div>
                     </div>
 
-                    <div className="bg-gray-50 rounded p-3 mb-3">
-                      <p className="text-sm text-gray-800">
+                    <div className="bg-gray-50 dark:bg-gray-900 rounded p-3 mb-3">
+                      <p className="text-sm text-gray-800 dark:text-gray-100">
                         <strong>Motivo:</strong> {request.reason}
                       </p>
                     </div>
 
                     {request.admin_response && (
-                      <div className="bg-blue-50 rounded p-3 mb-3">
-                        <p className="text-sm text-blue-800">
+                      <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-3 mb-3">
+                        <p className="text-sm text-blue-800 dark:text-blue-300">
                           <strong>Risposta Admin:</strong> {request.admin_response}
                         </p>
                         {request.processed_by_user && (
-                          <p className="text-xs text-blue-600 mt-1">
+                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                             Processata da {request.processed_by_user.email} il{' '}
                             {request.processed_at ? new Date(request.processed_at).toLocaleDateString() : ''}
                           </p>
@@ -355,19 +355,19 @@ export default function AdminReplacementManagement() {
       {/* Modal processamento */}
       {selectedRequest && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Processa Richiesta Sostituzione
             </h3>
             
             <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                 <strong>Business:</strong> {selectedRequest.lead_details.business_name}
               </p>
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                 <strong>Utente:</strong> {selectedRequest.user.email}
               </p>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 <strong>Motivo:</strong> {selectedRequest.reason}
               </p>
             </div>
@@ -376,7 +376,7 @@ export default function AdminReplacementManagement() {
               value={adminResponse}
               onChange={(e) => setAdminResponse(e.target.value)}
               placeholder="Inserisci la tua risposta per l'utente..."
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               rows={3}
             />
 
@@ -400,7 +400,7 @@ export default function AdminReplacementManagement() {
                   setSelectedRequest(null)
                   setAdminResponse('')
                 }}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg font-medium transition-colors"
+                className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-800 dark:text-gray-100 py-2 px-4 rounded-lg font-medium transition-colors"
               >
                 Annulla
               </button>

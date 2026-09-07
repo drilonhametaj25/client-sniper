@@ -213,7 +213,7 @@ export default function FeedbackDetailPage({
           <div className="flex items-center justify-between">
             <Link 
               href="/feedback" 
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
+              className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
               <span>Torna ai feedback</span>
@@ -227,17 +227,17 @@ export default function FeedbackDetailPage({
                   disabled={votingUp}
                   className={`p-2 rounded-lg transition-colors ${
                     feedback.user_vote === 'up'
-                      ? 'bg-green-100 text-green-600'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                   } ${votingUp ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <ArrowUp className="w-4 h-4" />
                 </button>
                 
                 <span className={`font-semibold ${
-                  score > 0 ? 'text-green-600' : 
-                  score < 0 ? 'text-red-600' : 
-                  'text-gray-600'
+                  score > 0 ? 'text-green-600 dark:text-green-400' : 
+                  score < 0 ? 'text-red-600 dark:text-red-400' : 
+                  'text-gray-600 dark:text-gray-400'
                 }`}>
                   {score > 0 ? '+' : ''}{score}
                 </span>
@@ -247,8 +247,8 @@ export default function FeedbackDetailPage({
                   disabled={votingDown}
                   className={`p-2 rounded-lg transition-colors ${
                     feedback.user_vote === 'down'
-                      ? 'bg-red-100 text-red-600'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                   } ${votingDown ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <ArrowDown className="w-4 h-4" />
@@ -272,15 +272,15 @@ export default function FeedbackDetailPage({
 
       {/* Contenuto principale */}
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
           {/* Header del feedback */}
-          <div className="p-6 border-b border-gray-100">
+          <div className="p-6 border-b border-gray-100 dark:border-gray-800">
             <div className="flex items-start space-x-4">
               <div className={`p-3 rounded-xl ${
-                feedbackType.color.includes('red') ? 'bg-red-50' :
-                feedbackType.color.includes('yellow') ? 'bg-yellow-50' :
-                feedbackType.color.includes('blue') ? 'bg-blue-50' :
-                'bg-gray-50'
+                feedbackType.color.includes('red') ? 'bg-red-50 dark:bg-red-900/20' :
+                feedbackType.color.includes('yellow') ? 'bg-yellow-50 dark:bg-yellow-900/20' :
+                feedbackType.color.includes('blue') ? 'bg-blue-50 dark:bg-blue-900/20' :
+                'bg-gray-50 dark:bg-gray-900'
               }`}>
                 <TypeIcon className={`w-6 h-6 ${feedbackType.color}`} />
               </div>
@@ -288,15 +288,15 @@ export default function FeedbackDetailPage({
               <div className="flex-1">
                 <div className="flex items-center space-x-2 mb-2">
                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    feedbackType.color.includes('red') ? 'bg-red-100 text-red-800' :
-                    feedbackType.color.includes('yellow') ? 'bg-yellow-100 text-yellow-800' :
-                    feedbackType.color.includes('blue') ? 'bg-blue-100 text-blue-800' :
-                    'bg-gray-100 text-gray-800'
+                    feedbackType.color.includes('red') ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' :
+                    feedbackType.color.includes('yellow') ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' :
+                    feedbackType.color.includes('blue') ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' :
+                    'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'
                   }`}>
                     {feedbackType.label}
                   </span>
                   
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
                     {new Date(feedback.created_at).toLocaleDateString('it-IT', {
                       year: 'numeric',
                       month: 'long',
@@ -309,11 +309,11 @@ export default function FeedbackDetailPage({
                   {feedback.title}
                 </h1>
                 
-                <div className="flex items-center space-x-4 text-sm text-gray-500">
+                <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                   <span>{feedback.upvotes} voti positivi</span>
                   <span>{feedback.downvotes} voti negativi</span>
                   {feedback.admin_response && (
-                    <span className="flex items-center space-x-1 text-green-600">
+                    <span className="flex items-center space-x-1 text-green-600 dark:text-green-400">
                       <CheckCircle className="w-4 h-4" />
                       <span>Risposta admin</span>
                     </span>
@@ -326,7 +326,7 @@ export default function FeedbackDetailPage({
           {/* Messaggio principale */}
           <div className="p-6">
             <div className="prose prose-gray max-w-none">
-              <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
                 {feedback.message}
               </p>
             </div>
@@ -334,22 +334,22 @@ export default function FeedbackDetailPage({
 
           {/* Risposta admin */}
           {feedback.admin_response && (
-            <div className="p-6 bg-green-50 border-t border-green-100">
+            <div className="p-6 bg-green-50 dark:bg-green-900/20 border-t border-green-100">
               <div className="flex items-start space-x-3">
-                <div className="p-2 bg-green-100 rounded-full">
-                  <Shield className="w-5 h-5 text-green-600" />
+                <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-full">
+                  <Shield className="w-5 h-5 text-green-600 dark:text-green-400" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center space-x-2 mb-2">
-                    <span className="font-semibold text-green-800">
+                    <span className="font-semibold text-green-800 dark:text-green-300">
                       Risposta del team
                     </span>
-                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                    <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs font-medium rounded-full">
                       Ufficiale
                     </span>
                   </div>
                   <div className="prose prose-green max-w-none">
-                    <p className="text-green-700 leading-relaxed whitespace-pre-wrap">
+                    <p className="text-green-700 dark:text-green-400 leading-relaxed whitespace-pre-wrap">
                       {feedback.admin_response}
                     </p>
                   </div>
@@ -363,15 +363,15 @@ export default function FeedbackDetailPage({
       {/* Modal per segnalazione */}
       {showReportModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6">
             <div className="flex items-center space-x-3 mb-4">
               <Flag className="w-6 h-6 text-red-500" />
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Segnala contenuto inappropriato
               </h3>
             </div>
             
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
               Spiega perché questo feedback viola le nostre linee guida:
             </p>
             
@@ -379,14 +379,14 @@ export default function FeedbackDetailPage({
               value={reportReason}
               onChange={(e) => setReportReason(e.target.value)}
               placeholder="Spam, contenuto offensivo, informazioni false..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
               rows={4}
             />
             
             <div className="flex space-x-3 mt-6">
               <button
                 onClick={() => setShowReportModal(false)}
-                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 Annulla
               </button>

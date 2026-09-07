@@ -77,16 +77,16 @@ export default function CategoryPage({ params }: CategoryPageProps) {
   const description = categoryDescriptions[categoryName]
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-gray-800">
       {/* Breadcrumb */}
-      <div className="bg-gray-50 border-b">
+      <div className="bg-gray-50 dark:bg-gray-900 border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <nav className="flex items-center space-x-2 text-sm">
-            <Link href="/" className="text-gray-500 hover:text-gray-700">Home</Link>
+            <Link href="/" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">Home</Link>
             <span className="text-gray-400">/</span>
-            <Link href="/blog" className="text-gray-500 hover:text-gray-700">Blog</Link>
+            <Link href="/blog" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">Blog</Link>
             <span className="text-gray-400">/</span>
-            <span className="text-gray-900 font-medium">{categoryName}</span>
+            <span className="text-gray-900 dark:text-white font-medium">{categoryName}</span>
           </nav>
         </div>
       </div>
@@ -97,25 +97,25 @@ export default function CategoryPage({ params }: CategoryPageProps) {
           <div className="mb-4">
             <Link 
               href="/blog"
-              className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium"
+              className="inline-flex items-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-400 font-medium"
             >
               <ArrowLeft className="h-4 w-4 mr-1" />
               Torna al blog
             </Link>
           </div>
           
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
             {categoryName}
           </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
+          <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto mb-8">
             {description}
           </p>
           
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 max-w-2xl mx-auto">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <div className="bg-gradient-to-r from-blue-50 dark:from-gray-900 to-indigo-50 dark:to-gray-800 rounded-lg p-6 max-w-2xl mx-auto">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               Metti in Pratica Quello che Impari
             </h3>
-            <p className="text-gray-600 mb-4 text-sm">
+            <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
               TrovaMi ti aiuta a trovare clienti reali per applicare subito queste strategie.
             </p>
             <Link 
@@ -132,14 +132,14 @@ export default function CategoryPage({ params }: CategoryPageProps) {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {posts.map((post: BlogPost) => (
             <Link key={post.slug} href={`/blog/${post.slug}`} className="group">
-              <article className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
+              <article className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-200 overflow-hidden">
                 <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
                   <span className="text-3xl">{post.emoji}</span>
                 </div>
                 <div className="p-6">
-                  <div className="flex items-center space-x-4 text-sm text-gray-500 mb-3">
+                  <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400 mb-3">
                     {post.featured && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
                         In evidenza
                       </span>
                     )}
@@ -148,13 +148,13 @@ export default function CategoryPage({ params }: CategoryPageProps) {
                       <span>{post.readTime}</span>
                     </div>
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors duration-200 mb-2">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200 mb-2">
                     {post.title}
                   </h3>
-                  <p className="text-gray-600 line-clamp-3 mb-4">
+                  <p className="text-gray-600 dark:text-gray-400 line-clamp-3 mb-4">
                     {post.excerpt}
                   </p>
-                  <div className="flex items-center text-sm text-gray-500">
+                  <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                     <User className="h-4 w-4 mr-1" />
                     <span>{post.author}</span>
                     <span className="mx-2">•</span>
@@ -170,10 +170,10 @@ export default function CategoryPage({ params }: CategoryPageProps) {
         {posts.length === 0 && (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">📝</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
               Nessun articolo trovato
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               Non ci sono ancora articoli in questa categoria.
             </p>
             <Link 

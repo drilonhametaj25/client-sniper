@@ -195,28 +195,28 @@ export default function PublicScanPage() {
           {/* Hero Section */}
           <section className="text-center mb-12">
             <div className="flex items-center justify-center mb-4">
-              <Gift className="h-8 w-8 text-purple-600 mr-3" />
-              <h1 className="text-4xl font-bold text-gray-900">
+              <Gift className="h-8 w-8 text-purple-600 dark:text-purple-400 mr-3" />
+              <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
                 Audit Digitale Gratuito
               </h1>
             </div>
-            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-3xl mx-auto">
               Audit tecnico professionale gratuito del tuo sito web. Analisi completa di oltre 70 parametri: 
               performance, SEO tecnico, sicurezza e compliance GDPR in tempo reale.
             </p>
             
             {/* Features highlights */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 max-w-2xl mx-auto">
-              <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
-                <TrendingUp className="h-4 w-4 text-green-600" />
+              <div className="flex items-center justify-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
                 <span>Audit Performance</span>
               </div>
-              <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
-                <Shield className="h-4 w-4 text-blue-600" />
+              <div className="flex items-center justify-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 <span>SEO Tecnico</span>
               </div>
-              <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
-                <Globe className="h-4 w-4 text-purple-600" />
+              <div className="flex items-center justify-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                <Globe className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                 <span>Compliance Check</span>
               </div>
             </div>
@@ -225,33 +225,33 @@ export default function PublicScanPage() {
           {/* Usage Info */}
           {usage && (
             <section className="mb-8" aria-labelledby="usage-info">
-              <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-6">
+              <div className="bg-gradient-to-r from-purple-50 dark:from-gray-900 to-blue-50 dark:to-gray-800 border border-purple-200 dark:border-purple-800 rounded-xl p-6">
                 <div className="flex items-center mb-4">
-                  <Eye className="h-5 w-5 text-purple-600 mr-2" />
-                  <h2 id="usage-info" className="text-lg font-semibold text-gray-900">
+                  <Eye className="h-5 w-5 text-purple-600 dark:text-purple-400 mr-2" />
+                  <h2 id="usage-info" className="text-lg font-semibold text-gray-900 dark:text-white">
                     Utilizzo Giornaliero
                   </h2>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">
+                  <span className="text-gray-600 dark:text-gray-400">
                     Analisi utilizzate oggi: <strong>{usage.used}/{usage.limit}</strong>
                   </span>
                   <div className="flex items-center space-x-2">
-                    <div className="w-20 bg-gray-200 rounded-full h-2">
+                    <div className="w-20 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                       <div 
                         className="bg-purple-600 h-2 rounded-full transition-all duration-300"
                         style={{ width: `${(usage.used / usage.limit) * 100}%` }}
                       ></div>
                     </div>
-                    <span className={`text-sm font-medium ${usage.canAnalyze ? 'text-green-600' : 'text-red-600'}`}>
+                    <span className={`text-sm font-medium ${usage.canAnalyze ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                       {usage.remaining} rimaste
                     </span>
                   </div>
                 </div>
                 {!usage.canAnalyze && (
-                  <div className="mt-3 text-sm text-orange-600">
+                  <div className="mt-3 text-sm text-orange-600 dark:text-orange-400">
                     Hai utilizzato tutte le <strong>{usage.limit}</strong> analisi gratuite di oggi. 
-                    <Link href="/register" className="text-blue-600 hover:text-blue-800 font-medium ml-1">
+                    <Link href="/register" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium ml-1">
                       Registrati gratis per analisi illimitate!
                     </Link>
                   </div>
@@ -262,13 +262,13 @@ export default function PublicScanPage() {
 
           {/* Analysis Form */}
           <section className="mb-12" aria-labelledby="analysis-form">
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
-              <h2 id="analysis-form" className="text-2xl font-bold text-gray-900 mb-6 text-center">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8">
+              <h2 id="analysis-form" className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
                 Inserisci l'URL del sito da analizzare
               </h2>
               <form onSubmit={(e) => { e.preventDefault(); handleAnalyze(); }} className="space-y-6">
                 <div>
-                  <label htmlFor="website-url" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="website-url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     URL Sito Web
                   </label>
                   <div className="relative">
@@ -278,7 +278,7 @@ export default function PublicScanPage() {
                       value={url}
                       onChange={(e) => setUrl(e.target.value)}
                       placeholder="https://esempio.com"
-                      className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                      className="w-full px-4 py-4 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
                       disabled={loading || (usage ? !usage.canAnalyze : false)}
                       required
                       aria-describedby="url-help"
@@ -287,19 +287,19 @@ export default function PublicScanPage() {
                       <Search className="h-5 w-5 text-gray-400" />
                     </div>
                   </div>
-                  <p id="url-help" className="mt-2 text-sm text-gray-500">
+                  <p id="url-help" className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                     Inserisci l'URL completo del sito web che vuoi analizzare (es. https://tuosito.com)
                   </p>
                 </div>
 
                 {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4" role="alert">
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4" role="alert">
                     <div className="flex">
                       <AlertTriangle className="h-5 w-5 text-red-400 mr-2 flex-shrink-0" />
                       <div>
-                        <p className="text-red-700 text-sm">{error}</p>
+                        <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
                         {error.includes('limite') && (
-                          <p className="mt-2 text-sm text-red-600">
+                          <p className="mt-2 text-sm text-red-600 dark:text-red-400">
                             💡 <Link href="/register" className="underline font-medium">Registrati gratuitamente</Link> per ottenere analisi illimitate!
                           </p>
                         )}
@@ -310,15 +310,15 @@ export default function PublicScanPage() {
 
                 {/* Messaggio Lead Esistente */}
                 {responseData?.existingLead && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4" role="status">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4" role="status">
                     <div className="flex items-center mb-2">
                       <CheckCircle className="h-5 w-5 text-blue-500 mr-2" />
-                      <span className="text-blue-800 font-medium">Sito già nel nostro database!</span>
+                      <span className="text-blue-800 dark:text-blue-300 font-medium">Sito già nel nostro database!</span>
                     </div>
-                    <p className="text-blue-700 text-sm mb-3">{responseData.message}</p>
+                    <p className="text-blue-700 dark:text-blue-400 text-sm mb-3">{responseData.message}</p>
                     {responseData.leadInfo && (
-                      <div className="bg-blue-100 rounded-lg p-3">
-                        <p className="text-sm text-blue-800">
+                      <div className="bg-blue-100 dark:bg-blue-900/30 rounded-lg p-3">
+                        <p className="text-sm text-blue-800 dark:text-blue-300">
                           <strong>Business:</strong> {responseData.leadInfo.businessName || 'N/A'}<br />
                           <strong>Punteggio:</strong> {responseData.leadInfo.score}/100<br />
                           <strong>Analizzato il:</strong> {new Date(responseData.leadInfo.analyzedDate).toLocaleDateString('it-IT')}
@@ -352,9 +352,9 @@ export default function PublicScanPage() {
           {/* Results Section */}
           {result && (
             <section className="mb-12" aria-labelledby="analysis-results">
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
-                <h2 id="analysis-results" className="text-2xl font-bold text-gray-900 mb-6 text-center">
-                  Risultati Analisi per <span className="text-blue-600">{result.url || result.finalUrl || 'Sito Web'}</span>
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8">
+                <h2 id="analysis-results" className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
+                  Risultati Analisi per <span className="text-blue-600 dark:text-blue-400">{result.url || result.finalUrl || 'Sito Web'}</span>
                 </h2>
                 
                 {/* Overall Score */}
@@ -362,20 +362,20 @@ export default function PublicScanPage() {
                   <div className={`text-6xl font-bold mb-2 ${getScoreColor(result.overallScore || responseData?.leadInfo?.score || 0)}`}>
                     {result.overallScore || responseData?.leadInfo?.score || 0}/100
                   </div>
-                  <div className="text-lg font-semibold text-gray-700 mb-2">
+                  <div className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Punteggio Complessivo
                   </div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
                     {(result.overallScore || responseData?.leadInfo?.score || 0) >= 70 && 'Sito ben ottimizzato - Poche opportunità di miglioramento'}
                     {(result.overallScore || responseData?.leadInfo?.score || 0) >= 40 && (result.overallScore || responseData?.leadInfo?.score || 0) < 70 && 'Sito discreto - Buone opportunità di ottimizzazione'}
                     {(result.overallScore || responseData?.leadInfo?.score || 0) < 40 && 'Molte opportunità di miglioramento - Potenziale lead caldo!'}
                   </div>
                   
                   {result.isLimitedAnalysis && (
-                    <div className="mt-4 bg-yellow-100 border border-yellow-300 rounded-lg p-3">
+                    <div className="mt-4 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 rounded-lg p-3">
                       <div className="flex items-center justify-center">
-                        <Lock className="h-4 w-4 text-yellow-600 mr-2" />
-                        <span className="text-sm text-yellow-800 font-medium">
+                        <Lock className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mr-2" />
+                        <span className="text-sm text-yellow-800 dark:text-yellow-300 font-medium">
                           Analisi limitata - Registrati per vedere tutti i dettagli
                         </span>
                       </div>
@@ -386,16 +386,16 @@ export default function PublicScanPage() {
                 {/* Analysis Details Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                   {/* SEO Score */}
-                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-6">
+                  <div className="bg-gradient-to-br from-green-50 dark:from-gray-900 to-emerald-50 dark:to-gray-800 border border-green-200 dark:border-green-800 rounded-lg p-6">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">SEO Base</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">SEO Base</h3>
                       <div className={`text-2xl font-bold ${getScoreColor(result.seo?.score || 0)}`}>
                         {result.seo?.score || 0}/100
                       </div>
                     </div>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-700">Title Tag</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Title Tag</span>
                         {result.seo?.hasTitle ? (
                           <CheckCircle className="h-5 w-5 text-green-500" />
                         ) : (
@@ -403,7 +403,7 @@ export default function PublicScanPage() {
                         )}
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-700">Meta Description</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Meta Description</span>
                         {result.seo?.hasMetaDescription ? (
                           <CheckCircle className="h-5 w-5 text-green-500" />
                         ) : (
@@ -411,7 +411,7 @@ export default function PublicScanPage() {
                         )}
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-700">Heading H1</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Heading H1</span>
                         {result.seo?.hasH1 ? (
                           <CheckCircle className="h-5 w-5 text-green-500" />
                         ) : (
@@ -422,30 +422,30 @@ export default function PublicScanPage() {
                   </div>
 
                   {/* Performance Score */}
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
+                  <div className="bg-gradient-to-br from-blue-50 dark:from-gray-900 to-indigo-50 dark:to-gray-800 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">Performance</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Performance</h3>
                       <div className={`text-2xl font-bold ${getScoreColor(result.performance?.score || 0)}`}>
                         {result.performance?.score || 0}/100
                       </div>
                     </div>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-700">Responsive Design</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Responsive Design</span>
                         {result.performance?.isResponsive ? (
                           <CheckCircle className="h-5 w-5 text-green-500" />
                         ) : (
                           <XCircle className="h-5 w-5 text-red-500" />
                         )}
                       </div>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="text-sm text-gray-700">Tempo di Caricamento</span>
-                        <span className={`text-sm font-medium ${(result.performance?.loadTime || 0) > 3000 ? 'text-red-600' : (result.performance?.loadTime || 0) > 2000 ? 'text-yellow-600' : 'text-green-600'}`}>
+                      <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Tempo di Caricamento</span>
+                        <span className={`text-sm font-medium ${(result.performance?.loadTime || 0) > 3000 ? 'text-red-600 dark:text-red-400' : (result.performance?.loadTime || 0) > 2000 ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'}`}>
                           {Math.round((result.performance?.loadTime || 0) / 1000 * 10) / 10}s
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-700">Sicurezza HTTPS</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Sicurezza HTTPS</span>
                         {(result.url || result.finalUrl || '').startsWith('https://') ? (
                           <CheckCircle className="h-5 w-5 text-green-500" />
                         ) : (
@@ -459,16 +459,16 @@ export default function PublicScanPage() {
                 {/* Additional Info Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                   {/* Tracking & Analytics */}
-                  <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-6">
+                  <div className="bg-gradient-to-br from-purple-50 dark:from-gray-900 to-indigo-50 dark:to-gray-800 border border-purple-200 dark:border-purple-800 rounded-lg p-6">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">🔍 Tracking & Analytics</h3>
-                      <div className={`px-3 py-1 rounded-full text-sm font-medium ${result.tracking?.hasAnyTracking ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">🔍 Tracking & Analytics</h3>
+                      <div className={`px-3 py-1 rounded-full text-sm font-medium ${result.tracking?.hasAnyTracking ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'}`}>
                         {result.tracking?.hasAnyTracking ? 'Installato' : 'Non rilevato'}
                       </div>
                     </div>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-700">Sistema di Tracciamento</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Sistema di Tracciamento</span>
                         {result.tracking?.hasAnyTracking ? (
                           <CheckCircle className="h-5 w-5 text-green-500" />
                         ) : (
@@ -476,8 +476,8 @@ export default function PublicScanPage() {
                         )}
                       </div>
                       {!result.tracking?.hasAnyTracking && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                          <p className="text-xs text-yellow-800">
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                          <p className="text-xs text-yellow-800 dark:text-yellow-300">
                             💡 Nessun pixel di tracking rilevato. Opportunità per migliorare l'analisi dei visitatori.
                           </p>
                         </div>
@@ -488,14 +488,14 @@ export default function PublicScanPage() {
                   {/* Social Presence */}
                   <div className="bg-gradient-to-br from-pink-50 to-rose-50 border border-pink-200 rounded-lg p-6">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">📱 Presenza Social</h3>
-                      <div className={`px-3 py-1 rounded-full text-sm font-medium ${result.social?.hasAnySocial ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">📱 Presenza Social</h3>
+                      <div className={`px-3 py-1 rounded-full text-sm font-medium ${result.social?.hasAnySocial ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}>
                         {result.social?.socialCount || 0} link
                       </div>
                     </div>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-700">Link Social Media</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Link Social Media</span>
                         {result.social?.hasAnySocial ? (
                           <CheckCircle className="h-5 w-5 text-green-500" />
                         ) : (
@@ -503,8 +503,8 @@ export default function PublicScanPage() {
                         )}
                       </div>
                       {!result.social?.hasAnySocial && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                          <p className="text-xs text-blue-800">
+                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                          <p className="text-xs text-blue-800 dark:text-blue-300">
                             💡 Nessun link ai social media trovato. Opportunità per aumentare la presenza online.
                           </p>
                         </div>
@@ -556,41 +556,41 @@ export default function PublicScanPage() {
 
           {/* SEO Content Section */}
           <section className="mb-16" aria-labelledby="seo-content">
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
-              <h2 id="seo-content" className="text-2xl font-bold text-gray-900 mb-6">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8">
+              <h2 id="seo-content" className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
                 Perché Analizzare il Tuo Sito Web?
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
                     🚀 Migliora le Performance
                   </h3>
-                  <p className="text-gray-600 mb-4">
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
                     Un sito veloce migliora l'esperienza utente e il ranking sui motori di ricerca. 
                     La nostra analisi identifica i colli di bottiglia che rallentano il tuo sito.
                   </p>
                   
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
                     📈 Ottimizza per i Motori di Ricerca
                   </h3>
-                  <p className="text-gray-600">
+                  <p className="text-gray-600 dark:text-gray-400">
                     Verifica se il tuo sito ha tutti gli elementi SEO essenziali: 
                     title tag, meta description, heading strutturati e molto altro.
                   </p>
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
                     📱 Controlla la Responsività
                   </h3>
-                  <p className="text-gray-600 mb-4">
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
                     Oltre il 60% del traffico web arriva da mobile. 
                     Assicurati che il tuo sito sia perfettamente visualizzabile su tutti i dispositivi.
                   </p>
                   
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
                     🛡️ Verifica la Sicurezza
                   </h3>
-                  <p className="text-gray-600">
+                  <p className="text-gray-600 dark:text-gray-400">
                     Controlla se il tuo sito utilizza HTTPS e ha le configurazioni di sicurezza corrette 
                     per proteggere i dati dei tuoi utenti.
                   </p>
@@ -684,7 +684,7 @@ export default function PublicScanPage() {
                 <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">
                   Privacy Policy
                 </Link>
-                <span className="text-gray-600">•</span>
+                <span className="text-gray-600 dark:text-gray-400">•</span>
                 <Link href="/terms" className="text-gray-400 hover:text-white transition-colors">
                   Termini e Condizioni
                 </Link>
