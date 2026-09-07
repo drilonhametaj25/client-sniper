@@ -58,6 +58,8 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Opzionale: performance reali via Google PageSpeed Insights (gratuita)
+          PSI_API_KEY: ${{ secrets.PSI_API_KEY }}
           NODE_ENV: production
 
       - name: Upload logs

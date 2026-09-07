@@ -22,6 +22,8 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { EnhancedWebsiteAnalyzer } from '../analyzers/enhanced-website-analyzer'
 import { decideLeadPublication } from '../utils/confidence'
 import { computeOpportunityScore } from '../scoring/opportunity-score'
+import { selectBestEmail } from '../utils/email-selection'
+import { fetchPsi } from '../utils/psi'
 
 interface LeadRow {
   id: string
@@ -164,9 +166,9 @@ async function main() {
 
     let query = supabase
       .from('leads')
-      .select('id, business_name, website_url, phone')
+      .select('id, business_name, website_url, phone, email')
       .not('website_url', 'is', null)
-      .order('created_at', { ascending: true })
+      .order('last_verified_at', { ascending: true, nullsFirst: true })
       .range(offset, offset + pageSize - 1)
 
     if (!all) query = query.eq('needs_recheck', true)
@@ -193,22 +195,63 @@ async function main() {
           hasReliableContact: !!lead.phone ||
             !!((analysis as any).content?.phoneNumbers?.length) ||
             !!((analysis as any).content?.emailAddresses?.length),
-          unverifiableSignalsCount: unverifiable
+          unverifiableSignalsCount: unverifiable,
+          analysisReliability: (analysis as any).reliability?.overallConfidence,
+          analysisMethod: (analysis as any).reliability?.analysisMethod
         })
+
+        // Email: selezione + verifica MX (aggiorna anche i lead storici)
+        let selectedEmail: Awaited<ReturnType<typeof selectBestEmail>> = null
+        try {
+          selectedEmail = await selectBestEmail({
+            websiteUrl: lead.website_url,
+            analyzerEmails: (analysis as any).content?.emailAddresses || []
+          })
+        } catch { /* mai bloccante */ }
+
+        // PSI: performance certificate da Google, solo per lead pubblicati e
+        // solo se la API key è configurata (gratuita, 25k/giorno)
+        const psiKey = process.env.PSI_API_KEY
+        if (psiKey && decision.status === 'published' && lead.website_url) {
+          const psi = await fetchPsi(lead.website_url, psiKey)
+          if (psi) {
+            ;(analysis as any).performance = { ...(analysis as any).performance, psi }
+          }
+        }
+
+        // Opportunity score v2 ricalcolato con l'analisi fresca
+        const opportunity = computeOpportunityScore(analysis as any, {
+          hasWebsite: !!lead.website_url,
+          phone: lead.phone,
+          email: selectedEmail?.email || lead.email || null,
+          rating: null,
+          reviewsCount: null
+        }, {
+          confirmedAbsence: (analysis as any).reachabilityVerdict === 'offline_confirmed' ||
+            (analysis as any).websiteStatus === 'parked'
+        })
+
+        const updatePayload: Record<string, any> = {
+          status: decision.status,
+          confidence_score: decision.score,
+          needs_recheck: decision.needsRecheck,
+          quarantine_reasons: decision.reasons,
+          reachability_verdict: (analysis as any).reachabilityVerdict || null,
+          website_analysis: analysis,
+          score: opportunity.score,
+          score_version: 2,
+          last_verified_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+        if (opportunity.neededRoles.length > 0) updatePayload.needed_roles = opportunity.neededRoles
+        if (selectedEmail) {
+          updatePayload.email = selectedEmail.email
+          updatePayload.email_confidence = selectedEmail.confidence
+        }
 
         const { error: updErr } = await supabase
           .from('leads')
-          .update({
-            status: decision.status,
-            confidence_score: decision.score,
-            needs_recheck: decision.needsRecheck,
-            quarantine_reasons: decision.reasons,
-            reachability_verdict: (analysis as any).reachabilityVerdict || null,
-            website_analysis: analysis,
-            score: analysis.overallScore,
-            last_verified_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
+          .update(updatePayload)
           .eq('id', lead.id)
 
         if (updErr) {

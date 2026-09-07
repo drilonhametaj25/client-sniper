@@ -82,6 +82,8 @@ export interface ContentHashInput extends LeadIdentityInput {
   /** technicalHealth a bucket di 10 (piccole oscillazioni non sono "cambiamenti") */
   technicalHealth?: number | null
   hasWebsite?: boolean
+  /** email selezionata: se compare/cambia, il lead va aggiornato per intero */
+  email?: string | null
 }
 
 /**
@@ -93,6 +95,7 @@ export function computeContentHash(input: ContentHashInput): string {
   const stable = {
     domain: normalizeDomain(input.website) || '',
     phone: normalizePhoneTail(input.phone) || '',
+    email: (input.email || '').toLowerCase().trim(),
     address: normalizeToken(input.address, 80),
     category: normalizeToken(input.category, 40),
     hasWebsite: input.hasWebsite ?? !!input.website,

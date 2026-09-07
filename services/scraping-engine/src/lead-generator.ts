@@ -342,6 +342,7 @@ export class LeadGenerator {
     const contentHash = computeContentHash({
       website: business.website,
       phone: business.phone,
+      email: (business as any).email || null,
       address: business.address,
       category: business.category,
       hasWebsite: !!business.website,
@@ -359,15 +360,24 @@ export class LeadGenerator {
       ? opportunity.neededRoles
       : this.getSuggestedRoles(business);
 
+    // WhatsApp: link wa.me/api.whatsapp trovati sul sito (pitch concreto per PMI)
+    const hasWhatsapp = (analysis?.content?.socialLinks || [])
+      .some((l: string) => /wa\.me\/|api\.whatsapp\.com/i.test(l))
+
     return {
       unique_key: uniqueKey,
       content_hash: contentHash,
       business_name: business.name || 'Nome non disponibile',
       website_url: business.website || null,
       phone: business.phone || null,
+      email: (business as any).email || null,
+      email_confidence: (business as any).email_confidence || null,
       address: business.address || null,
       city: business.city || null,
       category: business.category || null,
+      rating: business.rating ?? null,
+      reviews_count: business.reviews_count ?? null,
+      has_whatsapp: analysis ? hasWhatsapp : null,
       score: opportunity.score,
       score_version: 2,
       origin: 'scraping',

@@ -11,6 +11,7 @@ import { BusinessData } from '../scrapers/google-maps'
 import { BusinessLead } from '../types/LeadAnalysis'
 import { LeadGenerator } from '../lead-generator'
 import { EnhancedWebsiteAnalyzer, EnhancedWebsiteAnalysis } from '../analyzers/enhanced-website-analyzer'
+import { selectBestEmail } from '../utils/email-selection'
 
 export interface ScrapingJob {
   id: string
@@ -193,10 +194,26 @@ export class ScrapingJobRunner {
             await analyzer.analyzeWebsite(business.website) :
             null
 
+          // Email di contatto: selezione + verifica MX (Fase 6). Le email
+          // arrivano dalle fonti affidabili dell'analyzer (mailto/JSON-LD/testo
+          // visibile) con fallback alle pagine /contatti. Prima venivano
+          // scrapate e POI BUTTATE: leads.email non veniva mai scritto.
+          let selectedEmail: Awaited<ReturnType<typeof selectBestEmail>> = null
+          if (business.website) {
+            try {
+              selectedEmail = await selectBestEmail({
+                websiteUrl: business.website,
+                analyzerEmails: websiteAnalysis?.content?.emailAddresses || []
+              })
+            } catch { /* la selezione email non deve mai bloccare il lead */ }
+          }
+
           analyzedBusinesses.push({
             ...business,
             websiteAnalysis,  // Struttura moderna
             analysis: websiteAnalysis ? this.convertToLegacyAnalysis(websiteAnalysis) : null,  // Compatibilità legacy
+            email: selectedEmail?.email || null,
+            email_confidence: selectedEmail?.confidence || null,
             target_category: zone.category
           })
         } catch (error) {
