@@ -10,7 +10,6 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 import { WebsiteAnalysis } from '../../../lib/types/analysis'
-import { TourTarget } from '../../../components/onboarding/TourTarget'
 
 function getSupabase() {
   return createClient(
@@ -155,14 +154,14 @@ export default function ManualScanPage() {
         </div>
 
         {/* Form */}
-        <TourTarget tourId="manual-scan-form" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 p-6 mb-8">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 p-6 mb-8">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 URL del sito da analizzare
               </label>
               <div className="flex gap-3">
-                <TourTarget tourId="manual-scan-input" className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0">
                   <input
                     type="url"
                     id="url"
@@ -173,8 +172,8 @@ export default function ManualScanPage() {
                     disabled={isLoading}
                     required
                   />
-                </TourTarget>
-                <TourTarget tourId="manual-scan-button" className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed font-medium">
+                </div>
+                <div className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed font-medium">
                   <button
                     type="submit"
                     disabled={isLoading || (userCredits !== null && userCredits < 1)}
@@ -192,7 +191,7 @@ export default function ManualScanPage() {
                       '🔍 Analizza Sito'
                     )}
                   </button>
-                </TourTarget>
+                </div>
               </div>
             </div>
 
@@ -242,7 +241,7 @@ export default function ManualScanPage() {
               </div>
             )}
           </form>
-        </TourTarget>
+        </div>
 
         {/* Errore */}
         {error && (
@@ -306,7 +305,7 @@ export default function ManualScanPage() {
 
         {/* Risultati */}
         {result && (
-          <TourTarget tourId="manual-scan-results" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 overflow-hidden">
             {/* Header risultato */}
             <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
               <div className="flex items-center justify-between">
@@ -727,7 +726,7 @@ export default function ManualScanPage() {
                 </div>
               </div>
             </div>
-          </TourTarget>
+          </div>
         )}
       </div>
     </div>

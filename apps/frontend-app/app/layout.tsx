@@ -7,7 +7,6 @@ import './globals.css'
 import { Metadata, Viewport } from 'next'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
-import { OnboardingProvider } from '@/contexts/OnboardingContext'
 import { ToastProvider } from '@/components/ToastProvider'
 import Navbar from '@/components/Navbar'
 import CookieConsent from '@/components/CookieConsent'
@@ -154,17 +153,15 @@ export default function RootLayout({
         <ToastProvider>
           <AuthProvider>
             <ThemeProvider>
-              <OnboardingProvider>
-                <div id="root" className="min-h-full">
-                  <Navbar />
-                  <main className="min-h-screen pb-16 md:pb-0">
-                    {children}
-                  </main>
-                  <MobileBottomNav />
-                  <CookieConsent />
-                  <FeedbackWidget />
-                </div>
-              </OnboardingProvider>
+              <div id="root" className="min-h-full">
+                <Navbar />
+                <main className="min-h-screen pb-16 md:pb-0">
+                  {children}
+                </main>
+                <MobileBottomNav />
+                <CookieConsent />
+                <FeedbackWidget />
+              </div>
             </ThemeProvider>
           </AuthProvider>
         </ToastProvider>

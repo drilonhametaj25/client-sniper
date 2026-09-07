@@ -17,7 +17,6 @@ import { useToast } from '@/components/ToastProvider';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { isStarterOrHigher } from '@/lib/utils/plan-helpers';
-import { TourTarget } from '@/components/onboarding/TourTarget';
 import CRMKanban from '@/components/CRMKanban';
 import CRMStatsHeader from '@/components/CRMStatsHeader';
 import CRMLeadSidebar from '@/components/CRMLeadSidebar';
@@ -512,7 +511,7 @@ export default function CrmPage() {
 
   return (
     <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 min-h-screen bg-gray-50 dark:bg-gray-900">
-      <TourTarget tourId="crm-header" className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6">
         <h1 id="crm-header" className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">CRM Pipeline</h1>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           {/* Toggle Vista - Touch friendly */}
@@ -545,15 +544,15 @@ export default function CrmPage() {
             <span className="hidden sm:inline">Aggiorna</span>
           </Button>
         </div>
-      </TourTarget>
+      </div>
 
       {/* Statistiche Dashboard */}
-      <TourTarget tourId="crm-stats">
+      <div>
         <CRMStatsHeader stats={stats} entries={entries} />
-      </TourTarget>
+      </div>
 
       {/* Filtri e Ricerca - Mobile friendly */}
-      <TourTarget tourId="crm-filters" className="flex flex-col gap-2 sm:flex-row sm:gap-4 mb-4 sm:mb-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:gap-4 mb-4 sm:mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
@@ -577,10 +576,10 @@ export default function CrmPage() {
             ))}
           </select>
         </div>
-      </TourTarget>
+      </div>
 
       {/* Vista Kanban o Lista */}
-      <TourTarget tourId="crm-entries">
+      <div>
         {viewMode === 'kanban' ? (
           /* Vista Kanban */
           <div className="overflow-x-auto">
@@ -673,7 +672,7 @@ export default function CrmPage() {
             )}
           </div>
         )}
-      </TourTarget>
+      </div>
 
       {/* Modal Modifica Entry - Mobile optimized */}
       {isEditModalOpen && selectedEntry && (
