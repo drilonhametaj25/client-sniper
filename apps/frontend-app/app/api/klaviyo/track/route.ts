@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const klaviyoApiKey = process.env.KLAVIYO_PRIVATE_KEY
+    const klaviyoApiKey = process.env.KLAVIYO_PRIVATE_API_KEY || process.env.KLAVIYO_PRIVATE_KEY
     if (!klaviyoApiKey) {
       console.error('❌ KLAVIYO_PRIVATE_KEY mancante')
       return NextResponse.json(

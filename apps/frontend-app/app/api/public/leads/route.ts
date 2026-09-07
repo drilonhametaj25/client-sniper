@@ -37,14 +37,31 @@ async function validateApiKey(request: NextRequest) {
     return { error: 'Invalid API key', status: 401 }
   }
 
-  // Aggiorna last_used_at e total_requests
-  await supabase
-    .from('api_keys')
-    .update({
-      last_used_at: new Date().toISOString(),
-      total_requests: supabase.rpc('increment_api_requests', { key_hash: keyHash }),
-    })
-    .eq('key_hash', keyHash)
+  // Aggiorna last_used_at e total_requests.
+  // NB: prima total_requests riceveva un query-builder (oggetto) al posto di
+  // un intero: l'update falliva in silenzio e i contatori d'uso non si
+  // muovevano mai. Ora: RPC atomica se esiste, altrimenti read+update.
+  const { error: rpcError } = await supabase
+    .rpc('increment_api_requests', { key_hash: keyHash })
+  if (rpcError) {
+    const { data: current } = await supabase
+      .from('api_keys')
+      .select('total_requests')
+      .eq('key_hash', keyHash)
+      .single()
+    await supabase
+      .from('api_keys')
+      .update({
+        last_used_at: new Date().toISOString(),
+        total_requests: (current?.total_requests || 0) + 1
+      })
+      .eq('key_hash', keyHash)
+  } else {
+    await supabase
+      .from('api_keys')
+      .update({ last_used_at: new Date().toISOString() })
+      .eq('key_hash', keyHash)
+  }
 
   return { userId: keyData.user_id, permissions: keyData.permissions }
 }

@@ -279,7 +279,7 @@ export default function Navbar() {
                     {formatPlanName(user.plan)}
                   </Badge>
                   <Link
-                    href="/credits"
+                    href="/upgrade#pacchetti"
                     className="flex items-center space-x-1 px-2 py-1 rounded-lg bg-yellow-50 dark:bg-yellow-900/30 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 transition-colors group"
                     title="Acquista crediti"
                   >
@@ -431,7 +431,7 @@ export default function Navbar() {
                       {formatPlanName(user.plan)}
                     </Badge>
                     <Link
-                      href="/credits"
+                      href="/upgrade#pacchetti"
                       onClick={() => setMobileMenuOpen(false)}
                       className="flex items-center space-x-1 px-2 py-1 rounded-lg bg-yellow-50 dark:bg-yellow-900/30"
                     >

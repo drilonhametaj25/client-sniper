@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-TrovaMi is a SaaS for lead generation through automated technical analysis of business websites. The system scrapes business data from multiple sources (Google Maps, Yelp, Pagine Gialle), analyzes their websites for technical issues, assigns a 0-100 score, and distributes leads to users based on their subscription plan.
+TrovaMi is a SaaS for lead generation through automated technical analysis of business websites. The system scrapes business data from **Google Maps** (the only active source), analyzes their websites for technical issues, assigns a 0-100 **opportunity score**, and lets users unlock lead contacts with credits. Leads are a **shared public pool** (hybrid-transparent model: the UI shows how many users unlocked each lead; never-unlocked leads are highlighted as "fresh").
 
-**Important**: The classification system uses static rules (regex, performance metrics, tag analysis) - no GPT or AI for scoring.
+**Important**: The classification system uses static rules (regex, performance metrics, tag analysis) - no GPT or AI for scoring. Only confirmed defects count (see `src/utils/confidence.ts`); modules that fail during analysis are excluded from issues and scoring.
 
 ## Tech Stack
 
@@ -50,41 +50,45 @@ npm run type-check   # TypeScript validation
 ```bash
 npm run dev          # Watch mode with tsx
 npm run scrape       # Run scraper directly
-npm run scrape:production  # Production scraper with safety checks
 npm run build        # Compile TypeScript
 
 # Database
 npm run setup-db     # Initialize database schema
 npm run seed         # Seed with test data
 npm run migrate      # Run migrations
+npm run recheck-leads               # Re-verify existing leads (nightly via recheck.yml)
+npm run recheck-leads -- --rescore-only  # Offline v2 rescore (no re-scrape)
+npm run dedup-leads                 # Dedup dry-run (--apply to execute)
 
-# Testing
-npm run test:scraping    # Test scraping functionality
-npm run test:google-maps # Google Maps integration test
-npm run test:integration # Full integration test
+# Testing (vitest + golden HTML fixtures, run in CI by engine-ci.yml)
+npm test             # 12 tests: analyzer fixtures + confidence unit tests
 ```
 
 ## Architecture
 
 ### Lead Generation Flow
-1. **Scrapers** (`/services/scraping-engine/src/scrapers/`) collect business data from sources
-2. **Analyzers** (`/services/scraping-engine/src/analyzers/`) evaluate websites (78+ parameters: SEO, performance, security, tracking, mobile, social)
-3. **Lead Scoring** (`/services/scraping-engine/src/utils/advanced-lead-scoring.ts`) assigns 0-100 score based on defects found
-4. **Lead Generator** (`/services/scraping-engine/src/lead-generator.ts`) creates and assigns leads to users
+1. **Scraper** (`/scrapers/google-maps-improved.ts`, the only active one) discovers businesses per zone
+2. **Analyzer** (`/analyzers/enhanced-website-analyzer.ts`) evaluates websites with a two-lane architecture: DOM modules run SEQUENTIALLY on the live page (which is NEVER navigated after the initial goto), while sitemap/robots/security/tech-stack run via plain HTTP in parallel. Failed modules are excluded from issues and scoring
+3. **Scoring** (`/scoring/opportunity-score.ts`) computes the opportunity score v2 (0-100, HIGHER = better opportunity) from confirmed defects only, with per-service subscores, a contactability cap and a reviews-based viability bonus
+4. **Lead Generator** (`/lead-generator.ts`) upserts leads on a deterministic `unique_key` (domain/phone-based, see `/utils/lead-identity.ts`): unchanged content bumps `last_seen_at` only; changed content refreshes analysis and score. Low-confidence analyses go to quarantine (`utils/confidence.ts`)
+5. **Recheck** (`/scripts/recheck-leads.ts`, nightly via `recheck.yml`) re-verifies existing leads, refreshes email + MX confidence (`utils/email-selection.ts`) and optionally fetches real Google PageSpeed metrics (`utils/psi.ts`, needs `PSI_API_KEY`)
 
 ### Key Frontend Directories
-- `/app/api/` - 30+ API routes (leads, checkout, webhooks, CRM, gamification)
-- `/app/dashboard/` - Main user dashboard
+- `/app/api/` - API routes (leads, stripe, CRM, cron, tools, admin)
+- `/app/dashboard/` - Main lead finder ("Trova clienti")
 - `/app/admin/` - Admin panel (analytics, users, feedback)
-- `/components/` - 40+ React components
+- `/components/leads/` - LeadCard + UnlockLeadModal (THE single unlock flow)
+- `/lib/utils/opportunity.ts` - THE single place for score semantics (v1 legacy health score is inverted for display; v2 is used as-is via `leads.score_version`)
 - `/lib/services/` - Business logic (credits, leads, analytics, Klaviyo)
 
 ### Scraping Engine Key Files
 - `orchestrator.ts` - Main orchestration logic
-- `lead-generator.ts` - Lead creation and assignment
+- `jobs/scraping-job-runner.ts` - Zone processing (2 concurrent zones, one analyzer per zone)
+- `lead-generator.ts` - Lead upsert + publication decision
 - `/analyzers/enhanced-website-analyzer.ts` - Main website analyzer
-- `/scrapers/google-maps-improved.ts` - Primary scraper
-- `/utils/unified-lead-manager.ts` - Lead management
+- `/scoring/opportunity-score.ts` - Opportunity score v2
+- `/utils/lead-identity.ts` - Deterministic unique_key + content_hash
+- `/scrapers/google-maps-improved.ts` - Primary (only) scraper
 
 ### Zone-Based Scraping System
 The scraping uses geographic zones with intelligent scheduling:
@@ -102,14 +106,15 @@ The scraping uses geographic zones with intelligent scheduling:
 - `scrape_logs` - Scraping execution history
 - `feedback_reports` - User feedback system
 
-## Lead Scoring (0-100)
+## Lead Scoring (0-100) — Opportunity Score v2
 
-Lower score = more technical issues = better opportunity for digital agencies:
-- 0-20: Site absent or under construction
-- -15: Missing SEO basics (title/description)
-- -10: No tracking pixels (GTM, GA, Meta)
-- -10: Broken images
-- -15: Poor performance
+**HIGHER score = better sales opportunity** (`leads.score` with `leads.score_version = 2`). Legacy rows (`score_version = 1`) store the old inverted "health score"; the frontend normalizes both via `lib/utils/opportunity.ts` — never interpret `leads.score` directly.
+
+The v2 formula (`services/scraping-engine/src/scoring/opportunity-score.ts`):
+- per-service subscores (development/seo/analytics/gdpr/mobile/performance/design/social) computed from CONFIRMED defects only
+- overall = weighted max of the top-2 subscores (a lead strong on ONE concrete pitch is a strong lead)
+- capped at 40 when no direct contact exists; small bonus for review count (business viability)
+- no-website businesses (confirmed absence) score ~95 on development
 
 ## Subscription Plans
 

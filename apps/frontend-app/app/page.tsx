@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { ArrowRight, Target, BarChart3, Users, CheckCircle, Zap, Shield, Globe, Menu, X } from 'lucide-react'
 import NewsletterForm from '@/components/NewsletterForm'
 import StructuredFAQ from '@/components/StructuredFAQ'
-import SimplePricing from '@/components/SimplePricing'
+import PublicPricingSection from '@/components/pricing/PublicPricingSection'
 
 export default function HomePage() {
   const { user } = useAuth()
@@ -448,11 +448,7 @@ export default function HomePage() {
       </section>
 
       {/* Pricing Section */}
-      <SimplePricing
-        showAnnual={true}
-        redirectToCheckout={false}
-      />
-
+      <PublicPricingSection />
 
       {/* CTA Section */}
       <section className="py-24 relative overflow-hidden">
@@ -508,12 +504,6 @@ export default function HomePage() {
 
       {/* FAQ Section */}
       <StructuredFAQ className="bg-gray-50" />
-
-      {/* Bottom Pricing Section - Before Newsletter */}
-      <SimplePricing
-        showAnnual={true}
-        redirectToCheckout={false}
-      />
 
       {/* Newsletter Section */}
       <section className="py-24 bg-gradient-to-b from-gray-50 to-white">

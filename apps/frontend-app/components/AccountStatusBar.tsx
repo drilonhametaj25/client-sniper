@@ -41,9 +41,11 @@ export default function AccountStatusBar({
   const proposalsResetDate = userAny.proposals_reset_date
   const isFirstProposalAvailable = userAny.first_proposal_used === false
 
-  // Configurazione per piano
+  // Configurazione per piano.
+  // "Illimitato" è deciso dal DB (credits_remaining === -1), NON dal nome del
+  // piano: in produzione Agency è un piano a 300 crediti/mese.
   const planConfig = getPlanConfig(plan)
-  const isUnlimited = planConfig.isUnlimited
+  const isUnlimited = proposalsRemaining === -1
   const maxProposals = planConfig.maxProposals
   const resetType = planConfig.resetType
 
@@ -236,7 +238,7 @@ function getPlanConfig(plan: string): {
     case 'pro':
       return { label: `Piano Pro${annualSuffix}`, maxProposals: 100, isUnlimited: false, resetType: 'monthly' }
     case 'agency':
-      return { label: `Piano Agency${annualSuffix}`, maxProposals: -1, isUnlimited: true, resetType: 'never' }
+      return { label: `Piano Agency${annualSuffix}`, maxProposals: 300, isUnlimited: false, resetType: 'monthly' }
     default:
       return { label: 'Piano Free', maxProposals: 1, isUnlimited: false, resetType: 'never' }
   }

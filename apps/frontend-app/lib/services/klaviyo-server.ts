@@ -25,7 +25,7 @@ class KlaviyoServerService {
   private baseUrl = 'https://a.klaviyo.com/api'
 
   constructor() {
-    this.apiKey = process.env.KLAVIYO_PRIVATE_KEY || process.env.KLAVIYO_API_KEY || ''
+    this.apiKey = process.env.KLAVIYO_PRIVATE_API_KEY || process.env.KLAVIYO_PRIVATE_KEY || process.env.KLAVIYO_API_KEY || ''
     this.listId = process.env.KLAVIYO_LIST_ID || ''
 
     if (!this.apiKey) {

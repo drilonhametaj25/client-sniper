@@ -37,7 +37,11 @@
       "Bash(powershell -Command \"Stop-Process -Id 20072 -Force\")",
       "mcp__playwright__browser_navigate",
       "mcp__playwright__browser_close",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(rm -rf .next)",
+      "Bash(npm run *)",
+      "Bash(echo \"BUILD_EXIT=$?\")",
+      "Bash(echo \"TSC:$?\")"
     ]
   }
 }

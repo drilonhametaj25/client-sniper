@@ -88,8 +88,17 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="it" className="h-full">
+    <html lang="it" className="h-full" suppressHydrationWarning>
       <head>
+        {/* Anti-FOUC: applica il tema PRIMA dell'idratazione React.
+            Senza questo, gli utenti dark vedevano un flash bianco a ogni
+            caricamento (il tema veniva applicato solo in un useEffect). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('theme');var d=t==='dark'||((!t||t==='system')&&window.matchMedia('(prefers-color-scheme: dark)').matches);var r=document.documentElement;r.classList.toggle('dark',d);var m=document.querySelector('meta[name="theme-color"]');if(m){m.setAttribute('content',d?'#0f172a':'#ffffff')}}catch(e){}})();`,
+          }}
+        />
+
         {/* Google tag (gtag.js) */}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-VE3PVKHR35"></script>
         <script
@@ -141,7 +150,7 @@ export default function RootLayout({
         {/* Meta tag per tema mobile */}
         <meta name="theme-color" content="#ffffff" />
       </head>
-      <body className={`${inter.className} h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-300`}>
+      <body className={`${inter.className} h-full bg-gray-50 dark:bg-gray-900`}>
         <ToastProvider>
           <AuthProvider>
             <ThemeProvider>
