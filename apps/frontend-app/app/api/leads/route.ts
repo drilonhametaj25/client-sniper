@@ -9,7 +9,7 @@ import { getBasePlanType, isProOrHigher, isStarterOrHigher } from '@/lib/utils/p
 import { leadsHasStatusColumn, leadsHasColumn } from '@/lib/utils/leads-schema'
 import { detectServices } from '@/lib/utils/service-detection'
 import { calculateMatch } from '@/lib/utils/match-calculation'
-import { getUnlockedSet } from '@/lib/api/paywall'
+
 import type { ServiceType } from '@/lib/types/services'
 
 // Limite del working-set quando è attivo un filtro per servizi/match: questi filtri
@@ -428,16 +428,32 @@ export async function GET(request: NextRequest) {
         orderAscending = true
     }
 
-    // 🔒 PAYWALL: i contatti (phone/email) escono dal server SOLO per i lead
-    // sbloccati dall'utente. Per gli altri restituiamo i flag has_phone/has_email
-    // così le card possono dire "contatto disponibile" senza rivelarlo.
+    // 🔒 PAYWALL + TRASPARENZA: i contatti (phone/email) escono dal server SOLO
+    // per i lead sbloccati dall'utente; per gli altri restituiamo i flag
+    // has_phone/has_email. In più esponiamo global_unlock_count (quanti utenti
+    // in totale hanno sbloccato il lead): il modello è un pool condiviso e lo
+    // diciamo onestamente — i lead "freschi" (mai sbloccati) valgono di più.
     const maskContacts = async (pageLeads: any[]): Promise<any[]> => {
       if (!pageLeads || pageLeads.length === 0) return pageLeads
-      const unlockedSet = await getUnlockedSet(
-        getSupabaseAdmin(),
-        user.id,
-        pageLeads.map((l: any) => l.id)
-      )
+
+      const ids = pageLeads.map((l: any) => l.id)
+      const unlockedSet = new Set<string>()
+      const globalCounts = new Map<string, number>()
+
+      const { data: unlockRows, error: unlockError } = await getSupabaseAdmin()
+        .from('user_unlocked_leads')
+        .select('lead_id, user_id')
+        .in('lead_id', ids)
+
+      if (unlockError) {
+        console.error('Errore lettura sblocchi:', unlockError)
+      } else {
+        for (const row of unlockRows || []) {
+          globalCounts.set(row.lead_id, (globalCounts.get(row.lead_id) || 0) + 1)
+          if (row.user_id === user.id) unlockedSet.add(row.lead_id)
+        }
+      }
+
       return pageLeads.map((lead: any) => {
         const unlocked = unlockedSet.has(lead.id)
         return {
@@ -446,7 +462,8 @@ export async function GET(request: NextRequest) {
           has_email: !!lead.email,
           phone: unlocked ? lead.phone : null,
           email: unlocked ? lead.email : null,
-          is_unlocked: unlocked
+          is_unlocked: unlocked,
+          global_unlock_count: globalCounts.get(lead.id) || 0
         }
       })
     }
