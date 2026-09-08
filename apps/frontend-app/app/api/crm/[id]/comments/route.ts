@@ -5,18 +5,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { requireUser } from '@/lib/api/auth';
 import { isStarterOrHigher } from '@/lib/utils/plan-helpers';
 
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 export async function GET(
   request: NextRequest,
@@ -26,28 +19,12 @@ export async function GET(
     const leadId = params.id;
 
     // Verifica autenticazione
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Token di autorizzazione mancante' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Token non valido o scaduto' },
-        { status: 401 }
-      );
-    }
+    const auth = await requireUser(request);
+    if (auth.errorResponse) return auth.errorResponse;
+    const { user, admin } = auth;
 
     // Verifica che l'utente sia PRO o AGENCY
-    const { data: userData, error: userError } = await getSupabaseAdmin()
+    const { data: userData, error: userError } = await admin
       .from('users')
       .select('plan, role')
       .eq('id', user.id)
@@ -64,7 +41,7 @@ export async function GET(
     }
 
     // Verifica che il lead sia sbloccato dall'utente
-    const { data: unlockedLead, error: unlockError } = await getSupabaseAdmin()
+    const { data: unlockedLead, error: unlockError } = await admin
       .from('user_unlocked_leads')
       .select('lead_id')
       .eq('user_id', user.id)
@@ -76,7 +53,7 @@ export async function GET(
     }
 
     // Recupera commenti dalla tabella crm_comments
-    const { data: comments, error: commentsError } = await getSupabaseAdmin()
+    const { data: comments, error: commentsError } = await admin
       .from('crm_comments')
       .select('*')
       .eq('user_id', user.id)
@@ -108,28 +85,12 @@ export async function POST(
     const body = await request.json();
 
     // Verifica autenticazione
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Token di autorizzazione mancante' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Token non valido o scaduto' },
-        { status: 401 }
-      );
-    }
+    const auth = await requireUser(request);
+    if (auth.errorResponse) return auth.errorResponse;
+    const { user, admin } = auth;
 
     // Verifica che l'utente sia PRO o AGENCY
-    const { data: userData, error: userError } = await getSupabaseAdmin()
+    const { data: userData, error: userError } = await admin
       .from('users')
       .select('plan, role')
       .eq('id', user.id)
@@ -146,7 +107,7 @@ export async function POST(
     }
 
     // Verifica che il lead sia sbloccato dall'utente
-    const { data: unlockedLead, error: unlockError } = await getSupabaseAdmin()
+    const { data: unlockedLead, error: unlockError } = await admin
       .from('user_unlocked_leads')
       .select('lead_id')
       .eq('user_id', user.id)
@@ -163,7 +124,7 @@ export async function POST(
     }
 
     // Crea nuovo commento
-    const { data: newComment, error: commentError } = await getSupabaseAdmin()
+    const { data: newComment, error: commentError } = await admin
       .from('crm_comments')
       .insert({
         user_id: user.id,
@@ -182,7 +143,7 @@ export async function POST(
     }
 
     // Aggiorna timestamp entry CRM
-    const { error: updateError } = await getSupabaseAdmin()
+    const { error: updateError } = await admin
       .from('crm_entries')
       .update({
         updated_at: new Date().toISOString()
@@ -219,28 +180,12 @@ export async function DELETE(
     }
 
     // Verifica autenticazione
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Token di autorizzazione mancante' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Token non valido o scaduto' },
-        { status: 401 }
-      );
-    }
+    const auth = await requireUser(request);
+    if (auth.errorResponse) return auth.errorResponse;
+    const { user, admin } = auth;
 
     // Verifica che l'utente sia PRO o AGENCY
-    const { data: userData, error: userError } = await getSupabaseAdmin()
+    const { data: userData, error: userError } = await admin
       .from('users')
       .select('plan, role')
       .eq('id', user.id)
@@ -257,7 +202,7 @@ export async function DELETE(
     }
 
     // Elimina commento (solo se appartiene all'utente)
-    const { error: deleteError } = await getSupabaseAdmin()
+    const { error: deleteError } = await admin
       .from('crm_comments')
       .delete()
       .eq('id', commentId)

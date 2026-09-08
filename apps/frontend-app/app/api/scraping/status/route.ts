@@ -4,34 +4,19 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { requireUser } from '@/lib/api/auth'
 
 export const dynamic = 'force-dynamic'
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 export async function GET(request: NextRequest) {
   try {
     // Verifica autenticazione
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { user, admin } = auth
 
     // Verifica che sia admin (opzionale - puoi rimuovere per dare accesso a tutti)
-    const { data: userData } = await getSupabaseAdmin()
+    const { data: userData } = await admin
       .from('users')
       .select('role')
       .eq('id', user.id)
@@ -56,40 +41,40 @@ export async function GET(request: NextRequest) {
       lastRunResult
     ] = await Promise.all([
       // Zone totali
-      getSupabaseAdmin()
+      admin
         .from('zones_to_scrape')
         .select('*', { count: 'exact', head: true }),
 
       // Job completati oggi
-      getSupabaseAdmin()
+      admin
         .from('scrape_logs')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'success')
         .gte('created_at', today.toISOString()),
 
       // Job falliti oggi
-      getSupabaseAdmin()
+      admin
         .from('scrape_logs')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'failed')
         .gte('created_at', today.toISOString()),
 
       // Job completati questa settimana
-      getSupabaseAdmin()
+      admin
         .from('scrape_logs')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'success')
         .gte('created_at', weekAgo.toISOString()),
 
       // Log recenti (ultimi 10)
-      getSupabaseAdmin()
+      admin
         .from('scrape_logs')
         .select('id, source, category, location_name, status, leads_found, created_at, error_message')
         .order('created_at', { ascending: false })
         .limit(10),
 
       // Ultimo job
-      getSupabaseAdmin()
+      admin
         .from('scrape_logs')
         .select('created_at')
         .order('created_at', { ascending: false })
@@ -100,7 +85,7 @@ export async function GET(request: NextRequest) {
     // Lead totali generati (per admin)
     let totalLeads = 0
     if (isAdmin) {
-      const { count } = await getSupabaseAdmin()
+      const { count } = await admin
         .from('leads')
         .select('*', { count: 'exact', head: true })
       totalLeads = count || 0

@@ -3,48 +3,18 @@
 // Usato da: /settings page per caricare/aggiornare dati utente
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { requireUser, getSupabaseAdmin } from '@/lib/api/auth'
 
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
 
-function getSupabaseClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
-
 export async function GET(request: NextRequest) {
   try {
     // Verifica autenticazione
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Token di autorizzazione mancante' },
-        { status: 401 }
-      )
-    }
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
 
-    const token = authHeader.replace('Bearer ', '')
-    
-    // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
-    
-    if (authError || !user) {
-      console.error('Errore autenticazione:', authError)
-      return NextResponse.json(
-        { success: false, error: 'Token non valido o scaduto' },
-        { status: 401 }
-      )
-    }
+    const { user } = auth
 
     // Ottieni il profilo utente con fallback creation (usa service role)
     let { data: userData, error: profileError } = await getSupabaseAdmin()

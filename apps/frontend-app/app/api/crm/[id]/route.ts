@@ -5,18 +5,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { isStarterOrHigher } from '@/lib/utils/plan-helpers';
+import { requirePlan } from '@/lib/api/auth';
 
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 export async function GET(
   request: NextRequest,
@@ -25,59 +17,22 @@ export async function GET(
   try {
     const leadId = params.id;
 
-    // Verifica autenticazione
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Token di autorizzazione mancante' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Token non valido o scaduto' },
-        { status: 401 }
-      );
-    }
-
-    // Verifica che l'utente sia PRO e attivo
-    const { data: userData, error: userError } = await getSupabaseAdmin()
-      .from('users')
-      .select('plan, status, role')
-      .eq('id', user.id)
-      .single();
-
-    if (userError) {
-      console.error('Errore nel recupero dati utente:', userError);
-      return NextResponse.json({ error: 'Errore nel recupero dati utente' }, { status: 500 });
-    }
-
-    // Verifica piano Starter o superiore (include starter, pro, agency - mensile e annuale)
-    if (!isStarterOrHigher(userData?.plan || '')) {
-      return NextResponse.json({
-        error: 'Piano Starter richiesto',
-        current_plan: userData?.plan || 'unknown',
-        message: 'Il CRM è disponibile solo per utenti con piano Starter o Agency'
-      }, { status: 403 });
-    }
+    // Autenticazione + gate piano Starter o superiore (include starter, pro, agency - mensile e annuale)
+    const auth = await requirePlan(request, 'starter');
+    if (auth.errorResponse) return auth.errorResponse;
+    const { user, admin, profile } = auth;
 
     // Verifica che il piano sia attivo
-    if (userData?.status === 'inactive') {
-      return NextResponse.json({ 
-        error: 'Piano disattivato', 
+    if (profile?.status === 'inactive') {
+      return NextResponse.json({
+        error: 'Piano disattivato',
         message: 'Il tuo piano è temporaneamente disattivato. Riattivalo per accedere al CRM',
-        status: userData.status
+        status: profile.status
       }, { status: 403 });
     }
 
     // Se il piano è cancellato, nega l'accesso
-    if (userData?.status === 'cancelled') {
+    if (profile?.status === 'cancelled') {
       return NextResponse.json({ 
         error: 'Piano cancellato', 
         message: 'Il tuo piano è stato cancellato. Aggiorna il piano per accedere al CRM'
@@ -85,7 +40,7 @@ export async function GET(
     }
 
     // Recupera il lead con dettagli completi
-    const { data: leadData, error: leadError } = await getSupabaseAdmin()
+    const { data: leadData, error: leadError } = await admin
       .from('user_unlocked_leads')
       .select(`
         lead_id,
@@ -120,7 +75,7 @@ export async function GET(
     }
 
     // Recupera entry CRM per questo lead
-    const { data: crmEntry, error: crmError } = await getSupabaseAdmin()
+    const { data: crmEntry, error: crmError } = await admin
       .from('crm_entries')
       .select('*')
       .eq('user_id', user.id)
@@ -129,7 +84,7 @@ export async function GET(
 
     if (crmError) {
       // Se non esiste entry CRM, creala
-      const { data: newEntry, error: createError } = await getSupabaseAdmin()
+      const { data: newEntry, error: createError } = await admin
         .from('crm_entries')
         .insert({
           user_id: user.id,
@@ -208,44 +163,13 @@ export async function POST(
     const leadId = params.id;
     const body = await request.json();
 
-    // Verifica autenticazione
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Token di autorizzazione mancante' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Token non valido o scaduto' },
-        { status: 401 }
-      );
-    }
-
-    // Verifica che l'utente sia PRO
-    const { data: userData, error: userError } = await getSupabaseAdmin()
-      .from('users')
-      .select('plan, role')
-      .eq('id', user.id)
-      .single();
-
-    if (userError || !isStarterOrHigher(userData?.plan || '')) {
-      return NextResponse.json({
-        error: 'Piano Starter richiesto',
-        current_plan: userData?.plan || 'unknown',
-        message: 'La modifica entry CRM richiede piano Starter o Agency'
-      }, { status: 403 });
-    }
+    // Autenticazione + verifica che l'utente sia PRO
+    const auth = await requirePlan(request, 'starter');
+    if (auth.errorResponse) return auth.errorResponse;
+    const { user, admin } = auth;
 
     // Verifica che il lead sia sbloccato dall'utente
-    const { data: unlockedLead, error: unlockError } = await getSupabaseAdmin()
+    const { data: unlockedLead, error: unlockError } = await admin
       .from('user_unlocked_leads')
       .select('lead_id')
       .eq('user_id', user.id)
@@ -266,7 +190,7 @@ export async function POST(
     if (body.follow_up_date !== undefined) updateData.follow_up_date = body.follow_up_date;
     if (body.attachments !== undefined) updateData.attachments = body.attachments;
 
-    const { data: updatedEntry, error: updateError } = await getSupabaseAdmin()
+    const { data: updatedEntry, error: updateError } = await admin
       .from('crm_entries')
       .update(updateData)
       .eq('user_id', user.id)

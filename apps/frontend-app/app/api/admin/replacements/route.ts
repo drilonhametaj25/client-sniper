@@ -6,15 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { authenticateUser } from '@/lib/auth-middleware'
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+import { requireAdmin, getSupabaseAdmin } from '@/lib/api/auth'
 
 interface ProcessRequest {
   requestId: string
@@ -24,29 +16,9 @@ interface ProcessRequest {
 
 export async function GET(request: NextRequest) {
   try {
-    // Autenticazione unificata
-    const { user, error: authError } = await authenticateUser(request)
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: authError || 'Non autenticato' },
-        { status: 401 }
-      )
-    }
-
-    // Verifica ruolo admin
-    const { data: userData, error: userError } = await getSupabaseAdmin()
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (userError || userData?.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Accesso negato' },
-        { status: 403 }
-      )
-    }
+    // Autenticazione unificata (401) + verifica ruolo admin (403)
+    const auth = await requireAdmin(request)
+    if (auth.errorResponse) return auth.errorResponse
 
     // Ottieni parametri query
     const url = new URL(request.url)
@@ -118,31 +90,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Autenticazione unificata
-    const { user, error: authError } = await authenticateUser(request)
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: authError || 'Non autenticato' },
-        { status: 401 }
-      )
-    }
+    // Autenticazione unificata (401) + verifica ruolo admin (403)
+    const auth = await requireAdmin(request)
+    if (auth.errorResponse) return auth.errorResponse
 
-    const adminUserId = user.id
-
-    // Verifica ruolo admin
-    const { data: userData, error: userError } = await getSupabaseAdmin()
-      .from('users')
-      .select('role')
-      .eq('id', adminUserId)
-      .single()
-
-    if (userError || userData?.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Accesso negato' },
-        { status: 403 }
-      )
-    }
+    const adminUserId = auth.user.id
 
     const body: ProcessRequest = await request.json()
     const { requestId, action, adminResponse } = body

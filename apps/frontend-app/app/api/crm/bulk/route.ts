@@ -5,17 +5,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { requireUser } from '@/lib/api/auth'
 import { isStarterOrHigher } from '@/lib/utils/plan-helpers'
 
 export const dynamic = 'force-dynamic'
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 // Stati CRM validi
 const VALID_STATUSES = [
@@ -39,20 +32,12 @@ interface BulkRequest {
 export async function PATCH(request: NextRequest) {
   try {
     // Verifica autenticazione
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { user, admin } = auth
 
     // Verifica piano PRO
-    const { data: userData } = await getSupabaseAdmin()
+    const { data: userData } = await admin
       .from('users')
       .select('plan')
       .eq('id', user.id)
@@ -88,7 +73,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Verifica che le entry appartengano all'utente
-    const { data: userEntries, error: checkError } = await getSupabaseAdmin()
+    const { data: userEntries, error: checkError } = await admin
       .from('crm_entries')
       .select('id')
       .eq('user_id', user.id)
@@ -123,7 +108,7 @@ export async function PATCH(request: NextRequest) {
           }, { status: 400 })
         }
 
-        const { error: statusError, count: statusCount } = await getSupabaseAdmin()
+        const { error: statusError, count: statusCount } = await admin
           .from('crm_entries')
           .update({
             status: value,
@@ -141,7 +126,7 @@ export async function PATCH(request: NextRequest) {
         break
 
       case 'delete':
-        const { error: deleteError, count: deleteCount } = await getSupabaseAdmin()
+        const { error: deleteError, count: deleteCount } = await admin
           .from('crm_entries')
           .delete()
           .eq('user_id', user.id)
@@ -170,7 +155,7 @@ export async function PATCH(request: NextRequest) {
           }, { status: 400 })
         }
 
-        const { error: followUpError, count: followUpCount } = await getSupabaseAdmin()
+        const { error: followUpError, count: followUpCount } = await admin
           .from('crm_entries')
           .update({
             follow_up_date: value,
@@ -189,7 +174,7 @@ export async function PATCH(request: NextRequest) {
         break
 
       case 'clear_follow_up':
-        const { error: clearError, count: clearCount } = await getSupabaseAdmin()
+        const { error: clearError, count: clearCount } = await admin
           .from('crm_entries')
           .update({
             follow_up_date: null,
@@ -218,7 +203,7 @@ export async function PATCH(request: NextRequest) {
         const notePrefix = `[${noteTimestamp}] `
 
         // Recupera note esistenti e aggiungi
-        const { data: currentEntries } = await getSupabaseAdmin()
+        const { data: currentEntries } = await admin
           .from('crm_entries')
           .select('id, note')
           .eq('user_id', user.id)
@@ -231,7 +216,7 @@ export async function PATCH(request: NextRequest) {
             ? `${existingNote}\n${notePrefix}${value}`
             : `${notePrefix}${value}`
 
-          const { error: noteError } = await getSupabaseAdmin()
+          const { error: noteError } = await admin
             .from('crm_entries')
             .update({
               note: newNote,

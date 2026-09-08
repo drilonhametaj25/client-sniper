@@ -4,16 +4,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { requireUser, getSupabaseAdmin } from '@/lib/api/auth'
 
 export const dynamic = 'force-dynamic'
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 // Pesi scoring
 const SCORING_WEIGHTS = {
@@ -42,18 +35,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Verifica autenticazione
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
+    // Verifica autenticazione (helper unificato: Bearer token o sessione cookie)
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { user } = auth
 
     const leadId = params.id
 

@@ -11,39 +11,13 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+import { requireUser, getSupabaseAdmin } from '@/lib/api/auth'
 
 export async function GET(request: NextRequest) {
   try {
-    // Ottieni token di autenticazione
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Autenticazione richiesta' },
-        { status: 401 }
-      )
-    }
-
-    const token = authHeader.substring(7)
-
-    // Usa getSupabase() per ottenere il client
-    const supabase = getSupabase()
-
     // Verifica utente
-    const { data: { user } } = await getSupabase().auth.getUser(token)
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Utente non autenticato' },
-        { status: 401 }
-      )
-    }
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
 
     // Ottieni parametri di filtro
     const { searchParams } = new URL(request.url)
@@ -51,7 +25,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || null
 
     // Chiama RPC per ottenere i feedback dell'utente
-    const { data, error } = await getSupabase().rpc('get_user_feedback', {
+    const { data, error } = await getSupabaseAdmin().rpc('get_user_feedback', {
       filter_type: type,
       filter_status: status
     })

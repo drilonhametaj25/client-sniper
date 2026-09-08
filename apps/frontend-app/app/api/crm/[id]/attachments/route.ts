@@ -5,18 +5,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { requireUser } from '@/lib/api/auth';
 import { isStarterOrHigher } from '@/lib/utils/plan-helpers';
 
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 export async function POST(
   request: NextRequest,
@@ -26,28 +19,12 @@ export async function POST(
     const leadId = params.id;
 
     // Verifica autenticazione
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Token di autorizzazione mancante' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Token non valido o scaduto' },
-        { status: 401 }
-      );
-    }
+    const auth = await requireUser(request);
+    if (auth.errorResponse) return auth.errorResponse;
+    const { user, admin } = auth;
 
     // Verifica che l'utente sia PRO o AGENCY
-    const { data: userData, error: userError } = await getSupabaseAdmin()
+    const { data: userData, error: userError } = await admin
       .from('users')
       .select('plan, role')
       .eq('id', user.id)
@@ -64,7 +41,7 @@ export async function POST(
     }
 
     // Verifica che il lead sia sbloccato dall'utente
-    const { data: unlockedLead, error: unlockError } = await getSupabaseAdmin()
+    const { data: unlockedLead, error: unlockError } = await admin
       .from('user_unlocked_leads')
       .select('lead_id')
       .eq('user_id', user.id)
@@ -90,7 +67,7 @@ export async function POST(
 
     // Upload file su Supabase Storage
     const fileName = `crm-attachments/${user.id}/${leadId}/${Date.now()}-${file.name}`;
-    const { data: uploadData, error: uploadError } = await getSupabaseAdmin().storage
+    const { data: uploadData, error: uploadError } = await admin.storage
       .from('crm-files')
       .upload(fileName, file, {
         cacheControl: '3600',
@@ -103,7 +80,7 @@ export async function POST(
     }
 
     // Ottieni URL pubblico del file
-    const { data: urlData } = getSupabaseAdmin().storage
+    const { data: urlData } = admin.storage
       .from('crm-files')
       .getPublicUrl(fileName);
 
@@ -119,7 +96,7 @@ export async function POST(
     };
 
     // Recupera entry CRM corrente
-    const { data: crmEntry, error: crmError } = await getSupabaseAdmin()
+    const { data: crmEntry, error: crmError } = await admin
       .from('crm_entries')
       .select('attachments')
       .eq('user_id', user.id)
@@ -135,7 +112,7 @@ export async function POST(
     const updatedAttachments = [...currentAttachments, attachment];
 
     // Aggiorna entry CRM con nuovo attachment
-    const { error: updateError } = await getSupabaseAdmin()
+    const { error: updateError } = await admin
       .from('crm_entries')
       .update({
         attachments: updatedAttachments,
@@ -174,28 +151,12 @@ export async function DELETE(
     }
 
     // Verifica autenticazione
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Token di autorizzazione mancante' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Token non valido o scaduto' },
-        { status: 401 }
-      );
-    }
+    const auth = await requireUser(request);
+    if (auth.errorResponse) return auth.errorResponse;
+    const { user, admin } = auth;
 
     // Verifica che l'utente sia PRO o AGENCY
-    const { data: userData, error: userError } = await getSupabaseAdmin()
+    const { data: userData, error: userError } = await admin
       .from('users')
       .select('plan, role')
       .eq('id', user.id)
@@ -212,7 +173,7 @@ export async function DELETE(
     }
 
     // Recupera entry CRM corrente
-    const { data: crmEntry, error: crmError } = await getSupabaseAdmin()
+    const { data: crmEntry, error: crmError } = await admin
       .from('crm_entries')
       .select('attachments')
       .eq('user_id', user.id)
@@ -232,7 +193,7 @@ export async function DELETE(
 
     // Elimina file da Supabase Storage
     if (attachmentToDelete.path) {
-      const { error: deleteError } = await getSupabaseAdmin().storage
+      const { error: deleteError } = await admin.storage
         .from('crm-files')
         .remove([attachmentToDelete.path]);
 
@@ -245,7 +206,7 @@ export async function DELETE(
     const updatedAttachments = currentAttachments.filter((att: any) => att.id !== attachmentId);
 
     // Aggiorna entry CRM
-    const { error: updateError } = await getSupabaseAdmin()
+    const { error: updateError } = await admin
       .from('crm_entries')
       .update({
         attachments: updatedAttachments,

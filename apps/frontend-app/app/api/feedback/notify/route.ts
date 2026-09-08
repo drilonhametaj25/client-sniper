@@ -10,15 +10,8 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { requireAdmin } from '@/lib/api/auth'
 import smtpEmail from '@/lib/services/smtp-email'
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,42 +26,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Verifica autorizzazione admin
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Non autorizzato' },
-        { status: 401 }
-      )
-    }
+    const auth = await requireAdmin(request)
+    if (auth.errorResponse) return auth.errorResponse
 
-    const token = authHeader.substring(7)
-    const supabase = getSupabase()
-
-    // Verifica utente
-    const { data: { user } } = await getSupabase().auth.getUser(token)
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Non autorizzato' },
-        { status: 401 }
-      )
-    }
-
-    // Verifica ruolo admin
-    const { data: userData } = await getSupabase()
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (userData?.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Accesso riservato agli admin' },
-        { status: 403 }
-      )
-    }
+    const { admin } = auth
 
     // Recupera dettagli feedback
-    const { data: feedback, error } = await getSupabase()
+    const { data: feedback, error } = await admin
       .from('feedback_reports')
       .select('id, title, type, user_id, email')
       .eq('id', feedbackId)
@@ -86,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     // Se non c'è email nel feedback, prova a recuperarla dall'utente
     if (!recipientEmail && feedback.user_id) {
-      const { data: feedbackUser } = await getSupabase()
+      const { data: feedbackUser } = await admin
         .from('users')
         .select('email')
         .eq('id', feedback.user_id)

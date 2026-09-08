@@ -7,28 +7,14 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+import { requireUser, getSupabaseAdmin } from '@/lib/api/auth'
 
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 })
-    }
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
 
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Token non valido' }, { status: 401 })
-    }
+    const { user } = auth
 
     // Recupera o crea gamification data
     let { data: gamification, error } = await getSupabaseAdmin()
@@ -129,17 +115,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 })
-    }
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
 
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Token non valido' }, { status: 401 })
-    }
+    const { user } = auth
 
     const body = await request.json()
     const { action } = body

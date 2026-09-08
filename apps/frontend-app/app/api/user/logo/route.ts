@@ -10,34 +10,18 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { requireUser } from '@/lib/api/auth'
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml']
 
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
-
 export async function POST(request: NextRequest) {
   try {
     // Verifica autenticazione
-    const cookieStore = await cookies()
-    const supabase = createServerComponentClient({ cookies: () => cookieStore })
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Non autenticato' },
-        { status: 401 }
-      )
-    }
+    const { user, admin: supabaseAdmin } = auth
 
     // Ottieni file dal form
     const formData = await request.formData()
@@ -75,10 +59,7 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    // Upload su Supabase Storage
-    const supabaseAdmin = getSupabaseAdmin()
-
-    // Prima elimina eventuali logo precedenti
+    // Upload su Supabase Storage: prima elimina eventuali logo precedenti
     const { data: existingFiles } = await supabaseAdmin.storage
       .from('user-assets')
       .list(`logos/${user.id}`)
@@ -141,21 +122,12 @@ export async function POST(request: NextRequest) {
 }
 
 // DELETE: Rimuovi logo utente
-export async function DELETE() {
+export async function DELETE(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerComponentClient({ cookies: () => cookieStore })
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Non autenticato' },
-        { status: 401 }
-      )
-    }
-
-    const supabaseAdmin = getSupabaseAdmin()
+    const { user, admin: supabaseAdmin } = auth
 
     // Elimina tutti i file nella cartella dell'utente
     const { data: existingFiles } = await supabaseAdmin.storage

@@ -8,15 +8,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { authenticateUser } from '@/lib/auth-middleware'
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+import { requireAdmin, getSupabaseAdmin } from '@/lib/api/auth'
 
 interface PlanData {
   name: string
@@ -40,41 +32,11 @@ interface PlanData {
   visible_fields: string[]
 }
 
-// Verifica ruolo admin
-async function verifyAdminAccess(userId: string) {
-  const { data: userData, error } = await getSupabaseAdmin()
-    .from('users')
-    .select('role')
-    .eq('id', userId)
-    .single()
-
-  if (error || userData?.role !== 'admin') {
-    return false
-  }
-  
-  return true
-}
-
 export async function GET(request: NextRequest) {
   try {
-    // Autenticazione unificata
-    const { user, error: authError } = await authenticateUser(request)
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: authError || 'Non autenticato' },
-        { status: 401 }
-      )
-    }
-
-    // Verifica ruolo admin
-    const isAdmin = await verifyAdminAccess(user.id)
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: 'Accesso negato' },
-        { status: 403 }
-      )
-    }
+    // Autenticazione unificata (401) + verifica ruolo admin (403)
+    const auth = await requireAdmin(request)
+    if (auth.errorResponse) return auth.errorResponse
 
     // Carica tutti i piani (inclusi nascosti per admin)
     const { data: plans, error: plansError } = await getSupabaseAdmin()
@@ -105,24 +67,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Autenticazione unificata
-    const { user, error: authError } = await authenticateUser(request)
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: authError || 'Non autenticato' },
-        { status: 401 }
-      )
-    }
-
-    // Verifica ruolo admin
-    const isAdmin = await verifyAdminAccess(user.id)
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: 'Accesso negato' },
-        { status: 403 }
-      )
-    }
+    // Autenticazione unificata (401) + verifica ruolo admin (403)
+    const auth = await requireAdmin(request)
+    if (auth.errorResponse) return auth.errorResponse
 
     const planData: PlanData = await request.json()
 
@@ -207,24 +154,9 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    // Autenticazione unificata
-    const { user, error: authError } = await authenticateUser(request)
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: authError || 'Non autenticato' },
-        { status: 401 }
-      )
-    }
-
-    // Verifica ruolo admin
-    const isAdmin = await verifyAdminAccess(user.id)
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: 'Accesso negato' },
-        { status: 403 }
-      )
-    }
+    // Autenticazione unificata (401) + verifica ruolo admin (403)
+    const auth = await requireAdmin(request)
+    if (auth.errorResponse) return auth.errorResponse
 
     const planData: PlanData = await request.json()
 
@@ -310,24 +242,9 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    // Autenticazione unificata
-    const { user, error: authError } = await authenticateUser(request)
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: authError || 'Non autenticato' },
-        { status: 401 }
-      )
-    }
-
-    // Verifica ruolo admin
-    const isAdmin = await verifyAdminAccess(user.id)
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: 'Accesso negato' },
-        { status: 403 }
-      )
-    }
+    // Autenticazione unificata (401) + verifica ruolo admin (403)
+    const auth = await requireAdmin(request)
+    if (auth.errorResponse) return auth.errorResponse
 
     const { name } = await request.json()
 

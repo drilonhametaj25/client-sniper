@@ -5,29 +5,16 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateUser } from '@/lib/auth-middleware'
-import { createClient } from '@supabase/supabase-js'
+import { requireUser, getSupabaseAdmin } from '@/lib/api/auth'
 import { isStarterOrHigher } from '@/lib/utils/plan-helpers'
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    
-    const { user, dbClient, error: authError } = await authenticateUser(request)
-    
-    if (!user || !dbClient) {
-      return NextResponse.json(
-        { error: authError || 'Autorizzazione mancante' },
-        { status: 401 }
-      )
-    }
+
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { user } = auth
 
     // Verifica che l'utente abbia un piano PRO
     const { data: userData, error: userError } = await getSupabaseAdmin()
@@ -137,14 +124,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, dbClient, error: authError } = await authenticateUser(request)
-    
-    if (!user || !dbClient) {
-      return NextResponse.json(
-        { error: authError || 'Autorizzazione mancante' },
-        { status: 401 }
-      )
-    }
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { user } = auth
 
     // Verifica che l'utente abbia un piano PRO
     const { data: userData, error: userError } = await getSupabaseAdmin()
@@ -286,14 +268,9 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const { user, dbClient, error: authError } = await authenticateUser(request)
-    
-    if (!user || !dbClient) {
-      return NextResponse.json(
-        { error: authError || 'Autorizzazione mancante' },
-        { status: 401 }
-      )
-    }
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { user } = auth
 
     const body = await request.json()
     const { id, ...updateData } = body
@@ -356,15 +333,10 @@ export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
-    
-    const { user, dbClient, error: authError } = await authenticateUser(request)
-    
-    if (!user || !dbClient) {
-      return NextResponse.json(
-        { error: authError || 'Autorizzazione mancante' },
-        { status: 401 }
-      )
-    }
+
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { user } = auth
 
     if (!id) {
       return NextResponse.json(

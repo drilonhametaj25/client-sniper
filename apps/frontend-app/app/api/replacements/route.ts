@@ -6,16 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { createClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+import { requireUser } from '@/lib/api/auth'
 
 interface ReplacementRequest {
   leadId: string
@@ -31,17 +22,10 @@ interface ReplacementRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
-    
     // Verifica autenticazione
-    const { data: { session }, error: authError } = await supabase.auth.getSession()
-    
-    if (authError || !session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      )
-    }
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { user, admin } = auth
 
     const body: ReplacementRequest = await request.json()
     const { leadId, reason, leadDetails } = body
@@ -53,10 +37,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const userId = session.user.id
+    const userId = user.id
 
     // Verifica che l'utente abbia un piano attivo
-    const { data: userData, error: userError } = await getSupabaseAdmin()
+    const { data: userData, error: userError } = await admin
       .from('users')
       .select('plan, status, current_plan_monthly_replacements')
       .eq('id', userId)
@@ -84,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verifica che non abbia già richiesto sostituzione per questo lead
-    const { data: existingRequest } = await getSupabaseAdmin()
+    const { data: existingRequest } = await admin
       .from('lead_replacement_requests')
       .select('id')
       .eq('user_id', userId)
@@ -99,7 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Ottieni informazioni sostituzioni mensili
-    const { data: replacementInfo, error: replacementError } = await getSupabaseAdmin()
+    const { data: replacementInfo, error: replacementError } = await admin
       .rpc('get_user_replacement_info', { p_user_id: userId })
 
     if (replacementError) {
@@ -124,7 +108,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Crea richiesta di sostituzione
-    const { data: requestData, error: insertError } = await getSupabaseAdmin()
+    const { data: requestData, error: insertError } = await admin
       .from('lead_replacement_requests')
       .insert({
         user_id: userId,
@@ -145,12 +129,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Usa un credito di sostituzione
-    const { data: useReplacementResult, error: useError } = await getSupabaseAdmin()
+    const { data: useReplacementResult, error: useError } = await admin
       .rpc('use_replacement_credit', { p_user_id: userId })
 
     if (useError || !useReplacementResult) {
       // Rollback: elimina la richiesta creata
-      await getSupabaseAdmin()
+      await admin
         .from('lead_replacement_requests')
         .delete()
         .eq('id', requestData.id)
@@ -179,22 +163,15 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
-    
     // Verifica autenticazione
-    const { data: { session }, error: authError } = await supabase.auth.getSession()
-    
-    if (authError || !session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      )
-    }
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { user, admin } = auth
 
-    const userId = session.user.id
+    const userId = user.id
 
     // Ottieni info sostituzioni mensili
-    const { data: replacementInfo, error: infoError } = await getSupabaseAdmin()
+    const { data: replacementInfo, error: infoError } = await admin
       .rpc('get_user_replacement_info', { p_user_id: userId })
 
     if (infoError) {
@@ -206,7 +183,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Ottieni storico richieste
-    const { data: requests, error: requestsError } = await supabase
+    const { data: requests, error: requestsError } = await admin
       .from('lead_replacement_requests')
       .select('*')
       .eq('user_id', userId)

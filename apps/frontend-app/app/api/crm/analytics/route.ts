@@ -5,17 +5,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { requireUser } from '@/lib/api/auth'
 import { isStarterOrHigher } from '@/lib/utils/plan-helpers'
 
 export const dynamic = 'force-dynamic'
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 // Stima valore medio per lead (in euro) - configurabile
 const ESTIMATED_VALUE_PER_LEAD = {
@@ -30,20 +23,12 @@ const ESTIMATED_VALUE_PER_LEAD = {
 export async function GET(request: NextRequest) {
   try {
     // Verifica autenticazione
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { user, admin } = auth
 
     // Verifica piano PRO
-    const { data: userData } = await getSupabaseAdmin()
+    const { data: userData } = await admin
       .from('users')
       .select('plan')
       .eq('id', user.id)
@@ -64,7 +49,7 @@ export async function GET(request: NextRequest) {
     startDate.setDate(startDate.getDate() - periodDays)
 
     // Query tutte le entry CRM dell'utente
-    const { data: entries, error: entriesError } = await getSupabaseAdmin()
+    const { data: entries, error: entriesError } = await admin
       .from('crm_entries')
       .select(`
         id,

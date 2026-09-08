@@ -9,45 +9,22 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { requireUser } from '@/lib/api/auth';
 import { isStarterOrHigher } from '@/lib/utils/plan-helpers';
 import { CRMQuickUpdateRequest, CRMStatusType } from '@/lib/types/crm';
 
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
 
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
-
 export async function POST(request: NextRequest) {
   try {
     // Verifica autenticazione
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Token di autorizzazione mancante' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Verifica il JWT
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Token non valido o scaduto' },
-        { status: 401 }
-      );
-    }
+    const auth = await requireUser(request);
+    if (auth.errorResponse) return auth.errorResponse;
+    const { user, admin } = auth;
 
     // Verifica che l'utente abbia piano PRO
-    const { data: userProfile, error: profileError } = await getSupabaseAdmin()
+    const { data: userProfile, error: profileError } = await admin
       .from('users')
       .select('id, plan')
       .eq('id', user.id)
@@ -88,7 +65,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verifica che il lead esista
-    const { data: lead, error: leadError } = await getSupabaseAdmin()
+    const { data: lead, error: leadError } = await admin
       .from('leads')
       .select('id, business_name')
       .eq('id', leadId)
@@ -125,7 +102,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Prova prima ad aggiornare un record esistente
-    const { data: existingRecord, error: checkError } = await getSupabaseAdmin()
+    const { data: existingRecord, error: checkError } = await admin
       .from('crm_entries')
       .select('id')
       .eq('lead_id', leadId)
@@ -136,7 +113,7 @@ export async function POST(request: NextRequest) {
     
     if (existingRecord && !checkError) {
       // Aggiorna record esistente
-      const { data, error } = await getSupabaseAdmin()
+      const { data, error } = await admin
         .from('crm_entries')
         .update(updateData)
         .eq('id', existingRecord.id)
@@ -146,7 +123,7 @@ export async function POST(request: NextRequest) {
       crmResult = { data, error };
     } else {
       // Crea nuovo record
-      const { data, error } = await getSupabaseAdmin()
+      const { data, error } = await admin
         .from('crm_entries')
         .insert({
           ...updateData,

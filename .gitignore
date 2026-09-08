@@ -34,7 +34,10 @@ Thumbs.db
 
 # Logs
 *.log
-logs/
+# ⚠️ NON usare un "logs/" generico: matcherebbe qualsiasi cartella chiamata
+# logs, inclusa la route API app/api/scraping/logs/ (che così non veniva
+# mai committata). Ignoriamo solo i log a runtime del motore.
+/services/scraping-engine/logs/
 
 # Runtime data
 pids/

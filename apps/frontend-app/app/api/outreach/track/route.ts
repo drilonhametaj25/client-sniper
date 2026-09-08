@@ -6,7 +6,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/api/auth'
 
 // Pixel trasparente 1x1 GIF
 const TRANSPARENT_PIXEL = Buffer.from(
@@ -49,10 +49,7 @@ export async function GET(request: NextRequest) {
 }
 
 async function trackEmailOpen(trackingId: string) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  const supabase = getSupabaseAdmin()
 
   // Verifica che l'email esista
   const { data: email, error: fetchError } = await supabase

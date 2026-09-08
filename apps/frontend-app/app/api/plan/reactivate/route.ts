@@ -5,9 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { createClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
+import { requireUser } from '@/lib/api/auth'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -16,55 +14,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(req: NextRequest) {
   try {
-    let user = null
+    const auth = await requireUser(req)
+    if (auth.errorResponse) return auth.errorResponse
 
-    // ESATTA STESSA LOGICA DI /api/stripe/create-checkout CHE FUNZIONA
-    // Prima prova con il cookie (Next.js route handler)
-    const supabase = createRouteHandlerClient({ cookies })
-    
-    let sessionResult = await supabase.auth.getSession()
-
-    // Se la sessione del cookie non è valida, prova con l'header Authorization
-    if (sessionResult.error || !sessionResult.data.session?.user) {
-      const authHeader = req.headers.get('authorization')
-      
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7)
-        
-        // Crea un client temporaneo con il token
-        const supabaseWithToken = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        )
-        
-        // Imposta la sessione con il token
-        const { data: { user: tokenUser }, error: tokenError } = await supabaseWithToken.auth.getUser(token)
-        
-        if (tokenError || !tokenUser) {
-          return NextResponse.json(
-            { error: 'Token di autorizzazione non valido' },
-            { status: 401 }
-          )
-        }
-        
-        user = tokenUser
-      } else {
-        return NextResponse.json(
-          { error: 'Sessione non valida e nessun token di autorizzazione fornito' },
-          { status: 401 }
-        )
-      }
-    } else {
-      user = sessionResult.data.session.user
-    }
+    // Il client admin (service role) è usato per TUTTE le operazioni DB (come in /api/plan/deactivate)
+    const { user, admin: supabaseAdmin } = auth
 
     console.log('🔍 Autenticazione riuscita per utente:', user.id)
-
-    // Usa il service role per TUTTE le operazioni DB (come in /api/plan/deactivate)
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
 
     // Recupera dati utente correnti con fallback creation
     let { data: userData, error: userError } = await supabaseAdmin

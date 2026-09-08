@@ -5,44 +5,21 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { requireUser } from '@/lib/api/auth';
 import { isStarterOrHigher } from '@/lib/utils/plan-helpers';
 
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
 
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
-
 export async function GET(req: NextRequest) {
   try {
     // Verifica autenticazione
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Token di autorizzazione mancante' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Token non valido o scaduto' },
-        { status: 401 }
-      );
-    }
+    const auth = await requireUser(req);
+    if (auth.errorResponse) return auth.errorResponse;
+    const { user, admin } = auth;
 
     // Verifica piano PRO o superiore
-    const { data: userData } = await getSupabaseAdmin()
+    const { data: userData } = await admin
       .from('users')
       .select('plan, status')
       .eq('id', user.id)
@@ -59,7 +36,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Recupera statistiche CRM usando la funzione RPC
-    const { data: stats, error } = await getSupabaseAdmin()
+    const { data: stats, error } = await admin
       .rpc('get_user_crm_stats');
 
     if (error) {

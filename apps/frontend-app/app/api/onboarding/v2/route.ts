@@ -15,9 +15,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { requireUser, getSupabaseAdmin } from '@/lib/api/auth'
 import type { SaveOnboardingRequest, Specialization } from '@/lib/types/onboarding-v2'
 import type { ServiceType } from '@/lib/types/services'
 
@@ -37,27 +35,18 @@ const SERVICE_TO_SPECIALIZATION: Record<ServiceType, Specialization> = {
   gdpr: 'other'
 }
 
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
-
 export async function POST(request: NextRequest) {
   try {
     // Verifica autenticazione
-    const cookieStore = await cookies()
-    const supabase = createServerComponentClient({ cookies: () => cookieStore })
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
+    // Auth unificata: accetta sia Bearer token che sessione cookie
+    const auth = await requireUser(request)
+    if (auth.errorResponse) {
       return NextResponse.json(
         { success: false, message: 'Non autenticato' },
         { status: 401 }
       )
     }
+    const { user } = auth
 
     // Ottieni dati dal body
     const body: SaveOnboardingRequest = await request.json()
@@ -147,19 +136,17 @@ export async function POST(request: NextRequest) {
 }
 
 // GET: Controlla stato onboarding
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerComponentClient({ cookies: () => cookieStore })
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
+    // Auth unificata: accetta sia Bearer token che sessione cookie
+    const auth = await requireUser(request)
+    if (auth.errorResponse) {
       return NextResponse.json(
         { completed: false, message: 'Non autenticato' },
         { status: 401 }
       )
     }
+    const { user } = auth
 
     const supabaseAdmin = getSupabaseAdmin()
     const { data: userData, error: userError } = await supabaseAdmin

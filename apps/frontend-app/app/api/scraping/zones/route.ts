@@ -5,31 +5,16 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { requireUser } from '@/lib/api/auth'
 
 export const dynamic = 'force-dynamic'
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 export async function GET(request: NextRequest) {
   try {
     // Verifica autenticazione
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { admin } = auth
 
     // Parametri di query
     const { searchParams } = new URL(request.url)
@@ -41,7 +26,7 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit
 
     // Query zone
-    let query = getSupabaseAdmin()
+    let query = admin
       .from('zones_to_scrape')
       .select('*', { count: 'exact' })
       .order('priority_score', { ascending: false })
@@ -82,20 +67,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Verifica autenticazione
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { user, admin } = auth
 
     // Verifica che sia admin
-    const { data: userData } = await getSupabaseAdmin()
+    const { data: userData } = await admin
       .from('users')
       .select('role')
       .eq('id', user.id)
@@ -124,7 +101,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verifica se zona esiste gia
-    const { data: existingZone } = await getSupabaseAdmin()
+    const { data: existingZone } = await admin
       .from('zones_to_scrape')
       .select('id')
       .eq('source', source)
@@ -140,7 +117,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Inserisci nuova zona
-    const { data: newZone, error: insertError } = await getSupabaseAdmin()
+    const { data: newZone, error: insertError } = await admin
       .from('zones_to_scrape')
       .insert({
         source,

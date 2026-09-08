@@ -6,20 +6,11 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { createClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
+import { requireUser, getSupabaseAdmin } from '@/lib/api/auth'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-08-16',
 })
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,45 +24,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Autentica l'utente
-    const supabase = createRouteHandlerClient({ cookies })
-    let user = null
-    let dbUserId: string | null = null
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
 
-    const sessionResult = await supabase.auth.getSession()
-
-    if (sessionResult.error || !sessionResult.data.session?.user) {
-      // Prova con Authorization header
-      const authHeader = request.headers.get('authorization')
-
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7)
-
-        const supabaseWithToken = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        )
-
-        const { data: { user: tokenUser }, error: tokenError } = await supabaseWithToken.auth.getUser(token)
-
-        if (tokenError || !tokenUser) {
-          return NextResponse.json(
-            { error: 'Token di autorizzazione non valido' },
-            { status: 401 }
-          )
-        }
-
-        user = tokenUser
-        dbUserId = tokenUser.id
-      } else {
-        return NextResponse.json(
-          { error: 'Autenticazione richiesta' },
-          { status: 401 }
-        )
-      }
-    } else {
-      user = sessionResult.data.session.user
-      dbUserId = sessionResult.data.session.user.id
-    }
+    const { user } = auth
+    const dbUserId: string = user.id
 
     // Recupera il credit pack dal database
     const { data: pack, error: packError } = await getSupabaseAdmin()

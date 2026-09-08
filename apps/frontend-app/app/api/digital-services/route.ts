@@ -5,30 +5,17 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateUser } from '@/lib/auth-middleware'
-import { createClient } from '@supabase/supabase-js'
+import { requireUser } from '@/lib/api/auth'
 import { isStarterOrHigher } from '@/lib/utils/plan-helpers'
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    
-    // Usa l'auth-middleware del progetto
-    const { user, dbClient, error: authError } = await authenticateUser(request)
-    
-    if (!user || !dbClient) {
-      return NextResponse.json(
-        { error: authError || 'Autorizzazione mancante' },
-        { status: 401 }
-      )
-    }
+
+    // Helper di autenticazione unificato
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { admin } = auth
 
     // Catalogo servizi visibile a tutti gli utenti autenticati
     // Utile come strumento di marketing per mostrare cosa si può offrire ai lead
@@ -44,7 +31,7 @@ export async function GET(request: NextRequest) {
     const priceType = searchParams.get('priceType') || 'freelance' // 'freelance' o 'agency'
 
     // Costruisci la query
-    let query = getSupabaseAdmin()
+    let query = admin
       .from('digital_services')
       .select('*')
       .eq('is_active', true)
@@ -132,17 +119,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, dbClient, error: authError } = await authenticateUser(request)
-    
-    if (!user || !dbClient) {
-      return NextResponse.json(
-        { error: authError || 'Autorizzazione mancante' },
-        { status: 401 }
-      )
-    }
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { user, admin } = auth
 
     // Verifica che l'utente sia admin
-    const { data: userData, error: userError } = await getSupabaseAdmin()
+    const { data: userData, error: userError } = await admin
       .from('users')
       .select('role')
       .eq('id', user.id)
@@ -180,7 +162,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Inserisci nuovo servizio
-    const { data: newService, error: insertError } = await getSupabaseAdmin()
+    const { data: newService, error: insertError } = await admin
       .from('digital_services')
       .insert([{
         name,
@@ -223,17 +205,12 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const { user, dbClient, error: authError } = await authenticateUser(request)
-    
-    if (!user || !dbClient) {
-      return NextResponse.json(
-        { error: authError || 'Autorizzazione mancante' },
-        { status: 401 }
-      )
-    }
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { user, admin } = auth
 
     // Verifica che l'utente sia admin
-    const { data: userData, error: userError } = await getSupabaseAdmin()
+    const { data: userData, error: userError } = await admin
       .from('users')
       .select('role')
       .eq('id', user.id)
@@ -257,7 +234,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Aggiorna servizio esistente
-    const { data: updatedService, error: updateError } = await getSupabaseAdmin()
+    const { data: updatedService, error: updateError } = await admin
       .from('digital_services')
       .update(updateData)
       .eq('id', id)

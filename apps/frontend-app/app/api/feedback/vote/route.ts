@@ -4,14 +4,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+import { requireUser, getSupabaseAdmin } from '@/lib/api/auth'
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,34 +27,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Ottieni il token di autenticazione dall'header Authorization
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Devi essere loggato per votare' },
-        { status: 401 }
-      )
-    }
-
-    const token = authHeader.substring(7)
-    
-    // Usa getSupabase() per ottenere il client
-    const supabase = getSupabase()
-
     // Verifica che l'utente sia autenticato
-    const { data: { user } } = await getSupabase().auth.getUser(token)
-    
-    if (!user) {
+    const auth = await requireUser(request)
+    if (auth.errorResponse) {
       return NextResponse.json(
         { error: 'Devi essere loggato per votare' },
         { status: 401 }
       )
     }
+
+    const { user } = auth
 
     console.log('User authenticated:', user.id)
 
     // Chiama la funzione RPC per gestire il voto
-    const { data, error } = await getSupabase().rpc('vote_feedback', {
+    const { data, error } = await getSupabaseAdmin().rpc('vote_feedback', {
       p_feedback_id: feedbackId,
       p_vote_type: voteType
     })

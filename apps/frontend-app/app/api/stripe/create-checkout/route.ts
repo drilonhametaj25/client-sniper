@@ -56,10 +56,12 @@ export async function POST(request: NextRequest) {
       // Metodo normale: utente già loggato
       const supabase = createRouteHandlerClient({ cookies })
 
-      let sessionResult = await supabase.auth.getSession()
+      // getUser() e NON getSession(): il cookie va verificato contro l'auth
+      // server, altrimenti un cookie forgiato passerebbe il controllo
+      const sessionResult = await supabase.auth.getUser()
 
       // Se la sessione del cookie non è valida, prova con l'header Authorization
-      if (sessionResult.error || !sessionResult.data.session?.user) {
+      if (sessionResult.error || !sessionResult.data.user) {
         const authHeader = request.headers.get('authorization')
 
         if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -88,8 +90,8 @@ export async function POST(request: NextRequest) {
           )
         }
       } else {
-        user = sessionResult.data.session.user
-        dbUserId = sessionResult.data.session.user.id
+        user = sessionResult.data.user
+        dbUserId = sessionResult.data.user.id
       }
     }
 

@@ -4,7 +4,7 @@
 // ⚠️ Aggiornare se si modificano i filtri o la paginazione
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { requireUser, getSupabaseAdmin } from '@/lib/api/auth'
 import { getBasePlanType, isProOrHigher, isStarterOrHigher } from '@/lib/utils/plan-helpers'
 import { leadsHasStatusColumn, leadsHasColumn } from '@/lib/utils/leads-schema'
 import { detectServices } from '@/lib/utils/service-detection'
@@ -51,20 +51,6 @@ function stripDetectionFields(lead: any): any {
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
 
-function getSupabaseClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
-
 export async function GET(request: NextRequest) {
   
   try {
@@ -109,28 +95,11 @@ export async function GET(request: NextRequest) {
     const sortOrder = searchParams.get('sortOrder') || 'asc'
     
     
-    // Verifica autenticazione
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // Verifica autenticazione (helper unificato: Bearer token o sessione cookie)
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { user } = auth
 
-      return NextResponse.json(
-        { success: false, error: 'Token di autorizzazione mancante' },
-        { status: 401 }
-      )
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    
-    // ⚡ OTTIMIZZAZIONE: Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Token non valido o scaduto' },
-        { status: 401 }
-      )
-    }
-    
 
     // Ottieni il profilo utente con fallback creation (usa service role per scrivere)
     // I campi servizi/budget servono al match server-side ("Servizi Richiesti").

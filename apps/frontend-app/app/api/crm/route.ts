@@ -5,81 +5,29 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { isStarterOrHigher } from '@/lib/utils/plan-helpers';
+import { requirePlan } from '@/lib/api/auth';
 
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
 
-function getSupabaseClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
-
 export async function GET(request: NextRequest) {
   try {
-    // Verifica autenticazione
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Token di autorizzazione mancante' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Token non valido o scaduto' },
-        { status: 401 }
-      );
-    }
-
-    // Verifica che l'utente sia PRO e attivo
-    const { data: userData, error: userError } = await getSupabaseAdmin()
-      .from('users')
-      .select('plan, status, role')
-      .eq('id', user.id)
-      .single();
-
-    if (userError) {
-      console.error('Errore nel recupero dati utente:', userError);
-      return NextResponse.json({ error: 'Errore nel recupero dati utente' }, { status: 500 });
-    }
-
-    // Verifica piano Starter o superiore (include starter, pro, agency - mensile e annuale)
-    if (!isStarterOrHigher(userData?.plan || '')) {
-      return NextResponse.json({
-        error: 'Piano Starter richiesto',
-        current_plan: userData?.plan || 'unknown',
-        message: 'Il CRM è disponibile solo per utenti con piano Starter o Agency'
-      }, { status: 403 });
-    }
+    // Autenticazione + gate piano Starter o superiore (include starter, pro, agency - mensile e annuale)
+    const auth = await requirePlan(request, 'starter');
+    if (auth.errorResponse) return auth.errorResponse;
+    const { user, admin, profile } = auth;
 
     // Verifica che il piano sia attivo
-    if (userData?.status === 'inactive') {
-      return NextResponse.json({ 
-        error: 'Piano disattivato', 
+    if (profile?.status === 'inactive') {
+      return NextResponse.json({
+        error: 'Piano disattivato',
         message: 'Il tuo piano è temporaneamente disattivato. Riattivalo per accedere al CRM',
-        status: userData.status
+        status: profile.status
       }, { status: 403 });
     }
 
     // Se il piano è cancellato, nega l'accesso
-    if (userData?.status === 'cancelled') {
+    if (profile?.status === 'cancelled') {
       return NextResponse.json({ 
         error: 'Piano cancellato', 
         message: 'Il tuo piano è stato cancellato. Aggiorna il piano per accedere al CRM'
@@ -88,7 +36,7 @@ export async function GET(request: NextRequest) {
 
 
     // Prima controlla se ci sono lead sbloccati dall'utente nella tabella user_unlocked_leads
-    const { data: unlockedLeads, error: unlockedError } = await getSupabaseAdmin()
+    const { data: unlockedLeads, error: unlockedError } = await admin
       .from('user_unlocked_leads')
       .select(`
         lead_id,
@@ -100,14 +48,14 @@ export async function GET(request: NextRequest) {
       .eq('user_id', user.id);
 
     // AGGIUNGE: Controlla anche i lead con assigned_to (sistema legacy)
-    const { data: assignedLeads, error: assignedError } = await getSupabaseAdmin()
+    const { data: assignedLeads, error: assignedError } = await admin
       .from('leads')
       .select('id, business_name, website_url, city, category, score, analysis, updated_at')
       .eq('assigned_to', user.id);
 
 
     // Controlla se esistono entry CRM per questo utente
-    const { data: existingEntries, error: entriesError } = await getSupabaseAdmin()
+    const { data: existingEntries, error: entriesError } = await admin
       .from('crm_entries')
       .select('id, lead_id, user_id')
       .eq('user_id', user.id);
@@ -119,13 +67,13 @@ export async function GET(request: NextRequest) {
 
     try {
       // Prova RPC per entry CRM
-      const { data: rpcEntries, error: rpcError } = await getSupabaseAdmin()
+      const { data: rpcEntries, error: rpcError } = await admin
         .rpc('get_user_crm_entries');
 
       if (rpcError) {
         
         // Fallback: query diretta con JOIN esplicito
-        let { data: directEntries, error: directError } = await getSupabaseAdmin()
+        let { data: directEntries, error: directError } = await admin
           .from('crm_entries')
           .select(`
             id, lead_id, status, note, follow_up_date, attachments, created_at, updated_at,
@@ -158,7 +106,7 @@ export async function GET(request: NextRequest) {
             attachments: []
           }));
 
-          const { data: createdEntries, error: createError } = await getSupabaseAdmin()
+          const { data: createdEntries, error: createError } = await admin
             .from('crm_entries')
             .insert(newEntries)
             .select(`
@@ -193,7 +141,7 @@ export async function GET(request: NextRequest) {
       if (crmEntries.length > 0) {
         const leadIds = crmEntries.map((e: any) => e.lead_id);
 
-        const { data: proposalsData, error: proposalsError } = await getSupabaseAdmin()
+        const { data: proposalsData, error: proposalsError } = await admin
           .from('lead_proposed_services')
           .select(`
             lead_id,
@@ -226,7 +174,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Prova RPC per statistiche
-      const { data: rpcStats, error: statsError } = await getSupabaseAdmin()
+      const { data: rpcStats, error: statsError } = await admin
         .rpc('get_user_crm_stats', { user_id: user.id });
 
       if (statsError) {
@@ -277,42 +225,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Verifica autenticazione
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Token di autorizzazione mancante' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Verifica il JWT usando service role
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Token non valido o scaduto' },
-        { status: 401 }
-      );
-    }
-
-    // Verifica che l'utente sia PRO
-    // Verifica che l'utente sia PRO o superiore (POST)
-    const { data: userData, error: userError } = await getSupabaseAdmin()
-      .from('users')
-      .select('plan')
-      .eq('id', user.id)
-      .single();
-
-    if (userError || !isStarterOrHigher(userData?.plan || '')) {
-      return NextResponse.json({
-        error: 'Piano Starter richiesto',
-        current_plan: userData?.plan || 'unknown',
-        message: 'La creazione/modifica entry CRM richiede piano Starter o Agency'
-      }, { status: 403 });
-    }
+    // Autenticazione + verifica che l'utente sia PRO o superiore (POST)
+    const auth = await requirePlan(request, 'starter');
+    if (auth.errorResponse) return auth.errorResponse;
+    const { user, admin } = auth;
 
     const body = await request.json();
     const { lead_id, status, note, follow_up_date, attachments } = body;
@@ -325,7 +241,7 @@ export async function POST(request: NextRequest) {
     let entryId = null;
     
     try {
-      const { data: rpcResult, error: upsertError } = await getSupabaseAdmin()
+      const { data: rpcResult, error: upsertError } = await admin
         .rpc('upsert_crm_entry', {
           p_lead_id: lead_id,
           p_status: status,
@@ -337,7 +253,7 @@ export async function POST(request: NextRequest) {
       if (upsertError) {
         
         // Fallback: verifica se l'entry esiste già
-        const { data: existingEntry, error: checkError } = await getSupabaseAdmin()
+        const { data: existingEntry, error: checkError } = await admin
           .from('crm_entries')
           .select('id')
           .eq('user_id', user.id)
@@ -352,7 +268,7 @@ export async function POST(request: NextRequest) {
         let directResult;
         if (existingEntry) {
           // Update existing entry
-          const { data: updateResult, error: updateError } = await getSupabaseAdmin()
+          const { data: updateResult, error: updateError } = await admin
             .from('crm_entries')
             .update({
               status: status || 'to_contact',
@@ -373,7 +289,7 @@ export async function POST(request: NextRequest) {
           directResult = updateResult;
         } else {
           // Insert new entry
-          const { data: insertResult, error: insertError } = await getSupabaseAdmin()
+          const { data: insertResult, error: insertError } = await admin
             .from('crm_entries')
             .insert({
               user_id: user.id,

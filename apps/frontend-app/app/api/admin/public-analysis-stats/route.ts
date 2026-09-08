@@ -6,10 +6,18 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { requireAdmin } from '@/lib/api/auth'
 
 // Forza rendering dinamico per questa API route
 export const dynamic = 'force-dynamic'
 
+/**
+ * Client anon usato SOLO per le query di lettura su public_analysis_usage.
+ * Volutamente NON sostituito dal client service-role: le query qui sotto sono
+ * aggregate globali e mantenerle sul ruolo anon preserva esattamente il
+ * comportamento (e la visibilità RLS) precedente alla migrazione.
+ * L'autenticazione è invece delegata a requireAdmin.
+ */
 function getSupabase() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,29 +27,9 @@ function getSupabase() {
 
 export async function GET(request: NextRequest) {
   try {
-    // Verifica che l'utente sia admin
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 })
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await getSupabase().auth.getUser(token)
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Token non valido' }, { status: 401 })
-    }
-
-    // Verifica ruolo admin
-    const { data: profile, error: profileError } = await getSupabase()
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || profile?.role !== 'admin') {
-      return NextResponse.json({ error: 'Accesso negato' }, { status: 403 })
-    }
+    // Verifica che l'utente sia admin (401 se non autenticato, 403 se non admin)
+    const auth = await requireAdmin(request)
+    if (auth.errorResponse) return auth.errorResponse
 
     // Recupera statistiche
     const today = new Date().toISOString().split('T')[0]

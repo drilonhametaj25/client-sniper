@@ -11,16 +11,9 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { requireUser } from '@/lib/api/auth'
 import { enrichLeadFull } from '@/lib/enrichment/lead-enrichment'
 import { isLeadUnlocked } from '@/lib/api/paywall'
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 export async function GET(
   request: NextRequest,
@@ -29,17 +22,10 @@ export async function GET(
   try {
     const leadId = params.id
 
-    // Auth
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Token mancante' }, { status: 401 })
-    }
-    const token = authHeader.replace('Bearer ', '')
-    const admin = getSupabaseAdmin()
-    const { data: { user }, error: authError } = await admin.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Token non valido' }, { status: 401 })
-    }
+    // Auth (helper unificato: Bearer token o sessione cookie)
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { user, admin } = auth
 
     // 🔒 PAYWALL: l'arricchimento (email verificate incluse) è riservato a chi
     // ha sbloccato il lead

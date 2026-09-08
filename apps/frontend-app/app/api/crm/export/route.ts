@@ -5,17 +5,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { requireUser } from '@/lib/api/auth'
 import { isStarterOrHigher } from '@/lib/utils/plan-helpers'
 
 export const dynamic = 'force-dynamic'
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 // Stati CRM disponibili
 const CRM_STATUSES = [
@@ -40,20 +33,12 @@ const STATUS_LABELS: Record<string, string> = {
 export async function GET(request: NextRequest) {
   try {
     // Verifica autenticazione
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token)
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { user, admin } = auth
 
     // Verifica piano PRO
-    const { data: userData } = await getSupabaseAdmin()
+    const { data: userData } = await admin
       .from('users')
       .select('plan, status')
       .eq('id', user.id)
@@ -73,7 +58,7 @@ export async function GET(request: NextRequest) {
     const to = searchParams.get('to') // data fine (ISO string)
 
     // Query CRM entries con dati lead
-    let query = getSupabaseAdmin()
+    let query = admin
       .from('crm_entries')
       .select(`
         id,

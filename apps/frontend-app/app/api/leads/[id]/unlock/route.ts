@@ -17,15 +17,8 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { requireUser } from '@/lib/api/auth'
 import { klaviyoServer } from '@/lib/services/klaviyo-server'
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 export async function POST(
   request: NextRequest,
@@ -33,22 +26,11 @@ export async function POST(
 ) {
   try {
     const leadId = params.id
-    const admin = getSupabaseAdmin()
 
-    // Autenticazione tramite Authorization header
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Token di autorizzazione mancante' },
-        { status: 401 }
-      )
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await admin.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Token non valido' }, { status: 401 })
-    }
+    // Autenticazione (helper unificato: Bearer token o sessione cookie)
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { user, admin } = auth
 
     // Verifica che il lead esista
     const { data: lead, error: leadError } = await admin

@@ -8,51 +8,14 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { authenticateUser } from '@/lib/auth-middleware'
-
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
-
-// Verifica ruolo admin
-async function verifyAdminAccess(userId: string) {
-  const { data: userData, error } = await getSupabaseAdmin()
-    .from('users')
-    .select('role')
-    .eq('id', userId)
-    .single()
-
-  if (error || userData?.role !== 'admin') {
-    return false
-  }
-
-  return true
-}
+import { requireAdmin, getSupabaseAdmin } from '@/lib/api/auth'
 
 export async function POST(request: NextRequest) {
   try {
-    // Autenticazione unificata
-    const { user, error: authError } = await authenticateUser(request)
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: authError || 'Non autenticato' },
-        { status: 401 }
-      )
-    }
-
-    // Verifica ruolo admin
-    const isAdmin = await verifyAdminAccess(user.id)
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: 'Accesso negato' },
-        { status: 403 }
-      )
-    }
+    // Autenticazione unificata (401) + verifica ruolo admin (403)
+    const auth = await requireAdmin(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { user } = auth
 
     const body = await request.json()
     const { email, userId: targetUserId, reason } = body
@@ -165,24 +128,9 @@ export async function POST(request: NextRequest) {
 // GET per verificare stato utente prima del downgrade
 export async function GET(request: NextRequest) {
   try {
-    // Autenticazione unificata
-    const { user, error: authError } = await authenticateUser(request)
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: authError || 'Non autenticato' },
-        { status: 401 }
-      )
-    }
-
-    // Verifica ruolo admin
-    const isAdmin = await verifyAdminAccess(user.id)
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: 'Accesso negato' },
-        { status: 403 }
-      )
-    }
+    // Autenticazione unificata (401) + verifica ruolo admin (403)
+    const auth = await requireAdmin(request)
+    if (auth.errorResponse) return auth.errorResponse
 
     const { searchParams } = new URL(request.url)
     const email = searchParams.get('email')

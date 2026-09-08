@@ -4,8 +4,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { requireUser } from '@/lib/api/auth'
 import { isLeadUnlocked } from '@/lib/api/paywall'
+import { SERVICE_DEFINITIONS, SERVICE_NAMES, SERVICE_DESCRIPTIONS } from '@/lib/services/catalog'
 
 // Interfacce per i preventivi (portate dal PricingEngine)
 interface ServiceQuotation {
@@ -36,99 +37,6 @@ interface Quotation {
   complexity: 'simple' | 'medium' | 'complex' | 'enterprise'
   estimatedTotalDays: number
   roiSummary: string
-}
-
-// Prezzi base servizi (EUR)
-const SERVICE_DEFINITIONS: Record<string, {
-  basePrice: number
-  days: number
-  category: ServiceQuotation['category']
-  roiTemplate: string
-}> = {
-  'seo_audit': { basePrice: 400, days: 5, category: 'seo', roiTemplate: 'Identificazione opportunità per +{percentage}% traffico organico' },
-  'seo_optimization': { basePrice: 1500, days: 21, category: 'seo', roiTemplate: 'Aumento stimato traffico organico: +{percentage}%' },
-  'seo_technical': { basePrice: 800, days: 10, category: 'seo', roiTemplate: 'Miglioramento indicizzazione e velocità crawling' },
-  'structured_data': { basePrice: 300, days: 3, category: 'seo', roiTemplate: 'Rich snippets per +{percentage}% CTR nei risultati' },
-  'performance_optimization': { basePrice: 800, days: 14, category: 'performance', roiTemplate: 'Tempo caricamento ridotto del {percentage}%, -bounce rate' },
-  'image_optimization': { basePrice: 300, days: 5, category: 'performance', roiTemplate: 'Riduzione peso pagina fino a {percentage}%' },
-  'core_web_vitals': { basePrice: 600, days: 10, category: 'performance', roiTemplate: 'Miglioramento Core Web Vitals per ranking Google' },
-  'security_audit': { basePrice: 600, days: 7, category: 'security', roiTemplate: 'Identificazione vulnerabilità e piano remediation' },
-  'security_hardening': { basePrice: 900, days: 10, category: 'security', roiTemplate: 'Protezione da attacchi comuni, riduzione rischio data breach' },
-  'ssl_setup': { basePrice: 150, days: 1, category: 'security', roiTemplate: 'Certificato SSL attivo, trust badge, ranking boost' },
-  'security_headers': { basePrice: 250, days: 2, category: 'security', roiTemplate: 'Protezione XSS, clickjacking, injection attacks' },
-  'mobile_optimization': { basePrice: 900, days: 14, category: 'design', roiTemplate: 'Conversioni mobile aumentate: +{percentage}%' },
-  'ux_audit': { basePrice: 500, days: 7, category: 'design', roiTemplate: 'Identificazione friction points e opportunità conversione' },
-  'redesign_landing': { basePrice: 1200, days: 14, category: 'design', roiTemplate: 'Conversion rate aumentato: +{percentage}%' },
-  'redesign_full': { basePrice: 4000, days: 45, category: 'design', roiTemplate: 'Sito moderno, responsive, conversion-focused' },
-  'content_strategy': { basePrice: 800, days: 14, category: 'content', roiTemplate: 'Piano editoriale per +{percentage}% engagement' },
-  'blog_setup': { basePrice: 500, days: 5, category: 'content', roiTemplate: 'Blog per content marketing e lead generation' },
-  'gdpr_compliance': { basePrice: 500, days: 10, category: 'compliance', roiTemplate: 'Conformità GDPR, evitate sanzioni fino a 4% fatturato' },
-  'cookie_banner': { basePrice: 200, days: 2, category: 'compliance', roiTemplate: 'Consenso cookie conforme a normativa EU' },
-  'privacy_policy': { basePrice: 300, days: 3, category: 'compliance', roiTemplate: 'Documentazione legale completa' },
-  'accessibility_audit': { basePrice: 500, days: 7, category: 'compliance', roiTemplate: 'Conformità WCAG 2.1 AA, audience +{percentage}%' },
-  'accessibility_fix': { basePrice: 800, days: 14, category: 'compliance', roiTemplate: 'Sito accessibile a utenti con disabilità' },
-  'tracking_setup': { basePrice: 400, days: 5, category: 'marketing', roiTemplate: 'Tracciamento completo conversioni e comportamento' },
-  'gtm_setup': { basePrice: 350, days: 3, category: 'marketing', roiTemplate: 'Google Tag Manager configurato con eventi chiave' },
-  'facebook_pixel': { basePrice: 200, days: 2, category: 'marketing', roiTemplate: 'Remarketing Facebook/Instagram attivo' },
-  'update_dependencies': { basePrice: 350, days: 3, category: 'development', roiTemplate: 'Aggiornamento librerie per sicurezza e performance' },
-}
-
-const SERVICE_NAMES: Record<string, string> = {
-  'seo_audit': 'Audit SEO Completo',
-  'seo_optimization': 'Ottimizzazione SEO On-Page',
-  'seo_technical': 'SEO Tecnico',
-  'structured_data': 'Implementazione Dati Strutturati',
-  'performance_optimization': 'Ottimizzazione Performance',
-  'image_optimization': 'Ottimizzazione Immagini',
-  'core_web_vitals': 'Miglioramento Core Web Vitals',
-  'security_audit': 'Audit Sicurezza',
-  'security_hardening': 'Hardening e Protezione',
-  'ssl_setup': 'Configurazione SSL/HTTPS',
-  'security_headers': 'Configurazione Security Headers',
-  'mobile_optimization': 'Ottimizzazione Mobile',
-  'ux_audit': 'Audit UX/UI',
-  'redesign_landing': 'Redesign Landing Pages',
-  'redesign_full': 'Redesign Completo Sito',
-  'content_strategy': 'Strategia Contenuti',
-  'blog_setup': 'Setup Sezione Blog',
-  'gdpr_compliance': 'Compliance GDPR Completa',
-  'cookie_banner': 'Implementazione Cookie Banner',
-  'privacy_policy': 'Redazione Privacy Policy',
-  'accessibility_audit': 'Audit Accessibilità WCAG',
-  'accessibility_fix': 'Correzione Problemi Accessibilità',
-  'tracking_setup': 'Setup Analytics Completo',
-  'gtm_setup': 'Configurazione Google Tag Manager',
-  'facebook_pixel': 'Setup Facebook/Meta Pixel',
-  'update_dependencies': 'Aggiornamento Dipendenze',
-}
-
-const SERVICE_DESCRIPTIONS: Record<string, string> = {
-  'seo_audit': 'Analisi completa SEO con report dettagliato e piano di azione',
-  'seo_optimization': 'Ottimizzazione title, meta, heading e contenuti per keyword target',
-  'seo_technical': 'Sitemap, robots.txt, canonical, redirect e struttura URL',
-  'structured_data': 'Schema.org JSON-LD per rich snippets',
-  'performance_optimization': 'Caching, minification, lazy loading, code splitting',
-  'image_optimization': 'Compressione, WebP, lazy loading, responsive images',
-  'core_web_vitals': 'LCP, FID, CLS ottimizzati per ranking Google',
-  'security_audit': 'Penetration test base, vulnerability scanning',
-  'security_hardening': 'Firewall, WAF, protezione brute force, backup',
-  'ssl_setup': 'Certificato SSL, redirect HTTPS, HSTS',
-  'security_headers': 'CSP, X-Frame-Options, X-XSS-Protection',
-  'mobile_optimization': 'Layout responsive, touch-friendly, performance mobile',
-  'ux_audit': 'Analisi user journey, heatmaps, conversion funnel',
-  'redesign_landing': 'Riprogettazione pagine chiave per conversione',
-  'redesign_full': 'Nuovo design completo, responsive, moderno',
-  'content_strategy': 'Piano editoriale, keyword research, content calendar',
-  'blog_setup': 'Sezione blog con categorie, tags, e feed RSS',
-  'gdpr_compliance': 'Cookie policy, consensi, registro trattamenti',
-  'cookie_banner': 'Banner consenso con gestione preferenze',
-  'privacy_policy': 'Informativa privacy conforme GDPR',
-  'accessibility_audit': 'Test WCAG 2.1 AA con report violazioni',
-  'accessibility_fix': 'Correzione contrast, focus, ARIA, semantica',
-  'tracking_setup': 'Google Analytics 4, eventi, conversioni',
-  'gtm_setup': 'Container GTM con trigger e variabili',
-  'facebook_pixel': 'Pixel standard + eventi conversione',
-  'update_dependencies': 'Aggiornamento framework, librerie, plugin',
 }
 
 function createService(
@@ -353,29 +261,10 @@ export async function GET(
   try {
     const { id: leadId } = await params
 
-    // Verifica autenticazione
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
-
-    const admin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    // Verifica autenticazione (helper unificato: Bearer token o sessione cookie)
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { user, admin } = auth
 
     // 🔒 PAYWALL: il preventivo è riservato a chi ha sbloccato il lead
     if (!(await isLeadUnlocked(admin, user.id, leadId))) {

@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { requireUser } from '@/lib/api/auth'
 import { OutreachEmailGenerator, EMAIL_TEMPLATES } from '@/lib/outreach-email-generator'
 import { isLeadUnlocked, getUnlockedSet } from '@/lib/api/paywall'
 
@@ -57,30 +57,11 @@ interface Lead {
 export async function POST(request: NextRequest) {
   try {
     // Verifica autenticazione
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
-
-    // Client service-role per le operazioni DB (il ruolo anon non può più
-    // leggere i lead: paywall server-side)
-    const admin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    // (admin = client service-role per le operazioni DB: il ruolo anon non può
+    // più leggere i lead, paywall server-side)
+    const auth = await requireUser(request)
+    if (auth.errorResponse) return auth.errorResponse
+    const { user, admin } = auth
 
     // Verifica che l'utente abbia un piano che permette outreach
     const { data: profile } = await admin
