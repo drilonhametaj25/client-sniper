@@ -2,6 +2,10 @@
  * Quotation PDF Template using @react-pdf/renderer
  * Template per generare PDF dei preventivi automatici
  */
+/* eslint-disable jsx-a11y/alt-text --
+   <Image> qui è il componente di @react-pdf/renderer, non un <img> HTML:
+   il formato PDF non ha il concetto di testo alternativo, quindi la regola
+   di accessibilità produce solo falsi positivi. */
 import React from 'react'
 import { Document, Page, Text, View, Image } from '@react-pdf/renderer'
 import { styles, colors } from './pdf-styles'
