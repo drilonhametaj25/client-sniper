@@ -1,16 +1,19 @@
 /**
- * StepLocationSimple - Step 3 del nuovo onboarding
+ * Step 2 onboarding: "Dove lavori?"
+ * Scrive operating_city / is_remote_nationwide.
+ * Basta una delle due opzioni per continuare.
  *
- * Input città principale + checkbox remoto.
- * Una delle due opzioni richiesta per continuare.
+ * @file apps/frontend-app/app/onboarding/components/StepLocationSimple.tsx
  */
 
 'use client'
 
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, MapPin, Globe, AlertCircle } from 'lucide-react'
+import { AlertCircle, Check, ChevronLeft, Globe, MapPin } from 'lucide-react'
 import type { StepProps } from '@/lib/types/onboarding-v2'
 import { validateStep2 } from '@/lib/types/onboarding-v2'
+import { Button, Input } from '@/components/ui'
+import { cn } from '@/lib/utils/cn'
 
 export default function StepLocationSimple({
   data,
@@ -21,6 +24,7 @@ export default function StepLocationSimple({
   const [showError, setShowError] = useState(false)
 
   const isValid = validateStep2(data)
+  const isRemote = data.is_remote_nationwide || false
 
   const handleCityChange = (value: string) => {
     onUpdate({ operating_city: value })
@@ -41,108 +45,90 @@ export default function StepLocationSimple({
   }
 
   return (
-    <div className="max-w-xl mx-auto px-4">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Dove lavori?
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400">
-          Ti mostreremo opportunità nella tua zona
-        </p>
-      </div>
-
-      {/* City Input */}
-      <div className="mb-6">
-        <label
-          htmlFor="city"
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-        >
-          <MapPin className="inline w-4 h-4 mr-1" />
-          Città principale
-        </label>
-        <input
-          type="text"
-          id="city"
-          value={data.operating_city || ''}
-          onChange={(e) => handleCityChange(e.target.value)}
-          placeholder="es. Milano, Roma, Napoli..."
-          className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-        />
-      </div>
-
-      {/* Divider */}
-      <div className="flex items-center gap-4 my-6">
-        <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
-        <span className="text-sm text-gray-500 dark:text-gray-400">oppure</span>
-        <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
-      </div>
-
-      {/* Remote Checkbox */}
-      <label
-        className={`
-          flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all
-          ${data.is_remote_nationwide
-            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'
-          }
-        `}
-      >
-        <input
-          type="checkbox"
-          checked={data.is_remote_nationwide || false}
-          onChange={(e) => handleRemoteChange(e.target.checked)}
-          className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-        />
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            <span className="font-semibold text-gray-900 dark:text-white">
-              Lavoro in remoto per tutta Italia
-            </span>
-          </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Vedrai opportunità da tutte le città italiane
-          </p>
-        </div>
-      </label>
-
-      {/* Help text */}
-      <p className="text-sm text-gray-500 dark:text-gray-400 mt-4 text-center">
-        Puoi sempre modificare queste preferenze dalle impostazioni
+    <div>
+      <h1 className="text-title font-semibold text-content sm:text-display">Dove lavori?</h1>
+      <p className="mt-2 max-w-lg text-body-lg text-content-muted">
+        Cercheremo aziende vicino a te. Se lavori da remoto, guardiamo in
+        tutta Italia.
       </p>
 
-      {/* Error message */}
+      <div className="mt-8">
+        <Input
+          id="city"
+          type="text"
+          label="Città principale"
+          icon={<MapPin />}
+          value={data.operating_city || ''}
+          onChange={(e) => handleCityChange(e.target.value)}
+          placeholder="es. Milano, Roma, Napoli"
+          autoComplete="address-level2"
+        />
+      </div>
+
+      <div className="my-6 flex items-center gap-4">
+        <span className="h-px flex-1 bg-edge" aria-hidden="true" />
+        <span className="text-caption text-content-subtle">oppure</span>
+        <span className="h-px flex-1 bg-edge" aria-hidden="true" />
+      </div>
+
+      <button
+        type="button"
+        onClick={() => handleRemoteChange(!isRemote)}
+        aria-pressed={isRemote}
+        className={cn(
+          'focus-ring flex w-full items-start gap-3 rounded-card border p-4 text-left',
+          'transition-[background-color,border-color] duration-fast ease-soft',
+          isRemote
+            ? 'border-accent bg-accent-soft'
+            : 'border-edge bg-surface-elevated hover:border-edge-strong'
+        )}
+      >
+        <Globe
+          className={cn(
+            'mt-0.5 h-4 w-4 shrink-0',
+            isRemote ? 'text-accent-ink' : 'text-content-subtle'
+          )}
+          aria-hidden="true"
+        />
+
+        <span className="min-w-0 flex-1">
+          <span className="block text-body font-medium text-content">
+            Lavoro da remoto in tutta Italia
+          </span>
+          <span className="mt-0.5 block text-caption text-content-muted">
+            Vedrai opportunità da tutte le città italiane
+          </span>
+        </span>
+
+        <span
+          className={cn(
+            'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-pill border',
+            'transition-colors duration-fast ease-soft',
+            isRemote ? 'border-accent bg-accent text-accent-on' : 'border-edge-strong'
+          )}
+          aria-hidden="true"
+        >
+          {isRemote && <Check className="h-3 w-3" strokeWidth={3} />}
+        </span>
+      </button>
+
       {showError && (
-        <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm mt-4 justify-center">
-          <AlertCircle className="w-4 h-4" />
-          Inserisci una città o seleziona "remoto"
-        </div>
+        <p role="alert" className="mt-4 flex items-center gap-2 text-caption text-danger">
+          <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+          Inserisci una città oppure scegli il lavoro da remoto.
+        </p>
       )}
 
-      {/* Navigation */}
-      <div className="flex items-center justify-between mt-8">
-        <button
-          onClick={onBack}
-          className="inline-flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-        >
-          <ChevronLeft className="w-5 h-5" />
-          Indietro
-        </button>
+      <p className="mt-4 text-caption text-content-subtle">
+        Puoi cambiare zona quando vuoi dalle impostazioni.
+      </p>
 
-        <button
-          onClick={handleNext}
-          className={`
-            inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all
-            ${isValid
-              ? 'bg-blue-600 hover:bg-blue-700 text-white'
-              : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-            }
-          `}
-        >
-          Continua
-          <ChevronRight className="w-5 h-5" />
-        </button>
+      <div className="mt-8 flex items-center justify-between gap-3">
+        <Button variant="ghost" onClick={onBack} icon={<ChevronLeft />}>
+          Indietro
+        </Button>
+
+        <Button onClick={handleNext}>Continua</Button>
       </div>
     </div>
   )

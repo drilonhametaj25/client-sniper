@@ -3,6 +3,7 @@
  * Usato da: app/settings/page.tsx (tab "Piano")
  * API: POST /api/plan/deactivate, POST /api/plan/reactivate (Bearer token Supabase)
  * Display: getBasePlanType (supporta piani legacy es. 'pro') + formatCredits (-1 = Illimitati)
+ * Presentazione: guida in apps/frontend-app/DESIGN.md.
  */
 
 'use client'
@@ -13,18 +14,12 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ToastProvider'
 import Link from 'next/link'
-import {
-  Crown,
-  CheckCircle,
-  AlertTriangle,
-  Pause,
-  Play,
-  X,
-  RefreshCw
-} from 'lucide-react'
+import { Check, Pause, Play, RefreshCw } from 'lucide-react'
 import InactivePlanBanner from '@/components/InactivePlanBanner'
 import { getBasePlanType, isProOrHigher, type PlanType } from '@/lib/utils/plan-helpers'
 import { formatCredits } from '@/lib/utils/credits-display'
+import { Badge, Button, Card, CardTitle } from '@/components/ui'
+import { cn } from '@/lib/utils/cn'
 
 interface PlanState {
   plan: string
@@ -44,11 +39,24 @@ const BASE_PLAN_LABELS: Record<PlanType, string> = {
   agency: 'Piano Agency'
 }
 
-const BASE_PLAN_BADGES: Record<PlanType, string> = {
-  free: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200',
-  starter: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200',
-  pro: 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200',
-  agency: 'bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200'
+/**
+ * Caratteristiche mostrate sotto al piano: una lista sola, neutra.
+ * Stessa selezione dell'implementazione precedente: pro+ → lista Pro,
+ * starter → lista Starter, tutto il resto → lista Gratuito.
+ */
+const PLAN_FEATURES: Record<'free' | 'starter' | 'pro', string[]> = {
+  free: ['1 lead di prova', 'Informazioni base', 'Supporto community'],
+  starter: ['25 lead al mese', 'Analisi tecnica completa', 'Filtri avanzati', 'Supporto email'],
+  pro: [
+    '100 lead al mese',
+    'CRM personale integrato',
+    'Gestione lead avanzata',
+    'Note e follow-up',
+    'Upload allegati',
+    'Lead scoring avanzato',
+    'API access',
+    'Supporto prioritario'
+  ]
 }
 
 function planLabel(plan: string): string {
@@ -69,6 +77,7 @@ export default function PlanTab() {
   })
   const [deactivating, setDeactivating] = useState(false)
   const [reactivating, setReactivating] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const [showDeactivateModal, setShowDeactivateModal] = useState(false)
   const [deactivationReason, setDeactivationReason] = useState('')
 
@@ -82,20 +91,25 @@ export default function PlanTab() {
   }, [user?.plan, user?.credits_remaining])
 
   const handleRefresh = async () => {
-    // 1. Invalida localStorage cache
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('auth_profile_') || key.startsWith('profile_cache_')) {
-        localStorage.removeItem(key)
-      }
-    })
-    // 2. Invalida sessionStorage cache
-    Object.keys(sessionStorage).forEach(key => {
-      if (key.startsWith('auth_profile_') || key.startsWith('profile_cache_')) {
-        sessionStorage.removeItem(key)
-      }
-    })
-    // 3. Refresh del profilo AuthContext (i dati locali si aggiornano via useEffect)
-    await refreshProfile()
+    setRefreshing(true)
+    try {
+      // 1. Invalida localStorage cache
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('auth_profile_') || key.startsWith('profile_cache_')) {
+          localStorage.removeItem(key)
+        }
+      })
+      // 2. Invalida sessionStorage cache
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.startsWith('auth_profile_') || key.startsWith('profile_cache_')) {
+          sessionStorage.removeItem(key)
+        }
+      })
+      // 3. Refresh del profilo AuthContext (i dati locali si aggiornano via useEffect)
+      await refreshProfile()
+    } finally {
+      setRefreshing(false)
+    }
   }
 
   const handleDeactivatePlan = async () => {
@@ -203,269 +217,208 @@ export default function PlanTab() {
   }
 
   const basePlan = getBasePlanType(planData.plan)
+  const features = isProOrHigher(planData.plan)
+    ? PLAN_FEATURES.pro
+    : PLAN_FEATURES[basePlan === 'starter' ? 'starter' : 'free']
+  const isActive = planData.status === 'active'
+  const isInactive = planData.status === 'inactive'
+
+  // Una sola azione piena per schermata: riattivare, se il piano è fermo;
+  // altrimenti cambiare piano.
+  const planLinkClass = cn(
+    'focus-ring inline-flex h-11 items-center justify-center rounded-control px-4',
+    'text-body font-medium transition-colors duration-fast ease-soft',
+    isInactive
+      ? 'border border-edge bg-surface-elevated text-content hover:bg-surface-subtle'
+      : 'bg-accent text-accent-on hover:bg-accent-hover'
+  )
 
   return (
     <div className="space-y-6">
       {/* Banner Piano Disattivato */}
-      {planData.status !== 'active' && <InactivePlanBanner />}
+      {!isActive && <InactivePlanBanner />}
 
-      {/* Piano Attuale */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center">
-            <Crown className="w-5 h-5 text-gray-400 mr-2" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Piano Attuale</h2>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className={`px-3 py-1 rounded-full text-sm font-medium ${BASE_PLAN_BADGES[basePlan]}`}>
+      {/* Piano attuale */}
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="text-micro uppercase tracking-wide text-content-subtle">
+              Piano attuale
+            </div>
+            <h2 className="mt-1 text-heading font-semibold text-content">
               {planLabel(planData.plan)}
-            </span>
+            </h2>
           </div>
+
+          {isActive ? (
+            <Badge variant="success" dot>Attivo</Badge>
+          ) : isInactive ? (
+            <Badge variant="warning" dot>Disattivato</Badge>
+          ) : (
+            <Badge variant="error" dot>Cancellato</Badge>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Piano</label>
-            <div className="text-gray-900 dark:text-white font-medium">{planLabel(planData.plan)}</div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Crediti Rimanenti</label>
-            <div className="text-gray-900 dark:text-white font-medium">{formatCredits(planData.credits_remaining)}</div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stato</label>
-            <div className="flex items-center">
-              {planData.status === 'active' ? (
-                <>
-                  <CheckCircle className="w-4 h-4 text-green-500 mr-1" />
-                  <span className="text-green-600 text-sm">Attivo</span>
-                </>
-              ) : planData.status === 'inactive' ? (
-                <>
-                  <Pause className="w-4 h-4 text-orange-500 mr-1" />
-                  <span className="text-orange-600 text-sm">Disattivato</span>
-                </>
-              ) : (
-                <>
-                  <X className="w-4 h-4 text-red-500 mr-1" />
-                  <span className="text-red-600 text-sm">Cancellato</span>
-                </>
-              )}
-            </div>
-          </div>
+        <div className="mt-6 flex items-baseline gap-2">
+          <span className="text-metric font-semibold tabular-nums text-content">
+            {formatCredits(planData.credits_remaining)}
+          </span>
+          <span className="text-caption text-content-subtle">crediti rimanenti</span>
         </div>
 
-        {/* Caratteristiche del piano */}
-        {isProOrHigher(planData.plan) && (
-          <div className="mt-4 p-4 bg-purple-50 dark:bg-purple-900 rounded-xl">
-            <h3 className="text-sm font-medium text-purple-900 dark:text-purple-200 mb-2">Caratteristiche Piano Pro+</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-purple-800 dark:text-purple-300">
-              {[
-                '100 lead al mese',
-                'CRM personale integrato',
-                'Gestione lead avanzata',
-                'Note e follow-up',
-                'Upload allegati',
-                'Supporto prioritario',
-                'API access',
-                'Lead scoring avanzato'
-              ].map(feature => (
-                <div key={feature} className="flex items-center">
-                  <CheckCircle className="w-4 h-4 text-purple-600 dark:text-purple-400 mr-2" />
-                  {feature}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {basePlan === 'starter' && (
-          <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900 rounded-xl">
-            <h3 className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2">Caratteristiche Piano Starter</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-blue-800 dark:text-blue-300">
-              {[
-                '25 lead al mese',
-                'Analisi tecnica completa',
-                'Supporto email',
-                'Filtri avanzati'
-              ].map(feature => (
-                <div key={feature} className="flex items-center">
-                  <CheckCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-2" />
-                  {feature}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Cosa comprende */}
+        <ul className="mt-6 grid grid-cols-1 gap-x-6 gap-y-2 border-t border-edge pt-6 sm:grid-cols-2">
+          {features.map(feature => (
+            <li key={feature} className="flex items-center gap-2 text-body text-content-muted">
+              <Check className="h-4 w-4 shrink-0 text-content-subtle" aria-hidden="true" />
+              {feature}
+            </li>
+          ))}
+        </ul>
 
         {basePlan === 'free' && (
-          <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
-            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-200 mb-2">Caratteristiche Piano Gratuito</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-700 dark:text-gray-300">
-              {[
-                '1 lead di prova',
-                'Informazioni base',
-                'Supporto community'
-              ].map(feature => (
-                <div key={feature} className="flex items-center">
-                  <CheckCircle className="w-4 h-4 text-gray-600 dark:text-gray-400 mr-2" />
-                  {feature}
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-              <Link
-                href="/upgrade"
-                className="inline-flex items-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-              >
-                <Crown className="w-4 h-4 mr-1" />
-                Passa al piano Pro e accedi al CRM
-              </Link>
-            </div>
-          </div>
+          <Link
+            href="/upgrade"
+            className="focus-ring mt-4 inline-flex h-11 items-center rounded-control text-body text-accent-ink hover:underline"
+          >
+            Passa a Pro e sblocca il CRM
+          </Link>
         )}
 
         {/* Dettagli disattivazione */}
-        {planData.status === 'inactive' && planData.deactivated_at && (
-          <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-900 rounded-xl">
-            <div className="text-sm text-orange-800 dark:text-orange-200 space-y-1">
-              <div>
-                <strong>Disattivato il:</strong> {new Date(planData.deactivated_at).toLocaleDateString('it-IT')}
-              </div>
-              {planData.deactivation_reason && (
-                <div>
-                  <strong>Motivo:</strong> {planData.deactivation_reason}
-                </div>
-              )}
-            </div>
+        {isInactive && planData.deactivated_at && (
+          <div className="mt-6 rounded-card border border-edge bg-surface-subtle p-4">
+            <p className="text-body text-content-muted">
+              Disattivato il{' '}
+              <span className="tabular-nums text-content">
+                {new Date(planData.deactivated_at).toLocaleDateString('it-IT')}
+              </span>
+              {planData.deactivation_reason ? `. Motivo: ${planData.deactivation_reason}` : '.'}
+            </p>
           </div>
         )}
 
-        {/* Dettagli cancellazione programmata */}
-        {planData.status === 'active' && planData.deactivation_scheduled_at && planData.subscription_end_date && (
-          <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700 rounded-xl">
-            <div className="flex items-start">
-              <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2 mt-0.5" />
-              <div className="text-sm text-yellow-800 dark:text-yellow-200 space-y-1">
-                <div className="font-medium">Cancellazione programmata</div>
-                <div>
-                  Il tuo abbonamento è stato cancellato ma rimane <strong>attivo fino al {new Date(planData.subscription_end_date).toLocaleDateString('it-IT')}</strong>.
-                </div>
-                <div className="text-xs text-yellow-700 dark:text-yellow-300 mt-2">
-                  Potrai continuare ad utilizzare tutte le funzionalità premium fino alla scadenza del periodo già pagato.
-                </div>
-              </div>
-            </div>
+        {/* Cancellazione programmata */}
+        {isActive && planData.deactivation_scheduled_at && planData.subscription_end_date && (
+          <div className="mt-6 rounded-card border border-warning-edge bg-warning-soft p-4">
+            <p className="text-body font-medium text-warning">Cancellazione programmata</p>
+            <p className="mt-1 text-body text-content-muted">
+              Il piano resta attivo fino al{' '}
+              <span className="tabular-nums text-content">
+                {new Date(planData.subscription_end_date).toLocaleDateString('it-IT')}
+              </span>
+              : fino ad allora hai tutte le funzioni del periodo già pagato.
+            </p>
           </div>
         )}
 
-        {/* Dettagli riattivazione */}
+        {/* Riattivazione */}
         {planData.reactivated_at && (
-          <div className="mt-4 p-4 bg-green-50 dark:bg-green-900 rounded-xl">
-            <div className="text-sm text-green-800 dark:text-green-200 space-y-1">
-              <div>
-                <strong>Riattivato il:</strong> {new Date(planData.reactivated_at).toLocaleDateString('it-IT')}
-              </div>
-            </div>
+          <div className="mt-6 rounded-card border border-success-edge bg-success-soft p-4">
+            <p className="text-body text-content-muted">
+              Riattivato il{' '}
+              <span className="tabular-nums text-content">
+                {new Date(planData.reactivated_at).toLocaleDateString('it-IT')}
+              </span>
+              .
+            </p>
           </div>
         )}
 
-        {/* Azioni Piano */}
-        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Gestione Piano</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {planData.status === 'active'
-                  ? 'Gestisci il tuo abbonamento e le impostazioni di fatturazione'
-                  : 'Riattiva il tuo piano per accedere a tutte le funzionalità'
-                }
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <button
-                onClick={handleRefresh}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                title="Aggiorna i dati del profilo"
+        {/* Azioni */}
+        <div className="mt-6 flex flex-col gap-4 border-t border-edge pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-caption text-content-muted">
+            {isActive
+              ? 'Puoi cambiare piano o metterlo in pausa quando vuoi.'
+              : 'Riattiva il piano per tornare a sbloccare i contatti.'}
+          </p>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="ghost"
+              onClick={handleRefresh}
+              loading={refreshing}
+              icon={<RefreshCw />}
+              aria-label="Aggiorna i dati del piano"
+              title="Aggiorna i dati del piano"
+              iconOnly
+            />
+
+            {isActive && planData.plan !== 'free' && (
+              <Button
+                variant="secondary"
+                onClick={() => setShowDeactivateModal(true)}
+                icon={<Pause />}
               >
-                <RefreshCw className="w-4 h-4 mr-2 inline" />
-                Aggiorna
-              </button>
+                Metti in pausa
+              </Button>
+            )}
 
-              {planData.status === 'active' && planData.plan !== 'free' && (
-                <button
-                  onClick={() => setShowDeactivateModal(true)}
-                  className="px-4 py-2 border border-orange-300 dark:border-orange-600 text-orange-700 dark:text-orange-300 rounded-xl hover:bg-orange-50 dark:hover:bg-orange-900 transition-colors"
-                >
-                  <Pause className="w-4 h-4 mr-2 inline" />
-                  Disattiva Piano
-                </button>
-              )}
-
-              {planData.status === 'inactive' && (
-                <button
-                  onClick={handleReactivatePlan}
-                  disabled={reactivating}
-                  className="px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50"
-                >
-                  <Play className="w-4 h-4 mr-2 inline" />
-                  {reactivating ? 'Riattivando...' : 'Riattiva Piano'}
-                </button>
-              )}
-
-              <Link
-                href="/upgrade"
-                className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+            {isInactive && (
+              <Button
+                onClick={handleReactivatePlan}
+                loading={reactivating}
+                loadingText="Riattivazione…"
+                icon={<Play />}
               >
-                {planData.status === 'active' ? 'Cambia Piano' : 'Scegli Piano'}
-              </Link>
-            </div>
+                Riattiva piano
+              </Button>
+            )}
+
+            <Link href="/upgrade" className={planLinkClass}>
+              {isActive ? 'Cambia piano' : 'Scegli piano'}
+            </Link>
           </div>
         </div>
-      </div>
+      </Card>
 
-      {/* Modal Disattivazione */}
+      {/* Modale: metti in pausa */}
       {showDeactivateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" role="dialog" aria-modal="true" aria-label="Disattiva Piano">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full">
-            <div className="flex items-center mb-4">
-              <Pause className="w-6 h-6 text-orange-500 mr-3" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Disattiva Piano</h3>
-            </div>
-
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Disattivando il piano perderai l'accesso alle funzionalità premium.
-              Potrai riattivarlo in qualsiasi momento.
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="deactivate-title"
+        >
+          <div className="animate-slide-up w-full max-w-md rounded-panel border border-edge bg-surface-overlay p-6 shadow-pop">
+            <CardTitle id="deactivate-title">Metti in pausa il piano</CardTitle>
+            <p className="mt-1 text-body text-content-muted">
+              Perderai l'accesso alle funzioni premium. Puoi riattivarlo quando
+              vuoi, senza perdere i lead già sbloccati.
             </p>
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Motivo della disattivazione (opzionale)
-              </label>
-              <textarea
-                value={deactivationReason}
-                onChange={(e) => setDeactivationReason(e.target.value)}
-                placeholder="Aiutaci a migliorare..."
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                rows={3}
-              />
-            </div>
+            <label
+              htmlFor="deactivation-reason"
+              className="mb-1.5 mt-6 block text-caption font-medium text-content"
+            >
+              Perché lo metti in pausa? (facoltativo)
+            </label>
+            <textarea
+              id="deactivation-reason"
+              value={deactivationReason}
+              onChange={(e) => setDeactivationReason(e.target.value)}
+              placeholder="Aiutaci a migliorare…"
+              rows={3}
+              className="focus-ring block w-full resize-none rounded-control border border-edge bg-surface-elevated p-3 text-body text-content placeholder:text-content-subtle"
+            />
 
-            <div className="flex space-x-3">
-              <button
+            <div className="mt-6 flex gap-3">
+              <Button
+                variant="secondary"
                 onClick={() => setShowDeactivateModal(false)}
                 disabled={deactivating}
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                fullWidth
               >
                 Annulla
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleDeactivatePlan}
-                disabled={deactivating}
-                className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-colors disabled:opacity-50"
+                loading={deactivating}
+                loadingText="Attendi…"
+                fullWidth
               >
-                {deactivating ? 'Disattivando...' : 'Disattiva Piano'}
-              </button>
+                Metti in pausa
+              </Button>
             </div>
           </div>
         </div>

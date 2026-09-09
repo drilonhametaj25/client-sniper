@@ -149,10 +149,12 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://api.klaviyo.com" />
         <link rel="dns-prefetch" href="https://js.stripe.com" />
         
-        {/* Meta tag per tema mobile */}
-        <meta name="theme-color" content="#ffffff" />
+        {/* Meta tag per tema mobile: segue i token --color-surface */}
+        <meta name="theme-color" content="#FAFAFA" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#17171A" media="(prefers-color-scheme: dark)" />
       </head>
-      <body className={`${inter.className} h-full bg-gray-50 dark:bg-gray-900`}>
+      {/* Colori dal design system: bg-surface / text-content (vedi DESIGN.md) */}
+      <body className={`${inter.className} h-full bg-surface text-content`}>
         <ToastProvider>
           <AuthProvider>
             <ThemeProvider>

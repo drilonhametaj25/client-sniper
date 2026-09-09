@@ -3,6 +3,7 @@
  * Usato da: app/settings/page.tsx (tab "Servizi")
  * Salva su: users (services_offered, preferred_min_budget, preferred_max_budget)
  * Usa il componente condiviso ServicesEditor (stessa UI dell'onboarding).
+ * Presentazione: guida in apps/frontend-app/DESIGN.md.
  */
 
 'use client'
@@ -11,10 +12,11 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ToastProvider'
-import { RefreshCw, Save } from 'lucide-react'
+import { Euro } from 'lucide-react'
 import ServicesEditor from '@/components/settings/ServicesEditor'
 import LeadPreferencesSection from '@/components/settings/LeadPreferencesSection'
-import type { ServiceType } from '@/lib/types/services'
+import { Button, Card, CardTitle, Input, Skeleton } from '@/components/ui'
+import { SERVICE_CONFIGS, type ServiceType } from '@/lib/types/services'
 
 export default function ServicesTab() {
   const { user, refreshProfile } = useAuth()
@@ -79,99 +81,79 @@ export default function ServicesTab() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="space-y-6" role="status" aria-live="polite">
+        <span className="sr-only">Caricamento in corso</span>
+        <Skeleton className="h-96 w-full rounded-card" />
+        <Skeleton className="h-64 w-full rounded-card" />
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      {/* I Tuoi Servizi - Match Calculation */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex items-center mb-4">
-          <span className="text-xl mr-2" aria-hidden="true">🎯</span>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">I Tuoi Servizi</h2>
-        </div>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Questi servizi decidono quali clienti ti mostriamo.
+      {/* Servizi offerti: il controllo che decide quali lead vede l'utente */}
+      <Card>
+        <CardTitle>I tuoi servizi</CardTitle>
+        <p className="mt-1 text-body text-content-muted">
+          Questi servizi decidono quali clienti ti mostriamo: cerchiamo aziende
+          con i problemi che sai risolvere.
         </p>
 
-        {/* Selezione Servizi (componente condiviso con l'onboarding) */}
-        <div className="space-y-3 mb-6">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Servizi che offri
-          </label>
-          <ServicesEditor
-            value={servicesOffered}
-            onChange={setServicesOffered}
-            compact
-          />
-          {servicesOffered.length > 0 && (
-            <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">
-              {servicesOffered.length} servizi selezionati
-            </p>
-          )}
+        <div className="mt-6">
+          <ServicesEditor value={servicesOffered} onChange={setServicesOffered} compact />
+          <p className="mt-3 text-caption text-content-muted" aria-live="polite">
+            {servicesOffered.length === 0
+              ? 'Nessun servizio selezionato: la dashboard ti mostra tutti i lead, senza priorità.'
+              : `Cercheremo aziende con problemi di ${servicesOffered
+                  .map((service) => SERVICE_CONFIGS[service]?.label ?? service)
+                  .join(', ')}.`}
+          </p>
         </div>
 
-        {/* Preferenze Budget (opzionale) */}
-        <div className="border-t border-gray-200 dark:border-gray-700 pt-6 mb-6">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Range budget preferito (opzionale)
-          </label>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            I lead con budget in questo range avranno un match score più alto
+        {/* Budget preferito (opzionale) */}
+        <div className="mt-6 border-t border-edge pt-6">
+          <h3 className="text-body font-medium text-content">Budget preferito</h3>
+          <p className="mt-1 text-caption text-content-muted">
+            Opzionale. I lead con un budget stimato in questo intervallo salgono
+            nella tua lista.
           </p>
-          <div className="flex items-center gap-3">
-            <div className="flex-1">
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
-                <input
-                  type="number"
-                  placeholder="Min (es. 500)"
-                  value={preferredMinBudget}
-                  onChange={(e) => setPreferredMinBudget(e.target.value === '' ? '' : Number(e.target.value))}
-                  min="0"
-                  className="w-full pl-8 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-              </div>
-            </div>
-            <span className="text-gray-400">-</span>
-            <div className="flex-1">
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
-                <input
-                  type="number"
-                  placeholder="Max (es. 5000)"
-                  value={preferredMaxBudget}
-                  onChange={(e) => setPreferredMaxBudget(e.target.value === '' ? '' : Number(e.target.value))}
-                  min="0"
-                  className="w-full pl-8 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-              </div>
-            </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Input
+              label="Minimo"
+              type="number"
+              min="0"
+              inputMode="numeric"
+              placeholder="500"
+              icon={<Euro />}
+              className="tabular-nums"
+              value={preferredMinBudget}
+              onChange={(e) =>
+                setPreferredMinBudget(e.target.value === '' ? '' : Number(e.target.value))
+              }
+            />
+            <Input
+              label="Massimo"
+              type="number"
+              min="0"
+              inputMode="numeric"
+              placeholder="5000"
+              icon={<Euro />}
+              className="tabular-nums"
+              value={preferredMaxBudget}
+              onChange={(e) =>
+                setPreferredMaxBudget(e.target.value === '' ? '' : Number(e.target.value))
+              }
+            />
           </div>
         </div>
 
-        {/* Bottone Salva */}
-        <button
-          onClick={handleSaveServices}
-          disabled={savingServices}
-          className="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-        >
-          {savingServices ? (
-            <>
-              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-              Salvataggio...
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4 mr-2" />
-              Salva Preferenze Servizi
-            </>
-          )}
-        </button>
-      </div>
+        <div className="mt-6 flex justify-end">
+          <Button onClick={handleSaveServices} loading={savingServices} loadingText="Salvataggio…">
+            Salva preferenze
+          </Button>
+        </div>
+      </Card>
 
       {/* Preferenze Lead - Configurazione Avanzata */}
       <LeadPreferencesSection />

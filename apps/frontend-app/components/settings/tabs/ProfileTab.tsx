@@ -3,6 +3,7 @@
  * Usato da: app/settings/page.tsx (tab "Profilo")
  * Salva su: users (company_name, company_phone, company_website, company_email)
  * Logo: POST/DELETE /api/user/logo (bucket user-assets, users.company_logo_url)
+ * Presentazione: guida in apps/frontend-app/DESIGN.md.
  */
 
 'use client'
@@ -11,7 +12,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ToastProvider'
-import { User, Building, Image as ImageIcon, RefreshCw, Save, Trash2, Upload } from 'lucide-react'
+import { Image as ImageIcon, Trash2, Upload } from 'lucide-react'
+import { Button, Card, CardTitle, Input, Skeleton } from '@/components/ui'
 
 export default function ProfileTab() {
   const { user } = useAuth()
@@ -125,145 +127,111 @@ export default function ProfileTab() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="space-y-6" role="status" aria-live="polite">
+        <span className="sr-only">Caricamento in corso</span>
+        <Skeleton className="h-28 w-full rounded-card" />
+        <Skeleton className="h-80 w-full rounded-card" />
       </div>
     )
   }
 
-  const inputClass = 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400'
-
   return (
     <div className="space-y-6">
-      {/* Informazioni Account */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex items-center mb-4">
-          <User className="w-5 h-5 text-gray-400 mr-2" />
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Informazioni Account</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Account */}
+      <Card>
+        <CardTitle>Account</CardTitle>
+        <dl className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-            <div className="text-gray-900 dark:text-white">{user?.email}</div>
+            <dt className="text-micro uppercase tracking-wide text-content-subtle">Email</dt>
+            <dd className="mt-1 break-all text-body text-content">{user?.email}</dd>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Membro dal</label>
-            <div className="text-gray-900 dark:text-white">
-              {user?.created_at ? new Date(user.created_at).toLocaleDateString('it-IT') : '-'}
-            </div>
+            <dt className="text-micro uppercase tracking-wide text-content-subtle">Membro dal</dt>
+            <dd className="mt-1 text-body tabular-nums text-content">
+              {user?.created_at ? new Date(user.created_at).toLocaleDateString('it-IT') : '—'}
+            </dd>
           </div>
-        </div>
-      </div>
+        </dl>
+      </Card>
 
-      {/* Profilo Aziendale */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex items-center mb-4">
-          <Building className="w-5 h-5 text-gray-400 mr-2" />
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Profilo Aziendale</h2>
-        </div>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Questi dati verranno usati nei preventivi PDF che generi per i tuoi clienti.
+      {/* Profilo aziendale */}
+      <Card>
+        <CardTitle>Profilo aziendale</CardTitle>
+        <p className="mt-1 text-body text-content-muted">
+          Compaiono sui preventivi e sui report PDF che generi per i tuoi clienti.
         </p>
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Nome Azienda / Freelancer
-            </label>
-            <input
-              type="text"
-              placeholder="Es: Digital Agency Srl"
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-              className={inputClass}
+        <div className="mt-6 space-y-4">
+          <Input
+            label="Nome azienda o freelancer"
+            type="text"
+            placeholder="Es. Digital Agency Srl"
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
+          />
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Input
+              label="Telefono"
+              type="tel"
+              placeholder="Es. +39 02 1234567"
+              value={companyPhone}
+              onChange={(e) => setCompanyPhone(e.target.value)}
+            />
+            <Input
+              label="Email di contatto"
+              type="email"
+              placeholder="Es. info@tuaagenzia.it"
+              value={companyEmail}
+              onChange={(e) => setCompanyEmail(e.target.value)}
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Telefono
-              </label>
-              <input
-                type="tel"
-                placeholder="Es: +39 02 1234567"
-                value={companyPhone}
-                onChange={(e) => setCompanyPhone(e.target.value)}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Email Contatto
-              </label>
-              <input
-                type="email"
-                placeholder="Es: info@tuaagenzia.it"
-                value={companyEmail}
-                onChange={(e) => setCompanyEmail(e.target.value)}
-                className={inputClass}
-              />
-            </div>
-          </div>
+          <Input
+            label="Sito web"
+            type="url"
+            placeholder="Es. https://www.tuaagenzia.it"
+            value={companyWebsite}
+            onChange={(e) => setCompanyWebsite(e.target.value)}
+          />
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Sito Web
-            </label>
-            <input
-              type="url"
-              placeholder="Es: https://www.tuaagenzia.it"
-              value={companyWebsite}
-              onChange={(e) => setCompanyWebsite(e.target.value)}
-              className={inputClass}
-            />
-          </div>
-
-          <button
+        <div className="mt-6 flex justify-end">
+          <Button
             onClick={handleSaveBusinessProfile}
-            disabled={savingProfile}
-            className="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            loading={savingProfile}
+            loadingText="Salvataggio…"
           >
-            {savingProfile ? (
-              <>
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                Salvataggio...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4 mr-2" />
-                Salva Profilo Aziendale
-              </>
-            )}
-          </button>
+            Salva profilo
+          </Button>
         </div>
-      </div>
+      </Card>
 
-      {/* Logo Aziendale */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex items-center mb-4">
-          <ImageIcon className="w-5 h-5 text-gray-400 mr-2" />
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Logo Aziendale</h2>
-        </div>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Il logo apparirà sui preventivi e report PDF. Formati: PNG, JPG, SVG (max 2MB).
+      {/* Logo */}
+      <Card>
+        <CardTitle>Logo</CardTitle>
+        <p className="mt-1 text-body text-content-muted">
+          Appare sui preventivi e sui report. PNG, JPG o SVG, fino a 2 MB.
         </p>
 
-        <div className="flex items-center gap-4">
+        <div className="mt-6 flex flex-wrap items-center gap-4">
           {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={logoUrl}
               alt="Logo aziendale"
-              className="h-16 w-auto max-w-[160px] object-contain rounded-lg border border-gray-200 dark:border-gray-700 bg-white p-1"
+              className="h-16 w-auto max-w-[160px] rounded-control border border-edge bg-surface-elevated object-contain p-1"
             />
           ) : (
-            <div className="h-16 w-16 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-400">
-              <ImageIcon className="w-6 h-6" />
+            <div
+              className="flex h-16 w-16 items-center justify-center rounded-control border border-dashed border-edge-strong text-content-subtle"
+              aria-hidden="true"
+            >
+              <ImageIcon className="h-5 w-5" />
             </div>
           )}
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2">
             <input
               ref={fileInputRef}
               type="file"
@@ -272,36 +240,31 @@ export default function ProfileTab() {
               className="hidden"
               id="logo-upload-input"
             />
-            <button
+            <Button
+              variant="secondary"
               onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingLogo}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 flex items-center"
+              loading={uploadingLogo}
+              loadingText="Caricamento…"
+              icon={<Upload />}
             >
-              {uploadingLogo ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Caricamento...
-                </>
-              ) : (
-                <>
-                  <Upload className="w-4 h-4 mr-2" />
-                  {logoUrl ? 'Sostituisci logo' : 'Carica logo'}
-                </>
-              )}
-            </button>
+              {logoUrl ? 'Sostituisci' : 'Carica logo'}
+            </Button>
+
             {logoUrl && (
-              <button
+              <Button
+                variant="ghost"
                 onClick={handleLogoRemove}
-                disabled={removingLogo}
-                className="px-4 py-2 border border-red-300 dark:border-red-600 text-red-700 dark:text-red-300 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50 flex items-center"
+                loading={removingLogo}
+                loadingText="Rimozione…"
+                icon={<Trash2 />}
+                className="text-danger hover:text-danger"
               >
-                <Trash2 className="w-4 h-4 mr-2" />
-                {removingLogo ? 'Rimozione...' : 'Rimuovi'}
-              </button>
+                Rimuovi
+              </Button>
             )}
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   )
 }

@@ -8,6 +8,11 @@
  * - La chiamata API vive qui dentro: i chiamanti ricevono solo il risultato.
  * - Gestisce i piani illimitati (creditsRemaining === -1).
  *
+ * Presentazione: e' il momento piu' delicato del prodotto, quindi e' la
+ * schermata piu' silenziosa. Nessuna icona decorativa, nessun contatore,
+ * nessuna urgenza: si dice cosa si sblocca, quanto costa e quanto resta.
+ * Guida: apps/frontend-app/DESIGN.md
+ *
  * Usato da: dashboard (lista/griglia), pagina dettaglio lead.
  */
 
@@ -15,11 +20,12 @@
 
 import { Fragment, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
-import { Zap, AlertCircle, X, Crown } from 'lucide-react'
+import { X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ToastProvider'
 import { getOpportunity } from '@/lib/utils/opportunity'
 import { hasCredits as hasCreditsFn, isUnlimitedCredits } from '@/lib/utils/credits-display'
+import { Button, LinkButton, cn } from '@/components/ui'
 
 export interface UnlockableLead {
   id: string
@@ -48,6 +54,13 @@ interface UnlockLeadModalProps {
   onUnlocked: (result: UnlockResult) => void
 }
 
+/** Stessa mappatura usata da LeadCard: lo stato e' un pallino, non un badge. */
+function opportunityDot(label: string): string {
+  if (label === 'Opportunità alta') return 'bg-success'
+  if (label === 'Opportunità media') return 'bg-warning'
+  return 'bg-content-subtle'
+}
+
 export default function UnlockLeadModal({
   isOpen,
   lead,
@@ -61,6 +74,13 @@ export default function UnlockLeadModal({
   const unlimited = isUnlimitedCredits(creditsRemaining)
   const canUnlock = hasCreditsFn(creditsRemaining)
   const opportunity = lead ? getOpportunity(lead.score, lead.score_version) : null
+
+  // CHE COS'E': categoria + citta'. Il nome resta nascosto: e' quello che si compra.
+  const identity = lead
+    ? lead.city
+      ? `${lead.category || 'Attività locale'} a ${lead.city}`
+      : lead.category || 'Attività locale'
+    : ''
 
   const handleConfirm = async () => {
     if (!lead || isLoading) return
@@ -130,126 +150,81 @@ export default function UnlockLeadModal({
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="relative w-full max-w-sm transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-xl transition-all">
-                <button
+              <Dialog.Panel className="relative w-full max-w-md transform overflow-hidden rounded-panel bg-surface-overlay p-6 shadow-pop transition-all">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  iconOnly
                   onClick={onClose}
                   disabled={isLoading}
-                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                   aria-label="Chiudi"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                  icon={<X />}
+                  className="absolute right-3 top-3 text-content-subtle"
+                />
 
-                {/* Icona */}
-                <div className="flex justify-center mb-4">
-                  <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-                    canUnlock
-                      ? 'bg-blue-100 dark:bg-blue-900/30'
-                      : 'bg-red-100 dark:bg-red-900/30'
-                  }`}>
-                    {unlimited ? (
-                      <Crown className="w-8 h-8 text-purple-500" />
-                    ) : canUnlock ? (
-                      <Zap className="w-8 h-8 text-blue-500" />
-                    ) : (
-                      <AlertCircle className="w-8 h-8 text-red-500" />
-                    )}
-                  </div>
-                </div>
-
-                <Dialog.Title className="text-xl font-bold text-center text-gray-900 dark:text-white mb-2">
-                  {canUnlock ? 'Sblocca questo lead?' : 'Crediti esauriti'}
+                <Dialog.Title className="pr-10 text-heading font-semibold text-content">
+                  {canUnlock ? 'Sblocchiamo questo lead?' : 'Non hai più crediti'}
                 </Dialog.Title>
 
-                {/* Anteprima lead */}
+                {/* Cosa stai sbloccando: identita' + stato, senza il nome. */}
                 {lead && canUnlock && (
-                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 mb-4">
-                    <div className="font-semibold text-gray-900 dark:text-white">
-                      {lead.category || 'Attività locale'}
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      {lead.city || 'Posizione non disponibile'}
-                    </div>
+                  <div className="mt-4 border-t border-edge pt-4">
+                    <p className="text-body text-content">{identity}</p>
                     {opportunity && (
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${opportunity.badgeClass}`}>
-                          {opportunity.label} · {opportunity.value}/100
+                      <span className="mt-1.5 inline-flex items-center gap-1.5 text-caption text-content-muted">
+                        <span
+                          className={cn('h-1.5 w-1.5 rounded-pill', opportunityDot(opportunity.label))}
+                          aria-hidden="true"
+                        />
+                        {opportunity.label}
+                        <span className="tabular-nums text-content-subtle">
+                          {opportunity.value}
+                          <span className="sr-only"> su 100</span>
                         </span>
-                      </div>
+                      </span>
+                    )}
+                    <p className="mt-3 text-body text-content-muted">
+                      Sbloccando vedi il nome dell&apos;attività e come contattarla:
+                      telefono, email e sito.
+                    </p>
+                  </div>
+                )}
+
+                {/* Costo e saldo, in una frase. Nessuna urgenza. */}
+                <div className="mt-5 border-t border-edge pt-5">
+                  {canUnlock ? (
+                    unlimited ? (
+                      <p className="text-caption text-content-subtle">
+                        Il tuo piano ha crediti illimitati: lo sblocco non consuma nulla.
+                      </p>
+                    ) : (
+                      <p className="text-caption text-content-subtle">
+                        Costa 1 credito. Te ne restano{' '}
+                        <span className="tabular-nums text-content-muted">{creditsRemaining}</span>, dopo
+                        lo sblocco{' '}
+                        <span className="tabular-nums text-content-muted">{creditsRemaining - 1}</span>.
+                      </p>
+                    )
+                  ) : (
+                    <p className="text-body text-content-muted">
+                      Hai usato tutti i crediti del tuo piano. Puoi continuare a sbloccare
+                      lead passando a un piano superiore.
+                    </p>
+                  )}
+
+                  <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <Button variant="secondary" onClick={onClose} disabled={isLoading}>
+                      Annulla
+                    </Button>
+
+                    {canUnlock ? (
+                      <Button onClick={handleConfirm} loading={isLoading} loadingText="Sblocco…">
+                        Sblocca il lead
+                      </Button>
+                    ) : (
+                      <LinkButton href="/upgrade">Vedi i piani</LinkButton>
                     )}
                   </div>
-                )}
-
-                {/* Info costo/saldo */}
-                {canUnlock ? (
-                  unlimited ? (
-                    <div className="text-center mb-6 text-gray-600 dark:text-gray-400">
-                      Il tuo piano ha <span className="font-bold text-purple-600 dark:text-purple-400">crediti illimitati</span>:
-                      lo sblocco non consuma nulla.
-                    </div>
-                  ) : (
-                    <div className="text-center mb-6">
-                      <div className="text-gray-600 dark:text-gray-400 mb-2">
-                        Questo sblocco costa <span className="font-bold text-amber-600">1 credito</span>
-                      </div>
-                      <div className="flex items-center justify-center gap-4 text-sm">
-                        <div className="text-gray-500 dark:text-gray-400">
-                          Attuali: <span className="font-semibold">{creditsRemaining}</span>
-                        </div>
-                        <span className="text-gray-300 dark:text-gray-600">→</span>
-                        <div className="text-gray-500 dark:text-gray-400">
-                          Dopo: <span className="font-semibold">{creditsRemaining - 1}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                ) : (
-                  <div className="text-center mb-6">
-                    <p className="text-gray-600 dark:text-gray-400 mb-3">
-                      Hai esaurito i crediti disponibili.
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Passa a un piano superiore per continuare a sbloccare lead.
-                    </p>
-                  </div>
-                )}
-
-                {/* Azioni */}
-                <div className="flex gap-3">
-                  <button
-                    onClick={onClose}
-                    disabled={isLoading}
-                    className="flex-1 py-3 px-4 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
-                  >
-                    Annulla
-                  </button>
-
-                  {canUnlock ? (
-                    <button
-                      onClick={handleConfirm}
-                      disabled={isLoading}
-                      className="flex-1 py-3 px-4 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {isLoading ? (
-                        <>
-                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Sblocco...
-                        </>
-                      ) : (
-                        <>
-                          <Zap className="w-5 h-5" />
-                          Sblocca
-                        </>
-                      )}
-                    </button>
-                  ) : (
-                    <a
-                      href="/upgrade"
-                      className="flex-1 py-3 px-4 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors text-center"
-                    >
-                      Vedi i piani
-                    </a>
-                  )}
                 </div>
               </Dialog.Panel>
             </Transition.Child>

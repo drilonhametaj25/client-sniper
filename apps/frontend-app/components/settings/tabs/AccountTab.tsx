@@ -2,6 +2,7 @@
  * Tab Account — sicurezza (email/password), storico operazioni e zona pericolosa - TrovaMi
  * Usato da: app/settings/page.tsx (tab "Account")
  * API: supabase.auth.updateUser (email/password), tabella plan_status_logs (storico)
+ * Presentazione: guida in apps/frontend-app/DESIGN.md.
  */
 
 'use client'
@@ -11,7 +12,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ToastProvider'
 import Link from 'next/link'
-import { Settings as SettingsIcon, AlertTriangle } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Pause, RefreshCw, type LucideIcon } from 'lucide-react'
+import { Button, Card, CardTitle, Input } from '@/components/ui'
 
 interface PlanLog {
   action: string
@@ -20,6 +22,13 @@ interface PlanLog {
   reason: string
   triggered_by: string
   created_at: string
+}
+
+/** Etichetta e icona per ogni tipo di operazione sul piano. */
+const LOG_LABELS: Record<string, { label: string; icon: LucideIcon }> = {
+  activate: { label: 'Piano attivato', icon: CheckCircle2 },
+  deactivate: { label: 'Piano disattivato', icon: Pause },
+  auto_reactivate: { label: 'Riattivazione automatica', icon: RefreshCw }
 }
 
 export default function AccountTab() {
@@ -127,161 +136,175 @@ export default function AccountTab() {
     }
   }
 
-  const inputClass = 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400'
-
   return (
     <div className="space-y-6">
-      {/* Sicurezza Account */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex items-center mb-4">
-          <SettingsIcon className="w-5 h-5 text-gray-400 mr-2" />
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Sicurezza Account</h2>
+      {/* Email */}
+      <Card>
+        <CardTitle>Indirizzo email</CardTitle>
+        <p className="mt-1 text-body text-content-muted">
+          Accedi con <span className="text-content">{user?.email}</span>. Se lo
+          cambi, ti mandiamo una conferma al nuovo indirizzo.
+        </p>
+
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="flex-1">
+            <Input
+              label="Nuova email"
+              type="email"
+              placeholder="nuova@email.it"
+              autoComplete="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+            />
+          </div>
+          <Button
+            variant="secondary"
+            onClick={handleChangeEmail}
+            disabled={!newEmail.trim()}
+            loading={changingEmail}
+            loadingText="Aggiornamento…"
+          >
+            Aggiorna
+          </Button>
+        </div>
+      </Card>
+
+      {/* Password */}
+      <Card>
+        <CardTitle>Password</CardTitle>
+        <p className="mt-1 text-body text-content-muted">
+          Servono almeno 6 caratteri. Ti chiediamo prima quella attuale.
+        </p>
+
+        <div className="mt-6 space-y-4">
+          <Input
+            label="Password attuale"
+            type="password"
+            autoComplete="current-password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+          />
+          <Input
+            label="Nuova password"
+            type="password"
+            autoComplete="new-password"
+            hint="Almeno 6 caratteri."
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+          />
+          <Input
+            label="Conferma nuova password"
+            type="password"
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
         </div>
 
-        <div className="space-y-6">
-          {/* Cambio Email */}
-          <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
-            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Cambia Email</h3>
-            <div className="flex items-center space-x-3">
-              <input
-                type="email"
-                placeholder={user?.email || ''}
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                className={`flex-1 ${inputClass}`}
-              />
-              <button
-                onClick={handleChangeEmail}
-                disabled={changingEmail || !newEmail.trim()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {changingEmail ? 'Aggiornando...' : 'Aggiorna Email'}
-              </button>
-            </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              Riceverai un'email di conferma al nuovo indirizzo
-            </p>
-          </div>
-
-          {/* Cambio Password */}
-          <div>
-            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Cambia Password</h3>
-            <div className="space-y-3">
-              <input
-                type="password"
-                placeholder="Password attuale"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className={inputClass}
-              />
-              <input
-                type="password"
-                placeholder="Nuova password (min. 6 caratteri)"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className={inputClass}
-              />
-              <input
-                type="password"
-                placeholder="Conferma nuova password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className={inputClass}
-              />
-              <button
-                onClick={handleChangePassword}
-                disabled={changingPassword || !currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim()}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {changingPassword ? 'Aggiornando...' : 'Aggiorna Password'}
-              </button>
-              <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-3">
-                Non ricordi la password attuale?{' '}
-                <Link
-                  href="/forgot-password"
-                  className="text-blue-600 hover:text-blue-500 font-medium"
-                >
-                  Reimposta password
-                </Link>
-              </p>
-            </div>
-          </div>
+        <div className="mt-6 flex flex-col-reverse items-center gap-3 sm:flex-row sm:justify-between">
+          <Link
+            href="/forgot-password"
+            className="focus-ring inline-flex h-11 items-center rounded-control text-caption text-content-muted transition-colors duration-fast ease-soft hover:text-content"
+          >
+            Non ricordi la password attuale?
+          </Link>
+          <Button
+            variant="secondary"
+            onClick={handleChangePassword}
+            disabled={!currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim()}
+            loading={changingPassword}
+            loadingText="Aggiornamento…"
+            className="w-full sm:w-auto"
+          >
+            Aggiorna password
+          </Button>
         </div>
-      </div>
+      </Card>
 
-      {/* Storico Operazioni */}
+      {/* Storico operazioni */}
       {planLogs.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Storico Operazioni</h2>
-
-          <div className="space-y-3">
-            {planLogs.map((log, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-xl">
-                <div>
-                  <div className="font-medium text-gray-900 dark:text-white">
-                    {log.action === 'activate' && '✅ Piano attivato'}
-                    {log.action === 'deactivate' && '⏸️ Piano disattivato'}
-                    {log.action === 'auto_reactivate' && '🔄 Riattivazione automatica'}
+        <Card>
+          <CardTitle>Storico operazioni</CardTitle>
+          <ul className="mt-4 divide-y divide-edge">
+            {planLogs.map((log, index) => {
+              const entry = LOG_LABELS[log.action]
+              const Icon = entry?.icon
+              return (
+                <li key={index} className="flex items-start justify-between gap-4 py-3">
+                  <div className="flex min-w-0 items-start gap-2.5">
+                    {Icon && (
+                      <Icon
+                        className="mt-0.5 h-4 w-4 shrink-0 text-content-subtle"
+                        aria-hidden="true"
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <div className="text-body text-content">{entry?.label ?? log.action}</div>
+                      {log.reason && (
+                        <div className="text-caption text-content-muted">{log.reason}</div>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">{log.reason}</div>
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  {new Date(log.created_at).toLocaleDateString('it-IT')}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+                  <div className="shrink-0 text-caption tabular-nums text-content-subtle">
+                    {new Date(log.created_at).toLocaleDateString('it-IT')}
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </Card>
       )}
 
-      {/* Azioni Account */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Azioni Account</h2>
+      {/* Sessione e cancellazione */}
+      <Card>
+        <CardTitle>Il tuo account</CardTitle>
 
-        <div className="space-y-3">
-          <button
-            onClick={() => signOut()}
-            className="w-full text-left px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
-          >
+        <div className="mt-6 space-y-3">
+          <Button variant="secondary" onClick={() => signOut()} fullWidth>
             Disconnetti
-          </button>
+          </Button>
 
           {!confirmingDelete ? (
-            <button
+            <Button
+              variant="ghost"
               onClick={() => setConfirmingDelete(true)}
-              className="w-full text-left px-4 py-3 border border-red-300 dark:border-red-600 text-red-700 dark:text-red-300 rounded-xl hover:bg-red-50 dark:hover:bg-red-900 transition-colors"
+              fullWidth
+              className="text-danger hover:text-danger"
             >
-              Elimina Account
-            </button>
+              Elimina account
+            </Button>
           ) : (
-            <div className="p-4 border border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-900/30 rounded-xl space-y-3">
-              <div className="flex items-start">
-                <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 mr-2 mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-red-800 dark:text-red-200">
-                  Sei sicuro di voler eliminare il tuo account? Questa azione non può essere annullata.
+            <div className="rounded-card border border-danger-edge bg-danger-soft p-4">
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-hidden="true" />
+                <p className="text-body text-danger">
+                  Elimini l'account e tutti i lead sbloccati. Non si torna indietro.
                 </p>
               </div>
-              <div className="flex gap-3">
-                <button
+
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                <Button
+                  variant="secondary"
                   onClick={() => setConfirmingDelete(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  fullWidth
                 >
                   Annulla
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="danger"
                   onClick={() => {
                     setConfirmingDelete(false)
                     toast.info('Funzionalità in arrivo')
                   }}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors"
+                  fullWidth
                 >
                   Elimina definitivamente
-                </button>
+                </Button>
               </div>
             </div>
           )}
         </div>
-      </div>
+      </Card>
     </div>
   )
 }

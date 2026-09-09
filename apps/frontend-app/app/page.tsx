@@ -1,25 +1,66 @@
 'use client'
 
-// Homepage moderna redesignata con stile Apple/Linear
-// Design pulito, minimale con gradients e glassmorphism
-// Integrata con la Navbar globale per evitare duplicazioni
-// ⚠️ Aggiornare se si modificano contenuti o CTA
+// Landing pubblica di TrovaMi.
+// Percorso: apps/frontend-app/app/page.tsx
+// Presentazione: token di DESIGN.md (nessun gradiente, nessun vetro smerigliato,
+// un solo accento). Il pubblico e' un professionista del web: si mostra il
+// MECCANISMO e un esempio onesto di lead, non promesse.
+// La Navbar globale si nasconde da sola su "/" quando non c'e' utente: qui
+// vive l'header pubblico della landing.
 
 import { useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
-import { ArrowRight, Target, BarChart3, Users, CheckCircle, Zap, Shield, Globe, Menu, X } from 'lucide-react'
+import { ArrowRight, Lock, Menu, X } from 'lucide-react'
 import NewsletterForm from '@/components/NewsletterForm'
 import StructuredFAQ from '@/components/StructuredFAQ'
 import PublicPricingSection from '@/components/pricing/PublicPricingSection'
+import Card from '@/components/ui/Card'
+import Badge from '@/components/ui/Badge'
+import LinkButton from '@/components/ui/LinkButton'
+import { cn } from '@/lib/utils/cn'
+
+// Il meccanismo, in tre passaggi. Niente aggettivi: cosa succede, in ordine.
+const STEPS = [
+  {
+    title: 'Partiamo da una zona e una categoria',
+    body:
+      'Idraulici a Torino, ristoranti a Bergamo, studi dentistici a Bari. Raccogliamo le attività da fonti pubbliche come Google Maps e le directory di settore, e teniamo traccia di quelle già viste per non ripeterle.',
+  },
+  {
+    title: 'Analizziamo il sito, non l’azienda',
+    body:
+      '78 controlli tecnici, sempre gli stessi: title e description, velocità di caricamento, HTTPS e certificato, pixel di tracciamento, immagini rotte, resa su mobile. Regole deterministiche, nessun modello che tira a indovinare.',
+  },
+  {
+    title: 'Ti diciamo cosa puoi vendergli',
+    body:
+      'Ogni lead arriva con i problemi scritti in italiano e il servizio che ci puoi costruire sopra. Guardi l’elenco, scegli, e spendi un credito solo su quelli che ti interessano davvero.',
+  },
+]
+
+// Dettagli dell'esempio: sono i controlli veri dell'analizzatore, scritti come
+// li vedrebbe l'utente. Niente dati di aziende reali.
+const EXAMPLE_ISSUES = [
+  'Certificato SSL assente: il browser mostra «Non sicuro»',
+  'Nessun tag title né meta description',
+  'Prima schermata caricata in 4,2 s su rete mobile',
+  'Nessun Google Analytics, Tag Manager o Meta Pixel',
+]
 
 export default function HomePage() {
   const { user } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  const navLinks = [
+    { href: '#come-funziona', label: 'Come funziona' },
+    { href: '#esempio', label: 'Esempio di lead' },
+    { href: '#pricing', label: 'Prezzi' },
+    { href: '/tools', label: 'Tool gratuiti' },
+  ]
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-      
+    <div className="min-h-screen bg-surface">
       {/* Schema Markup per SEO */}
       <script
         type="application/ld+json"
@@ -52,7 +93,7 @@ export default function HomePage() {
           })
         }}
       />
-      
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -75,7 +116,7 @@ export default function HomePage() {
           })
         }}
       />
-      
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -98,511 +139,362 @@ export default function HomePage() {
         }}
       />
 
-      {/* Header per utenti non loggati */}
+      {/* Header pubblico: solo per i visitatori anonimi.
+          Con l'utente loggato ci pensa la Navbar globale. */}
       {!user && (
-        <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <Target className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-xl font-bold text-gray-900 dark:text-white">TrovaMi</span>
-              </div>
+        <header className="sticky top-0 z-40 border-b border-edge bg-surface">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <div className="flex h-16 items-center justify-between gap-4">
+              <Link
+                href="/"
+                className="focus-ring rounded-control text-heading font-semibold tracking-tight text-content"
+              >
+                TrovaMi
+              </Link>
 
-              {/* Desktop Navigation */}
-              <nav className="hidden md:flex items-center space-x-8">
-                <a href="#features" className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">
-                  Funzionalità
-                </a>
-                <a href="#pricing" className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">
-                  Prezzi
-                </a>
-                <Link href="/login" className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">
-                  Accedi
-                </Link>
-                <Link
-                  href="/register"
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
-                >
-                  Inizia Gratis
-                </Link>
+              <nav className="hidden items-center gap-6 md:flex" aria-label="Sezioni del sito">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="focus-ring rounded-control text-caption text-content-muted transition-colors duration-fast ease-soft hover:text-content"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
               </nav>
 
-              {/* Mobile menu button */}
+              <div className="hidden items-center gap-2 md:flex">
+                <LinkButton href="/login" variant="ghost">
+                  Accedi
+                </LinkButton>
+                <LinkButton href="/register" variant="secondary">
+                  Crea un account
+                </LinkButton>
+              </div>
+
               <button
+                type="button"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
-                aria-label="Menu"
+                aria-label={mobileMenuOpen ? 'Chiudi il menu' : 'Apri il menu'}
+                aria-expanded={mobileMenuOpen}
+                aria-controls="menu-landing"
+                className="focus-ring -mr-2 inline-flex h-11 w-11 items-center justify-center rounded-control text-content-muted transition-colors duration-fast ease-soft hover:bg-surface-subtle hover:text-content md:hidden"
               >
-                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                {mobileMenuOpen ? (
+                  <X className="h-5 w-5" aria-hidden="true" />
+                ) : (
+                  <Menu className="h-5 w-5" aria-hidden="true" />
+                )}
               </button>
             </div>
 
-            {/* Mobile Navigation */}
             {mobileMenuOpen && (
-              <div className="md:hidden border-t border-gray-200/50 dark:border-gray-700/50 py-4 space-y-3">
-                <a
-                  href="#features"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 rounded-lg transition-colors"
-                >
-                  Funzionalità
-                </a>
-                <a
-                  href="#pricing"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 rounded-lg transition-colors"
-                >
-                  Prezzi
-                </a>
-                <Link
-                  href="/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 rounded-lg transition-colors"
-                >
-                  Accedi
-                </Link>
-                <Link
+              <div id="menu-landing" className="border-t border-edge py-3 md:hidden">
+                <nav className="flex flex-col" aria-label="Sezioni del sito">
+                  {navLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="focus-ring-inset flex min-h-control items-center rounded-control px-1 text-body text-content-muted transition-colors duration-fast ease-soft hover:text-content"
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="focus-ring-inset flex min-h-control items-center rounded-control px-1 text-body text-content-muted transition-colors duration-fast ease-soft hover:text-content"
+                  >
+                    Accedi
+                  </Link>
+                </nav>
+                <LinkButton
                   href="/register"
+                  variant="secondary"
+                  fullWidth
+                  className="mt-3"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block mx-3 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-center rounded-lg transition-colors font-medium"
                 >
-                  Inizia Gratis
-                </Link>
+                  Crea un account
+                </LinkButton>
               </div>
             )}
           </div>
         </header>
       )}
 
-      {/* Hero Section */}
-      <section className={`${user ? 'pt-24' : 'pt-32'} pb-20 px-4 sm:px-6 lg:px-8`}>
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-4xl mx-auto">
-            {/* Badge di benvenuto */}
-            <div className="inline-flex items-center px-4 py-2 bg-blue-50 border border-blue-200 rounded-full text-blue-700 text-sm font-medium mb-8 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300">
-              <Zap className="w-4 h-4 mr-2" />
-              Analisi tecnica avanzata basata su algoritmi proprietari
-            </div>
+      {/* Hero: cosa fa il prodotto e per chi, in una frase */}
+      <section className={cn('px-4 pb-16 sm:px-6 lg:px-8', user ? 'pt-28' : 'pt-16 sm:pt-24')}>
+        <div className="mx-auto max-w-6xl">
+          <p className="text-caption text-content-subtle">Per freelance e agenzie web</p>
+          <h1 className="mt-3 max-w-3xl text-title font-semibold text-content sm:text-display">
+            Trova le attività vicino a te che hanno un sito da sistemare.
+          </h1>
+          <p className="mt-5 max-w-2xl text-body-lg text-content-muted">
+            TrovaMi analizza i siti delle attività italiane — SEO, velocità, HTTPS,
+            tracciamento — e ti mostra quelle con problemi che tu sai già risolvere.
+            Con nome, contatti e il dettaglio tecnico di cosa non va.
+          </p>
 
-            {/* Titolo principale SEO-optimized */}
-            <h1 className="text-5xl md:text-7xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
-              Trova Clienti nella Tua Zona
-              <span className="block">
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800">
-                  con Proposte Pronte
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <LinkButton
+              href="/register"
+              size="lg"
+              icon={<ArrowRight />}
+              className="sm:w-auto"
+              fullWidth
+            >
+              Crea un account gratuito
+            </LinkButton>
+            <LinkButton
+              href="/tools/public-scan"
+              variant="secondary"
+              size="lg"
+              className="sm:w-auto"
+              fullWidth
+            >
+              Analizza un sito adesso
+            </LinkButton>
+          </div>
+
+          <p className="mt-4 text-caption text-content-subtle">
+            Include 1 credito di prova. Nessuna carta di credito.
+          </p>
+        </div>
+      </section>
+
+      {/* Ancora storica: /#features e' ancora linkato da altre pagine pubbliche */}
+      <span id="features" aria-hidden="true" />
+
+      {/* Il meccanismo */}
+      <section
+        id="come-funziona"
+        className="border-t border-edge px-4 py-16 sm:px-6 sm:py-24 lg:px-8"
+      >
+        <div className="mx-auto max-w-6xl">
+          <div className="max-w-2xl">
+            <h2 className="text-title font-semibold text-content">Come funziona</h2>
+            <p className="mt-3 text-body-lg text-content-muted">
+              Non è una lista di aziende comprata da qualche parte: è un’analisi tecnica
+              rifatta ogni volta, con criteri che puoi verificare da solo.
+            </p>
+          </div>
+
+          <ol className="mt-12 grid gap-10 md:grid-cols-3 md:gap-8">
+            {STEPS.map((step, index) => (
+              <li key={step.title}>
+                <span className="text-caption tabular-nums text-content-subtle">
+                  {String(index + 1).padStart(2, '0')}
                 </span>
-              </span>
-              <span className="block">da Inviare</span>
-            </h1>
+                <h3 className="mt-3 text-heading font-semibold text-content">{step.title}</h3>
+                <p className="mt-2 text-body text-content-muted">{step.body}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
 
-            {/* Sottotitolo ottimizzato per SEO */}
-            <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed">
-              <strong>TrovaMi</strong> analizza i siti web delle attività vicino a te, trova i problemi e ti prepara
-              <strong className="text-gray-900 dark:text-white"> una proposta commerciale professionale</strong> da mandare in 2 click.
+      {/* Esempio onesto: com'e' fatto un lead prima dello sblocco */}
+      <section id="esempio" className="border-t border-edge px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <h2 className="text-title font-semibold text-content">
+            Un lead, prima di sbloccarlo
+          </h2>
+          <p className="mt-3 max-w-2xl text-body-lg text-content-muted">
+            Nella dashboard vedi subito di cosa si tratta e perché ti riguarda. Il nome
+            dell’azienda e i contatti restano coperti: è quello che compri con il credito.
+          </p>
+
+          <Card className="mt-8 max-w-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <p className="text-caption text-content-subtle">Ristorante · Bergamo</p>
+              <Badge size="sm">Esempio</Badge>
+            </div>
+
+            <h3 className="mt-3 text-heading font-semibold text-content">
+              Il sito non è protetto da HTTPS e non ha nessun tracciamento.
+            </h3>
+            <p className="mt-2 text-body text-content-muted">
+              Puoi proporgli la messa in sicurezza del sito e l’installazione di un
+              tracciamento base, così saprà da dove arrivano le prenotazioni.
             </p>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-              <Link
-                href="/register"
-                className="group inline-flex items-center justify-center px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-              >
-                Crea Account Gratuito
-                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link
-                href="/tools/public-scan"
-                className="group inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-lg font-semibold rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-              >
-                <Zap className="mr-2 w-5 h-5" />
-                Prova l'Analisi Gratis
-              </Link>
-              <button
-                onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })}
-                className="inline-flex items-center justify-center px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-white text-lg font-semibold rounded-2xl border-2 border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600 transition-all duration-300"
-              >
-                Vedi Come Funziona
-              </button>
-            </div>
-
-            {/* Stats - Solo dati reali e verificabili */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-8 max-w-2xl mx-auto">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">78+</div>
-                <div className="text-gray-600 dark:text-gray-400">Parametri Analizzati</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">1 min</div>
-                <div className="text-gray-600 dark:text-gray-400">Per Ogni Analisi</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">0€</div>
-                <div className="text-gray-600 dark:text-gray-400">Per Iniziare</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-
-      {/* Features Section */}
-      <section id="features" className="py-24 bg-gradient-to-b from-gray-50 to-white dark:from-gray-800/50 dark:to-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-20">
-            <div className="inline-flex items-center px-4 py-2 bg-green-50 border border-green-200 rounded-full text-green-700 text-sm font-medium mb-6 dark:bg-green-900/30 dark:border-green-800 dark:text-green-300">
-              <Shield className="w-4 h-4 mr-2" />
-              Tecnologia proprietaria basata su algoritmi deterministici
-            </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
-              Come <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-blue-600">Funziona</span>
-            </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Sistema di audit digitale automatizzato che analizza oltre 78 parametri tecnici per identificare opportunità di business
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
-            {/* Feature 1 */}
-            <div className="group relative">
-              <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-3xl p-8 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-xl transition-all duration-500 group-hover:-translate-y-2">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                  <Globe className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Ricerca Automatizzata</h3>
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-6">
-                  Sistema di intelligence digitale che monitora directory business e fonti pubbliche per identificare aziende target
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <span className="px-3 py-1 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-lg text-sm font-medium">Business Directory</span>
-                  <span className="px-3 py-1 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-lg text-sm font-medium">Geolocalizzazione</span>
-                  <span className="px-3 py-1 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-lg text-sm font-medium">Targeting</span>
-                </div>
-              </div>
-            </div>
-            
-            {/* Feature 2 */}
-            <div className="group relative">
-              <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-3xl p-8 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-xl transition-all duration-500 group-hover:-translate-y-2">
-                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                  <BarChart3 className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Audit Digitale Completo</h3>
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-6">
-                  Analisi multi-livello che valuta SEO tecnico, performance, sicurezza, UX e compliance GDPR in tempo reale
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <span className="px-3 py-1 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded-lg text-sm font-medium">SEO Tecnico</span>
-                  <span className="px-3 py-1 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded-lg text-sm font-medium">Performance</span>
-                  <span className="px-3 py-1 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded-lg text-sm font-medium">GDPR Check</span>
-                </div>
-              </div>
-            </div>
-            
-            {/* Feature 3 */}
-            <div className="group relative">
-              <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-3xl p-8 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-xl transition-all duration-500 group-hover:-translate-y-2">
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                  <Users className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Lead Intelligence</h3>
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-6">
-                  Scoring proprietario che prioritizza le opportunità in base a criticità tecniche e potenziale di conversione
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <span className="px-3 py-1 bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded-lg text-sm font-medium">Scoring 0-100</span>
-                  <span className="px-3 py-1 bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded-lg text-sm font-medium">Priorità</span>
-                  <span className="px-3 py-1 bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded-lg text-sm font-medium">Report Tecnico</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Demo Section */}
-          <div id="demo" className="mt-24 text-center">
-            <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-12 text-white">
-              <h3 className="text-3xl font-bold mb-6">Esempio di Audit Completo</h3>
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 max-w-2xl mx-auto text-left">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-xl font-semibold">Ristorante Da Mario</h4>
-                  <span className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">Score: 25/100</span>
-                </div>
-                <p className="text-gray-300 mb-4">📍 Milano • 🌐 damario-milano.it • ☎️ +39 02 1234567</p>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center text-red-400">
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Meta tag SEO mancanti (Title, Description)
-                  </div>
-                  <div className="flex items-center text-red-400">
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Performance critica: 4.2s di caricamento
-                  </div>
-                  <div className="flex items-center text-red-400">
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Tracking analytics non configurato
-                  </div>
-                  <div className="flex items-center text-orange-400">
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Cookie banner GDPR non conforme
-                  </div>
-                </div>
-                <div className="mt-4 pt-4 border-t border-white/20">
-                  <p className="text-green-400 font-medium">💡 Opportunità ideale per: Web Agency, SEO Specialist, Consulenti Digitali</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Sezione Servizi Digitali PRO - NUOVA */}
-      <section className="py-24 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/20 dark:to-indigo-950/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center px-4 py-2 bg-purple-100 border border-purple-200 rounded-full text-purple-700 text-sm font-medium mb-6 dark:bg-purple-900/30 dark:border-purple-800 dark:text-purple-300">
-              <Zap className="w-4 h-4 mr-2" />
-              Esclusivo Account PRO
-            </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
-              Servizi Digitali <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-600">Suggeriti</span>
-            </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-              Per ogni lead analizzato, <strong>gli utenti PRO ricevono suggerimenti specifici</strong> sui servizi digitali da offrire 
-              con prezzi consigliati per massimizzare le conversioni
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Esempio Servizio SEO */}
-            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-3xl p-8 border border-purple-200/50 dark:border-purple-800/50 hover:shadow-xl transition-all duration-500">
-              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-6">
-                <BarChart3 className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Audit SEO Completo</h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
-                Analisi tecnica completa con report dettagliato e piano di ottimizzazione
+            <div className="mt-6 border-t border-edge pt-5">
+              <p className="text-micro uppercase tracking-wide text-content-subtle">
+                Dettagli tecnici
               </p>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Prezzo suggerito:</span>
-                <span className="text-lg font-bold text-green-600 dark:text-green-400">€800 - €1.500</span>
-              </div>
-            </div>
-
-            {/* Esempio Servizio Performance */}
-            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-3xl p-8 border border-purple-200/50 dark:border-purple-800/50 hover:shadow-xl transition-all duration-500">
-              <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center mb-6">
-                <Zap className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Ottimizzazione Performance</h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
-                Miglioramento velocità di caricamento e Core Web Vitals
-              </p>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Prezzo suggerito:</span>
-                <span className="text-lg font-bold text-orange-600 dark:text-orange-400">€600 - €1.200</span>
-              </div>
-            </div>
-
-            {/* Esempio Servizio GDPR */}
-            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-3xl p-8 border border-purple-200/50 dark:border-purple-800/50 hover:shadow-xl transition-all duration-500">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6">
-                <Shield className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Compliance GDPR</h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
-                Implementazione cookie policy, privacy e conformità normativa
-              </p>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Prezzo suggerito:</span>
-                <span className="text-lg font-bold text-blue-600 dark:text-blue-400">€400 - €800</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-12 text-center">
-            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-8 text-white">
-              <h3 className="text-2xl font-bold mb-4">Proposte Pronte da Inviare</h3>
-              <p className="text-lg mb-6 text-purple-100">
-                Per ogni opportunità ricevi una <strong>proposta commerciale completa</strong> con
-                analisi tecnica dettagliata, problemi identificati e prezzi suggeriti per il mercato italiano
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link
-                  href="/register"
-                  className="inline-flex items-center px-6 py-3 bg-white hover:bg-gray-100 text-purple-600 font-semibold rounded-xl transition-all duration-300"
-                >
-                  Prova Gratis
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Link>
-                <Link
-                  href="/tools/public-scan"
-                  className="inline-flex items-center px-6 py-3 bg-purple-500 hover:bg-purple-400 text-white font-semibold rounded-xl transition-all duration-300"
-                >
-                  Analizza un Sito Ora
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <PublicPricingSection />
-
-      {/* CTA Section */}
-      <section className="py-24 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800"></div>
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-4xl md:text-6xl font-bold text-white mb-6">
-              Pronto a Trovare i Tuoi 
-              <span className="block">Primi Lead?</span>
-            </h2>
-            <p className="text-xl md:text-2xl text-blue-100 mb-12 leading-relaxed">
-              Registrati ora e sblocca il tuo <strong className="text-white">primo lead gratis</strong>.
-              Nessuna carta di credito richiesta.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-6 justify-center">
-              <Link 
-                href="/register" 
-                className="group inline-flex items-center justify-center px-8 py-4 bg-white text-blue-600 text-lg font-bold rounded-2xl hover:bg-gray-100 transition-all duration-300 shadow-2xl hover:shadow-3xl transform hover:-translate-y-1"
-              >
-                Inizia Subito - È Gratis
-                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link 
-                href="/login" 
-                className="inline-flex items-center justify-center px-8 py-4 border-2 border-white/30 text-white text-lg font-semibold rounded-2xl hover:bg-white/10 transition-all duration-300"
-              >
-                Hai già un account?
-              </Link>
-            </div>
-
-            {/* Trust indicators */}
-            <div className="mt-16 pt-12 border-t border-white/20">
-              <p className="text-blue-100 mb-8">Usato da freelancer e agenzie web in tutta Italia</p>
-              <div className="flex flex-wrap justify-center items-center gap-8 opacity-60">
-                <div className="flex items-center space-x-2">
-                  <Shield className="w-5 h-5 text-white" />
-                  <span className="text-white font-medium">100% GDPR Compliant</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="w-5 h-5 text-white" />
-                  <span className="text-white font-medium">Dati Verificati</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Zap className="w-5 h-5 text-white" />
-                  <span className="text-white font-medium">Aggiornamento Continuo</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ Section */}
-      <StructuredFAQ className="bg-gray-50 dark:bg-gray-900" />
-
-      {/* Newsletter Section */}
-      <section className="py-24 bg-gradient-to-b from-gray-50 to-white dark:from-gray-800/50 dark:to-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto">
-            <NewsletterForm
-              title="Strategie e Opportunità ogni Mese"
-              description="Iscriviti alla newsletter per ricevere opportunità selezionate e strategie di acquisizione clienti direttamente nella tua inbox"
-              source="homepage_cta"
-              className="mx-auto"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Newsletter compatta nel footer */}
-          <div className="mb-16 p-8 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-2xl border border-white/10">
-            <NewsletterForm
-              title="Newsletter per Professionisti"
-              description="Lead gratuiti e strategie di crescita per la tua agenzia"
-              placeholder="Il tuo indirizzo email"
-              buttonText="Iscriviti"
-              source="footer"
-              variant="compact"
-              className="max-w-2xl mx-auto"
-            />
-          </div>
-
-          <div className="grid md:grid-cols-4 gap-8 mb-12">
-            <div className="col-span-2">
-              <div className="flex items-center space-x-3 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                  <Target className="w-6 h-6 text-white" />
-                </div>
-                <span className="text-2xl font-bold">TrovaMi</span>
-              </div>
-              <p className="text-gray-400 text-lg leading-relaxed max-w-md">
-                La piattaforma più avanzata per trovare lead qualificati attraverso l'analisi automatizzata di siti web aziendali.
-              </p>
-              <div className="mt-6 flex space-x-4">
-                <a href="#" className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors">
-                  <span className="sr-only">Twitter</span>
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M6.29 18.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0020 3.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.073 4.073 0 01.8 7.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 010 16.407a11.616 11.616 0 006.29 1.84" />
-                  </svg>
-                </a>
-                <a href="#" className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors">
-                  <span className="sr-only">LinkedIn</span>
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.338 16.338H13.67V12.16c0-.995-.017-2.277-1.387-2.277-1.39 0-1.601 1.086-1.601 2.207v4.248H8.014v-8.59h2.559v1.174h.037c.356-.675 1.227-1.387 2.526-1.387 2.703 0 3.203 1.778 3.203 4.092v4.711zM5.005 6.575a1.548 1.548 0 11-.003-3.096 1.548 1.548 0 01.003 3.096zm-1.337 9.763H6.34v-8.59H3.667v8.59zM17.668 1H2.328C1.595 1 1 1.581 1 2.298v15.403C1 18.418 1.595 19 2.328 19h15.34c.734 0 1.332-.582 1.332-1.299V2.298C19 1.581 18.402 1 17.668 1z" clipRule="evenodd" />
-                  </svg>
-                </a>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Prodotto</h3>
-              <ul className="space-y-3">
-                <li><a href="#features" className="text-gray-400 hover:text-white transition-colors">Funzionalità</a></li>
-                <li><a href="#pricing" className="text-gray-400 hover:text-white transition-colors">Prezzi</a></li>
-                <li><a href="#demo" className="text-gray-400 hover:text-white transition-colors">Demo</a></li>
-                <li><Link href="/login" className="text-gray-400 hover:text-white transition-colors">Login</Link></li>
+              <ul className="mt-3 space-y-2">
+                {EXAMPLE_ISSUES.map((issue) => (
+                  <li key={issue} className="flex items-start gap-2.5 text-caption text-content-muted">
+                    <span
+                      className="mt-2 h-1 w-1 shrink-0 rounded-pill bg-content-subtle"
+                      aria-hidden="true"
+                    />
+                    {issue}
+                  </li>
+                ))}
               </ul>
             </div>
-            
+
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-edge pt-5">
+              <p className="flex items-center gap-2 text-caption text-content-subtle">
+                <Lock className="h-4 w-4 shrink-0" aria-hidden="true" />
+                Nome, telefono, email e indirizzo del sito si vedono dopo lo sblocco
+              </p>
+              <p className="text-caption text-content-muted">1 credito</p>
+            </div>
+          </Card>
+        </div>
+      </section>
+
+      {/* Prezzi */}
+      <PublicPricingSection className="border-t border-edge" />
+
+      {/* FAQ */}
+      <StructuredFAQ className="border-t border-edge bg-surface" />
+
+      {/* Chiusura */}
+      <section className="border-t border-edge px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <h2 className="max-w-2xl text-title font-semibold text-content">
+            Il primo lead è di prova, e non costa niente.
+          </h2>
+          <p className="mt-3 max-w-2xl text-body-lg text-content-muted">
+            Crei l’account, dici cosa vendi e dove lavori, e vedi subito le attività
+            compatibili con i tuoi servizi.
+          </p>
+          <LinkButton href="/register" size="lg" icon={<ArrowRight />} className="mt-8">
+            Crea un account gratuito
+          </LinkButton>
+        </div>
+      </section>
+
+      {/* Newsletter + footer */}
+      <footer className="border-t border-edge bg-surface px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <div className="grid gap-10 md:grid-cols-2 md:gap-16">
             <div>
-              <h3 className="text-lg font-semibold mb-4">Risorse</h3>
-              <ul className="space-y-3">
-                <li><Link href="/come-trovare-clienti" className="text-gray-400 hover:text-white transition-colors">Come Trovare Clienti</Link></li>
-                <li><Link href="/lead-generation-agenzie" className="text-gray-400 hover:text-white transition-colors">Lead Generation Agenzie</Link></li>
-                <li><Link href="/confronto-costi-lead" className="text-gray-400 hover:text-white transition-colors">Confronto Costi per Lead</Link></li>
-                <li><Link href="/help" className="text-gray-400 hover:text-white transition-colors">Centro Assistenza</Link></li>
-                <li><Link href="/contact" className="text-gray-400 hover:text-white transition-colors">Contatti</Link></li>
-              </ul>
+              <h2 className="text-heading font-semibold text-content">
+                Una mail al mese, quando c’è qualcosa da dire
+              </h2>
+              <p className="mt-2 text-body text-content-muted">
+                Opportunità selezionate e modi concreti per proporre i tuoi servizi.
+                Niente altro.
+              </p>
+            </div>
+            <div className="md:pt-1">
+              <NewsletterForm
+                placeholder="La tua email"
+                buttonText="Iscriviti"
+                source="homepage_footer"
+                variant="inline"
+              />
             </div>
           </div>
-          
-          <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center">
-            <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-6 mb-4 md:mb-0">
-              <p className="text-gray-400">
-                &copy; 2025 TrovaMi. Tutti i diritti riservati.
+
+          <div className="mt-16 grid gap-10 border-t border-edge pt-10 sm:grid-cols-3">
+            <div>
+              <p className="text-body font-medium text-content">TrovaMi</p>
+              <p className="mt-2 max-w-xs text-caption text-content-muted">
+                Analisi tecnica dei siti delle attività italiane, per chi quei siti li
+                sa rifare.
               </p>
-              <div className="flex items-center space-x-4 text-sm">
-                <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">
-                  Privacy Policy
-                </Link>
-                <span className="text-gray-600">•</span>
-                <Link href="/terms" className="text-gray-400 hover:text-white transition-colors">
-                  Termini e Condizioni
-                </Link>
-              </div>
             </div>
-            <div className="flex items-center space-x-6 text-sm text-gray-400">
-              <span>P.IVA 07327360488</span>
-              <span>•</span>
-              <span>Made in Italy 🇮🇹</span>
+
+            <nav aria-label="Prodotto">
+              <p className="text-caption font-medium text-content">Prodotto</p>
+              <ul className="mt-3 space-y-2.5">
+                <li>
+                  <Link
+                    href="#come-funziona"
+                    className="focus-ring rounded-control text-caption text-content-muted transition-colors duration-fast ease-soft hover:text-content"
+                  >
+                    Come funziona
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/pricing"
+                    className="focus-ring rounded-control text-caption text-content-muted transition-colors duration-fast ease-soft hover:text-content"
+                  >
+                    Prezzi
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/tools"
+                    className="focus-ring rounded-control text-caption text-content-muted transition-colors duration-fast ease-soft hover:text-content"
+                  >
+                    Tool gratuiti
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/login"
+                    className="focus-ring rounded-control text-caption text-content-muted transition-colors duration-fast ease-soft hover:text-content"
+                  >
+                    Accedi
+                  </Link>
+                </li>
+              </ul>
+            </nav>
+
+            <nav aria-label="Risorse e assistenza">
+              <p className="text-caption font-medium text-content">Risorse</p>
+              <ul className="mt-3 space-y-2.5">
+                <li>
+                  <Link
+                    href="/come-trovare-clienti"
+                    className="focus-ring rounded-control text-caption text-content-muted transition-colors duration-fast ease-soft hover:text-content"
+                  >
+                    Come trovare clienti
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/lead-generation-agenzie"
+                    className="focus-ring rounded-control text-caption text-content-muted transition-colors duration-fast ease-soft hover:text-content"
+                  >
+                    Lead generation per agenzie
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/help"
+                    className="focus-ring rounded-control text-caption text-content-muted transition-colors duration-fast ease-soft hover:text-content"
+                  >
+                    Centro assistenza
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/contact"
+                    className="focus-ring rounded-control text-caption text-content-muted transition-colors duration-fast ease-soft hover:text-content"
+                  >
+                    Contatti
+                  </Link>
+                </li>
+              </ul>
+            </nav>
+          </div>
+
+          <div className="mt-10 flex flex-col gap-3 border-t border-edge pt-6 text-caption text-content-subtle sm:flex-row sm:items-center sm:justify-between">
+            <p>© 2025 TrovaMi · P.IVA 07327360488</p>
+            <div className="flex items-center gap-4">
+              <Link
+                href="/privacy"
+                className="focus-ring rounded-control transition-colors duration-fast ease-soft hover:text-content"
+              >
+                Privacy
+              </Link>
+              <Link
+                href="/terms"
+                className="focus-ring rounded-control transition-colors duration-fast ease-soft hover:text-content"
+              >
+                Termini
+              </Link>
             </div>
           </div>
         </div>

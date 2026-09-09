@@ -1,48 +1,112 @@
-// UI restyling stile Apple + Linear
-// Badge component moderno con design minimale
-// Utilizzato per stati, piani, categorie con colori consistenti
+/**
+ * Badge — etichetta di stato o metadato.
+ *
+ * Percorso: apps/frontend-app/components/ui/Badge.tsx
+ * Guida: apps/frontend-app/DESIGN.md
+ *
+ * REGOLA: in una card c'e' AL MASSIMO un badge colorato. Se ne servono
+ * altri, sono `neutral`. Un badge non e' una decorazione: se non comunica
+ * uno stato o un metadato, va tolto.
+ * Il colore non e' mai l'unica informazione: il testo dice sempre cosa
+ * significa (accessibilita' + daltonismo).
+ */
 
 'use client'
 
-import { ReactNode } from 'react'
+import { HTMLAttributes, ReactNode } from 'react'
+import { cn } from '@/lib/utils/cn'
 
-interface BadgeProps {
+export type BadgeVariant =
+  | 'neutral'
+  | 'default'
+  | 'accent'
+  | 'info'
+  | 'success'
+  | 'warning'
+  | 'error'
+  | 'danger'
+  | 'outline'
+
+export type BadgeSize = 'sm' | 'md' | 'lg'
+
+export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   children: ReactNode
-  variant?: 'default' | 'success' | 'warning' | 'error' | 'info'
-  size?: 'sm' | 'md' | 'lg'
-  className?: string
+  variant?: BadgeVariant
+  size?: BadgeSize
+  /** Pallino di stato prima del testo */
+  dot?: boolean
+  /** Forma a pillola (per i piani, i tag) invece dell'angolo morbido */
+  pill?: boolean
+  icon?: ReactNode
 }
 
-export default function Badge({ 
-  children, 
-  variant = 'default', 
+const variants: Record<BadgeVariant, string> = {
+  neutral: 'bg-surface-subtle text-content-muted border-edge',
+  default: 'bg-surface-subtle text-content-muted border-edge',
+  accent: 'bg-accent-soft text-accent-ink border-accent-edge',
+  info: 'bg-accent-soft text-accent-ink border-accent-edge',
+  success: 'bg-success-soft text-success border-success-edge',
+  warning: 'bg-warning-soft text-warning border-warning-edge',
+  error: 'bg-danger-soft text-danger border-danger-edge',
+  danger: 'bg-danger-soft text-danger border-danger-edge',
+  outline: 'bg-transparent text-content-muted border-edge-strong',
+}
+
+const dots: Record<BadgeVariant, string> = {
+  neutral: 'bg-content-subtle',
+  default: 'bg-content-subtle',
+  accent: 'bg-accent',
+  info: 'bg-accent',
+  success: 'bg-success',
+  warning: 'bg-warning',
+  error: 'bg-danger',
+  danger: 'bg-danger',
+  outline: 'bg-content-subtle',
+}
+
+const sizes: Record<BadgeSize, string> = {
+  sm: 'h-5 px-1.5 text-micro gap-1',
+  md: 'h-6 px-2 text-caption gap-1.5',
+  lg: 'h-7 px-2.5 text-caption gap-1.5',
+}
+
+export default function Badge({
+  children,
+  variant = 'neutral',
   size = 'md',
-  className = '' 
+  dot = false,
+  pill = false,
+  icon,
+  className,
+  ...props
 }: BadgeProps) {
-  const baseClasses = 'inline-flex items-center font-medium rounded-full'
-  
-  const variantClasses = {
-    default: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200',
-    success: 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200',
-    warning: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200', 
-    error: 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200',
-    info: 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200'
-  }
-  
-  const sizeClasses = {
-    sm: 'px-2 py-1 text-xs',
-    md: 'px-3 py-1 text-sm',
-    lg: 'px-4 py-2 text-base'
-  }
-  
   return (
-    <span className={`
-      ${baseClasses}
-      ${variantClasses[variant]}
-      ${sizeClasses[size]}
-      ${className}
-    `}>
+    <span
+      className={cn(
+        'inline-flex max-w-full items-center border font-medium',
+        'whitespace-nowrap overflow-hidden text-ellipsis',
+        pill ? 'rounded-pill' : 'rounded-md',
+        variants[variant],
+        sizes[size],
+        '[&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:shrink-0',
+        className
+      )}
+      {...props}
+    >
+      {dot && (
+        <span
+          className={cn('h-1.5 w-1.5 shrink-0 rounded-pill', dots[variant])}
+          aria-hidden="true"
+        />
+      )}
+      {icon && (
+        <span className="inline-flex shrink-0 items-center" aria-hidden="true">
+          {icon}
+        </span>
+      )}
       {children}
     </span>
   )
 }
+
+export { Badge }

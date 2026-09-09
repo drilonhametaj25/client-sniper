@@ -1,11 +1,13 @@
 /**
- * Pagina Onboarding V2
+ * Pagina Onboarding
  *
- * Flow semplificato a 4 step:
- * 1. Benvenuto (value proposition)
- * 2. Specializzazione (cosa offri)
- * 3. Zona (dove lavori)
- * 4. Branding (opzionale - personalizza proposte)
+ * Tre schermate, una domanda per schermata:
+ * 1. Cosa vendi  → users.services_offered (guida il matching)
+ * 2. Dove lavori → operating_city / tutta Italia
+ * 3. Riepilogo   → dashboard con il filtro gia' applicato
+ *
+ * La pagina e' solo la cornice: progresso, errori e passaggio fra gli step.
+ * Il contenuto vive in ./components/*.
  *
  * @file apps/frontend-app/app/onboarding/page.tsx
  */
@@ -14,12 +16,15 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { AlertCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import {
   INITIAL_ONBOARDING_DATA,
   ONBOARDING_STEPS,
   type OnboardingV2Data
 } from '@/lib/types/onboarding-v2'
+import { Skeleton } from '@/components/ui'
+import { cn } from '@/lib/utils/cn'
 
 // Step Components (3 step: servizi → zona → riepilogo)
 import StepServices from './components/StepServices'
@@ -155,13 +160,28 @@ export default function OnboardingPage() {
     }
   }
 
-  // Loading state
+  // Attesa: lo scheletro ha la forma del primo step, cosi' la pagina non salta
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Caricamento...</p>
+      <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-16">
+        <div className="flex items-center gap-3">
+          <div className="flex flex-1 gap-1.5">
+            <Skeleton className="h-1 flex-1" />
+            <Skeleton className="h-1 flex-1" />
+            <Skeleton className="h-1 flex-1" />
+          </div>
+        </div>
+
+        <div className="mt-10 space-y-3" role="status" aria-live="polite">
+          <span className="sr-only">Caricamento in corso</span>
+          <Skeleton className="h-8 w-56" />
+          <Skeleton className="h-4 w-full max-w-md" />
+        </div>
+
+        <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-[86px] rounded-card" />
+          ))}
         </div>
       </div>
     )
@@ -176,90 +196,59 @@ export default function OnboardingPage() {
     onSkip: handleSkip
   }
 
+  const currentStepTitle = ONBOARDING_STEPS[currentStep - 1]?.title ?? ''
+
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Progress bar */}
-      <div className="w-full bg-gray-200 dark:bg-gray-700 h-1">
-        <div
-          className="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-500"
-          style={{ width: `${(currentStep / totalSteps) * 100}%` }}
-        />
-      </div>
-
-      {/* Step indicator */}
-      <div className="py-4 px-6 flex items-center justify-center gap-2">
-        {ONBOARDING_STEPS.map((step, idx) => {
-          const stepNum = idx + 1
-          const isActive = currentStep === stepNum
-          const isCompleted = currentStep > stepNum
-
-          return (
-            <div key={step.id} className="flex items-center">
-              <div
-                className={`
-                  w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all
-                  ${isActive
-                    ? 'bg-blue-600 text-white'
-                    : isCompleted
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                  }
-                `}
-              >
-                {isCompleted ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
-                  stepNum
-                )}
-              </div>
-
-              {idx < ONBOARDING_STEPS.length - 1 && (
-                <div
-                  className={`
-                    w-12 h-0.5 mx-1
-                    ${currentStep > stepNum
-                      ? 'bg-green-500'
-                      : 'bg-gray-200 dark:bg-gray-700'
-                    }
-                  `}
-                />
+    <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-16">
+      {/* Progresso: presente ma silenzioso */}
+      <div className="flex items-center gap-4">
+        <div className="flex flex-1 gap-1.5" aria-hidden="true">
+          {ONBOARDING_STEPS.map((step, idx) => (
+            <span
+              key={step.id}
+              className={cn(
+                'h-1 flex-1 rounded-pill transition-colors duration-base ease-soft',
+                currentStep >= idx + 1 ? 'bg-accent' : 'bg-edge'
               )}
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center py-8 px-4">
-        <div className="w-full max-w-2xl">
-          {/* Error Message */}
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl">
-              <p className="text-sm text-red-600 dark:text-red-400 text-center">{error}</p>
-            </div>
-          )}
-
-          {/* Step Content */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-10">
-            {currentStep === 1 && <StepServices {...stepProps} />}
-            {currentStep === 2 && <StepLocationSimple {...stepProps} />}
-            {currentStep === 3 && <StepRecap {...stepProps} />}
-          </div>
+            />
+          ))}
         </div>
+        <span className="shrink-0 text-micro tabular-nums text-content-subtle">
+          Passo {currentStep} di {totalSteps}
+        </span>
       </div>
 
-      {/* Footer */}
-      <div className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+      <p className="sr-only" aria-live="polite">
+        Passo {currentStep} di {totalSteps}: {currentStepTitle}
+      </p>
+
+      {/* Errore di salvataggio */}
+      {error && (
+        <div
+          role="alert"
+          className="mt-8 flex items-start gap-2.5 rounded-card border border-danger-edge bg-danger-soft p-4"
+        >
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-hidden="true" />
+          <p className="text-body text-danger">{error}</p>
+        </div>
+      )}
+
+      {/* Una domanda per schermata */}
+      <div className="mt-10">
+        {currentStep === 1 && <StepServices {...stepProps} />}
+        {currentStep === 2 && <StepLocationSimple {...stepProps} />}
+        {currentStep === 3 && <StepRecap {...stepProps} isSaving={isSaving} />}
+      </div>
+
+      <p className="mt-12 text-center text-caption text-content-subtle">
         Hai bisogno di aiuto?{' '}
         <a
           href="mailto:support@trovami.pro"
-          className="text-blue-600 dark:text-blue-400 hover:underline"
+          className="focus-ring rounded-sm text-accent-ink hover:underline"
         >
-          Contattaci
+          Scrivici
         </a>
-      </div>
+      </p>
     </div>
   )
 }

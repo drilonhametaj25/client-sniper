@@ -1,110 +1,124 @@
 /**
- * LeadProblems — Problemi del sito in italiano semplice, dal più grave.
+ * LeadProblems — i problemi del sito raccontati in italiano semplice.
  *
- * Riusa il problem-translator (extractProblemKeysFromAnalysis + translations)
- * per convertire l'analisi tecnica in problemi comprensibili al cliente,
- * raggruppati per severità con l'idioma SEVERITY_COLORS esistente
- * (esteso con le varianti dark).
+ * Riusa il problem-translator (extractProblemKeysFromAnalysis + translations):
+ * una sola lista ordinata dal più grave al meno grave, con la gravità scritta a
+ * parole (il colore non è mai l'unica informazione). Di default mostra i primi
+ * quattro: il resto si apre a richiesta, perché la pagina non è un cruscotto.
  *
  * Usato da: app/lead/[id]/page.tsx (solo vista sbloccata)
  */
 
 'use client'
 
-import { useMemo } from 'react'
-import { AlertTriangle, CheckCircle } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Check } from 'lucide-react'
 import {
   extractProblemKeysFromAnalysis,
   translateProblems,
-  SEVERITY_COLORS,
   SEVERITY_NAMES,
   TranslatedProblem
 } from '@/lib/utils/problem-translator'
+import { Button, Card, CardTitle, cn } from '@/components/ui'
 
 interface LeadProblemsProps {
   analysis: any
 }
 
-const SEVERITY_ORDER: TranslatedProblem['severity'][] = ['critical', 'high', 'medium', 'low']
-
-/** Varianti dark per l'idioma SEVERITY_COLORS (che definisce solo il tema chiaro). */
-const SEVERITY_DARK: Record<TranslatedProblem['severity'], string> = {
-  critical: 'dark:bg-red-900/20 dark:text-red-300 dark:border-red-800',
-  high: 'dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800',
-  medium: 'dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800',
-  low: 'dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800'
+const SEVERITY_ORDER: Record<TranslatedProblem['severity'], number> = {
+  critical: 0,
+  high: 1,
+  medium: 2,
+  low: 3
 }
 
+/** Il pallino è un rinforzo: la gravità è comunque scritta accanto. */
+const SEVERITY_DOT: Record<TranslatedProblem['severity'], string> = {
+  critical: 'bg-danger',
+  high: 'bg-warning',
+  medium: 'bg-content-subtle',
+  low: 'bg-edge-strong'
+}
+
+const PREVIEW_COUNT = 4
+
 export default function LeadProblems({ analysis }: LeadProblemsProps) {
-  const grouped = useMemo(() => {
-    const problems = translateProblems(extractProblemKeysFromAnalysis(analysis))
-    const bySeverity = new Map<TranslatedProblem['severity'], TranslatedProblem[]>()
-    for (const problem of problems) {
-      const list = bySeverity.get(problem.severity) || []
-      list.push(problem)
-      bySeverity.set(problem.severity, list)
-    }
-    return bySeverity
+  const [expanded, setExpanded] = useState(false)
+
+  const problems = useMemo(() => {
+    const list = translateProblems(extractProblemKeysFromAnalysis(analysis))
+    return [...list].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity])
   }, [analysis])
 
-  const total = SEVERITY_ORDER.reduce((sum, s) => sum + (grouped.get(s)?.length || 0), 0)
+  const criticalCount = problems.filter(p => p.severity === 'critical').length
+  const visible = expanded ? problems : problems.slice(0, PREVIEW_COUNT)
+  const hidden = problems.length - visible.length
 
   return (
-    <section className="bg-white dark:bg-gray-800 rounded-xl p-6">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-        <AlertTriangle className="h-5 w-5 mr-2 text-orange-500" />
-        Problemi del sito
-      </h2>
+    <Card>
+      <CardTitle>Problemi del sito</CardTitle>
 
-      {total === 0 ? (
-        <div className="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-400">
-          <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
-          <p>
-            L&apos;analisi automatica non ha rilevato problemi significativi. Il sito è
-            in buone condizioni generali.
+      {problems.length === 0 ? (
+        <div className="mt-2 flex items-start gap-2">
+          <Check className="mt-1 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
+          <p className="text-body text-content-muted">
+            L&apos;analisi automatica non ha rilevato problemi significativi: il sito è in
+            buone condizioni generali.
           </p>
         </div>
       ) : (
-        <div className="space-y-5">
-          {SEVERITY_ORDER.map(severity => {
-            const problems = grouped.get(severity)
-            if (!problems || problems.length === 0) return null
-            const colors = SEVERITY_COLORS[severity]
-            return (
-              <div key={severity}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${colors.bg} ${colors.text} ${colors.border} ${SEVERITY_DARK[severity]}`}
-                  >
-                    {SEVERITY_NAMES[severity]}
-                  </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {problems.length} {problems.length === 1 ? 'problema' : 'problemi'}
-                  </span>
+        <>
+          <p className="mt-2 text-body text-content-muted">
+            {problems.length === 1
+              ? 'Abbiamo rilevato un problema.'
+              : `Abbiamo rilevato ${problems.length} problemi.`}
+            {criticalCount > 0 &&
+              (criticalCount === 1
+                ? ' Uno è critico: è il motivo per cui vale la pena chiamarlo.'
+                : ` ${criticalCount} sono critici: sono il motivo per cui vale la pena chiamarlo.`)}
+          </p>
+
+          <ul className="mt-4">
+            {visible.map((problem, index) => (
+              <li
+                key={problem.key}
+                className={cn('flex gap-3 py-4', index > 0 && 'border-t border-edge')}
+              >
+                <span
+                  className={cn(
+                    'mt-2 h-1.5 w-1.5 shrink-0 rounded-pill',
+                    SEVERITY_DOT[problem.severity]
+                  )}
+                  aria-hidden="true"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <span className="text-body font-medium text-content">{problem.title}</span>
+                    <span className="text-micro text-content-subtle">
+                      {SEVERITY_NAMES[problem.severity]}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-body text-content-muted">{problem.description}</p>
+                  <p className="mt-1 text-caption text-content-subtle">{problem.impact}</p>
                 </div>
-                <ul className="space-y-2">
-                  {problems.map(problem => (
-                    <li
-                      key={problem.key}
-                      className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50"
-                    >
-                      <div className="font-medium text-gray-900 dark:text-white">
-                        {problem.title}
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
-                        {problem.description}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {problem.impact}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )
-          })}
-        </div>
+              </li>
+            ))}
+          </ul>
+
+          {problems.length > PREVIEW_COUNT && (
+            <div className="mt-2 border-t border-edge pt-4">
+              <Button
+                variant="ghost"
+                onClick={() => setExpanded(!expanded)}
+                aria-expanded={expanded}
+                className="-ml-4"
+              >
+                {expanded ? 'Mostra solo i principali' : `Mostra gli altri ${hidden} problemi`}
+              </Button>
+            </div>
+          )}
+        </>
       )}
-    </section>
+    </Card>
   )
 }

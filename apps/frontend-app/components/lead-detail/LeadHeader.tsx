@@ -1,18 +1,26 @@
 /**
- * LeadHeader — Intestazione della pagina dettaglio lead.
+ * LeadHeader — l'intestazione del dossier lead.
  *
- * Mostra il nome dell'attività (o una descrizione generica quando il lead è
- * ancora bloccato), città, categoria, il badge Opportunità (sempre via
- * getOpportunity: mai lo score grezzo) e i chip di freschezza dei dati.
- * Lo stato published/quarantine è visibile solo agli admin.
+ * Il soggetto della schermata è l'attività: nome (se sbloccata) o "Ristorante a
+ * Bergamo" quando è ancora bloccata. Subito sotto, in una frase, il motivo per
+ * cui vale la pena guardarla (il problema più grave tradotto in italiano).
+ * Città, categoria e freschezza sono metadati quieti su una riga.
+ *
+ * Il punteggio non compare come numero: getOpportunity resta l'unica fonte
+ * della semantica dello score, ma qui se ne usa solo l'etichetta ("Opportunità
+ * alta"). Il numero grezzo vive nei dettagli tecnici, dove sta il gergo.
  *
  * Usato da: app/lead/[id]/page.tsx
  */
 
 'use client'
 
-import { ArrowLeft, MapPin, Clock, ShieldAlert, ShieldCheck } from 'lucide-react'
+import { useMemo } from 'react'
+import { ArrowLeft, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { getOpportunity } from '@/lib/utils/opportunity'
+import { translateCategory } from '@/lib/utils/categories'
+import { extractProblemKeysFromAnalysis, getMainProblem } from '@/lib/utils/problem-translator'
+import { Badge, Button, type BadgeVariant } from '@/components/ui'
 
 interface LeadHeaderProps {
   businessName?: string | null
@@ -23,6 +31,8 @@ interface LeadHeaderProps {
   createdAt?: string | null
   lastSeenAt?: string | null
   status?: string | null
+  /** analisi del sito: serve solo per la frase di apertura */
+  analysis?: any
   unlocked: boolean
   isAdmin: boolean
   onBack: () => void
@@ -41,6 +51,13 @@ function freshnessLabel(lastSeenAt?: string | null, createdAt?: string | null): 
   return months === 1 ? 'Verificato un mese fa' : `Verificato ${months} mesi fa`
 }
 
+/** L'etichetta dell'opportunità è l'unico badge colorato dell'intestazione. */
+const OPPORTUNITY_VARIANT: Record<string, BadgeVariant> = {
+  'Opportunità alta': 'success',
+  'Opportunità media': 'warning',
+  'Opportunità bassa': 'neutral'
+}
+
 export default function LeadHeader({
   businessName,
   city,
@@ -50,71 +67,66 @@ export default function LeadHeader({
   createdAt,
   lastSeenAt,
   status,
+  analysis,
   unlocked,
   isAdmin,
   onBack
 }: LeadHeaderProps) {
   const opportunity = getOpportunity(score, scoreVersion)
   const freshness = freshnessLabel(lastSeenAt, createdAt)
+  const categoryLabel = category ? translateCategory(category) : 'Attività locale'
 
-  const title = unlocked && businessName
-    ? businessName
-    : `Attività ${category || 'locale'}${city ? ` a ${city}` : ''}`
+  const mainProblem = useMemo(
+    () => getMainProblem(extractProblemKeysFromAnalysis(analysis)),
+    [analysis]
+  )
+
+  const title =
+    unlocked && businessName
+      ? businessName
+      : city
+        ? `${categoryLabel} a ${city}`
+        : categoryLabel
+
+  // Metadati: testo semplice separato da punti medi, niente chip in fila.
+  // Se il lead è bloccato, citta' e categoria sono gia' nel titolo: non si ripetono.
+  const meta = (
+    unlocked ? [city, category ? categoryLabel : null, freshness] : [freshness]
+  ).filter(Boolean) as string[]
 
   return (
     <header>
-      <button
-        onClick={onBack}
-        className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4 transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4 mr-2" />
+      <Button variant="ghost" onClick={onBack} icon={<ArrowLeft />} className="-ml-4 mb-4">
         Torna ai lead
-      </button>
+      </Button>
 
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 break-words">
-            {title}
-          </h1>
-          <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            {city && (
-              <span className="flex items-center">
-                <MapPin className="h-4 w-4 mr-1" />
-                {city}
-              </span>
-            )}
-            {category && (
-              <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full">
-                {category}
-              </span>
-            )}
-            {freshness && (
-              <span className="flex items-center px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full">
-                <Clock className="h-3.5 w-3.5 mr-1" />
-                {freshness}
-              </span>
-            )}
-            {isAdmin && status === 'quarantine' && (
-              <span className="flex items-center px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800">
-                <ShieldAlert className="h-3.5 w-3.5 mr-1" />
-                In quarantena
-              </span>
-            )}
-            {isAdmin && status === 'published' && (
-              <span className="flex items-center px-2 py-1 rounded-full bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
-                <ShieldCheck className="h-3.5 w-3.5 mr-1" />
-                Pubblicato
-              </span>
-            )}
-          </div>
-        </div>
+      <h1 className="text-title font-semibold text-content break-words">{title}</h1>
 
-        <div className={`shrink-0 text-right p-4 rounded-xl border ${opportunity.badgeClass}`}>
-          <div className={`text-2xl font-bold ${opportunity.textClass}`}>
-            {opportunity.value}/100
-          </div>
-          <div className="text-sm">{opportunity.label}</div>
-        </div>
+      {mainProblem && (
+        <p className="mt-2 max-w-2xl text-body-lg text-content-muted">
+          {mainProblem.description}
+        </p>
+      )}
+
+      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-caption text-content-subtle">
+        <Badge variant={OPPORTUNITY_VARIANT[opportunity.label] ?? 'neutral'} dot>
+          {opportunity.label}
+        </Badge>
+
+        {meta.length > 0 && <span>{meta.join(' · ')}</span>}
+
+        {isAdmin && status === 'quarantine' && (
+          <span className="flex items-center gap-1.5 text-warning">
+            <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
+            In quarantena
+          </span>
+        )}
+        {isAdmin && status === 'published' && (
+          <span className="flex items-center gap-1.5">
+            <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+            Pubblicato
+          </span>
+        )}
       </div>
     </header>
   )

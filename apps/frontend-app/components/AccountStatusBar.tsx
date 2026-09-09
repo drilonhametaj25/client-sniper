@@ -1,22 +1,29 @@
 /**
- * AccountStatusBar - Barra stato crediti utente
+ * AccountStatusBar — quanto ti resta, detto in una riga.
  *
- * Mostra i crediti rimanenti in base al piano:
- * - FREE: "1 credito di prova disponibile"
- * - STARTER: "18/25 crediti rimasti questo mese"
- * - AGENCY: "Crediti illimitati"
+ * Percorso: apps/frontend-app/components/AccountStatusBar.tsx
+ * Guida: apps/frontend-app/DESIGN.md
  *
- * Include:
- * - Progress bar visuale
- * - Data prossimo reset
- * - CTA upgrade se necessario
+ * Nella dashboard il soggetto sono i lead, non l'account: questa barra deve
+ * arretrare. Una frase leggibile ("18 crediti rimasti su 25"), una riga di
+ * contesto piccola e grigia (piano + rinnovo), una barra sottile e un link
+ * quieto ai piani. Nessun badge colorato, nessun gradiente.
+ *
+ * Varianti:
+ * - full     riga senza cornice, dentro l'intestazione di pagina (dashboard)
+ * - compact  numero + barra corta (header, pannelli)
+ * - minimal  solo il numero (menu, liste dense)
+ *
+ * "Illimitato" lo decide il DB (credits_remaining === -1), NON il nome del
+ * piano: in produzione Agency e' un piano a 300 crediti/mese.
  */
 
 'use client'
 
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
-import { Zap, TrendingUp, Crown, RefreshCw, ChevronRight } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
+import { cn } from '@/lib/utils/cn'
 import { getBasePlanType } from '@/lib/utils/plan-helpers'
 
 interface AccountStatusBarProps {
@@ -41,182 +48,131 @@ export default function AccountStatusBar({
   const proposalsResetDate = userAny.proposals_reset_date
   const isFirstProposalAvailable = userAny.first_proposal_used === false
 
-  // Configurazione per piano.
-  // "Illimitato" è deciso dal DB (credits_remaining === -1), NON dal nome del
-  // piano: in produzione Agency è un piano a 300 crediti/mese.
   const planConfig = getPlanConfig(plan)
   const isUnlimited = proposalsRemaining === -1
   const maxProposals = planConfig.maxProposals
   const resetType = planConfig.resetType
 
-  // Calcola percentuale usata
+  // Percentuale ancora disponibile (la barra mostra quello che RESTA)
   const usedPercentage = isUnlimited
     ? 0
     : maxProposals > 0
       ? Math.round(((maxProposals - proposalsRemaining) / maxProposals) * 100)
       : 0
 
-  // Calcola giorni al reset
   const daysToReset = proposalsResetDate
     ? Math.max(0, Math.ceil((new Date(proposalsResetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : null
 
-  // Determina se mostrare warning
   const isLow = !isUnlimited && proposalsRemaining <= 3 && proposalsRemaining > 0
   const isDepleted = !isUnlimited && proposalsRemaining <= 0
 
-  // Versione minimal
+  // Il colore dice solo lo stato, e sempre insieme a una parola
+  const textTone = isFirstProposalAvailable
+    ? 'text-content'
+    : isDepleted
+      ? 'text-danger'
+      : isLow
+        ? 'text-warning'
+        : 'text-content'
+  const barTone = isDepleted ? 'bg-danger' : isLow ? 'bg-warning' : 'bg-accent'
+  const showBar = !isUnlimited && maxProposals > 0
+
+  // ---- minimal: solo il numero ------------------------------------------
   if (variant === 'minimal') {
     return (
-      <div className={`inline-flex items-center gap-2 ${className}`}>
+      <span className={cn('inline-flex items-center text-caption', className)}>
         {isUnlimited ? (
-          <span className="text-purple-600 dark:text-purple-400 font-medium flex items-center gap-1">
-            <Crown className="w-4 h-4" />
-            Illimitati
-          </span>
+          <span className="text-content-muted">Crediti illimitati</span>
         ) : (
-          <span className={`font-medium ${isDepleted ? 'text-red-600' : isLow ? 'text-orange-600' : 'text-gray-700 dark:text-gray-300'}`}>
-            {proposalsRemaining} crediti
+          <span className={textTone}>
+            <span className="tabular-nums font-medium">{proposalsRemaining}</span> crediti
           </span>
         )}
-      </div>
+      </span>
     )
   }
 
-  // Versione compact
+  // ---- compact: numero + barra corta -------------------------------------
   if (variant === 'compact') {
     return (
-      <div className={`flex items-center gap-3 ${className}`}>
-        <div className="flex items-center gap-2">
-          <PlanIcon plan={plan} />
-          {isUnlimited ? (
-            <span className="text-sm font-medium text-purple-600 dark:text-purple-400">
-              Crediti illimitati
+      <div className={cn('flex items-center gap-3', className)}>
+        {isUnlimited ? (
+          <span className="text-caption text-content-muted">Crediti illimitati</span>
+        ) : (
+          <>
+            <span className={cn('text-caption tabular-nums', textTone)}>
+              {proposalsRemaining}/{maxProposals}
             </span>
-          ) : (
-            <>
-              <span className={`text-sm font-medium ${isDepleted ? 'text-red-600' : isLow ? 'text-orange-600' : 'text-gray-700 dark:text-gray-300'}`}>
-                {proposalsRemaining}/{maxProposals}
-              </span>
-              <div className="w-16 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div
-                  className={`h-full transition-all ${getProgressColor(proposalsRemaining, maxProposals)}`}
-                  style={{ width: `${100 - usedPercentage}%` }}
-                />
+            {showBar && (
+              <div
+                className="h-1 w-16 overflow-hidden rounded-pill bg-surface-subtle"
+                role="img"
+                aria-label={`${proposalsRemaining} crediti disponibili su ${maxProposals}`}
+              >
+                <div className={cn('h-full rounded-pill', barTone)} style={{ width: `${100 - usedPercentage}%` }} />
               </div>
-            </>
-          )}
-        </div>
+            )}
+          </>
+        )}
 
         {showUpgradeButton && !isUnlimited && (
           <Link
             href="/upgrade"
-            className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+            className="focus-ring rounded-md text-caption text-accent-ink hover:underline"
           >
-            Upgrade
+            Aggiorna piano
           </Link>
         )}
       </div>
     )
   }
 
-  // Versione full (default)
+  // ---- full: una riga sola, senza cornice --------------------------------
+  // Nessuna card: in dashboard le card sono i LEAD. Lo stato dell'account e'
+  // parte dell'intestazione di pagina, e la frase basta a se stessa (la barra
+  // di avanzamento ripeteva un'informazione che il testo gia' dice).
+  const context = [
+    planConfig.label,
+    !isUnlimited && resetType !== 'never' && daysToReset !== null
+      ? daysToReset === 0
+        ? 'si rinnova oggi'
+        : `si rinnova tra ${daysToReset} ${daysToReset === 1 ? 'giorno' : 'giorni'}`
+      : null
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 ${className}`}>
-      <div className="flex items-start justify-between gap-4">
-        {/* Left: Status info */}
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <PlanIcon plan={plan} />
-            <span className="font-semibold text-gray-900 dark:text-white">
-              {planConfig.label}
-            </span>
-          </div>
-
-          {/* Messaggio principale */}
-          <div className={`text-lg font-medium ${isDepleted ? 'text-red-600' : isLow ? 'text-orange-600' : 'text-gray-900 dark:text-white'}`}>
-            {getStatusMessage(proposalsRemaining, maxProposals, isUnlimited, resetType, isFirstProposalAvailable)}
-          </div>
-
-          {/* Progress bar per piani limitati */}
-          {!isUnlimited && maxProposals > 0 && (
-            <div className="mt-3">
-              <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-                <span>Usate: {maxProposals - proposalsRemaining}</span>
-                <span>Disponibili: {proposalsRemaining}</span>
-              </div>
-              <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div
-                  className={`h-full transition-all ${getProgressColor(proposalsRemaining, maxProposals)}`}
-                  style={{ width: `${100 - usedPercentage}%` }}
-                />
-              </div>
-            </div>
+    <div className={cn('flex flex-wrap items-center justify-between gap-x-6 gap-y-1', className)}>
+      <div className="min-w-0">
+        <p className={cn('text-body', textTone)}>
+          {getStatusMessage(
+            proposalsRemaining,
+            maxProposals,
+            isUnlimited,
+            resetType,
+            isFirstProposalAvailable
           )}
-
-          {/* Info reset */}
-          {!isUnlimited && resetType !== 'never' && daysToReset !== null && (
-            <div className="mt-2 text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
-              <RefreshCw className="w-3.5 h-3.5" />
-              Reset mensile tra {daysToReset} giorni
-            </div>
-          )}
-
-          {/* Prima proposta gratuita */}
-          {isFirstProposalAvailable && (
-            <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg text-sm font-medium">
-              <Zap className="w-3.5 h-3.5" />
-              Primo sblocco GRATUITO disponibile!
-            </div>
-          )}
-        </div>
-
-        {/* Right: CTA */}
-        {showUpgradeButton && (
-          <div className="flex-shrink-0">
-            {isDepleted ? (
-              <Link
-                href="/upgrade"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm font-medium rounded-xl transition-colors"
-              >
-                <TrendingUp className="w-4 h-4" />
-                Ottieni più crediti
-                <ChevronRight className="w-4 h-4" />
-              </Link>
-            ) : isLow ? (
-              <Link
-                href="/upgrade"
-                className="inline-flex items-center gap-2 px-4 py-2 border border-orange-300 dark:border-orange-700 text-orange-600 dark:text-orange-400 text-sm font-medium rounded-xl hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
-              >
-                Upgrade
-                <ChevronRight className="w-4 h-4" />
-              </Link>
-            ) : !isUnlimited ? (
-              <Link
-                href="/upgrade"
-                className="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-              >
-                Vedi piani
-                <ChevronRight className="w-4 h-4" />
-              </Link>
-            ) : null}
-          </div>
-        )}
+        </p>
+        <p className="mt-0.5 text-caption text-content-subtle">{context}</p>
       </div>
+
+      {showUpgradeButton && !isUnlimited && (
+        <Link
+          href="/upgrade"
+          className={cn(
+            'focus-ring -mr-2 inline-flex min-h-control items-center gap-1 rounded-control px-2',
+            'text-caption transition-colors duration-fast ease-soft hover:bg-surface-subtle',
+            isDepleted || isLow ? 'text-accent-ink' : 'text-content-muted hover:text-content'
+          )}
+        >
+          {isDepleted ? 'Ottieni più crediti' : 'Vedi i piani'}
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
+      )}
     </div>
   )
-}
-
-// Helper: Icona piano
-function PlanIcon({ plan }: { plan: string }) {
-  const base = getBasePlanType(plan)
-  if (base === 'agency') {
-    return <Crown className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-  }
-  if (base === 'starter' || base === 'pro') {
-    return <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-  }
-  return <Zap className="w-5 h-5 text-gray-500 dark:text-gray-400" />
 }
 
 // Helper: Configurazione piano.
@@ -230,7 +186,7 @@ function getPlanConfig(plan: string): {
   resetType: 'weekly' | 'monthly' | 'never'
 } {
   const base = getBasePlanType(plan)
-  const annualSuffix = plan.includes('_annual') ? ' (Annuale)' : ''
+  const annualSuffix = plan.includes('_annual') ? ' (annuale)' : ''
 
   switch (base) {
     case 'starter':
@@ -244,7 +200,8 @@ function getPlanConfig(plan: string): {
   }
 }
 
-// Helper: Messaggio stato
+// Helper: la frase che l'utente legge. Stesse soglie di prima, italiano più
+// calmo (niente punti esclamativi, niente maiuscole urlate).
 function getStatusMessage(
   remaining: number,
   max: number,
@@ -257,13 +214,13 @@ function getStatusMessage(
   }
 
   if (isFirstProposalAvailable) {
-    return 'Prova il tuo primo sblocco gratuito!'
+    return 'Il tuo primo sblocco è gratuito'
   }
 
   if (remaining <= 0) {
     return resetType === 'never'
-      ? 'Credito di prova esaurito — abbonati per continuare'
-      : 'Crediti esauriti — upgrade per continuare'
+      ? 'Credito di prova esaurito'
+      : 'Crediti esauriti per questo mese'
   }
 
   if (remaining === 1) {
@@ -274,15 +231,5 @@ function getStatusMessage(
 
   return resetType === 'never'
     ? `${remaining} crediti di prova disponibili`
-    : `${remaining}/${max} crediti rimasti questo mese`
-}
-
-// Helper: Colore progress bar
-function getProgressColor(remaining: number, max: number): string {
-  const percentage = max > 0 ? (remaining / max) * 100 : 0
-
-  if (percentage <= 0) return 'bg-red-500'
-  if (percentage <= 20) return 'bg-orange-500'
-  if (percentage <= 50) return 'bg-yellow-500'
-  return 'bg-green-500'
+    : `${remaining} crediti rimasti su ${max}`
 }

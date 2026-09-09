@@ -8,37 +8,42 @@
 
 import type { StepProps } from '@/lib/types/onboarding-v2'
 import { validateStep1 } from '@/lib/types/onboarding-v2'
+import { SERVICE_CONFIGS } from '@/lib/types/services'
 import ServicesEditor from '@/components/settings/ServicesEditor'
+import { Button } from '@/components/ui'
 
 export default function StepServices({ data, onUpdate, onNext }: StepProps) {
   const isValid = validateStep1(data)
+  const selected = data.services_offered
 
   return (
     <div>
-      <div className="text-center mb-8">
-        <div className="text-4xl mb-3">🎯</div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-          Cosa vendi?
-        </h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
-          Ti mostreremo le aziende della tua zona che hanno bisogno
-          esattamente di questi servizi.
-        </p>
+      <h1 className="text-title font-semibold text-content sm:text-display">Cosa vendi?</h1>
+      <p className="mt-2 max-w-lg text-body-lg text-content-muted">
+        Scegli i servizi che offri. Ti mostreremo solo le aziende che hanno
+        bisogno esattamente di questi.
+      </p>
+
+      <div className="mt-8">
+        <ServicesEditor
+          value={selected}
+          onChange={(services) => onUpdate({ services_offered: services })}
+        />
       </div>
 
-      <ServicesEditor
-        value={data.services_offered}
-        onChange={(services) => onUpdate({ services_offered: services })}
-      />
+      <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-caption text-content-muted" aria-live="polite">
+          {selected.length === 0
+            ? 'Scegline almeno uno per continuare.'
+            : `Cercheremo aziende con problemi di ${selected
+                .map((service) => SERVICE_CONFIGS[service]?.label ?? service)
+                .join(', ')}.`}
+        </p>
 
-      <button
-        onClick={onNext}
-        disabled={!isValid}
-        className="mt-8 w-full py-3 rounded-xl font-semibold text-white transition-colors
-          bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
-      >
-        {isValid ? 'Continua' : 'Seleziona almeno un servizio'}
-      </button>
+        <Button onClick={onNext} disabled={!isValid} className="sm:w-auto" fullWidth>
+          Continua
+        </Button>
+      </div>
     </div>
   )
 }

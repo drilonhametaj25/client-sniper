@@ -1,8 +1,9 @@
 /**
  * Layout per Onboarding
  *
- * Layout minimale senza navbar per flow di onboarding immersivo.
- * Include solo logo TrovaMi e pulsante per tornare indietro.
+ * Layout minimale senza navbar per un flow immersivo: solo il marchio e
+ * l'uscita di sicurezza ("Salta per ora"). Niente vetro, niente gradienti:
+ * la pagina e' una superficie neutra, il contenuto e' l'interfaccia.
  *
  * @file apps/frontend-app/app/onboarding/layout.tsx
  */
@@ -21,35 +22,30 @@ export default function OnboardingLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900">
-      {/* Minimal Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14">
-            <Link
-              href="/dashboard"
-              className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
-            >
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <Target className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-lg font-bold text-gray-900 dark:text-white">TrovaMi</span>
-            </Link>
+    <div className="min-h-screen bg-surface">
+      {/* Header minimo: marchio a sinistra, uscita a destra.
+          E' alto quanto la navbar globale e la copre (z sopra la sua): durante
+          l'onboarding non ci sono altre destinazioni da mostrare. */}
+      <header className="fixed inset-x-0 top-0 z-[60] border-b border-edge bg-surface">
+        <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-4 sm:px-6">
+          <Link
+            href="/dashboard"
+            className="focus-ring -ml-2 inline-flex h-11 items-center gap-2 rounded-control px-2 text-content"
+          >
+            <Target className="h-4 w-4 text-accent-ink" aria-hidden="true" />
+            <span className="text-body font-semibold">TrovaMi</span>
+          </Link>
 
-            <Link
-              href="/dashboard"
-              className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-            >
-              Salta per ora
-            </Link>
-          </div>
+          <Link
+            href="/dashboard"
+            className="focus-ring -mr-2 inline-flex h-11 items-center rounded-control px-2 text-caption text-content-muted transition-colors duration-fast ease-soft hover:text-content"
+          >
+            Salta per ora
+          </Link>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="pt-14">
-        {children}
-      </main>
+      <div className="pt-16">{children}</div>
     </div>
   )
 }

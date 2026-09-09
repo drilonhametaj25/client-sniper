@@ -1,10 +1,13 @@
 /**
- * LeadActions — Azioni commerciali sul lead (solo per lead sbloccati).
+ * LeadActions — cosa fai adesso con questo lead.
  *
  * Stato trattativa CRM (vocabolario di lib/types/crm.ts, salvato via
- * /api/crm/quick-update), template di primo contatto (ContactTemplates),
- * composer email (EmailComposerModal), preventivo automatico (QuotationTab)
- * e segnalazione dati errati (ReportLeadIssueButton).
+ * /api/crm/quick-update), scrittura dell'email (EmailComposerModal), template di
+ * primo contatto (ContactTemplates) e preventivo automatico (QuotationTab).
+ * "Scrivi email" è l'unica azione piena della schermata sbloccata.
+ *
+ * La segnalazione dati errati vive in fondo alla pagina (app/lead/[id]/page.tsx):
+ * è un ripensamento, non un'azione commerciale.
  *
  * Usato da: app/lead/[id]/page.tsx (solo vista sbloccata)
  */
@@ -12,14 +15,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Briefcase, Euro, Send } from 'lucide-react'
+import { Send } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ToastProvider'
 import { CRMStatusType, CRM_STATUS_CONFIG } from '@/lib/types/crm'
 import ContactTemplates from '@/components/ContactTemplates'
 import EmailComposerModal from '@/components/EmailComposerModal'
 import QuotationTab from '@/components/QuotationTab'
-import ReportLeadIssueButton from '@/components/ReportLeadIssueButton'
+import { Button, Card, CardTitle, Select } from '@/components/ui'
 
 interface LeadActionsProps {
   lead: {
@@ -46,6 +49,11 @@ const DB_TO_UI_STATUS: Record<string, CRMStatusType> = {
   closed_positive: 'won',
   closed_negative: 'lost'
 }
+
+const STATUS_OPTIONS = (Object.keys(CRM_STATUS_CONFIG) as CRMStatusType[]).map(status => ({
+  value: status,
+  label: CRM_STATUS_CONFIG[status].label
+}))
 
 export default function LeadActions({ lead, userId, userPlan }: LeadActionsProps) {
   const { success, error: toastError } = useToast()
@@ -110,44 +118,35 @@ export default function LeadActions({ lead, userId, userPlan }: LeadActionsProps
 
   return (
     <div className="space-y-6">
-      {/* Stato trattativa CRM */}
-      <section className="bg-white dark:bg-gray-800 rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-          <Briefcase className="h-5 w-5 mr-2 text-purple-500" />
-          Stato trattativa
-        </h2>
-        <div className="flex flex-wrap items-center gap-3">
-          <select
+      {/* Stato trattativa CRM + l'unica azione piena della pagina */}
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <CardTitle>La tua trattativa</CardTitle>
+            <p className="mt-1 text-body text-content-muted">
+              Segna a che punto sei: lo ritrovi nel CRM insieme agli altri lead.
+            </p>
+          </div>
+
+          {lead.email && (
+            <Button icon={<Send />} onClick={() => setShowEmailModal(true)}>
+              Scrivi email
+            </Button>
+          )}
+        </div>
+
+        <div className="mt-5 sm:max-w-xs">
+          <Select
+            aria-label="Stato della trattativa"
             value={crmStatus}
             onChange={e => updateCrmStatus(e.target.value as CRMStatusType)}
             disabled={savingStatus}
-            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-sm disabled:opacity-50"
-          >
-            <option value="" disabled>
-              Imposta uno stato
-            </option>
-            {(Object.keys(CRM_STATUS_CONFIG) as CRMStatusType[]).map(status => (
-              <option key={status} value={status}>
-                {CRM_STATUS_CONFIG[status].label}
-              </option>
-            ))}
-          </select>
-          {crmStatus && (
-            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${CRM_STATUS_CONFIG[crmStatus].color}`}>
-              {CRM_STATUS_CONFIG[crmStatus].description}
-            </span>
-          )}
-          {lead.email && (
-            <button
-              onClick={() => setShowEmailModal(true)}
-              className="ml-auto flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Send className="h-4 w-4" />
-              Scrivi email
-            </button>
-          )}
+            placeholder="Imposta uno stato"
+            options={STATUS_OPTIONS}
+            hint={crmStatus ? CRM_STATUS_CONFIG[crmStatus].description : undefined}
+          />
         </div>
-      </section>
+      </Card>
 
       {/* Template di primo contatto (email, WhatsApp, telefono, LinkedIn) */}
       <ContactTemplates
@@ -167,18 +166,12 @@ export default function LeadActions({ lead, userId, userPlan }: LeadActionsProps
       />
 
       {/* Preventivo automatico */}
-      <section className="bg-white dark:bg-gray-800 rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-          <Euro className="h-5 w-5 mr-2 text-green-600" />
-          Preventivo automatico
-        </h2>
-        <QuotationTab leadId={lead.id} businessName={lead.business_name || ''} />
-      </section>
-
-      {/* Segnalazione dati errati: alimenta la quarantena automatica */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-4">
-        <ReportLeadIssueButton leadId={lead.id} />
-      </div>
+      <Card>
+        <CardTitle>Preventivo automatico</CardTitle>
+        <div className="mt-4">
+          <QuotationTab leadId={lead.id} businessName={lead.business_name || ''} />
+        </div>
+      </Card>
 
       {showEmailModal && lead.email && (
         <EmailComposerModal

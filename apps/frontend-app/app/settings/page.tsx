@@ -3,6 +3,7 @@
  * Usato per: Profilo, servizi offerti, piano, notifiche e sicurezza account
  * Chiamato da: Dashboard navbar, profilo utente
  * I contenuti vivono in components/settings/tabs/* — questa pagina è solo la shell.
+ * Presentazione: guida in apps/frontend-app/DESIGN.md.
  */
 
 'use client'
@@ -13,7 +14,6 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft,
-  Settings as SettingsIcon,
   User,
   Target,
   Crown,
@@ -25,6 +25,8 @@ import ServicesTab from '@/components/settings/tabs/ServicesTab'
 import PlanTab from '@/components/settings/tabs/PlanTab'
 import NotificationsTab from '@/components/settings/tabs/NotificationsTab'
 import AccountTab from '@/components/settings/tabs/AccountTab'
+import { Skeleton } from '@/components/ui'
+import { cn } from '@/lib/utils/cn'
 
 const TABS = [
   { id: 'profilo', label: 'Profilo', icon: User },
@@ -65,62 +67,80 @@ export default function SettingsPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-surface">
+        <div className="mx-auto max-w-3xl px-4 pb-16 pt-24 sm:px-6">
+          <div role="status" aria-live="polite">
+            <span className="sr-only">Caricamento in corso</span>
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="mt-6 h-7 w-48" />
+            <Skeleton className="mt-3 h-4 w-72 max-w-full" />
+            <Skeleton className="mt-8 h-11 w-full rounded-card" />
+            <Skeleton className="mt-6 h-64 w-full rounded-card" />
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link
-              href="/dashboard"
-              className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              Dashboard
-            </Link>
-            <div className="flex items-center">
-              <SettingsIcon className="w-5 h-5 text-gray-400 mr-2" />
-              <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Impostazioni Account</h1>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-surface">
+      <div className="mx-auto max-w-3xl px-4 pb-16 pt-24 sm:px-6">
+        {/* Uscita verso la dashboard */}
+        <Link
+          href="/dashboard"
+          className="focus-ring -ml-2 inline-flex h-11 items-center gap-1.5 rounded-control px-2 text-caption text-content-muted transition-colors duration-fast ease-soft hover:text-content"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          Dashboard
+        </Link>
 
-      <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        {/* Tab Navigation */}
+        <h1 className="mt-4 text-title font-semibold text-content">Impostazioni</h1>
+        <p className="mt-1 text-body text-content-muted">
+          Il tuo profilo, i servizi che offri e il piano attivo.
+        </p>
+
+        {/* Navigazione a schede */}
         <div
           role="tablist"
           aria-label="Sezioni impostazioni"
-          className="flex gap-1 overflow-x-auto border-b border-gray-200 dark:border-gray-700 mb-6"
+          className="scrollbar-hide mt-8 flex gap-1 overflow-x-auto border-b border-edge"
         >
-          {TABS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              role="tab"
-              id={`tab-${id}`}
-              aria-selected={activeTab === id}
-              aria-controls={`panel-${id}`}
-              onClick={() => selectTab(id)}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${
-                activeTab === id
-                  ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {label}
-            </button>
-          ))}
+          {TABS.map(({ id, label, icon: Icon }) => {
+            const isActive = activeTab === id
+            return (
+              <button
+                key={id}
+                role="tab"
+                id={`tab-${id}`}
+                aria-selected={isActive}
+                aria-controls={`panel-${id}`}
+                onClick={() => selectTab(id)}
+                className={cn(
+                  'focus-ring-inset -mb-px flex h-11 shrink-0 items-center gap-2 whitespace-nowrap',
+                  'border-b-2 px-3 text-body font-medium',
+                  'transition-colors duration-fast ease-soft',
+                  isActive
+                    ? 'border-accent text-content'
+                    : 'border-transparent text-content-muted hover:text-content'
+                )}
+              >
+                <Icon
+                  className={cn('h-4 w-4', isActive ? 'text-accent-ink' : 'text-content-subtle')}
+                  aria-hidden="true"
+                />
+                {label}
+              </button>
+            )
+          })}
         </div>
 
-        {/* Tab Panels */}
-        <div role="tabpanel" id={`panel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
+        {/* Pannelli */}
+        <div
+          role="tabpanel"
+          id={`panel-${activeTab}`}
+          aria-labelledby={`tab-${activeTab}`}
+          className="mt-8"
+        >
           {activeTab === 'profilo' && <ProfileTab />}
           {activeTab === 'servizi' && <ServicesTab />}
           {activeTab === 'piano' && <PlanTab />}

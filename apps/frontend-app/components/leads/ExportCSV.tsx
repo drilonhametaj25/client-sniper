@@ -11,6 +11,7 @@
 'use client'
 
 import { Download } from 'lucide-react'
+import { Button } from '@/components/ui'
 import { isStarterOrHigher } from '@/lib/utils/plan-helpers'
 import type { DashboardLead } from '@/lib/hooks/useLeads'
 
@@ -52,18 +53,16 @@ export default function ExportCSV({ leads, plan, className = '' }: ExportCSVProp
   }
 
   return (
-    <button
+    <Button
+      variant="secondary"
       onClick={handleExport}
       disabled={leads.length === 0}
       title={leads.length === 0 ? 'Sblocca almeno un lead per esportare' : `Esporta ${leads.length} lead sbloccati`}
-      className={`inline-flex items-center gap-2 px-3 py-2 min-h-[44px] text-sm font-medium rounded-xl transition-colors ${
-        leads.length === 0
-          ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
-          : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-      } ${className}`}
+      icon={<Download aria-hidden="true" />}
+      aria-label="Esporta CSV"
+      className={className}
     >
-      <Download className="w-4 h-4" />
       <span className="hidden sm:inline">Esporta CSV</span>
-    </button>
+    </Button>
   )
 }

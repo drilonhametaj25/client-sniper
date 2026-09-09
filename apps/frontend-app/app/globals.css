@@ -1,93 +1,202 @@
-/* Questo file contiene gli stili globali dell'applicazione */
-/* È parte del modulo apps/frontend-app */
-/* Viene importato nel layout principale */
+/* Stili globali + design tokens di TrovaMi
+   Percorso: apps/frontend-app/app/globals.css
+   Importato da app/layout.tsx.
+
+   QUI vive l'unica fonte di verita' del tema. Le schermate NON scrivono
+   colori hardcoded ne' classi dark:*: usano i token mappati in
+   tailwind.config.js (bg-surface, text-content, border-edge, ...).
+   Riferimento d'uso: apps/frontend-app/DESIGN.md */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Import degli stili di Leaflet per le mappe */
+/* Stili Leaflet per le mappe */
 @import '../styles/leaflet.css';
 
+/* ============================================================================
+   I due blocchi di token stanno FUORI da @layer di proposito.
+   Dentro `@layer base` Tailwind elimina le regole con selettore di classe che
+   non trova nel contenuto: quando le ultime classi `dark:*` spariranno dal
+   codice, `.dark` verrebbe rimossa e il tema scuro smetterebbe di funzionare
+   senza nessun errore. Fuori dai layer il CSS viene emesso sempre.
+   NON spostare questi due blocchi dentro un @layer.
+   ============================================================================ */
+
+/* ==========================================================================
+   TOKEN SEMANTICI — TEMA CHIARO
+   Valori in "R G B" (senza rgb()) per poter usare / <alpha-value>.
+   ========================================================================== */
+:root {
+  /* Superfici, dal fondo pagina all'elemento piu' sovrapposto */
+  --color-surface: 250 250 250;           /* #FAFAFA  fondo pagina */
+  --color-surface-elevated: 255 255 255;  /* #FFFFFF  card, pannelli */
+  --color-surface-subtle: 244 244 245;    /* #F4F4F5  fill: input, hover, skeleton */
+  --color-surface-overlay: 255 255 255;   /* #FFFFFF  modali, dropdown, popover */
+
+  /* Testo: tre soli livelli, tutti >= 4.5:1 sulle superfici */
+  --color-content: 24 24 27;              /* #18181B  titoli e testo primario */
+  --color-content-muted: 82 82 91;        /* #52525B  testo secondario */
+  --color-content-subtle: 107 107 117;    /* #6B6B75  metadati, label */
+
+  /* Bordi */
+  --color-edge: 228 228 231;              /* #E4E4E7  hairline (default) */
+  --color-edge-strong: 212 212 216;       /* #D4D4D8  separatori da leggere */
+
+  /* Accento: UN solo blu */
+  --color-accent: 37 99 235;              /* #2563EB  riempimento pieno */
+  --color-accent-hover: 29 78 216;        /* #1D4ED8  hover del pieno */
+  --color-accent-on: 255 255 255;         /* testo sopra il pieno */
+  --color-accent-soft: 239 246 255;       /* #EFF6FF  sfondo tenue */
+  --color-accent-edge: 191 219 254;       /* #BFDBFE  bordo del tenue */
+  --color-accent-ink: 29 78 216;          /* #1D4ED8  accento come TESTO/icona */
+
+  /* Stato — tinte tenui, mai riempimenti grandi */
+  --color-success: 21 128 61;             /* #15803D */
+  --color-success-soft: 240 253 244;      /* #F0FDF4 */
+  --color-success-edge: 187 247 208;      /* #BBF7D0 */
+
+  --color-warning: 180 83 9;              /* #B45309 */
+  --color-warning-soft: 255 251 235;      /* #FFFBEB */
+  --color-warning-edge: 253 230 138;      /* #FDE68A */
+
+  --color-danger: 185 28 28;              /* #B91C1C  danger come TESTO */
+  --color-danger-soft: 254 242 242;       /* #FEF2F2 */
+  --color-danger-edge: 254 202 202;       /* #FECACA */
+  --color-danger-solid: 220 38 38;        /* #DC2626  bottone distruttivo */
+  --color-danger-solid-hover: 185 28 28;  /* #B91C1C */
+
+  /* Focus */
+  --color-focus: 37 99 235;               /* #2563EB */
+}
+
+/* ==========================================================================
+   TOKEN SEMANTICI — TEMA SCURO
+   Superfici grigio-antracite (mai nero pece), testo mai bianco puro.
+   Lo stacco card/pagina e' piu' marcato che nel chiaro: al buio non c'e'
+   ombra che tenga, la separazione la fa la luminosita' della superficie.
+   ========================================================================== */
+.dark {
+  --color-surface: 23 23 26;              /* #17171A */
+  --color-surface-elevated: 31 31 35;     /* #1F1F23 */
+  --color-surface-subtle: 38 38 43;       /* #26262B */
+  --color-surface-overlay: 39 39 44;      /* #27272C */
+
+  --color-content: 237 237 239;           /* #EDEDEF */
+  --color-content-muted: 161 161 170;     /* #A1A1AA */
+  --color-content-subtle: 148 148 158;    /* #94949E */
+
+  --color-edge: 51 51 58;                 /* #33333A  stesso stacco percettivo del chiaro */
+  --color-edge-strong: 69 69 78;          /* #45454E */
+
+  /* L'accento pieno NON cambia col tema: il blu si legge uguale sui due fondi
+     e cosi' il bianco sopra resta sempre >= 4.5:1. Cambiano soft, edge e ink. */
+  --color-accent: 37 99 235;              /* #2563EB */
+  --color-accent-hover: 29 78 216;        /* #1D4ED8 */
+  --color-accent-on: 255 255 255;
+  --color-accent-soft: 30 45 74;          /* #1E2D4A */
+  --color-accent-edge: 42 67 114;         /* #2A4372 */
+  --color-accent-ink: 96 165 250;         /* #60A5FA */
+
+  --color-success: 74 222 128;            /* #4ADE80 */
+  --color-success-soft: 20 39 28;         /* #14271C */
+  --color-success-edge: 30 74 46;         /* #1E4A2E */
+
+  --color-warning: 251 191 36;            /* #FBBF24 */
+  --color-warning-soft: 44 33 10;         /* #2C210A */
+  --color-warning-edge: 74 58 18;         /* #4A3A12 */
+
+  --color-danger: 248 113 113;            /* #F87171 */
+  --color-danger-soft: 49 25 26;          /* #31191A */
+  --color-danger-edge: 76 34 36;          /* #4C2224 */
+  --color-danger-solid: 220 38 38;        /* #DC2626 */
+  --color-danger-solid-hover: 239 68 68;  /* #EF4444 */
+
+  --color-focus: 96 165 250;              /* #60A5FA */
+}
+
 @layer base {
-  /* ===== TOKEN SEMANTICI =====
-     Il dark mode si sistema QUI, non con migliaia di classi dark: sparse.
-     Le pagine nuove/convertite usano bg-surface / bg-surface-elevated /
-     text-content / text-content-muted / border-edge (mappati in
-     tailwind.config.js): il tema scuro deriva automaticamente dai token. */
-  :root {
-    --color-surface: 249 250 251;          /* gray-50 */
-    --color-surface-elevated: 255 255 255; /* white */
-    --color-content: 17 24 39;             /* gray-900 */
-    --color-content-muted: 107 114 128;    /* gray-500 */
-    --color-edge: 229 231 235;             /* gray-200 */
-  }
-
-  .dark {
-    --color-surface: 17 24 39;             /* gray-900 */
-    --color-surface-elevated: 31 41 55;    /* gray-800 */
-    --color-content: 243 244 246;          /* gray-100 */
-    --color-content-muted: 156 163 175;    /* gray-400 */
-    --color-edge: 55 65 81;                /* gray-700 */
-  }
-
   html {
     scroll-behavior: smooth;
+    /* Evita il flash chiaro sulle superfici native (overscroll, scrollbar) */
+    background-color: rgb(var(--color-surface));
   }
 
   body {
     /* Niente transition-colors qui: causava un fade visibile di 300ms
-       a ogni caricamento per gli utenti dark */
-    @apply bg-gray-50 text-gray-900;
+       a ogni caricamento per gli utenti in tema scuro. */
+    background-color: rgb(var(--color-surface));
+    color: rgb(var(--color-content));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
-  /* Dark mode support */
-  .dark body {
-    @apply bg-gray-900 text-gray-100;
+  ::selection {
+    background-color: rgb(var(--color-accent) / 0.18);
+    color: rgb(var(--color-content));
   }
-  
-  /* Scrollbar styling */
+
+  /* Scrollbar discrete e theme-aware */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
   }
-  
+
   ::-webkit-scrollbar-track {
-    @apply bg-gray-100 dark:bg-gray-800;
+    background-color: transparent;
   }
-  
+
   ::-webkit-scrollbar-thumb {
-    @apply bg-gray-400 dark:bg-gray-600 rounded-full;
+    background-color: rgb(var(--color-edge-strong));
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 9999px;
   }
-  
+
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-500 dark:bg-gray-500;
+    background-color: rgb(var(--color-content-subtle) / 0.7);
+  }
+
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--color-edge-strong)) transparent;
   }
 }
 
-/* NB: le vecchie classi componente (.btn*, .card, .input, .label, .score-*)
-   sono state rimosse: avevano ZERO utilizzi nel codice. I componenti condivisi
-   vivono in components/ui/ (Button, Card, Input, Badge). */
+/* ============================================================================
+   ANELLO DI FOCUS — uno solo per tutta l'app.
+   Usa `outline` invece di `ring`: l'offset resta trasparente e lascia vedere
+   lo sfondo vero, quindi funziona identico sopra pagina, card, modale e
+   bottone pieno. Con `ring` servirebbe un ring-offset-color diverso per ogni
+   superficie.
+   ============================================================================ */
+@layer components {
+  .focus-ring {
+    @apply outline-none;
+  }
+
+  .focus-ring:focus-visible {
+    outline: 2px solid rgb(var(--color-focus));
+    outline-offset: 2px;
+  }
+
+  /* Per elementi a filo del contenitore (righe di lista, tab, celle) */
+  .focus-ring-inset:focus-visible {
+    outline: 2px solid rgb(var(--color-focus));
+    outline-offset: -2px;
+  }
+}
 
 @layer utilities {
-  /* Safe area insets for iOS notch/home indicator */
-  .safe-area-top {
-    padding-top: env(safe-area-inset-top);
-  }
+  /* Safe area insets iOS */
+  .safe-area-top    { padding-top: env(safe-area-inset-top); }
+  .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  .safe-area-left   { padding-left: env(safe-area-inset-left); }
+  .safe-area-right  { padding-right: env(safe-area-inset-right); }
 
-  .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-
-  .safe-area-left {
-    padding-left: env(safe-area-inset-left);
-  }
-
-  .safe-area-right {
-    padding-right: env(safe-area-inset-right);
-  }
-
-  /* Hide scrollbar but keep functionality */
+  /* Nasconde la scrollbar mantenendo lo scroll */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -97,99 +206,80 @@
     display: none;
   }
 
-  /* Horizontal scroll snap for mobile tabs */
+  /* Scroll snap orizzontale (tab mobile) */
   .scroll-snap-x {
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
   }
 
-  .scroll-snap-start {
-    scroll-snap-align: start;
-  }
+  .scroll-snap-start  { scroll-snap-align: start; }
+  .scroll-snap-center { scroll-snap-align: center; }
 
-  .scroll-snap-center {
-    scroll-snap-align: center;
-  }
-
-  /* Touch-friendly tap highlight */
   .tap-highlight-none {
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Prevent text selection on mobile */
   .select-none-mobile {
     -webkit-user-select: none;
     user-select: none;
   }
 
-  /* Glass effect for overlays */
-  .glass {
-    @apply bg-white/80 dark:bg-gray-900/80 backdrop-blur-md;
-  }
-
-  /* Line clamp utilities */
-  .line-clamp-1 {
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .line-clamp-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
+  /* Line clamp */
+  .line-clamp-1,
+  .line-clamp-2,
   .line-clamp-3 {
     display: -webkit-box;
-    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+
+  .line-clamp-1 { -webkit-line-clamp: 1; }
+  .line-clamp-2 { -webkit-line-clamp: 2; }
+  .line-clamp-3 { -webkit-line-clamp: 3; }
 }
 
-/* Mobile-specific animations */
+/* ============================================================================
+   MOVIMENTO
+   Solo come feedback a un'azione: 120-220ms, ease-out. Nessuna animazione
+   decorativa, nessun pulse infinito. L'unica eccezione e' lo skeleton, che
+   sta comunicando "sto caricando".
+   ============================================================================ */
 @keyframes slide-up {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
 }
 
 @keyframes slide-down {
-  from {
-    transform: translateY(-100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  from { transform: translateY(-8px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
 }
 
 @keyframes fade-in {
-  from {
-    opacity: 0;
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.animate-slide-up   { animation: slide-up   180ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-slide-down { animation: slide-down 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-sheet-up   { animation: sheet-up   220ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-fade-in    { animation: fade-in    160ms cubic-bezier(0.2, 0, 0, 1) forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
-  to {
-    opacity: 1;
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
-}
-
-.animate-slide-up {
-  animation: slide-up 0.3s ease-out forwards;
-}
-
-.animate-slide-down {
-  animation: slide-down 0.3s ease-out forwards;
-}
-
-.animate-fade-in {
-  animation: fade-in 0.2s ease-out forwards;
 }

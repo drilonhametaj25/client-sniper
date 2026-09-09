@@ -1,9 +1,12 @@
 /**
  * FiltersBar — barra filtri della dashboard "Trova clienti".
  *
+ * Deve sembrare uno strumento leggero, non un pannello di controllo: nessuna
+ * superficie che la incornici, solo i controlli appoggiati sulla pagina.
+ *
  * Riga 1: ricerca testuale (debounce nel hook useLeads) + ordinamento.
- * Riga 2: Categoria, Città, toggle "Solo per i miei servizi" (VISIBILE, non
- * sepolto nei filtri), toggle "Solo sbloccati", export CSV (Starter+).
+ * Riga 2: Categoria, Città, "Solo per i miei servizi" (il filtro che conta:
+ * VISIBILE, non sepolto), "Solo sbloccati", salva ricerca, export CSV (Starter+).
  * Sotto: AdvancedFilters per tutto il resto (score, contatti, tecnici, CRM,
  * servizi richiesti). Tutti i filtri sono applicati server-side da /api/leads.
  *
@@ -12,11 +15,13 @@
 
 'use client'
 
-import { useMemo, useState } from 'react'
-import { Search, X, Bell } from 'lucide-react'
+import { useMemo, useState, type ReactNode } from 'react'
+import { Search, X, Bell, Check } from 'lucide-react'
 import AdvancedFilters, { AdvancedFiltersState } from '@/components/AdvancedFilters'
 import ExportCSV from '@/components/leads/ExportCSV'
 import SavedSearchForm from '@/components/SavedSearchForm'
+import { Button, Input, Select } from '@/components/ui'
+import { cn } from '@/lib/utils/cn'
 import { CATEGORY_OPTIONS } from '@/lib/utils/categories'
 import type { LeadsFilterState, LeadSortBy, DashboardLead } from '@/lib/hooks/useLeads'
 
@@ -31,9 +36,6 @@ const SORT_OPTIONS = [
   { value: 'business_name-desc', label: 'Nome azienda (Z-A)' }
 ]
 
-const selectClass =
-  'min-h-[44px] px-3 py-2 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500'
-
 interface FiltersBarProps {
   filters: LeadsFilterState
   onChange: (patch: Partial<LeadsFilterState>) => void
@@ -44,6 +46,39 @@ interface FiltersBarProps {
   /** lead sbloccati della pagina corrente, per l'export CSV */
   unlockedLeads: DashboardLead[]
   leadCount: number
+}
+
+/** Chip di filtro: acceso = fondo d'accento tenue + spunta (mai solo colore). */
+function FilterChip({
+  active,
+  onClick,
+  title,
+  children
+}: {
+  active: boolean
+  onClick: () => void
+  title?: string
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-pressed={active}
+      className={cn(
+        'focus-ring inline-flex h-11 items-center gap-2 rounded-control border px-3.5',
+        'text-body font-medium whitespace-nowrap',
+        'transition-colors duration-fast ease-soft',
+        active
+          ? 'border-accent-edge bg-accent-soft text-accent-ink'
+          : 'border-edge bg-surface-elevated text-content-muted hover:bg-surface-subtle hover:text-content'
+      )}
+    >
+      {active && <Check className="h-4 w-4 shrink-0" aria-hidden="true" />}
+      {children}
+    </button>
+  )
 }
 
 export default function FiltersBar({
@@ -67,100 +102,104 @@ export default function FiltersBar({
     scoreMax: filters.advanced.scoreRange.max
   }), [filters.category, filters.city, filters.advanced.scoreRange.min, filters.advanced.scoreRange.max])
 
-  const toggleClass = (active: boolean) =>
-    `px-3 py-2 min-h-[44px] rounded-xl text-sm font-medium transition-colors ${
-      active
-        ? 'bg-blue-600 text-white'
-        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-    }`
-
   return (
-    <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-4 border border-gray-200/50 dark:border-gray-700/50 mb-6">
+    <div className="mb-6 space-y-3">
       {/* Riga 1: ricerca + ordinamento */}
-      <div className="flex flex-col lg:flex-row gap-3 mb-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex-1">
+          <Input
             type="text"
-            placeholder="Cerca per nome o città..."
+            aria-label="Cerca fra i lead"
+            placeholder="Cerca per nome o città"
             value={filters.search}
             onChange={(e) => onChange({ search: e.target.value })}
-            className="w-full pl-10 pr-9 py-2.5 min-h-[44px] bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            icon={<Search />}
+            className={filters.search ? 'pr-14' : undefined}
+            trailing={
+              filters.search ? (
+                <Button
+                  variant="ghost"
+                  iconOnly
+                  aria-label="Pulisci la ricerca"
+                  onClick={() => onChange({ search: '' })}
+                  icon={<X />}
+                />
+              ) : undefined
+            }
           />
-          {filters.search && (
-            <button
-              onClick={() => onChange({ search: '' })}
-              aria-label="Pulisci ricerca"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
         </div>
-        <select
-          value={`${filters.sortBy}-${filters.sortOrder}`}
-          onChange={(e) => {
-            const idx = e.target.value.lastIndexOf('-')
-            onChange({
-              sortBy: e.target.value.slice(0, idx) as LeadSortBy,
-              sortOrder: e.target.value.slice(idx + 1) as 'asc' | 'desc'
-            })
-          }}
-          className={selectClass}
-        >
-          {SORT_OPTIONS.map(opt => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
+        <div className="sm:w-64">
+          <Select
+            aria-label="Ordina i risultati"
+            value={`${filters.sortBy}-${filters.sortOrder}`}
+            onChange={(e) => {
+              const idx = e.target.value.lastIndexOf('-')
+              onChange({
+                sortBy: e.target.value.slice(0, idx) as LeadSortBy,
+                sortOrder: e.target.value.slice(idx + 1) as 'asc' | 'desc'
+              })
+            }}
+            options={SORT_OPTIONS}
+          />
+        </div>
       </div>
 
-      {/* Riga 2: categoria, città, toggles, export */}
+      {/* Riga 2: categoria, città, i due filtri che contano, azioni */}
       <div className="flex flex-wrap items-center gap-2">
-        <select
-          value={filters.category}
-          onChange={(e) => onChange({ category: e.target.value })}
-          className={`${selectClass} max-w-[180px]`}
-        >
-          <option value="">Tutte le categorie</option>
-          {CATEGORY_OPTIONS.map(opt => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
-        <select
-          value={filters.city}
-          onChange={(e) => onChange({ city: e.target.value })}
-          className={`${selectClass} max-w-[180px]`}
-        >
-          <option value="">Tutte le città</option>
-          {cities.map(city => (
-            <option key={city} value={city}>{city}</option>
-          ))}
-        </select>
-        {hasServices && (
-          <button
-            onClick={() => onChange({ showOnlyMatching: !filters.showOnlyMatching })}
-            className={toggleClass(filters.showOnlyMatching)}
-            title="Mostra solo i lead che necessitano dei servizi che offri"
+        <div className="w-[calc(50%-0.25rem)] sm:w-44">
+          <Select
+            aria-label="Filtra per categoria"
+            value={filters.category}
+            onChange={(e) => onChange({ category: e.target.value })}
           >
-            🎯 Solo per i miei servizi
-          </button>
+            <option value="">Tutte le categorie</option>
+            {CATEGORY_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </Select>
+        </div>
+        <div className="w-[calc(50%-0.25rem)] sm:w-44">
+          <Select
+            aria-label="Filtra per città"
+            value={filters.city}
+            onChange={(e) => onChange({ city: e.target.value })}
+          >
+            <option value="">Tutte le città</option>
+            {cities.map(city => (
+              <option key={city} value={city}>{city}</option>
+            ))}
+          </Select>
+        </div>
+
+        {hasServices && (
+          <FilterChip
+            active={filters.showOnlyMatching}
+            onClick={() => onChange({ showOnlyMatching: !filters.showOnlyMatching })}
+            title="Mostra solo i lead che hanno bisogno dei servizi che offri"
+          >
+            Solo per i miei servizi
+          </FilterChip>
         )}
-        <button
+
+        <FilterChip
+          active={filters.showOnlyUnlocked}
           onClick={() => onChange({ showOnlyUnlocked: !filters.showOnlyUnlocked })}
-          className={toggleClass(filters.showOnlyUnlocked)}
+          title="Mostra solo i lead che hai già sbloccato"
         >
           Solo sbloccati
-        </button>
-        <button
-          onClick={() => setShowSavedSearch(true)}
-          className={toggleClass(false)}
-          title="Salva questa ricerca e ricevi un alert quando arrivano nuovi lead compatibili"
-        >
-          <Bell className="w-4 h-4 inline-block mr-1 -mt-0.5" />
-          Salva ricerca
-        </button>
-        <div className="flex-1" />
-        <ExportCSV leads={unlockedLeads} plan={plan} />
+        </FilterChip>
+
+        <div className="flex items-center gap-2 sm:ml-auto">
+          <Button
+            variant="ghost"
+            icon={<Bell />}
+            onClick={() => setShowSavedSearch(true)}
+            title="Salva questa ricerca e ricevi un avviso quando arrivano nuovi lead compatibili"
+          >
+            Salva ricerca
+          </Button>
+          <ExportCSV leads={unlockedLeads} plan={plan} />
+        </div>
       </div>
 
       {/* Ricerche salvate → alert email "nuovi lead per te" (cron già attivo) */}

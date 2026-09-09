@@ -1,53 +1,137 @@
-// UI restyling stile Apple + Linear
-// Componente Card moderno con glassmorphism e design minimale
-// Utilizzato in tutto il sistema per mantenere consistenza visiva
+/**
+ * Card — superficie elevata.
+ *
+ * Percorso: apps/frontend-app/components/ui/Card.tsx
+ * Guida: apps/frontend-app/DESIGN.md
+ *
+ * Una card e' un rettangolo di superficie con bordo hairline e ombra
+ * quasi invisibile. Non ha gradienti, non ha vetro smerigliato, non si
+ * solleva da sola: si solleva SOLO se e' cliccabile (`interactive`).
+ *
+ * `CardHeader` / `CardBody` / `CardFooter` sono opzionali: servono quando
+ * la card ha sezioni separate da un divider a filo dei bordi.
+ */
 
 'use client'
 
-import { ReactNode } from 'react'
-import { customClasses } from '@/lib/design-tokens'
+import { HTMLAttributes, ReactNode, forwardRef } from 'react'
+import { cn } from '@/lib/utils/cn'
 
-interface CardProps {
+export type CardPadding = 'none' | 'sm' | 'md' | 'lg' | 'xl'
+
+export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode
-  className?: string
-  variant?: 'default' | 'glass' | 'elevated'
-  padding?: 'sm' | 'md' | 'lg' | 'xl'
+  /**
+   * default   card normale
+   * flat      nessuna ombra (dentro un'altra superficie)
+   * overlay   modale / dropdown: superficie overlay + ombra pop
+   * glass     DEPRECATO — reso come `default`. Niente glassmorphism.
+   */
+  variant?: 'default' | 'flat' | 'overlay' | 'glass' | 'elevated'
+  padding?: CardPadding
+  /** Aggiunge feedback al passaggio del mouse. Solo per card cliccabili. */
+  interactive?: boolean
+  /** Alias storico di `interactive`. */
   hover?: boolean
 }
 
-export default function Card({ 
-  children, 
-  className = '', 
-  variant = 'default',
-  padding = 'lg',
-  hover = true 
-}: CardProps) {
-  const baseClasses = 'rounded-2xl transition-all duration-200'
-  
-  const variantClasses = {
-    default: 'bg-white dark:bg-gray-800 border border-gray-200/50 dark:border-gray-700/50 shadow-sm',
-    glass: 'bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-white/20 dark:border-gray-700/20 shadow-sm',
-    elevated: 'bg-white dark:bg-gray-800 border border-gray-200/50 dark:border-gray-700/50 shadow-lg'
-  }
-  
-  const paddingClasses = {
-    sm: 'p-4',
-    md: 'p-6', 
-    lg: 'p-8',
-    xl: 'p-10'
-  }
-  
-  const hoverClasses = hover ? 'hover:shadow-md hover:border-gray-300/50 dark:hover:border-gray-600/50 hover:-translate-y-0.5' : ''
-  
+const paddings: Record<CardPadding, string> = {
+  none: 'p-0',
+  sm: 'p-4',
+  md: 'p-5',
+  lg: 'p-6',
+  xl: 'p-8',
+}
+
+const variants: Record<NonNullable<CardProps['variant']>, string> = {
+  default: 'bg-surface-elevated border border-edge shadow-card',
+  elevated: 'bg-surface-elevated border border-edge shadow-card',
+  glass: 'bg-surface-elevated border border-edge shadow-card',
+  flat: 'bg-surface-elevated border border-edge',
+  overlay: 'bg-surface-overlay border border-edge shadow-pop',
+}
+
+const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
+  {
+    children,
+    className,
+    variant = 'default',
+    padding = 'lg',
+    interactive = false,
+    hover = false,
+    ...props
+  },
+  ref
+) {
+  const isInteractive = interactive || hover
+
   return (
-    <div className={`
-      ${baseClasses}
-      ${variantClasses[variant]}
-      ${paddingClasses[padding]}
-      ${hoverClasses}
-      ${className}
-    `}>
+    <div
+      ref={ref}
+      className={cn(
+        'rounded-card',
+        variants[variant],
+        paddings[padding],
+        isInteractive &&
+          'cursor-pointer transition-[border-color,box-shadow] duration-base ease-soft ' +
+            'hover:border-edge-strong hover:shadow-lift focus-ring',
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+})
+
+export interface CardSectionProps extends HTMLAttributes<HTMLDivElement> {
+  children: ReactNode
+}
+
+/** Intestazione della card: titolo a sinistra, azioni a destra. */
+export function CardHeader({ children, className, ...props }: CardSectionProps) {
+  return (
+    <div
+      className={cn('flex items-start justify-between gap-4 pb-4', className)}
+      {...props}
+    >
       {children}
     </div>
   )
 }
+
+export function CardBody({ children, className, ...props }: CardSectionProps) {
+  return (
+    <div className={cn('text-body text-content-muted', className)} {...props}>
+      {children}
+    </div>
+  )
+}
+
+/** Piede della card, separato da un divider hairline. */
+export function CardFooter({ children, className, ...props }: CardSectionProps) {
+  return (
+    <div
+      className={cn('mt-5 flex items-center gap-3 border-t border-edge pt-4', className)}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+}
+
+/** Titolo di card: 18px, mai piu' grande del titolo di pagina. */
+export function CardTitle({
+  children,
+  className,
+  ...props
+}: HTMLAttributes<HTMLHeadingElement>) {
+  return (
+    <h3 className={cn('text-heading font-semibold text-content', className)} {...props}>
+      {children}
+    </h3>
+  )
+}
+
+export default Card
+export { Card }

@@ -1,18 +1,24 @@
 /**
- * Pagina dettaglio lead — shell sottile orientata alla vendita.
+ * Pagina dettaglio lead — un dossier, non un cruscotto.
  *
  * Regola fondamentale: GUARDARE questa pagina non consuma mai crediti.
- * Se il lead non è sbloccato mostra un'anteprima bloccata con CTA che apre
- * UnlockLeadModal (l'unico flusso di sblocco del prodotto). I contatti
- * arrivano solo dalla vista my_unlocked_contacts o dalla risposta dell'API
- * di sblocco: phone/email non sono selezionabili dal client sulla tabella leads.
+ * Se il lead non è sbloccato mostra già il quadro (attività, problema
+ * principale, cosa gli si può vendere e quanto vale) e tiene nascosti solo nome
+ * e contatti, con la CTA che apre UnlockLeadModal (l'unico flusso di sblocco del
+ * prodotto). I contatti arrivano solo dalla vista my_unlocked_contacts o dalla
+ * risposta dell'API di sblocco: phone/email non sono selezionabili dal client
+ * sulla tabella leads.
+ *
+ * Ordine della vista sbloccata: prima quello che ha comprato (i contatti), poi
+ * il lavoro che ci può fare, poi i problemi, poi gli strumenti. Il gergo sta in
+ * fondo, dentro i dettagli tecnici chiusi.
  *
  * Le sezioni vivono in components/lead-detail/.
  */
 
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { ReactNode, useCallback, useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { AlertTriangle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -26,6 +32,8 @@ import LeadTechnicalDetails from '@/components/lead-detail/LeadTechnicalDetails'
 import LeadActions from '@/components/lead-detail/LeadActions'
 import LeadLockedPreview from '@/components/lead-detail/LeadLockedPreview'
 import LeadDigitalServices from '@/components/LeadDigitalServices'
+import ReportLeadIssueButton from '@/components/ReportLeadIssueButton'
+import { Button, EmptyState, Skeleton, SkeletonCard } from '@/components/ui'
 
 interface LeadDetail {
   id: string
@@ -52,6 +60,15 @@ interface LeadDetail {
 
 const LEAD_COLUMNS =
   'id, business_name, website_url, address, city, category, score, analysis, website_analysis, needed_roles, issues, origin, confidence_score, status, reachability_verdict, created_at, last_seen_at'
+
+/** Colonna di lettura: un dossier si legge in una colonna sola. */
+function PageShell({ children }: { children: ReactNode }) {
+  return (
+    <div className="min-h-screen bg-surface">
+      <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-12">{children}</div>
+    </div>
+  )
+}
 
 export default function LeadDetailPage() {
   const { user, refreshProfile } = useAuth()
@@ -138,104 +155,126 @@ export default function LeadDetailPage() {
   }
 
   if (loading) {
+    // Lo scheletro ha la forma del dossier: intestazione + due blocchi.
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Caricamento dettagli lead...</p>
+      <PageShell>
+        <div role="status" aria-live="polite" aria-busy="true">
+          <span className="sr-only">Caricamento del lead in corso</span>
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="mt-6 h-7 w-3/4" />
+          <Skeleton className="mt-3 h-4 w-full" />
+          <Skeleton className="mt-2 h-4 w-2/3" />
+          <div className="mt-8 space-y-6">
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
         </div>
-      </div>
+      </PageShell>
     )
   }
 
   if (error || !lead) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Errore</h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">{error || 'Lead non trovato'}</p>
-          <button
-            onClick={() => router.back()}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            Torna indietro
-          </button>
-        </div>
-      </div>
+      <PageShell>
+        <EmptyState
+          icon={<AlertTriangle />}
+          title={error || 'Lead non trovato'}
+          description="Il lead potrebbe essere stato rimosso oppure il link non è più valido."
+          action={
+            <Button variant="secondary" onClick={() => router.back()}>
+              Torna indietro
+            </Button>
+          }
+        />
+      </PageShell>
     )
   }
 
   const analysis = lead.website_analysis || lead.analysis || null
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-      <div className="max-w-6xl mx-auto px-4 space-y-6">
-        <LeadHeader
-          businessName={lead.business_name}
-          city={lead.city}
-          category={lead.category}
-          score={lead.score}
-          scoreVersion={lead.score_version}
-          createdAt={lead.created_at}
-          lastSeenAt={lead.last_seen_at}
-          status={lead.status}
-          unlocked={canViewFull}
-          isAdmin={isAdmin}
-          onBack={() => router.back()}
-        />
+    <PageShell>
+      <LeadHeader
+        businessName={lead.business_name}
+        city={lead.city}
+        category={lead.category}
+        score={lead.score}
+        scoreVersion={lead.score_version}
+        createdAt={lead.created_at}
+        lastSeenAt={lead.last_seen_at}
+        status={lead.status}
+        analysis={analysis}
+        unlocked={canViewFull}
+        isAdmin={isAdmin}
+        onBack={() => router.back()}
+      />
 
+      <div className="mt-8 space-y-6">
         {canViewFull ? (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1 space-y-6">
-              <LeadContacts
-                leadId={lead.id}
-                businessName={lead.business_name}
-                phone={lead.phone}
-                email={lead.email}
-                websiteUrl={lead.website_url}
-                address={lead.address}
-                city={lead.city}
-              />
+          <>
+            {/* Prima quello che ha comprato */}
+            <LeadContacts
+              leadId={lead.id}
+              businessName={lead.business_name}
+              phone={lead.phone}
+              email={lead.email}
+              websiteUrl={lead.website_url}
+              address={lead.address}
+              city={lead.city}
+            />
+
+            <LeadPitch analysis={analysis} userServices={user?.services_offered} />
+            <LeadProblems analysis={analysis} />
+
+            <LeadActions
+              lead={{
+                id: lead.id,
+                business_name: lead.business_name,
+                website_url: lead.website_url,
+                phone: lead.phone,
+                email: lead.email,
+                city: lead.city,
+                category: lead.category,
+                score: lead.score,
+                website_analysis: lead.website_analysis,
+                analysis: lead.analysis
+              }}
+              userId={user?.id}
+              userPlan={user?.plan || 'free'}
+            />
+
+            <LeadDigitalServices
+              lead={{
+                id: lead.id,
+                business_name: lead.business_name || '',
+                city: lead.city || '',
+                category: lead.category || '',
+                website_url: lead.website_url || undefined,
+                analysis
+              }}
+            />
+
+            <LeadTechnicalDetails
+              analysis={analysis}
+              score={lead.score}
+              scoreVersion={lead.score_version}
+            />
+
+            {/* Segnalazione dati errati: alimenta la quarantena automatica */}
+            <div className="flex justify-center pt-2">
+              <ReportLeadIssueButton leadId={lead.id} />
             </div>
-            <div className="lg:col-span-2 space-y-6">
-              <LeadPitch analysis={analysis} userServices={user?.services_offered} />
-              <LeadProblems analysis={analysis} />
-              <LeadTechnicalDetails analysis={analysis} />
-              <LeadActions
-                lead={{
-                  id: lead.id,
-                  business_name: lead.business_name,
-                  website_url: lead.website_url,
-                  phone: lead.phone,
-                  email: lead.email,
-                  city: lead.city,
-                  category: lead.category,
-                  score: lead.score,
-                  website_analysis: lead.website_analysis,
-                  analysis: lead.analysis
-                }}
-                userId={user?.id}
-                userPlan={user?.plan || 'free'}
-              />
-              <LeadDigitalServices
-                lead={{
-                  id: lead.id,
-                  business_name: lead.business_name || '',
-                  city: lead.city || '',
-                  category: lead.category || '',
-                  website_url: lead.website_url || undefined,
-                  analysis
-                }}
-              />
-            </div>
-          </div>
+          </>
         ) : (
-          <LeadLockedPreview
-            category={lead.category}
-            city={lead.city}
-            onUnlock={() => setShowUnlockModal(true)}
-          />
+          <>
+            {/* Bloccato: il valore si vede, il contatto no */}
+            <LeadPitch analysis={analysis} userServices={user?.services_offered} />
+            <LeadLockedPreview
+              analysis={analysis}
+              creditsRemaining={creditsRemaining}
+              onUnlock={() => setShowUnlockModal(true)}
+            />
+          </>
         )}
       </div>
 
@@ -253,6 +292,6 @@ export default function LeadDetailPage() {
         onClose={() => setShowUnlockModal(false)}
         onUnlocked={handleUnlocked}
       />
-    </div>
+    </PageShell>
   )
 }

@@ -1,66 +1,87 @@
 /**
- * LeadLockedPreview — Anteprima per lead NON sbloccati.
+ * LeadLockedPreview — l'unica cosa che manca è il contatto.
  *
- * Non mostra contatti né dettagli dell'analisi: solo cosa si ottiene con lo
- * sblocco e la CTA che apre UnlockLeadModal (l'unico flusso che può consumare
- * un credito, sempre con conferma esplicita). Guardare questa pagina non
- * costa mai nulla.
+ * La pagina bloccata mostra già l'attività, il problema principale e cosa gli si
+ * può vendere (LeadHeader + LeadPitch): qui si dice, senza giri di parole, cosa
+ * resta nascosto e quanto costa vederlo. Nessuna urgenza finta, nessun contatore:
+ * costo e saldo scritti chiari, e la conferma passa sempre da UnlockLeadModal
+ * (l'unico flusso che può consumare un credito).
+ *
+ * Guardare questa pagina non costa mai nulla.
  *
  * Usato da: app/lead/[id]/page.tsx
  */
 
 'use client'
 
-import { Lock, Phone, Search, MessageSquareText, Euro, Zap } from 'lucide-react'
+import { useMemo } from 'react'
+import { Check } from 'lucide-react'
+import {
+  extractProblemKeysFromAnalysis,
+  translateProblems
+} from '@/lib/utils/problem-translator'
+import { hasCredits, isUnlimitedCredits } from '@/lib/utils/credits-display'
+import { Button, Card, CardTitle } from '@/components/ui'
 
 interface LeadLockedPreviewProps {
-  category?: string | null
-  city?: string | null
+  analysis?: any
+  /** saldo crediti attuale; -1 = piano illimitato */
+  creditsRemaining: number
   onUnlock: () => void
 }
 
-const BENEFITS = [
-  { icon: Phone, text: 'Contatti diretti: telefono, email e sito web' },
-  { icon: Search, text: 'Analisi completa del sito con i problemi da risolvere' },
-  { icon: MessageSquareText, text: 'Template pronti per email, WhatsApp e telefonate' },
-  { icon: Euro, text: 'Preventivo automatico basato sui difetti rilevati' }
-]
+export default function LeadLockedPreview({
+  analysis,
+  creditsRemaining,
+  onUnlock
+}: LeadLockedPreviewProps) {
+  const problemCount = useMemo(
+    () => translateProblems(extractProblemKeysFromAnalysis(analysis)).length,
+    [analysis]
+  )
 
-export default function LeadLockedPreview({ category, city, onUnlock }: LeadLockedPreviewProps) {
+  const unlimited = isUnlimitedCredits(creditsRemaining)
+  const canUnlock = hasCredits(creditsRemaining)
+
+  const items = [
+    "Nome dell'attività, telefono ed email",
+    'Sito web e indirizzo, con copia negli appunti',
+    problemCount > 0
+      ? `Tutti i ${problemCount} problemi del sito, spiegati uno per uno`
+      : "L'analisi completa del sito, spiegata in italiano",
+    'Template pronti per email, WhatsApp e telefonata',
+    'Preventivo automatico basato sui difetti rilevati'
+  ]
+
+  const costLine = unlimited
+    ? 'Il tuo piano ha crediti illimitati: lo sblocco non consuma nulla.'
+    : canUnlock
+      ? `Costa 1 credito e te ne restano ${creditsRemaining}. Prima di usarlo ti chiediamo conferma.`
+      : 'Non hai più crediti disponibili: nella finestra di sblocco trovi i piani.'
+
   return (
-    <section className="bg-white dark:bg-gray-800 rounded-xl p-8 text-center">
-      <div className="flex justify-center mb-4">
-        <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-          <Lock className="h-8 w-8 text-blue-500" />
-        </div>
-      </div>
-
-      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-        Questo lead è ancora bloccato
-      </h2>
-      <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-        Sblocca questa attività{category ? ` (${category}` : ''}
-        {category && city ? `, ${city})` : category ? ')' : city ? ` di ${city}` : ''} per
-        vedere contatti, analisi e strumenti di vendita. Lo sblocco costa 1 credito e
-        richiede sempre la tua conferma.
+    <Card>
+      <CardTitle>Cosa manca ancora</CardTitle>
+      <p className="mt-2 max-w-xl text-body text-content-muted">
+        Di questa attività hai già il quadro: quello che resta nascosto è come
+        raggiungerla.
       </p>
 
-      <ul className="max-w-md mx-auto text-left space-y-3 mb-8">
-        {BENEFITS.map(({ icon: Icon, text }) => (
-          <li key={text} className="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300">
-            <Icon className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
-            <span>{text}</span>
+      <ul className="mt-5 space-y-3">
+        {items.map(item => (
+          <li key={item} className="flex items-start gap-3">
+            <Check className="mt-1 h-4 w-4 shrink-0 text-content-subtle" aria-hidden="true" />
+            <span className="text-body text-content">{item}</span>
           </li>
         ))}
       </ul>
 
-      <button
-        onClick={onUnlock}
-        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors"
-      >
-        <Zap className="h-5 w-5" />
-        Sblocca questo lead
-      </button>
-    </section>
+      <div className="mt-6 border-t border-edge pt-6">
+        <Button size="lg" onClick={onUnlock} className="w-full sm:w-auto">
+          Sblocca il lead
+        </Button>
+        <p className="mt-3 text-caption text-content-subtle">{costLine}</p>
+      </div>
+    </Card>
   )
 }

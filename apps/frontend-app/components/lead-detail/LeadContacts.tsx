@@ -1,18 +1,22 @@
 /**
- * LeadContacts — Contatti del lead (solo per lead sbloccati).
+ * LeadContacts — quello che l'utente ha comprato con il credito.
  *
- * Telefono, email, sito web e link Google Maps con pulsanti copia negli
- * appunti (feedback via toast). Sotto la card mostra VerifiedContactsCard
- * con i dati di arricchimento on-demand (contatti verificati, dati azienda).
+ * È la prima cosa che vede dopo lo sblocco, quindi è la più leggibile della
+ * pagina: etichetta piccola, valore grande e cliccabile, copia negli appunti a
+ * un tocco (feedback via toast). Niente icone decorative: il contenuto è
+ * l'interfaccia.
+ *
+ * Sotto la card resta VerifiedContactsCard con l'arricchimento on-demand.
  *
  * Usato da: app/lead/[id]/page.tsx (solo vista sbloccata)
  */
 
 'use client'
 
-import { Phone, Mail, Globe, MapPin, Copy } from 'lucide-react'
+import { Copy } from 'lucide-react'
 import { useToast } from '@/components/ToastProvider'
 import VerifiedContactsCard from '@/components/VerifiedContactsCard'
+import { Button, Card, CardTitle, cn } from '@/components/ui'
 
 interface LeadContactsProps {
   leadId: string
@@ -49,90 +53,96 @@ export default function LeadContacts({
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`
     : null
 
-  const CopyButton = ({ label, value }: { label: string; value: string }) => (
-    <button
-      onClick={() => copy(label, value)}
-      className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-      title={`Copia ${label.toLowerCase()}`}
-      aria-label={`Copia ${label.toLowerCase()}`}
-    >
-      <Copy className="h-4 w-4" />
-    </button>
-  )
+  const rows: Array<{
+    label: string
+    value: string
+    href: string
+    external?: boolean
+    /** valore da copiare: se assente la riga non ha il pulsante copia */
+    copyValue?: string
+    numeric?: boolean
+  }> = []
+
+  if (phone) {
+    rows.push({ label: 'Telefono', value: phone, href: `tel:${phone}`, copyValue: phone, numeric: true })
+  }
+  if (email) {
+    rows.push({ label: 'Email', value: email, href: `mailto:${email}`, copyValue: email })
+  }
+  if (websiteUrl) {
+    rows.push({
+      label: 'Sito web',
+      value: websiteUrl,
+      // Molti lead hanno il dominio senza schema: senza https:// il link
+      // diventa relativo e porta dentro l'app invece che sul sito.
+      href: websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`,
+      external: true,
+      copyValue: websiteUrl
+    })
+  }
+  if (mapsUrl) {
+    rows.push({
+      label: 'Indirizzo',
+      value: address || 'Apri su Google Maps',
+      href: mapsUrl,
+      external: true,
+      copyValue: address || undefined
+    })
+  }
 
   return (
     <>
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Contatti
-        </h2>
-
-        <div className="space-y-3">
-          {phone && (
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center min-w-0">
-                <Phone className="h-4 w-4 text-gray-400 mr-3 shrink-0" />
-                <a href={`tel:${phone}`} className="text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 truncate">
-                  {phone}
-                </a>
-              </div>
-              <CopyButton label="Telefono" value={phone} />
-            </div>
-          )}
-
-          {email && (
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center min-w-0">
-                <Mail className="h-4 w-4 text-gray-400 mr-3 shrink-0" />
-                <a href={`mailto:${email}`} className="text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline truncate">
-                  {email}
-                </a>
-              </div>
-              <CopyButton label="Email" value={email} />
-            </div>
-          )}
-
-          {websiteUrl && (
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center min-w-0">
-                <Globe className="h-4 w-4 text-gray-400 mr-3 shrink-0" />
-                <a
-                  href={websiteUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline truncate"
-                >
-                  {websiteUrl}
-                </a>
-              </div>
-              <CopyButton label="Sito web" value={websiteUrl} />
-            </div>
-          )}
-
-          {mapsUrl && (
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-start min-w-0">
-                <MapPin className="h-4 w-4 text-gray-400 mr-3 mt-0.5 shrink-0" />
-                <a
-                  href={mapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline"
-                >
-                  {address || 'Apri su Google Maps'}
-                </a>
-              </div>
-              {address && <CopyButton label="Indirizzo" value={address} />}
-            </div>
-          )}
-
-          {!phone && !email && !websiteUrl && !mapsUrl && (
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Nessun contatto diretto disponibile per questo lead.
-            </p>
-          )}
+      <Card padding="none">
+        <div className="px-6 pt-6">
+          <CardTitle>Contatti</CardTitle>
         </div>
-      </div>
+
+        {rows.length === 0 ? (
+          <p className="px-6 pb-6 pt-3 text-body text-content-muted">
+            Per questo lead non abbiamo contatti diretti. Puoi comunque usare i dati
+            azienda qui sotto per raggiungerlo.
+          </p>
+        ) : (
+          <ul className="mt-4 pb-3">
+            {rows.map((row, index) => (
+              <li
+                key={row.label}
+                className={cn(
+                  'flex items-center gap-3 px-6 py-3',
+                  index > 0 && 'border-t border-edge'
+                )}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="text-micro text-content-subtle">{row.label}</div>
+                  <a
+                    href={row.href}
+                    {...(row.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                    className={cn(
+                      'focus-ring mt-0.5 block break-words rounded-sm text-body-lg text-content',
+                      'underline-offset-4 transition-colors duration-fast ease-soft',
+                      'hover:text-accent-ink hover:underline',
+                      row.numeric && 'tabular-nums'
+                    )}
+                  >
+                    {row.value}
+                  </a>
+                </div>
+
+                {row.copyValue && (
+                  <Button
+                    variant="ghost"
+                    size="md"
+                    iconOnly
+                    icon={<Copy />}
+                    aria-label={`Copia ${row.label.toLowerCase()}`}
+                    onClick={() => copy(row.label, row.copyValue as string)}
+                  />
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
 
       {/* Contatti verificati e dati azienda (arricchimento on-demand) */}
       <VerifiedContactsCard leadId={leadId} phone={phone || undefined} />

@@ -1,28 +1,43 @@
 /**
- * Loading Spinner Component
- * Componente per mostrare un indicatore di caricamento generico
- * 
- * Utilizzato da: tutti i componenti che necessitano di indicatori di caricamento
- * Dipende da: nessuna dipendenza esterna
+ * LoadingSpinner — indicatore di caricamento puntuale.
+ *
+ * Percorso: apps/frontend-app/components/ui/loading-spinner.tsx
+ *
+ * Da usare solo dove NON si conosce la forma del contenuto in arrivo
+ * (es. una mappa, un grafico). Per liste e card usare Skeleton.
  */
+
+import { cn } from '@/lib/utils/cn'
 
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg'
   className?: string
+  /** Testo per gli screen reader */
+  label?: string
 }
 
-export default function LoadingSpinner({ size = 'md', className = '' }: LoadingSpinnerProps) {
-  const sizeClasses = {
-    sm: 'h-4 w-4',
-    md: 'h-8 w-8',
-    lg: 'h-12 w-12'
-  }
+const sizes = {
+  sm: 'h-4 w-4 border-2',
+  md: 'h-6 w-6 border-2',
+  lg: 'h-8 w-8 border-2',
+}
 
+export default function LoadingSpinner({
+  size = 'md',
+  className = '',
+  label = 'Caricamento in corso',
+}: LoadingSpinnerProps) {
   return (
-    <div className={`flex items-center justify-center ${className}`}>
-      <div 
-        className={`animate-spin rounded-full border-2 border-gray-300 border-t-blue-600 ${sizeClasses[size]}`}
+    <div
+      className={cn('flex items-center justify-center', className)}
+      role="status"
+      aria-live="polite"
+    >
+      <div
+        className={cn('animate-spin rounded-pill border-edge-strong border-t-accent', sizes[size])}
+        aria-hidden="true"
       />
+      <span className="sr-only">{label}</span>
     </div>
   )
 }

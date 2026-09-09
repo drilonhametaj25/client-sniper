@@ -1,7 +1,11 @@
 /**
- * Pagina di registrazione migliorata con design moderno
- * Include header, footer, selezione piano integrata e UX ottimizzata
- * SEO-friendly con struttura semantica e accessibilità migliorata
+ * Pagina di registrazione - TrovaMi
+ * Percorso: apps/frontend-app/app/register/page.tsx
+ *
+ * Due passaggi: (1) scelta del piano, (2) dati dell'account. Il flusso resta
+ * quello di prima: piano gratuito -> /onboarding, piano a pagamento -> checkout
+ * Stripe. Cambia solo la presentazione (token e primitive di DESIGN.md):
+ * niente header duplicato, niente newsletter, niente vetrina di funzionalita'.
  */
 
 'use client'
@@ -14,25 +18,13 @@ import Script from 'next/script'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/ToastProvider'
 import { supabase } from '@/lib/supabase'
-import { validatePassword, validateEmail, getPasswordStrengthColor, getPasswordStrengthBg } from '@/lib/validation'
-import { 
-  Check, 
-  Star, 
-  Eye, 
-  EyeOff, 
-  Target,
-  Search,
-  ArrowLeft,
-  Zap,
-  Shield,
-  Crown,
-  Users,
-  BarChart3,
-  Mail,
-  Lock
-} from 'lucide-react'
-import NewsletterForm from '@/components/NewsletterForm'
-import ThemeToggle from '@/components/theme/ThemeToggle'
+import { validatePassword, validateEmail } from '@/lib/validation'
+import { ArrowLeft, Check, Eye, EyeOff, Minus } from 'lucide-react'
+import Button from '@/components/ui/Button'
+import Card from '@/components/ui/Card'
+import Input from '@/components/ui/Input'
+import Skeleton from '@/components/ui/Skeleton'
+import { cn } from '@/lib/utils/cn'
 import NewPlanSelector from '@/components/NewPlanSelector'
 
 // Estende il tipo Window per includere le funzioni di tracking
@@ -44,24 +36,51 @@ declare global {
   }
 }
 
-interface Plan {
-  id: string
-  name: string
-  price: number
-  credits: number
-  features: string[]
-  popular?: boolean
-  stripePriceId?: string
+// Requisiti della password: stessi controlli di lib/validation, mostrati
+// all'utente mentre scrive. Il verdetto finale resta di validatePassword().
+const PASSWORD_RULES: { label: string; test: (value: string) => boolean }[] = [
+  { label: 'Almeno 8 caratteri', test: (v) => v.length >= 8 },
+  { label: 'Una lettera maiuscola', test: (v) => /[A-Z]/.test(v) },
+  { label: 'Una lettera minuscola', test: (v) => /[a-z]/.test(v) },
+  { label: 'Un numero', test: (v) => /\d/.test(v) },
+  {
+    label: 'Un carattere speciale',
+    test: (v) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(v),
+  },
+]
+
+const STRENGTH_LABEL: Record<'weak' | 'medium' | 'strong', string> = {
+  weak: 'Password debole',
+  medium: 'Password discreta',
+  strong: 'Password forte',
+}
+
+const STRENGTH_TEXT: Record<'weak' | 'medium' | 'strong', string> = {
+  weak: 'text-danger',
+  medium: 'text-warning',
+  strong: 'text-success',
+}
+
+const STRENGTH_FILL: Record<'weak' | 'medium' | 'strong', string> = {
+  weak: 'bg-danger w-1/3',
+  medium: 'bg-warning w-2/3',
+  strong: 'bg-success w-full',
 }
 
 // Componente principale con Suspense wrapper
 export default function RegisterPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-surface px-4 pb-20 pt-24 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-md space-y-4">
+            <Skeleton className="h-8 w-56" />
+            <Skeleton className="h-4 w-72 max-w-full" />
+            <Skeleton className="h-64 w-full rounded-card" />
+          </div>
+        </div>
+      }
+    >
       <RegisterPageContent />
     </Suspense>
   )
@@ -82,7 +101,7 @@ function RegisterPageContent() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState(1) // 1 = piano, 2 = dati
-  
+
   const { signUp } = useAuth()
   const { success, error: showError } = useToast()
   const router = useRouter()
@@ -92,13 +111,13 @@ function RegisterPageContent() {
   useEffect(() => {
     const planParam = searchParams.get('plan')
     const stepParam = searchParams.get('step')
-    
+
     if (planParam) {
       // Estrae il nome base del piano (rimuove suffissi _monthly/_annual)
       const basePlanName = planParam.replace('_monthly', '').replace('_annual', '')
       setSelectedPlan(basePlanName)
     }
-    
+
     if (stepParam) {
       const stepValue = parseInt(stepParam)
       if (stepValue >= 1 && stepValue <= 3) {
@@ -118,7 +137,7 @@ function RegisterPageContent() {
         .select('*')
         .eq('is_visible', true)
         .order('sort_order')
-      
+
       if (error) throw error
       setAvailablePlans(plans || [])
     } catch (error) {
@@ -131,12 +150,12 @@ function RegisterPageContent() {
   // Trova il piano selezionato dai dati del database
   const getSelectedPlanData = () => {
     if (!availablePlans.length) return null
-    
+
     // Cerca prima la versione mensile del piano selezionato
-    const monthlyPlan = availablePlans.find(plan => 
+    const monthlyPlan = availablePlans.find(plan =>
       plan.name === selectedPlan || plan.name === `${selectedPlan}_monthly`
     )
-    
+
     return monthlyPlan || null
   }
 
@@ -146,7 +165,7 @@ function RegisterPageContent() {
   const handlePlanSelect = (planId: string) => {
     setSelectedPlan(planId)
     setStep(2) // Vai ai dati utente
-    
+
     // Track piano selezionato
     if (typeof window !== 'undefined' && window.fbq) {
       window.fbq('track', 'InitiateCheckout', {
@@ -156,7 +175,7 @@ function RegisterPageContent() {
         currency: 'EUR'
       })
     }
-    
+
     if (typeof window !== 'undefined' && window.gtag) {
       window.gtag('event', 'begin_checkout', {
         event_category: 'Registration',
@@ -168,7 +187,7 @@ function RegisterPageContent() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // Validazione email
     if (!validateEmail(email)) {
       showError('Email non valida', 'Inserisci un indirizzo email valido')
@@ -197,7 +216,7 @@ function RegisterPageContent() {
     try {
       // Crea l'account
       const signUpResult = await signUp(email, password)
-      
+
       if (!signUpResult.success) {
         throw new Error(signUpResult.error || 'Errore durante la registrazione')
       }
@@ -231,15 +250,15 @@ function RegisterPageContent() {
       // Se piano a pagamento, vai DIRETTAMENTE al checkout (senza conferma email)
       if (selectedPlan !== 'free') {
         success('Account creato!', 'Procediamo al pagamento...')
-        
+
         // Attendiamo un momento per assicurarci che l'utente sia nel database
         await new Promise(resolve => setTimeout(resolve, 2000))
-        
+
         // Vai direttamente al checkout
         try {
           // Recupera dati del piano selezionato
           const planData = getSelectedPlanData()
-          
+
           if (!planData || !planData.stripe_price_id_monthly) {
             throw new Error('Piano non configurato correttamente. Contatta il supporto.')
           }
@@ -304,6 +323,8 @@ function RegisterPageContent() {
     }
   }
 
+  const planLabel = selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)
+
   if (step === 1) {
     return (
       <>
@@ -364,177 +385,37 @@ function RegisterPageContent() {
           `}
         </Script>
 
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900">
-          {/* Header */}
-          <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700" role="banner">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex items-center justify-between h-16">
-                <Link href="/" className="flex items-center space-x-3" aria-label="Torna alla homepage di TrovaMi">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                    <Target className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="text-xl font-bold text-gray-900 dark:text-white">TrovaMi</span>
-                </Link>
-                
-                <nav className="flex items-center space-x-4" aria-label="Navigazione principale">
-                  <Link 
-                    href="/tools/public-scan"
-                    className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
-                  >
-                    <Search className="w-4 h-4 inline mr-1" />
-                    Analisi Gratuita
-                  </Link>
-                  <ThemeToggle variant="compact" showLabel={false} />
-                  <Link 
-                    href="/login"
-                    className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
-                  >
-                    Accedi
-                  </Link>
-                </nav>
-              </div>
-            </div>
-          </header>
-
-          <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12" role="main">
-            {/* Hero Section */}
-            <section className="text-center mb-12">
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                Scegli il Piano Professionale per Te
+        <div className="min-h-screen bg-surface px-4 pb-20 pt-24 sm:px-6 sm:pt-28 lg:px-8">
+          <div className="mx-auto max-w-6xl">
+            <div className="max-w-2xl">
+              <p className="text-caption text-content-subtle">Passo 1 di 2</p>
+              <h1 className="mt-2 text-title font-semibold text-content">
+                Scegli da dove partire
               </h1>
-              <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
-                Inizia con audit gratuiti e scala verso l'intelligence automatizzata. 
-                Tutti i piani includono accesso alla piattaforma professionale di audit digitale.
+              <p className="mt-3 text-body-lg text-content-muted">
+                1 credito = 1 lead sbloccato. Con l’account gratuito hai un credito di
+                prova; puoi passare a un piano quando ti serve, e disdire quando vuoi.
               </p>
-              
-              {/* Features highlights */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 max-w-3xl mx-auto">
-                <div className="flex items-center justify-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-                  <Search className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <span>Audit Automatizzati</span>
-                </div>
-                <div className="flex items-center justify-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-                  <BarChart3 className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  <span>Dashboard Tecnica</span>
-                </div>
-                <div className="flex items-center justify-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-                  <Shield className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                  <span>Dati Sicuri</span>
-                </div>
-                <div className="flex items-center justify-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-                  <Users className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                  <span>Supporto 24/7</span>
-                </div>
-              </div>
-            </section>
-
-            {/* Plans Grid */}
-            <NewPlanSelector 
-              currentPlan={selectedPlan}
-              onPlanSelect={(planId, isAnnual) => handlePlanSelect(planId)}
-              showFree={true}
-            />
-
-            {/* CTA Section */}
-            <section className="text-center mb-16">
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
-                Hai già un account?{' '}
-                <Link
-                  href="/login"
-                  className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
-                >
-                  Accedi qui
-                </Link>
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Tutti i piani includono una garanzia di rimborso entro 30 giorni
-              </p>
-            </section>
-
-            {/* Newsletter Section */}
-            <section className="mb-16">
-              <div className="max-w-2xl mx-auto">
-                <NewsletterForm
-                  title="Prima di Iniziare..."
-                  description="Iscriviti alla newsletter e ricevi subito 3 lead gratuiti + strategie di acquisizione clienti"
-                  source="register_page"
-                  variant="default"
-                />
-              </div>
-            </section>
-          </main>
-
-          {/* Footer */}
-          <footer className="bg-gray-900 text-white py-16">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              {/* Newsletter compatta nel footer */}
-              <div className="mb-16 p-8 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-2xl border border-white/10">
-                <NewsletterForm
-                  title="Newsletter Professionale"
-                  description="Lead qualificati e strategie di acquisizione clienti"
-                  placeholder="Il tuo indirizzo email"
-                  buttonText="Iscriviti"
-                  source="register_footer_step1"
-                  variant="compact"
-                  className="max-w-2xl mx-auto"
-                />
-              </div>
-
-              <div className="grid md:grid-cols-4 gap-8 mb-12">
-                <div className="col-span-2">
-                  <div className="flex items-center space-x-3 mb-6">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                      <Target className="w-6 h-6 text-white" />
-                    </div>
-                    <span className="text-2xl font-bold">TrovaMi</span>
-                  </div>
-                  <p className="text-gray-400 text-lg leading-relaxed max-w-md">
-                    La piattaforma più avanzata per trovare lead qualificati attraverso l'analisi automatizzata di siti web aziendali.
-                  </p>
-                </div>
-                
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Prodotto</h3>
-                  <ul className="space-y-3">
-                    <li><Link href="/tools/public-scan" className="text-gray-400 hover:text-white transition-colors">Analisi Gratuita</Link></li>
-                    <li><Link href="/#pricing" className="text-gray-400 hover:text-white transition-colors">Prezzi</Link></li>
-                    <li><Link href="/login" className="text-gray-400 hover:text-white transition-colors">Login</Link></li>
-                  </ul>
-                </div>
-                
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Risorse</h3>
-                  <ul className="space-y-3">
-                    <li><Link href="/come-trovare-clienti" className="text-gray-400 hover:text-white transition-colors">Come Trovare Clienti</Link></li>
-                    <li><Link href="/help" className="text-gray-400 hover:text-white transition-colors">Centro Assistenza</Link></li>
-                    <li><Link href="/contact" className="text-gray-400 hover:text-white transition-colors">Contatti</Link></li>
-                  </ul>
-                </div>
-              </div>
-              
-              <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center">
-                <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-6 mb-4 md:mb-0">
-                  <p className="text-gray-400">
-                    &copy; 2025 TrovaMi. Tutti i diritti riservati.
-                  </p>
-                  <div className="flex items-center space-x-4 text-sm">
-                    <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">
-                      Privacy Policy
-                    </Link>
-                    <span className="text-gray-600">•</span>
-                    <Link href="/terms" className="text-gray-400 hover:text-white transition-colors">
-                      Termini e Condizioni
-                    </Link>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-6 text-sm text-gray-400">
-                  <span>Made in Italy 🇮🇹</span>
-                  <span>•</span>
-                  <span>Powered by Drilon Hametaj</span>
-                </div>
-              </div>
             </div>
-          </footer>
+
+            <div className="mt-10">
+              <NewPlanSelector
+                currentPlan={selectedPlan}
+                onPlanSelect={(planId, isAnnual) => handlePlanSelect(planId)}
+                showFree={true}
+              />
+            </div>
+
+            <p className="mt-10 text-caption text-content-muted">
+              Hai già un account?{' '}
+              <Link
+                href="/login"
+                className="focus-ring rounded-control font-medium text-accent-ink transition-colors duration-fast ease-soft hover:text-accent"
+              >
+                Accedi
+              </Link>
+            </p>
+          </div>
         </div>
       </>
     )
@@ -542,377 +423,200 @@ function RegisterPageContent() {
 
   // Step 2: Form dati utente
   return (
-    <>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900">
-        {/* Header */}
-        <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700" role="banner">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
-              <Link href="/" className="flex items-center space-x-3" aria-label="Torna alla homepage di TrovaMi">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <Target className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-xl font-bold text-gray-900 dark:text-white">TrovaMi</span>
-              </Link>
-              
-              <nav className="flex items-center space-x-4" aria-label="Navigazione principale">
-                <Link 
-                  href="/tools/public-scan"
-                  className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
-                >
-                  <Search className="w-4 h-4 inline mr-1" />
-                  Analisi Gratuita
-                </Link>
-                <ThemeToggle variant="compact" showLabel={false} />
-                <Link 
-                  href="/login"
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
-                >
-                  Accedi
-                </Link>
-              </nav>
-            </div>
-          </div>
-        </header>
+    <div className="min-h-screen bg-surface px-4 pb-20 pt-24 sm:px-6 sm:pt-28 lg:px-8">
+      <div className="mx-auto w-full max-w-md">
+        <div className="mb-8">
+          <p className="text-caption text-content-subtle">Passo 2 di 2</p>
+          <h1 className="mt-2 text-title font-semibold text-content">Crea il tuo account</h1>
+          <p className="mt-2 text-body text-content-muted">
+            Piano {selectedPlan === 'free' ? 'gratuito' : planLabel}.{' '}
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="focus-ring inline-flex items-center gap-1 rounded-control text-accent-ink transition-colors duration-fast ease-soft hover:text-accent"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+              Cambia piano
+            </button>
+          </p>
+        </div>
 
-        <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12" role="main">
-          {/* Progress indicator */}
-          <div className="mb-8">
-            <div className="flex items-center justify-center space-x-4">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                  <Check className="w-5 h-5 text-white" />
-                </div>
-                <span className="ml-2 text-sm font-medium text-blue-600 dark:text-blue-400">Piano</span>
-              </div>
-              <div className="w-12 h-0.5 bg-blue-600"></div>
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                  <span className="text-white font-semibold text-sm">2</span>
-                </div>
-                <span className="ml-2 text-sm font-medium text-blue-600 dark:text-blue-400">Dati</span>
-              </div>
-            </div>
-          </div>
+        <Card padding="lg">
+          <form className="space-y-5" onSubmit={handleSignUp}>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              label="Email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="nome@esempio.com"
+            />
 
-          {/* Registration Form */}
-          <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                Completa la Registrazione
-              </h1>
-              <p className="text-gray-600 dark:text-gray-300">
-                Piano selezionato: <span className="font-semibold text-blue-600 dark:text-blue-400 capitalize">{selectedPlan}</span>
-              </p>
-              <button
-                onClick={() => setStep(1)}
-                className="mt-2 inline-flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4 mr-1" />
-                Cambia piano
-              </button>
-            </div>
-            
-            <form className="space-y-6" onSubmit={handleSignUp}>
-              <div className="grid grid-cols-1 gap-6">
-                {/* Email Field */}
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Indirizzo Email
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Mail className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                    </div>
-                    <input
-                      id="email"
-                      name="email"
-                      type="email"
-                      autoComplete="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                      placeholder="nome@esempio.com"
-                    />
-                  </div>
-                </div>
-                
-                {/* Password Field */}
-                <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Lock className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                    </div>
-                    <input
-                      id="password"
-                      name="password"
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="block w-full pl-10 pr-10 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                      placeholder="Crea una password sicura"
-                    />
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-5 w-5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300" />
-                      ) : (
-                        <Eye className="h-5 w-5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300" />
-                      )}
-                    </button>
-                  </div>
-                  
-                  {/* Password Strength Indicator */}
-                  {password && (
-                    <div className="mt-2">
-                      <div className={`h-2 w-full rounded-full ${getPasswordStrengthBg(passwordValidation.strength)}`}>
-                        <div 
-                          className={`h-2 rounded-full transition-all duration-200 ${getPasswordStrengthColor(passwordValidation.strength)}`}
-                          style={{ 
-                            width: `${
-                              passwordValidation.strength === 'weak' ? 33 :
-                              passwordValidation.strength === 'medium' ? 66 : 100
-                            }%` 
-                          }}
-                        ></div>
-                      </div>
-                      <p className={`text-xs mt-1 ${getPasswordStrengthColor(passwordValidation.strength)}`}>
-                        {passwordValidation.strength === 'weak' && 'Password debole'}
-                        {passwordValidation.strength === 'medium' && 'Password discreta'}
-                        {passwordValidation.strength === 'strong' && 'Password forte'}
-                      </p>
-                      {/* Password Requirements */}
-                      {!passwordValidation.isValid && (
-                        <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                          <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">La password deve contenere:</p>
-                          <ul className="space-y-1">
-                            <li className={`text-xs flex items-center ${password.length >= 8 ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                              <div className={`w-3 h-3 rounded-full mr-2 flex items-center justify-center ${password.length >= 8 ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                                {password.length >= 8 ? (
-                                  <Check className="w-2 h-2 text-green-600 dark:text-green-400" />
-                                ) : (
-                                  <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-                                )}
-                              </div>
-                              Almeno 8 caratteri
-                            </li>
-                            <li className={`text-xs flex items-center ${/[A-Z]/.test(password) ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                              <div className={`w-3 h-3 rounded-full mr-2 flex items-center justify-center ${/[A-Z]/.test(password) ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                                {/[A-Z]/.test(password) ? (
-                                  <Check className="w-2 h-2 text-green-600 dark:text-green-400" />
-                                ) : (
-                                  <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-                                )}
-                              </div>
-                              Una lettera maiuscola (A-Z)
-                            </li>
-                            <li className={`text-xs flex items-center ${/[a-z]/.test(password) ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                              <div className={`w-3 h-3 rounded-full mr-2 flex items-center justify-center ${/[a-z]/.test(password) ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                                {/[a-z]/.test(password) ? (
-                                  <Check className="w-2 h-2 text-green-600 dark:text-green-400" />
-                                ) : (
-                                  <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-                                )}
-                              </div>
-                              Una lettera minuscola (a-z)
-                            </li>
-                            <li className={`text-xs flex items-center ${/\d/.test(password) ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                              <div className={`w-3 h-3 rounded-full mr-2 flex items-center justify-center ${/\d/.test(password) ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                                {/\d/.test(password) ? (
-                                  <Check className="w-2 h-2 text-green-600 dark:text-green-400" />
-                                ) : (
-                                  <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-                                )}
-                              </div>
-                              Un numero (0-9)
-                            </li>
-                            <li className={`text-xs flex items-center ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                              <div className={`w-3 h-3 rounded-full mr-2 flex items-center justify-center ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                                {/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? (
-                                  <Check className="w-2 h-2 text-green-600 dark:text-green-400" />
-                                ) : (
-                                  <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-                                )}
-                              </div>
-                              Un carattere speciale (!@#$%^&*)
-                            </li>
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-                
-                {/* Confirm Password Field */}
-                <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Conferma Password
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Lock className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                    </div>
-                    <input
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      required
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="block w-full pl-10 pr-10 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                      placeholder="Ripeti la password"
-                    />
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-5 w-5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300" />
-                      ) : (
-                        <Eye className="h-5 w-5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300" />
-                      )}
-                    </button>
-                  </div>
-                  
-                  {/* Password Match Indicator */}
-                  {confirmPassword && (
-                    <p className={`text-xs mt-1 ${password === confirmPassword ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {password === confirmPassword ? 'Le password corrispondono' : 'Le password non corrispondono'}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={loading || !passwordValidation.isValid || password !== confirmPassword}
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Creazione account...
-                  </>
-                ) : (
-                  <>
-                    <Crown className="h-5 w-5 mr-2" />
-                    Crea Account {selectedPlan === 'free' ? 'Gratuito' : selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}
-                  </>
-                )}
-              </button>
-
-              {/* Terms and Privacy */}
-              <p className="text-xs text-center text-gray-600 dark:text-gray-300">
-                Creando un account, accetti i nostri{' '}
-                <Link href="/terms" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
-                  Termini di Servizio
-                </Link>{' '}
-                e{' '}
-                <Link href="/privacy" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
-                  Privacy Policy
-                </Link>
-              </p>
-            </form>
-          </section>
-
-          {/* Additional Info */}
-          <section className="text-center mt-8">
-            <p className="text-gray-600 dark:text-gray-300">
-              Hai già un account?{' '}
-              <Link
-                href="/login"
-                className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
-              >
-                Accedi qui
-              </Link>
-            </p>
-          </section>
-        </main>
-
-        {/* Footer */}
-        <footer className="bg-gray-900 text-white py-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            {/* Newsletter compatta nel footer */}
-            <div className="mb-16 p-8 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-2xl border border-white/10">
-              <NewsletterForm
-                title="Newsletter Professionale"
-                description="Lead qualificati e strategie di acquisizione clienti"
-                placeholder="Il tuo indirizzo email"
-                buttonText="Iscriviti"
-                source="register_footer_step2"
-                variant="compact"
-                className="max-w-2xl mx-auto"
+            <div>
+              <Input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                label="Password"
+                autoComplete="new-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Crea una password"
+                className="pr-12"
+                trailing={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Nascondi la password' : 'Mostra la password'}
+                    className="focus-ring inline-flex h-11 w-11 items-center justify-center rounded-control text-content-subtle transition-colors duration-fast ease-soft hover:text-content"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <Eye className="h-4 w-4" aria-hidden="true" />
+                    )}
+                  </button>
+                }
               />
+
+              {password && (
+                <div className="mt-3">
+                  <div className="h-1 w-full overflow-hidden rounded-pill bg-surface-subtle">
+                    <div
+                      className={cn(
+                        'h-full rounded-pill transition-[width] duration-base ease-soft',
+                        STRENGTH_FILL[passwordValidation.strength]
+                      )}
+                    />
+                  </div>
+                  <p
+                    className={cn(
+                      'mt-2 text-caption',
+                      STRENGTH_TEXT[passwordValidation.strength]
+                    )}
+                  >
+                    {STRENGTH_LABEL[passwordValidation.strength]}
+                  </p>
+
+                  {!passwordValidation.isValid && (
+                    <ul className="mt-3 space-y-1.5">
+                      {PASSWORD_RULES.map((rule) => {
+                        const done = rule.test(password)
+                        return (
+                          <li
+                            key={rule.label}
+                            className={cn(
+                              'flex items-center gap-2 text-caption',
+                              done ? 'text-content-muted' : 'text-content-subtle'
+                            )}
+                          >
+                            {done ? (
+                              <Check
+                                className="h-3.5 w-3.5 shrink-0 text-success"
+                                aria-hidden="true"
+                              />
+                            ) : (
+                              <Minus
+                                className="h-3.5 w-3.5 shrink-0 text-content-subtle"
+                                aria-hidden="true"
+                              />
+                            )}
+                            <span className="sr-only">
+                              {done ? 'Requisito soddisfatto:' : 'Requisito mancante:'}
+                            </span>
+                            {rule.label}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
 
-            <div className="grid md:grid-cols-4 gap-8 mb-12">
-              <div className="col-span-2">
-                <div className="flex items-center space-x-3 mb-6">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                    <Target className="w-6 h-6 text-white" />
-                  </div>
-                  <span className="text-2xl font-bold">TrovaMi</span>
-                </div>
-                <p className="text-gray-400 text-lg leading-relaxed max-w-md">
-                  La piattaforma più avanzata per trovare lead qualificati attraverso l'analisi automatizzata di siti web aziendali.
-                </p>
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Prodotto</h3>
-                <ul className="space-y-3">
-                  <li><Link href="/tools/public-scan" className="text-gray-400 hover:text-white transition-colors">Analisi Gratuita</Link></li>
-                  <li><Link href="/#pricing" className="text-gray-400 hover:text-white transition-colors">Prezzi</Link></li>
-                  <li><Link href="/login" className="text-gray-400 hover:text-white transition-colors">Login</Link></li>
-                </ul>
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Risorse</h3>
-                <ul className="space-y-3">
-                  <li><Link href="/come-trovare-clienti" className="text-gray-400 hover:text-white transition-colors">Come Trovare Clienti</Link></li>
-                  <li><Link href="/help" className="text-gray-400 hover:text-white transition-colors">Centro Assistenza</Link></li>
-                  <li><Link href="/contact" className="text-gray-400 hover:text-white transition-colors">Contatti</Link></li>
-                </ul>
-              </div>
-            </div>
-            
-            <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center">
-              <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-6 mb-4 md:mb-0">
-                <p className="text-gray-400">
-                  &copy; 2025 TrovaMi. Tutti i diritti riservati.
-                </p>
-                <div className="flex items-center space-x-4 text-sm">
-                  <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">
-                    Privacy Policy
-                  </Link>
-                  <span className="text-gray-600">•</span>
-                  <Link href="/terms" className="text-gray-400 hover:text-white transition-colors">
-                    Termini e Condizioni
-                  </Link>
-                </div>
-              </div>
-              <div className="flex items-center space-x-6 text-sm text-gray-400">
-                <span>Made in Italy 🇮🇹</span>
-                <span>•</span>
-                <span>Powered by Drilon Hametaj</span>
-              </div>
-            </div>
-          </div>
-        </footer>
+            <Input
+              id="confirmPassword"
+              name="confirmPassword"
+              type={showConfirmPassword ? 'text' : 'password'}
+              label="Conferma password"
+              autoComplete="new-password"
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Ripeti la password"
+              className="pr-12"
+              error={
+                confirmPassword && password !== confirmPassword
+                  ? 'Le due password non corrispondono'
+                  : undefined
+              }
+              hint={
+                confirmPassword && password === confirmPassword
+                  ? 'Le password corrispondono'
+                  : undefined
+              }
+              trailing={
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  aria-label={
+                    showConfirmPassword ? 'Nascondi la password' : 'Mostra la password'
+                  }
+                  className="focus-ring inline-flex h-11 w-11 items-center justify-center rounded-control text-content-subtle transition-colors duration-fast ease-soft hover:text-content"
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <Eye className="h-4 w-4" aria-hidden="true" />
+                  )}
+                </button>
+              }
+            />
+
+            <Button
+              type="submit"
+              fullWidth
+              loading={loading}
+              loadingText="Creazione account…"
+              disabled={loading || !passwordValidation.isValid || password !== confirmPassword}
+            >
+              {selectedPlan === 'free' ? 'Crea account gratuito' : `Crea account ${planLabel}`}
+            </Button>
+
+            <p className="text-caption text-content-subtle">
+              Creando un account accetti i{' '}
+              <Link
+                href="/terms"
+                className="focus-ring rounded-control text-accent-ink transition-colors duration-fast ease-soft hover:text-accent"
+              >
+                Termini di servizio
+              </Link>{' '}
+              e la{' '}
+              <Link
+                href="/privacy"
+                className="focus-ring rounded-control text-accent-ink transition-colors duration-fast ease-soft hover:text-accent"
+              >
+                Privacy Policy
+              </Link>
+              .
+            </p>
+          </form>
+        </Card>
+
+        <p className="mt-6 text-center text-caption text-content-muted">
+          Hai già un account?{' '}
+          <Link
+            href="/login"
+            className="focus-ring rounded-control font-medium text-accent-ink transition-colors duration-fast ease-soft hover:text-accent"
+          >
+            Accedi
+          </Link>
+        </p>
       </div>
-    </>
+    </div>
   )
 }

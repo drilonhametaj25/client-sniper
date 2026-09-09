@@ -4,13 +4,21 @@
  * funziona per visitatori anonimi indipendentemente dalle RLS).
  * Usata da: landing page (app/page.tsx) e pagina prezzi pubblica (app/pricing).
  * CTA: redirect a /register (con piano preselezionato per i piani a pagamento).
+ *
+ * Presentazione: token di DESIGN.md. Un solo piano ha il pieno d'accento
+ * (quello consigliato dal DB); tutti gli altri sono superfici neutre.
  */
 
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { Check, Star, ChevronRight } from 'lucide-react'
+import { Check } from 'lucide-react'
+import Card from '@/components/ui/Card'
+import Badge from '@/components/ui/Badge'
+import Skeleton from '@/components/ui/Skeleton'
+import EmptyState from '@/components/ui/EmptyState'
+import LinkButton from '@/components/ui/LinkButton'
+import { cn } from '@/lib/utils/cn'
 
 interface PlanFromApi {
   id: number
@@ -183,29 +191,50 @@ export default function PublicPricingSection({
   const getCreditsLabel = (plan: DisplayPlan, variant: PlanVariant): string => {
     if (variant.isUnlimited) return 'Crediti illimitati'
     if (plan.base === 'free') return '1 credito di prova'
-    return `${variant.credits} crediti/mese`
+    return `${variant.credits} crediti al mese`
   }
 
   const isPopular = (plan: DisplayPlan): boolean =>
     Boolean(plan.badge && plan.badge.toLowerCase().includes('popular'))
 
-  // Skeleton di caricamento
+  // Un solo pieno d'accento nella sezione: il piano consigliato dal DB.
+  // Se il DB non ne segnala nessuno, l'accento va al primo piano in elenco.
+  const highlightedBase = (plans.find(isPopular) ?? plans[0])?.base
+
+  // Skeleton di caricamento: stessa forma delle card, così la pagina non salta
   if (loading) {
     return (
-      <section id="pricing" className={`py-16 ${className}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section id="pricing" className={cn('py-16 sm:py-24', className)}>
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           {showTitle && (
-            <div className="text-center mb-12">
-              <div className="h-9 w-72 max-w-full bg-gray-200 dark:bg-gray-700 rounded-lg mx-auto animate-pulse" />
-              <div className="h-5 w-96 max-w-full bg-gray-200 dark:bg-gray-700 rounded-lg mx-auto mt-4 animate-pulse" />
+            <div className="mb-12 flex max-w-xl flex-col gap-3">
+              <Skeleton className="h-8 w-64 max-w-full" />
+              <Skeleton className="h-5 w-80 max-w-full" />
             </div>
           )}
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div
+            className="grid gap-4 md:grid-cols-3"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+          >
+            <span className="sr-only">Caricamento dei piani in corso</span>
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="h-96 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl animate-pulse"
-              />
+                className="rounded-card border border-edge bg-surface-elevated p-6 shadow-card"
+                aria-hidden="true"
+              >
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="mt-5 h-10 w-32" />
+                <Skeleton className="mt-6 h-4 w-40" />
+                <div className="mt-6 space-y-3">
+                  <Skeleton className="h-3.5 w-full" />
+                  <Skeleton className="h-3.5 w-5/6" />
+                  <Skeleton className="h-3.5 w-4/6" />
+                </div>
+                <Skeleton className="mt-8 h-11 w-full" />
+              </div>
             ))}
           </div>
         </div>
@@ -216,78 +245,88 @@ export default function PublicPricingSection({
   // Stato di errore onesto: nessun prezzo inventato, solo un rimando
   if (error || plans.length === 0) {
     return (
-      <section id="pricing" className={`py-16 ${className}`}>
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-            Prezzi non disponibili al momento
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Non siamo riusciti a caricare i piani. Riprova tra qualche istante oppure
-            registrati gratis: potrai vedere i piani dal tuo account.
-          </p>
-          <Link
-            href="/register"
-            className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors"
-          >
-            Registrati gratis
-            <ChevronRight className="w-4 h-4 ml-1" />
-          </Link>
+      <section id="pricing" className={cn('py-16 sm:py-24', className)}>
+        <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
+          <EmptyState
+            title="Non riusciamo a mostrare i piani"
+            description="Riprova fra qualche istante, oppure registrati: i piani sono sempre visibili dal tuo account."
+            action={
+              <LinkButton href="/register" variant="secondary">
+                Registrati gratis
+              </LinkButton>
+            }
+          />
         </div>
       </section>
     )
   }
 
   return (
-    <section id="pricing" className={`py-16 ${className}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          {showTitle && (
-            <>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                Prezzi semplici e trasparenti
-              </h2>
-              <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                1 credito = 1 lead sbloccato. Inizia gratis, passa a un piano quando sei pronto.
-              </p>
-            </>
-          )}
+    <section id="pricing" className={cn('py-16 sm:py-24', className)}>
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        {/* Intestazione */}
+        {showTitle && (
+          <div className="max-w-2xl">
+            <h2 className="text-title font-semibold text-content">Un credito, un lead</h2>
+            <p className="mt-4 text-body-lg text-content-muted">
+              Sblocchi solo i contatti che ti interessano. Si parte gratis, il piano si
+              cambia o si disdice quando vuoi.
+            </p>
+          </div>
+        )}
 
-          {/* Toggle Mensile/Annuale */}
-          {hasAnnualPlans && (
-            <div className={`${showTitle ? 'mt-8' : ''} inline-flex items-center gap-3 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl`}>
+        {/* Mensile / Annuale */}
+        {hasAnnualPlans && (
+          <div className={cn('flex', showTitle ? 'mt-8' : 'mt-0')}>
+            <div
+              role="group"
+              aria-label="Ciclo di fatturazione"
+              className="inline-flex items-center gap-1 rounded-card border border-edge bg-surface-subtle p-1"
+            >
               <button
                 type="button"
                 onClick={() => setIsAnnual(false)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                aria-pressed={!isAnnual}
+                className={cn(
+                  'focus-ring h-11 rounded-control px-5 text-body font-medium',
+                  'transition-colors duration-fast ease-soft',
                   !isAnnual
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400'
-                }`}
+                    ? 'bg-surface-elevated text-content shadow-card'
+                    : 'text-content-muted hover:text-content'
+                )}
               >
                 Mensile
               </button>
               <button
                 type="button"
                 onClick={() => setIsAnnual(true)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                aria-pressed={isAnnual}
+                className={cn(
+                  'focus-ring h-11 rounded-control px-5 text-body font-medium',
+                  'transition-colors duration-fast ease-soft',
                   isAnnual
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400'
-                }`}
+                    ? 'bg-surface-elevated text-content shadow-card'
+                    : 'text-content-muted hover:text-content'
+                )}
               >
                 Annuale
               </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Cards */}
-        <div className={`grid gap-8 max-w-5xl mx-auto ${plans.length >= 4 ? 'md:grid-cols-2 lg:grid-cols-4 max-w-7xl' : 'md:grid-cols-3'}`}>
+        {/* Piani */}
+        <div
+          className={cn(
+            'mt-10 grid gap-4',
+            plans.length >= 4 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'
+          )}
+        >
           {plans.map((plan) => {
             const variant = isAnnual && plan.annual ? plan.annual : plan.monthly!
             const usingAnnual = isAnnual && plan.annual !== null
             const popular = isPopular(plan)
+            const highlighted = plan.base === highlightedBase
             const hasDiscount = variant.originalPrice > variant.price
             const annualSavings =
               plan.annual && plan.monthly ? plan.monthly.price * 12 - plan.annual.price : 0
@@ -297,107 +336,98 @@ export default function PublicPricingSection({
                 : FALLBACK_FEATURES[plan.base] || FALLBACK_FEATURES.starter
 
             return (
-              <div
+              <Card
                 key={plan.base}
-                className={`relative bg-white dark:bg-gray-800 rounded-2xl border-2 p-6 flex flex-col transition-all duration-300 ${
-                  popular
-                    ? 'border-blue-500 shadow-xl md:scale-105'
-                    : 'border-gray-200 dark:border-gray-700 hover:shadow-lg'
-                }`}
+                padding="none"
+                className={cn('flex flex-col', highlighted && 'border-accent-edge')}
               >
-                {/* Badge dal DB */}
-                {plan.badge && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span
-                      className={`inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-full shadow-lg text-white ${
-                        popular ? 'bg-blue-600' : 'bg-gray-900 dark:bg-gray-600'
-                      }`}
-                    >
-                      {popular && <Star className="w-3 h-3" />}
-                      {plan.badge}
-                    </span>
-                  </div>
-                )}
-
-                {/* Nome piano */}
-                <div className="text-center mb-6 mt-2">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                    {plan.displayName}
-                  </h3>
-                </div>
-
-                {/* Prezzo */}
-                <div className="text-center mb-6">
-                  <div className="flex items-baseline justify-center gap-2">
-                    {hasDiscount && (
-                      <span className="text-lg text-gray-400 dark:text-gray-500 line-through">
-                        €{formatEuro(variant.originalPrice)}
-                      </span>
+                <div className="flex h-full flex-col p-6">
+                  {/* Nome del piano + eventuale etichetta dal DB */}
+                  <div className="flex min-h-[1.75rem] items-center justify-between gap-3">
+                    <h3 className="text-heading font-semibold text-content">
+                      {plan.displayName}
+                    </h3>
+                    {plan.badge && (
+                      <Badge variant={popular ? 'accent' : 'neutral'} size="sm" pill>
+                        {plan.badge}
+                      </Badge>
                     )}
-                    <span className="text-4xl font-bold text-gray-900 dark:text-white">
+                  </div>
+
+                  {/* Prezzo */}
+                  <div className="mt-5 flex items-baseline gap-1.5">
+                    <span className="text-metric font-semibold tabular-nums text-content">
                       {variant.price === 0 ? 'Gratis' : `€${formatEuro(variant.price)}`}
                     </span>
                     {variant.price > 0 && (
-                      <span className="text-gray-500 dark:text-gray-400">
-                        /{usingAnnual ? 'anno' : 'mese'}
+                      <span className="text-caption text-content-subtle">
+                        al {usingAnnual ? 'anno' : 'mese'}
                       </span>
                     )}
                   </div>
-                  {usingAnnual && annualSavings > 0 && (
-                    <p className="text-sm text-green-600 dark:text-green-400 mt-1 font-medium">
-                      Risparmi €{formatEuro(annualSavings)} rispetto al mensile
+
+                  <div className="mt-1.5 min-h-[1.25rem]">
+                    {hasDiscount && (
+                      <p className="text-caption text-content-subtle">
+                        Listino{' '}
+                        <span className="line-through tabular-nums">
+                          €{formatEuro(variant.originalPrice)}
+                        </span>
+                      </p>
+                    )}
+                    {usingAnnual && annualSavings > 0 && (
+                      <p className="text-caption text-success">
+                        Risparmi{' '}
+                        <span className="tabular-nums">€{formatEuro(annualSavings)}</span> in
+                        un anno
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Crediti: la chiave di lettura del piano */}
+                  <div className="mt-5 border-t border-edge pt-5">
+                    <p className="text-body font-medium text-content">
+                      {getCreditsLabel(plan, variant)}
                     </p>
-                  )}
-                </div>
-
-                {/* Crediti */}
-                <div className="text-center py-4 mb-4 border-y border-gray-200 dark:border-gray-700">
-                  <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {getCreditsLabel(plan, variant)}
+                    <p className="mt-1 text-caption text-content-subtle">
+                      {plan.base === 'free'
+                        ? 'Solo alla registrazione, senza rinnovo'
+                        : variant.isUnlimited
+                          ? 'Nessun limite mensile'
+                          : '1 credito = 1 lead sbloccato per sempre'}
+                    </p>
                   </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    {plan.base === 'free'
-                      ? 'Solo alla registrazione'
-                      : variant.isUnlimited
-                        ? 'Nessun limite mensile'
-                        : 'Ricaricati ogni mese'}
-                  </div>
+
+                  {/* Cosa include */}
+                  <ul className="mt-5 flex-1 space-y-2.5">
+                    {features.map((feature, idx) => (
+                      <li key={idx} className="flex items-start gap-2.5">
+                        <Check
+                          className="mt-0.5 h-4 w-4 shrink-0 text-content-subtle"
+                          aria-hidden="true"
+                        />
+                        <span className="text-caption text-content-muted">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <LinkButton
+                    href={getCtaHref(plan)}
+                    variant={highlighted ? 'primary' : 'secondary'}
+                    fullWidth
+                    className="mt-6"
+                  >
+                    {plan.base === 'free' ? 'Inizia gratis' : `Scegli ${plan.displayName}`}
+                  </LinkButton>
                 </div>
-
-                {/* Features */}
-                <ul className="space-y-3 mb-6 flex-1">
-                  {features.map((feature, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* CTA */}
-                <Link
-                  href={getCtaHref(plan)}
-                  className={`w-full py-3 px-4 rounded-xl font-semibold text-center transition-all flex items-center justify-center gap-2 ${
-                    popular
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                      : plan.base === 'free'
-                        ? 'bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
-                        : 'bg-gray-900 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 text-white'
-                  }`}
-                >
-                  {plan.base === 'free' ? 'Inizia gratis' : `Scegli ${plan.displayName}`}
-                  <ChevronRight className="w-4 h-4" />
-                </Link>
-              </div>
+              </Card>
             )
           })}
         </div>
 
-        {/* Footer note */}
-        <div className="text-center mt-12 text-sm text-gray-500 dark:text-gray-400">
-          <p>Puoi disdire in qualsiasi momento. Pagamenti sicuri con Stripe.</p>
-          <p className="mt-1">P.IVA 07327360488</p>
-        </div>
+        <p className="mt-8 text-caption text-content-subtle">
+          Pagamenti gestiti da Stripe. Puoi disdire quando vuoi. P.IVA 07327360488
+        </p>
       </div>
     </section>
   )

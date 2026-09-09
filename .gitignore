@@ -105,3 +105,4 @@ coverage/
 
 # Cache directories
 .turbo/
+*.tsbuildinfo
