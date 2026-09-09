@@ -73,12 +73,18 @@ export async function POST(request: NextRequest) {
     // ⚠️ services_offered è ciò che il matching legge davvero (filtro "Solo per
     // i miei servizi", % match, sezione Per Te). Prima il wizard scriveva solo
     // specialization, che nessun matching leggeva: onboarding inutile.
+    // ⚠️ onboarding_completed_at NON sta su users: sta su user_profiles.
+    // Tenerlo qui faceva fallire l'INTERO update con 42703, quindi il wizard
+    // rispondeva 500 e NIENTE veniva salvato — non solo la data. Effetto in
+    // produzione: 0 utenti su 192 con operating_city o specialization, e solo
+    // 13 con services_offered (scritti da /settings, non dal wizard). Il
+    // filtro "Solo per i miei servizi" era quindi vuoto per il 93% degli
+    // iscritti. Viene scritto dopo, sulla tabella giusta.
     const updateData: Record<string, any> = {
       services_offered: services,
       specialization: [...new Set(services.map(s => SERVICE_TO_SPECIALIZATION[s]))],
       operating_city: body.operating_city?.trim() || null,
-      is_remote_nationwide: body.is_remote_nationwide || false,
-      onboarding_completed_at: new Date().toISOString()
+      is_remote_nationwide: body.is_remote_nationwide || false
     }
 
     // Aggiungi campi opzionali se presenti
@@ -110,6 +116,36 @@ export async function POST(request: NextRequest) {
         { success: false, message: 'Errore durante il salvataggio' },
         { status: 500 }
       )
+    }
+
+    // Marca l'onboarding come completato sulla tabella che ha davvero la
+    // colonna. Se fallisce NON si restituisce errore: i dati che contano
+    // (servizi, citta') sono gia' salvati, e dire "errore" all'utente dopo un
+    // salvataggio riuscito e' peggio del rivedere il wizard una volta in piu'.
+    // Update-poi-insert, NON upsert: un upsert scriverebbe user_type a ogni
+    // passaggio, sovrascrivendo chi si e' registrato come 'agency'.
+    const completedAt = new Date().toISOString()
+    const { data: profileRow, error: profileError } = await supabaseAdmin
+      .from('user_profiles')
+      .update({ onboarding_completed_at: completedAt })
+      .eq('user_id', user.id)
+      .select('user_id')
+      .maybeSingle()
+
+    if (profileError) {
+      console.error('Onboarding completato ma profilo non marcato:', profileError)
+    } else if (!profileRow) {
+      // Nessun profilo ancora: crealo. user_type e' NOT NULL.
+      const { error: insertError } = await supabaseAdmin
+        .from('user_profiles')
+        .insert({
+          user_id: user.id,
+          user_type: 'freelancer',
+          onboarding_completed_at: completedAt
+        })
+      if (insertError) {
+        console.error('Onboarding completato ma profilo non creato:', insertError)
+      }
     }
 
     console.log(`[Onboarding V2] Completato per user ${user.id}:`, {
@@ -148,10 +184,14 @@ export async function GET(request: NextRequest) {
     }
     const { user } = auth
 
+    // onboarding_completed_at sta su user_profiles, non su users: chiederlo a
+    // users faceva fallire la query, l'errore veniva inghiottito dal chiamante
+    // (`if (response.ok)`) e chi aveva gia' completato rivedeva il wizard vuoto
+    // a ogni visita.
     const supabaseAdmin = getSupabaseAdmin()
     const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
-      .select('onboarding_completed_at, services_offered, specialization, operating_city, is_remote_nationwide')
+      .select('services_offered, specialization, operating_city, is_remote_nationwide')
       .eq('id', user.id)
       .single()
 
@@ -162,7 +202,17 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const isCompleted = !!userData?.onboarding_completed_at
+    const { data: profileData } = await supabaseAdmin
+      .from('user_profiles')
+      .select('onboarding_completed_at')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    // Chi ha gia' i servizi configurati (anche solo da /settings) e' di fatto
+    // a posto: non ha senso rimandarlo nel wizard perche' manca una data.
+    const isCompleted =
+      !!profileData?.onboarding_completed_at ||
+      (Array.isArray(userData?.services_offered) && userData.services_offered.length > 0)
 
     return NextResponse.json({
       completed: isCompleted,

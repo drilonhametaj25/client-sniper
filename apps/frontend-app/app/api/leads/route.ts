@@ -260,17 +260,33 @@ export async function GET(request: NextRequest) {
     }
     
     // ⚡ FILTRI TECNICI AVANZATI
+    //
+    // Leggono website_analysis (formato moderno). Prima interrogavano il
+    // legacy `analysis`, che ha solo 7 campi piatti (has_website,
+    // website_load_time, missing_meta_tags, gtm_installed, has_tracking_pixel,
+    // broken_images, overall_score) e NON contiene i percorsi
+    // security/tracking/performance: la condizione era sempre null e il ramo
+    // ".is.null" faceva passare TUTTI i lead spacciandoli per filtrati
+    // ("Senza SSL" restituiva 11.556 lead su 11.556; "Caricamento lento" ne
+    // restituiva 0).
+    //
+    // Nessun ramo "is null": un lead senza analisi non è un lead SENZA SSL,
+    // è un lead di cui non sappiamo nulla. Stessa regola dei difetti
+    // "confermati" del motore.
     if (noGoogleAds) {
-      query = query.or('analysis->tracking->>hasGoogleAds.eq.false,analysis->tracking->>hasGoogleAds.is.null')
+      query = query.eq('website_analysis->tracking->>googleAdsConversion', 'false')
     }
     if (noFacebookPixel) {
-      query = query.or('analysis->tracking->>hasFacebookPixel.eq.false,analysis->tracking->>hasFacebookPixel.is.null')
+      query = query.eq('website_analysis->tracking->>facebookPixel', 'false')
     }
     if (slowLoading) {
-      query = query.gte('analysis->performance->>loadTime', 3.0)
+      // loadComplete è in MILLISECONDI. Freccia singola (->) di proposito:
+      // con ->> il valore è testo e il confronto diventa lessicografico
+      // ("1200" < "500"), quindi >= 500 restituiva MENO righe di >= 3000.
+      query = query.gte('website_analysis->performance->loadComplete', 3000)
     }
     if (noSSL) {
-      query = query.or('analysis->security->>hasSSL.eq.false,analysis->security->>hasSSL.is.null')
+      query = query.eq('website_analysis->>hasSSL', 'false')
     }
     // ⚡ OTTIMIZZAZIONE: Ricerca testuale solo su campi indicizzati
     if (search) {

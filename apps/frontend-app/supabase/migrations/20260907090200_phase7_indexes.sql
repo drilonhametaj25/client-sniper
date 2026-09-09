@@ -27,13 +27,21 @@ CREATE INDEX IF NOT EXISTS idx_leads_status_created
 CREATE INDEX IF NOT EXISTS idx_leads_status_score
   ON public.leads (status, score);
 
--- Filtri tecnici sul JSONB legacy (expression index sugli esatti path filtrati)
-CREATE INDEX IF NOT EXISTS idx_leads_analysis_gads
-  ON public.leads (((analysis -> 'tracking' ->> 'hasGoogleAds')));
-CREATE INDEX IF NOT EXISTS idx_leads_analysis_fbpixel
-  ON public.leads (((analysis -> 'tracking' ->> 'hasFacebookPixel')));
-CREATE INDEX IF NOT EXISTS idx_leads_analysis_ssl
-  ON public.leads (((analysis -> 'security' ->> 'hasSSL')));
+-- Filtri tecnici: expression index sugli ESATTI percorsi interrogati da
+-- /api/leads. I percorsi sono quelli di website_analysis (formato moderno):
+-- il legacy `analysis` ha 7 campi piatti e non contiene security/tracking/
+-- performance, per questo i filtri "Senza SSL" e "Caricamento lento" davano
+-- risultati privi di senso.
+-- loadComplete e' indicizzato con la freccia SINGOLA perche' il filtro
+-- confronta jsonb (numerico): con ->> sarebbe testo e l'indice non servirebbe.
+CREATE INDEX IF NOT EXISTS idx_leads_wa_gads
+  ON public.leads (((website_analysis -> 'tracking' ->> 'googleAdsConversion')));
+CREATE INDEX IF NOT EXISTS idx_leads_wa_fbpixel
+  ON public.leads (((website_analysis -> 'tracking' ->> 'facebookPixel')));
+CREATE INDEX IF NOT EXISTS idx_leads_wa_ssl
+  ON public.leads (((website_analysis ->> 'hasSSL')));
+CREATE INDEX IF NOT EXISTS idx_leads_wa_load
+  ON public.leads (((website_analysis -> 'performance' -> 'loadComplete')));
 
 -- Sblocchi: conteggi globali per pagina (global_unlock_count) e set utente
 CREATE INDEX IF NOT EXISTS idx_uul_lead_user

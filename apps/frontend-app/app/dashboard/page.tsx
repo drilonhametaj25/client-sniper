@@ -21,6 +21,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ToastProvider'
 import { isStarterOrHigher } from '@/lib/utils/plan-helpers'
+import { buildCityOptions } from '@/lib/utils/city'
 import AccountStatusBar from '@/components/AccountStatusBar'
 import type { AdvancedFiltersState } from '@/components/AdvancedFilters'
 import LeadCard from '@/components/leads/LeadCard'
@@ -109,12 +110,16 @@ export default function DashboardPage() {
   const { leads, total, totalPages, userProfile, isLoading, isFetching, error, refetch, patchLead } =
     useLeads(filters, !!user)
 
-  // Città disponibili (RPC che bypassa la RLS sulla tabella leads)
+  // Città disponibili (RPC che bypassa la RLS sulla tabella leads).
+  // I valori grezzi sono indirizzi Google ("00144 Roma RM"): senza
+  // normalizzazione il menu aveva 1000 voci ordinate per CAP, con Roma
+  // ripetuta 37 volte. buildCityOptions riduce al nome e deduplica; il
+  // filtro server usa ILIKE, quindi "Roma" cattura tutti i CAP.
   const [cities, setCities] = useState<string[]>([])
   useEffect(() => {
     supabase.rpc('get_all_available_cities').then(({ data, error: rpcError }) => {
       if (rpcError) return console.error('Errore caricamento città:', rpcError)
-      setCities((data || []).map((row: any) => row.city).filter(Boolean))
+      setCities(buildCityOptions((data || []).map((row: any) => row.city)))
     })
   }, [])
 
