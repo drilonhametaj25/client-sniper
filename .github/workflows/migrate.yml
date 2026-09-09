@@ -161,6 +161,16 @@ jobs:
                 WHERE NOT EXISTS (
                   SELECT 1 FROM information_schema.views
                   WHERE table_name = 'my_unlocked_contacts')
+              UNION ALL
+              -- Esistere non basta: la funzione deve puntare alla tabella di
+              -- audit REALE (credit_usage_log, singolare). Con il plurale
+              -- l'oggetto esiste, i test sui lead gia' sbloccati passano, e
+              -- ogni sblocco NUOVO fallisce con 500 (successo settembre 2026).
+              SELECT 'consume_credit punta a credit_usage_logs (tabella inesistente)'
+                WHERE EXISTS (
+                  SELECT 1 FROM pg_proc
+                  WHERE proname = 'consume_credit'
+                    AND prosrc LIKE '%credit_usage_logs%')
             ) AS mancanti")
 
           if [ -n "$missing" ]; then

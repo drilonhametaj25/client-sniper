@@ -72,15 +72,19 @@ export async function decrementUserCredits({
       return { success: false, error: 'Errore aggiornamento crediti' }
     }
 
-    // 4. Logga la transazione (tabella reale: credit_usage_logs)
+    // 4. Logga la transazione.
+    // La tabella e' credit_usage_log al SINGOLARE (il plurale non esiste in
+    // produzione) e le colonne sono credits_consumed + lead_id: non c'e' una
+    // colonna details, quindi il lead va nella sua colonna e il metadata
+    // libero non viene persistito.
     const { error: logError } = await getSupabaseAdmin()
-      .from('credit_usage_logs')
+      .from('credit_usage_log')
       .insert({
         user_id: userId,
         action,
-        credits_used: creditsConsumed,
+        lead_id: leadId || null,
+        credits_consumed: creditsConsumed,
         credits_remaining: newCreditsRemaining,
-        details: { lead_id: leadId || null, ...(metadata || {}) },
         created_at: new Date().toISOString()
       })
 
@@ -182,15 +186,14 @@ export async function addUserCredits({
       return { success: false, error: 'Errore aggiornamento crediti' }
     }
 
-    // 3. Logga la transazione (tabella reale: credit_usage_logs; negativo = aggiunta)
+    // 3. Logga la transazione (credit_usage_log al SINGOLARE; negativo = aggiunta)
     const { error: logError } = await getSupabaseAdmin()
-      .from('credit_usage_logs')
+      .from('credit_usage_log')
       .insert({
         user_id: userId,
         action,
-        credits_used: -creditsToAdd, // Negativo per indicare aggiunta
+        credits_consumed: -creditsToAdd, // Negativo per indicare aggiunta
         credits_remaining: newCreditsRemaining,
-        details: metadata || {},
         created_at: new Date().toISOString()
       })
 
