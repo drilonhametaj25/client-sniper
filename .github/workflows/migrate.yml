@@ -1,0 +1,164 @@
+# Applica automaticamente le migrazioni SQL non ancora eseguite.
+#
+# PERCHE' ESISTE: il progetto ha avuto piu' volte lo stesso incidente — codice
+# deployato che si aspetta uno schema non ancora applicato (lead non salvati a
+# giugno per la colonna mancante, sblocco rotto a settembre per la funzione
+# consume_credit mancante). Un registro in database + questo workflow rendono
+# impossibile ripeterlo: ogni file viene applicato esattamente una volta, in
+# ordine, e se fallisce il workflow diventa rosso.
+#
+# REGISTRO: tabella public.schema_migrations (creata dal bootstrap, vedi
+# apps/frontend-app/supabase/bootstrap-ledger.sql). Il workflow applica solo i
+# file che NON risultano gia' registrati.
+#
+# CONVENZIONE per i file nuovi in apps/frontend-app/supabase/migrations/:
+#   - nome ordinabile: YYYYMMDDHHMMSS_descrizione.sql
+#   - il file si apre con BEGIN; e si chiude con COMMIT;
+#   - va scritto idempotente (IF NOT EXISTS / OR REPLACE) — se il registro non
+#     venisse aggiornato per un guasto, una riesecuzione non deve fare danni.
+#
+# SEGRETO RICHIESTO: SUPABASE_DB_URL
+#   Supabase Dashboard > Project Settings > Database > Connection string > URI
+#   (usa la stringa "Session pooler" o "Direct connection"; contiene la password
+#   del database). Va aggiunto in GitHub > Settings > Secrets and variables >
+#   Actions. NON metterlo in Vercel e non incollarlo in chat.
+
+name: Apply DB migrations
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/frontend-app/supabase/migrations/**.sql'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Solo elenco delle migrazioni pendenti, senza applicarle'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+# Mai due esecuzioni in parallelo sullo stesso database
+concurrency:
+  group: db-migrations
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Installa client PostgreSQL
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+          fi
+          psql --version
+
+      - name: Verifica registro migrazioni
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$DB_URL" ]; then
+            echo "::error::Segreto SUPABASE_DB_URL mancante. Aggiungilo in Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          exists=$(psql "$DB_URL" -tAc "SELECT to_regclass('public.schema_migrations') IS NOT NULL")
+          if [ "$exists" != "t" ]; then
+            echo "::error::Tabella public.schema_migrations assente. Esegui prima una volta apps/frontend-app/supabase/bootstrap-ledger.sql nell'SQL Editor di Supabase (crea il registro e marca come gia' applicate le migrazioni esistenti)."
+            exit 1
+          fi
+          echo "Registro presente."
+
+      - name: Applica le migrazioni pendenti
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          MIG_DIR="apps/frontend-app/supabase/migrations"
+          applied=0
+          skipped=0
+          pending=""
+
+          for file in $(ls -1 "$MIG_DIR"/*.sql | sort); do
+            version=$(basename "$file" .sql)
+
+            already=$(psql "$DB_URL" -tAc \
+              "SELECT 1 FROM public.schema_migrations WHERE version = '$version'")
+
+            if [ -n "$already" ]; then
+              skipped=$((skipped + 1))
+              continue
+            fi
+
+            pending="$pending $version"
+
+            if [ "${DRY_RUN:-false}" = "true" ]; then
+              echo "PENDENTE (dry-run, non applicata): $version"
+              continue
+            fi
+
+            echo "==> Applico $version"
+            # ON_ERROR_STOP: al primo errore psql esce != 0 e il job fallisce.
+            # Il file gestisce da se' la propria transazione (BEGIN/COMMIT).
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$file"
+
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -c \
+              "INSERT INTO public.schema_migrations (version) VALUES ('$version')"
+
+            echo "==> $version applicata e registrata"
+            applied=$((applied + 1))
+          done
+
+          {
+            echo "### Migrazioni database"
+            echo ""
+            if [ "${DRY_RUN:-false}" = "true" ]; then
+              echo "Modalita' **dry-run**: nessuna modifica applicata."
+              if [ -z "$pending" ]; then
+                echo "Nessuna migrazione pendente: lo schema e' allineato."
+              else
+                echo "Pendenti:$pending"
+              fi
+            else
+              echo "- Applicate: **$applied**"
+              echo "- Gia' presenti nel registro: $skipped"
+              if [ "$applied" -gt 0 ]; then echo "- Nuove:$pending"; fi
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Controllo di sanita' post-migrazione
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          # Oggetti da cui dipende il codice in produzione: se mancano, il
+          # deploy e' incoerente con lo schema e va saputo SUBITO.
+          missing=$(psql "$DB_URL" -tAc "
+            SELECT string_agg(nome, ', ')
+            FROM (
+              SELECT 'funzione consume_credit' AS nome
+                WHERE NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'consume_credit')
+              UNION ALL
+              SELECT 'colonna leads.score_version'
+                WHERE NOT EXISTS (
+                  SELECT 1 FROM information_schema.columns
+                  WHERE table_name = 'leads' AND column_name = 'score_version')
+              UNION ALL
+              SELECT 'vista my_unlocked_contacts'
+                WHERE NOT EXISTS (
+                  SELECT 1 FROM information_schema.views
+                  WHERE table_name = 'my_unlocked_contacts')
+            ) AS mancanti")
+
+          if [ -n "$missing" ]; then
+            echo "::error::Schema incoerente col codice in produzione. Manca: $missing"
+            exit 1
+          fi
+          echo "Schema coerente: consume_credit, leads.score_version e my_unlocked_contacts presenti."
