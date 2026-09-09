@@ -43,7 +43,10 @@
       "Bash(echo \"BUILD_EXIT=$?\")",
       "Bash(echo \"TSC:$?\")",
       "Bash(echo \"exit=$?\")",
-      "Bash(echo \"TSC-EXIT:$?\")"
+      "Bash(echo \"TSC-EXIT:$?\")",
+      "Bash(curl -s \"https://www.trovami.pro/api/plans/public\")",
+      "Bash(python -c ' *)",
+      "Bash(rm -f p.json /tmp/p.json)"
     ]
   }
 }

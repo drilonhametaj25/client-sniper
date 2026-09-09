@@ -6,7 +6,12 @@
 -- nessun composito per la lista di default (status + ordinamento).
 -- Con ~10-20k righe gli indici si creano in secondi: niente CONCURRENTLY.
 
-BEGIN;
+
+-- NB: nessun BEGIN;/COMMIT; esplicito in questo file. L'SQL Editor di Supabase
+-- avvolge gia' lo script in una transazione propria e le transazioni annidate
+-- esplicite ne rompono l'esecuzione (era la causa per cui le migrazioni
+-- sembravano applicate ma non lo erano). L'atomicita' e' garantita dal
+-- workflow, che invoca psql con --single-transaction.
 
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
@@ -34,4 +39,3 @@ CREATE INDEX IF NOT EXISTS idx_leads_analysis_ssl
 CREATE INDEX IF NOT EXISTS idx_uul_lead_user
   ON public.user_unlocked_leads (lead_id, user_id);
 
-COMMIT;

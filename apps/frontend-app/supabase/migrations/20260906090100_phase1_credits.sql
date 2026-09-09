@@ -13,11 +13,16 @@
 -- Durante la transizione proposals_remaining viene tenuta in sync a ogni
 -- scrittura; le colonne proposals_* verranno droppate a fine rilancio.
 
-BEGIN;
 
 -- 1) Risana i paganti bloccati: prendi il massimo tra i due contatori.
 -- Esclude i piani illimitati (credits_remaining = -1 è il marker "illimitato"
 -- e non va sovrascritto).
+-- NB: nessun BEGIN;/COMMIT; esplicito in questo file. L'SQL Editor di Supabase
+-- avvolge gia' lo script in una transazione propria e le transazioni annidate
+-- esplicite ne rompono l'esecuzione (era la causa per cui le migrazioni
+-- sembravano applicate ma non lo erano). L'atomicita' e' garantita dal
+-- workflow, che invoca psql con --single-transaction.
+
 UPDATE public.users u
 SET
   credits_remaining   = GREATEST(COALESCE(u.credits_remaining, 0), COALESCE(u.proposals_remaining, 0)),
@@ -162,4 +167,3 @@ COMMENT ON FUNCTION public.consume_credit IS
 -- Solo il service role (che bypassa i grant) può chiamarla: nessun client diretto
 REVOKE ALL ON FUNCTION public.consume_credit(UUID, UUID) FROM PUBLIC, anon, authenticated;
 
-COMMIT;

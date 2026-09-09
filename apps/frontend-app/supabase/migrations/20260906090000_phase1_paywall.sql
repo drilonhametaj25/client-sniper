@@ -19,9 +19,15 @@
 -- Nota: le colonne AGGIUNTE in futuro a leads saranno invisibili al client
 -- finché non vengono grantate esplicitamente (fail-closed, voluto).
 
-BEGIN;
+
+-- NB: nessun BEGIN;/COMMIT; esplicito in questo file. L'SQL Editor di Supabase
+-- avvolge gia' lo script in una transazione propria e le transazioni annidate
+-- esplicite ne rompono l'esecuzione (era la causa per cui le migrazioni
+-- sembravano applicate ma non lo erano). L'atomicita' e' garantita dal
+-- workflow, che invoca psql con --single-transaction.
 
 -- 1) Azzera i grant esistenti sul client
+
 REVOKE SELECT ON public.leads FROM anon;
 REVOKE SELECT ON public.leads FROM authenticated;
 
@@ -60,4 +66,3 @@ GRANT SELECT ON public.my_unlocked_contacts TO authenticated;
 COMMENT ON VIEW public.my_unlocked_contacts IS
   'Contatti (phone/email) dei soli lead sbloccati dall''utente corrente. Unico canale client-side per leggere i contatti.';
 
-COMMIT;

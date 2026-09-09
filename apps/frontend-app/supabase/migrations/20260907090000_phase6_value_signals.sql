@@ -8,7 +8,12 @@
 -- has_whatsapp: presenza di un canale WhatsApp (link wa.me sul sito) — per
 -- le PMI italiane è un canale di contatto chiave e un pitch concreto.
 
-BEGIN;
+
+-- NB: nessun BEGIN;/COMMIT; esplicito in questo file. L'SQL Editor di Supabase
+-- avvolge gia' lo script in una transazione propria e le transazioni annidate
+-- esplicite ne rompono l'esecuzione (era la causa per cui le migrazioni
+-- sembravano applicate ma non lo erano). L'atomicita' e' garantita dal
+-- workflow, che invoca psql con --single-transaction.
 
 ALTER TABLE public.leads
   ADD COLUMN IF NOT EXISTS rating NUMERIC(3,1),
@@ -24,4 +29,3 @@ GRANT SELECT (rating) ON public.leads TO authenticated;
 GRANT SELECT (reviews_count) ON public.leads TO authenticated;
 GRANT SELECT (has_whatsapp) ON public.leads TO authenticated;
 
-COMMIT;

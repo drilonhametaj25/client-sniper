@@ -13,7 +13,11 @@
 #
 # CONVENZIONE per i file nuovi in apps/frontend-app/supabase/migrations/:
 #   - nome ordinabile: YYYYMMDDHHMMSS_descrizione.sql
-#   - il file si apre con BEGIN; e si chiude con COMMIT;
+#   - NIENTE BEGIN;/COMMIT; espliciti: all'atomicita' pensa psql con
+#     --single-transaction. Le transazioni annidate rompono l'esecuzione
+#     nell'SQL Editor di Supabase (che avvolge gia' tutto in una transazione):
+#     e' il motivo per cui a settembre 2026 sei migrazioni sembravano applicate
+#     e invece non lo era nessuna.
 #   - va scritto idempotente (IF NOT EXISTS / OR REPLACE) — se il registro non
 #     venisse aggiornato per un guasto, una riesecuzione non deve fare danni.
 #
@@ -105,8 +109,10 @@ jobs:
 
             echo "==> Applico $version"
             # ON_ERROR_STOP: al primo errore psql esce != 0 e il job fallisce.
-            # Il file gestisce da se' la propria transazione (BEGIN/COMMIT).
-            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$file"
+            # --single-transaction: e' psql a rendere atomico il file, cosi' i
+            # file NON devono contenere BEGIN;/COMMIT; espliciti (che romperebbero
+            # l'esecuzione nell'SQL Editor di Supabase).
+            psql "$DB_URL" -v ON_ERROR_STOP=1 --single-transaction -f "$file"
 
             psql "$DB_URL" -v ON_ERROR_STOP=1 -c \
               "INSERT INTO public.schema_migrations (version) VALUES ('$version')"

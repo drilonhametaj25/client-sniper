@@ -10,7 +10,12 @@
 -- 3. DROP di get_available_leads_for_user: zero chiamanti nel codice e
 --    ordinava score DESC mentre l'API ordina ASC (split-brain).
 
-BEGIN;
+
+-- NB: nessun BEGIN;/COMMIT; esplicito in questo file. L'SQL Editor di Supabase
+-- avvolge gia' lo script in una transazione propria e le transazioni annidate
+-- esplicite ne rompono l'esecuzione (era la causa per cui le migrazioni
+-- sembravano applicate ma non lo erano). L'atomicita' e' garantita dal
+-- workflow, che invoca psql con --single-transaction.
 
 ALTER TABLE public.leads
   ADD COLUMN IF NOT EXISTS score_version INT NOT NULL DEFAULT 1;
@@ -32,4 +37,3 @@ DROP FUNCTION IF EXISTS public.get_available_leads_for_user(UUID);
 -- per le colonne aggiunte dopo la migrazione phase1_paywall)
 GRANT SELECT (score_version) ON public.leads TO authenticated;
 
-COMMIT;
