@@ -1,35 +1,56 @@
 /**
- * Security Quick Check - Tool gratuito per analisi sicurezza
- * Verifica gli header di sicurezza e la configurazione HTTPS
- * Parte della strategia di lead generation tramite tool gratuiti
+ * Security Check — tool pubblico che analizza la sicurezza di un sito.
+ *
+ * Percorso: apps/frontend-app/app/tools/security-check/page.tsx
+ * Guida: apps/frontend-app/DESIGN.md
+ * Chiamata da: indice /tools, voce "Tools" della Navbar, ricerca organica.
+ * API: GET/POST /api/tools/security-check (il limite giornaliero è per IP
+ * per chi non ha un account, per piano per chi ce l'ha).
+ *
+ * Presentazione: primitive condivise di components/tools sopra i token del
+ * design system. Il rapporto è il soggetto della pagina: il colore dice lo
+ * stato di un controllo una volta sola, accanto a una parola, e il nome
+ * tecnico dell'header HTTP resta come dettaglio sotto il nome in italiano.
+ * La logica (chiamate, campi della risposta, rate limit, stati di errore)
+ * è identica a prima: qui è cambiata solo la resa.
  */
 
 'use client'
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import {
-  Search,
-  Shield,
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
-  ArrowRight,
-  Globe,
-  Lock,
-  ShieldCheck,
-  ShieldAlert,
-  ShieldX,
-  Eye,
-  EyeOff,
-  Server,
   Cookie,
-  Target,
-  Code,
-  TrendingUp,
-  Activity
+  Cpu,
+  EyeOff,
+  FileType,
+  Frame,
+  Info,
+  KeyRound,
+  Link2,
+  Lock,
+  Server,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  type LucideIcon,
 } from 'lucide-react'
 import NewsletterForm from '@/components/NewsletterForm'
+import LinkButton from '@/components/ui/LinkButton'
+import {
+  ToolCheckList,
+  ToolLoadingState,
+  ToolPageHeader,
+  ToolResultPanel,
+  ToolScore,
+  ToolSignupCta,
+  ToolStatusMessage,
+  ToolSummaryStats,
+  ToolUrlForm,
+  ToolsCrossLinks,
+  type ToolCheckItem,
+  type ToolTone,
+  type ToolUsage,
+} from '@/components/tools'
 
 interface SecurityCheck {
   name: string
@@ -56,26 +77,151 @@ interface SecurityResult {
   remaining: number
 }
 
-interface UsageInfo {
-  used: number
-  limit: number
-  remaining: number
-  canAnalyze: boolean
+interface CheckMeta {
+  /** Il nome del controllo in italiano: è quello che si legge per primo */
+  label: string
+  /** L'intestazione HTTP letta, se il controllo ne guarda una */
+  header?: string
+  icon: LucideIcon
 }
 
-const checkIcons: Record<string, any> = {
-  'HTTPS': Lock,
-  'HSTS': ShieldCheck,
-  'Content Security Policy': Shield,
-  'X-Frame-Options': Eye,
-  'X-Content-Type-Options': Server,
-  'X-XSS-Protection': ShieldAlert,
-  'Referrer-Policy': EyeOff,
-  'Permissions-Policy': Shield,
-  'Server Header': Server,
-  'X-Powered-By': Server,
-  'Mixed Content': AlertTriangle,
-  'Cookie Security': Cookie,
+/**
+ * Come si chiama in italiano ogni controllo dell'API, con l'header HTTP
+ * corrispondente (mostrato sotto, in piccolo) e un'icona di argomento.
+ * La chiave è il campo `name` restituito dall'API: non va cambiata.
+ */
+const CHECK_META: Record<string, CheckMeta> = {
+  HTTPS: {
+    label: 'Connessione cifrata (HTTPS)',
+    icon: Lock,
+  },
+  HSTS: {
+    label: 'Obbligo di usare HTTPS',
+    header: 'Strict-Transport-Security',
+    icon: ShieldCheck,
+  },
+  'Content Security Policy': {
+    label: 'Regole su cosa il sito può caricare',
+    header: 'Content-Security-Policy',
+    icon: Shield,
+  },
+  'X-Frame-Options': {
+    label: 'Protezione dal clickjacking',
+    header: 'X-Frame-Options',
+    icon: Frame,
+  },
+  'X-Content-Type-Options': {
+    label: 'Tipo dei file dichiarato dal server',
+    header: 'X-Content-Type-Options',
+    icon: FileType,
+  },
+  'X-XSS-Protection': {
+    label: 'Filtro del browser contro gli script iniettati',
+    header: 'X-XSS-Protection',
+    icon: ShieldAlert,
+  },
+  'Referrer-Policy': {
+    label: 'Dati inviati quando si esce dal sito',
+    header: 'Referrer-Policy',
+    icon: EyeOff,
+  },
+  'Permissions-Policy': {
+    label: 'Permessi concessi al browser',
+    header: 'Permissions-Policy',
+    icon: KeyRound,
+  },
+  'Server Header': {
+    label: 'Informazioni sul server',
+    header: 'Server',
+    icon: Server,
+  },
+  'X-Powered-By': {
+    label: 'Tecnologia dichiarata dal server',
+    header: 'X-Powered-By',
+    icon: Cpu,
+  },
+  'Mixed Content': {
+    label: 'Risorse caricate senza HTTPS',
+    icon: Link2,
+  },
+  'Cookie Security': {
+    label: 'Sicurezza dei cookie',
+    icon: Cookie,
+  },
+}
+
+/** Ordine dei controlli nell'anteprima: è lo stesso in cui l'API li restituisce. */
+const CHECK_ORDER = Object.keys(CHECK_META)
+
+/** Se un domani l'API aggiunge un controllo, si mostra col suo nome originale. */
+const FALLBACK_CHECK_META: CheckMeta = { label: '', icon: Shield }
+
+/** Quanto pesa un controllo non superato. Si mostra solo quando non lo è. */
+const SEVERITY_LABEL: Record<SecurityCheck['severity'], string> = {
+  critical: 'Impatto critico',
+  high: 'Impatto alto',
+  medium: 'Impatto medio',
+  low: 'Impatto basso',
+}
+
+/**
+ * Il voto in lettera dell'API ha soglie sue (90/75/60/40): la parola e la
+ * tinta accanto al punteggio seguono quelle, non quelle di default.
+ */
+const GRADE_META: Record<string, { word: string; tone: ToolTone; caption: string }> = {
+  A: {
+    word: 'Buono',
+    tone: 'success',
+    caption:
+      'Il sito ha attive tutte le protezioni principali. Restano al massimo dettagli da rifinire.',
+  },
+  B: {
+    word: 'Buono',
+    tone: 'success',
+    caption:
+      'Le basi ci sono. Qualche protezione consigliata manca, ma niente che esponga il sito a rischi seri.',
+  },
+  C: {
+    word: 'Da migliorare',
+    tone: 'warning',
+    caption:
+      'Diverse protezioni consigliate non sono attive: chi gestisce il sito ha del lavoro davanti.',
+  },
+  D: {
+    word: 'Da migliorare',
+    tone: 'warning',
+    caption:
+      'Mancano protezioni importanti e il sito resta più esposto del necessario a problemi già noti.',
+  },
+  F: {
+    word: 'Critico',
+    tone: 'danger',
+    caption:
+      'Il sito è servito quasi senza protezioni di base: è il primo intervento da mettere sul tavolo.',
+  },
+}
+
+/** Solo per la resa: se l'indirizzo non è analizzabile si mostra com'è. */
+function hostnameOf(value: string): string {
+  try {
+    return new URL(value).hostname
+  } catch {
+    return value
+  }
+}
+
+/** Data dell'analisi in italiano; se la data non è leggibile non si mostra. */
+function formatAnalysisDate(value: string): string | undefined {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return undefined
+
+  return `Analisi del ${date.toLocaleString('it-IT', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })}`
 }
 
 export default function SecurityCheckPage() {
@@ -83,7 +229,7 @@ export default function SecurityCheckPage() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<SecurityResult | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [usage, setUsage] = useState<UsageInfo | null>(null)
+  const [usage, setUsage] = useState<ToolUsage | null>(null)
 
   useEffect(() => {
     loadUsageInfo()
@@ -138,387 +284,192 @@ export default function SecurityCheckPage() {
     }
   }
 
-  const getGradeColor = (grade: string) => {
-    switch (grade) {
-      case 'A': return 'text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30'
-      case 'B': return 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30'
-      case 'C': return 'text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30'
-      case 'D': return 'text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30'
-      case 'F': return 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30'
-      default: return 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-900/30'
-    }
-  }
+  const limitReached = usage !== null && !usage.canAnalyze
 
-  const getStatusIcon = (status: 'pass' | 'warning' | 'fail') => {
-    switch (status) {
-      case 'pass':
-        return <CheckCircle className="w-5 h-5 text-green-500" />
-      case 'warning':
-        return <AlertTriangle className="w-5 h-5 text-yellow-500" />
-      case 'fail':
-        return <XCircle className="w-5 h-5 text-red-500" />
-    }
-  }
+  const checkItems: ToolCheckItem[] = (result?.checks ?? []).map((check, index) => {
+    const meta = CHECK_META[check.name] ?? FALLBACK_CHECK_META
+    const Icon = meta.icon
+    const label = meta.label || check.name
+    const header = meta.header
 
-  const getSeverityBadge = (severity: 'critical' | 'high' | 'medium' | 'low') => {
-    const colors = {
-      critical: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-      high: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
-      medium: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
-      low: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    const technicalValue = header
+      ? check.value
+        ? `${header}: ${check.value}`
+        : header
+      : check.value
+
+    return {
+      id: `${check.name}-${index}`,
+      name: label,
+      status: check.status,
+      value: technicalValue,
+      mono: Boolean(header),
+      meta: check.status === 'pass' ? undefined : SEVERITY_LABEL[check.severity],
+      recommendation: check.recommendation,
+      icon: <Icon />,
     }
-    const labels = {
-      critical: 'Critico',
-      high: 'Alto',
-      medium: 'Medio',
-      low: 'Basso',
-    }
-    return (
-      <span className={`text-xs px-2 py-0.5 rounded-full ${colors[severity]}`}>
-        {labels[severity]}
-      </span>
-    )
-  }
+  })
+
+  const gradeMeta = result ? GRADE_META[result.grade] ?? null : null
+
+  const criticalNote =
+    result && result.summary.critical > 0
+      ? result.summary.critical === 1
+        ? 'Un controllo critico non è superato: è la prima cosa da sistemare.'
+        : `${result.summary.critical} controlli critici non sono superati: sono la prima cosa da sistemare.`
+      : null
+
+  const scoreCaption = [gradeMeta?.caption, criticalNote].filter(Boolean).join(' ')
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50/30 dark:from-gray-900 dark:via-red-950/30 dark:to-gray-900">
-      {/* Header */}
-      <header className="border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <Target className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-              <span className="text-xl font-bold text-gray-900 dark:text-white">TrovaMi</span>
-            </Link>
-            <div className="flex items-center gap-4">
-              <Link
-                href="/tools/seo-checker"
-                className="text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 text-sm font-medium"
-              >
-                SEO Checker
-              </Link>
-              <Link
-                href="/register"
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-              >
-                Inizia Gratis
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-surface">
+      {/* pt generoso: la Navbar pubblica è fissa e non lascia spazio dietro di sé */}
+      <main className="mx-auto max-w-4xl px-4 pb-16 pt-24 sm:px-6 sm:pb-24 sm:pt-28 lg:px-8">
+        <ToolPageHeader
+          eyebrow="Tool gratuito"
+          title="Controlla la sicurezza di un sito"
+          description="Vedi se il sito viaggia cifrato, quali protezioni ha attive e quali mancano. Ne esce un punteggio, un voto da A a F e l'elenco di cosa conviene sistemare per primo."
+          usage={usage}
+          fallbackLimit={2}
+        >
+          <ToolUrlForm
+            value={url}
+            onChange={setUrl}
+            onSubmit={handleAnalyze}
+            loading={loading}
+            disabled={limitReached}
+            hint="Puoi scrivere l'indirizzo anche senza https://"
+          />
+        </ToolPageHeader>
 
-      {/* Hero Section */}
-      <section className="pt-16 pb-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full text-sm font-medium mb-6">
-            <Shield className="w-4 h-4 mr-2" />
-            Tool Gratuito - {usage?.remaining ?? 3} analisi rimaste oggi
-          </div>
+        {error && (
+          <ToolStatusMessage className="mt-6" title="Analisi non riuscita">
+            <p>{error}</p>
+            <p className="mt-1 text-caption text-content-subtle">
+              Controlla che l&apos;indirizzo sia scritto per intero e che il sito risponda da un
+              browser.
+            </p>
+          </ToolStatusMessage>
+        )}
 
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
-            Security{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-orange-600">
-              Quick Check
-            </span>
-          </h1>
+        {limitReached && (
+          <ToolStatusMessage
+            tone="warning"
+            className="mt-6"
+            title="Hai finito le analisi gratuite di oggi"
+            action={
+              <LinkButton href="/pricing" variant="secondary">
+                Vedi i piani
+              </LinkButton>
+            }
+          >
+            Il contatore riparte domani. Se ti serve analizzare più siti al giorno, i piani a
+            pagamento alzano il limite.
+          </ToolStatusMessage>
+        )}
 
-          <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-            Analizza la sicurezza del tuo sito: HTTPS, header di sicurezza, CSP e altro.
-            Ottieni un voto da A a F con raccomandazioni.
+        {loading && <ToolLoadingState className="mt-12 sm:mt-16" rows={6} />}
+
+        {!loading && result && (
+          <ToolResultPanel
+            className="mt-12 sm:mt-16"
+            title="Rapporto sicurezza"
+            subject={hostnameOf(result.finalUrl)}
+            meta={formatAnalysisDate(result.analysisDate)}
+          >
+            <ToolScore
+              value={result.score}
+              label="Punteggio sicurezza"
+              qualifier={gradeMeta?.word}
+              tone={gradeMeta?.tone}
+              grade={result.grade}
+              gradeLabel="Voto"
+              caption={scoreCaption || undefined}
+            />
+
+            {!result.isAccessible && (
+              <p className="mt-6 flex items-start gap-2.5 rounded-card border border-edge bg-surface-subtle p-4 text-caption text-content-muted">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-content-subtle" aria-hidden="true" />
+                Il sito ha risposto con un errore. Le intestazioni sono state lette lo stesso, ma i
+                controlli sul contenuto della pagina potrebbero essere parziali.
+              </p>
+            )}
+
+            <ToolSummaryStats
+              className="mt-8"
+              items={[
+                { label: 'Superati', value: result.summary.passed },
+                { label: 'Da controllare', value: result.summary.warnings },
+                {
+                  label: 'Non superati',
+                  value: result.summary.failed,
+                  tone: result.summary.failed > 0 ? 'danger' : undefined,
+                },
+                { label: 'Controlli totali', value: result.checks.length },
+              ]}
+            />
+
+            <ToolCheckList
+              className="mt-10"
+              title="Dettaglio dei controlli"
+              description="Sotto ogni controllo c'è il valore letto sul sito e, dove qualcosa non va, cosa fare per sistemarlo."
+              items={checkItems}
+            />
+          </ToolResultPanel>
+        )}
+
+        {!loading && !result && (
+          <section className="mt-12 border-t border-edge pt-10 sm:mt-16 sm:pt-12">
+            <h2 className="text-heading font-semibold text-content">Cosa controlla</h2>
+            <p className="mt-2 max-w-2xl text-body text-content-muted">
+              {CHECK_ORDER.length} verifiche sulla risposta del server e sulla pagina: le stesse
+              cose che vede un browser quando apre il sito, senza fare login.
+            </p>
+
+            <ul className="mt-6 grid gap-x-10 gap-y-4 sm:grid-cols-2">
+              {CHECK_ORDER.map((name) => {
+                const meta = CHECK_META[name]
+                const Icon = meta.icon
+
+                return (
+                  <li key={name} className="flex items-start gap-2.5">
+                    <Icon
+                      className="mt-0.5 h-4 w-4 shrink-0 text-content-subtle"
+                      aria-hidden="true"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-body text-content">{meta.label}</span>
+                      {meta.header && (
+                        <span className="mt-0.5 block break-all font-mono text-micro text-content-subtle">
+                          {meta.header}
+                        </span>
+                      )}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        )}
+
+        <ToolSignupCta
+          className="mt-12 sm:mt-16"
+          title="Aziende con questi problemi, vicino a te"
+          description="Questi controlli li puoi fare un sito alla volta. TrovaMi li passa sui siti delle attività italiane e ti mostra quelle che navigano senza HTTPS o senza protezioni, con nome, contatti e il dettaglio di cosa manca."
+        />
+
+        <ToolsCrossLinks className="mt-12 sm:mt-16" currentSlug="security-check" />
+
+        <section className="mt-12 border-t border-edge pt-10 sm:mt-16 sm:pt-12">
+          <h2 className="text-heading font-semibold text-content">Resta aggiornato sui nuovi tool</h2>
+          <p className="mt-2 max-w-2xl text-body text-content-muted">
+            Ti scriviamo quando pubblichiamo un nuovo strumento gratuito. Nient&apos;altro.
           </p>
-
-          {/* Search Form */}
-          <form onSubmit={handleAnalyze} className="max-w-2xl mx-auto">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Globe className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder="esempio.com"
-                  className="w-full pl-12 pr-4 py-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent text-lg dark:text-white dark:placeholder-gray-400"
-                  disabled={loading || (usage !== null && !usage.canAnalyze)}
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={loading || (usage !== null && !usage.canAnalyze)}
-                className="px-8 py-4 bg-gradient-to-r from-red-600 to-orange-600 text-white font-semibold rounded-xl hover:from-red-700 hover:to-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Analizzando...
-                  </>
-                ) : (
-                  <>
-                    <Shield className="w-5 h-5" />
-                    Analizza
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-
-          {/* Error Message */}
-          {error && (
-            <div className="mt-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-300 flex items-center gap-2">
-              <XCircle className="w-5 h-5 flex-shrink-0" />
-              {error}
-            </div>
-          )}
-
-          {/* Usage Limit Warning */}
-          {usage !== null && !usage.canAnalyze && (
-            <div className="mt-6 p-6 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-xl">
-              <p className="text-yellow-800 dark:text-yellow-200 mb-4">
-                Hai esaurito le {usage.limit} analisi gratuite di oggi.
-              </p>
-              <Link
-                href="/register"
-                className="inline-flex items-center px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
-              >
-                Registrati per analisi illimitate
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Link>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Results Section */}
-      {result && (
-        <section className="py-12 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-5xl mx-auto">
-            {/* Grade Card */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8 mb-8">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-8">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                    Rapporto Sicurezza
-                  </h2>
-                  <p className="text-gray-500 dark:text-gray-400">
-                    {new URL(result.finalUrl).hostname}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-6">
-                  <div className={`w-24 h-24 rounded-2xl flex items-center justify-center ${getGradeColor(result.grade)}`}>
-                    <span className="text-5xl font-bold">{result.grade}</span>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                      {result.score}
-                    </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">/100</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Summary */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">{result.summary.passed}</div>
-                  <div className="text-sm text-green-700 dark:text-green-300">Passati</div>
-                </div>
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{result.summary.warnings}</div>
-                  <div className="text-sm text-yellow-700 dark:text-yellow-300">Warning</div>
-                </div>
-                <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold text-red-600 dark:text-red-400">{result.summary.failed}</div>
-                  <div className="text-sm text-red-700 dark:text-red-300">Falliti</div>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 text-center">
-                  <div className="text-2xl font-bold text-gray-600 dark:text-gray-300">{result.checks.length}</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Totale Check</div>
-                </div>
-              </div>
-
-              {/* Checks List */}
-              <div className="space-y-4">
-                {result.checks.map((check, idx) => {
-                  const IconComponent = checkIcons[check.name] || Shield
-
-                  return (
-                    <div
-                      key={idx}
-                      className={`p-4 rounded-xl border ${
-                        check.status === 'pass' ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800' :
-                        check.status === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800' :
-                        'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
-                      }`}
-                    >
-                      <div className="flex items-start gap-4">
-                        {getStatusIcon(check.status)}
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-1">
-                            <h4 className="font-semibold text-gray-900 dark:text-white">{check.name}</h4>
-                            {getSeverityBadge(check.severity)}
-                          </div>
-                          {check.value && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mb-1 font-mono">{check.value}</p>
-                          )}
-                          {check.recommendation && (
-                            <p className="text-sm text-gray-500 dark:text-gray-400">{check.recommendation}</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* CTA */}
-            <div className="bg-gradient-to-r from-red-600 to-orange-600 rounded-2xl p-8 text-center text-white">
-              <h3 className="text-2xl font-bold mb-4">
-                Vuoi aiutare i tuoi clienti con la sicurezza?
-              </h3>
-              <p className="text-red-100 mb-6 max-w-2xl mx-auto">
-                TrovaMi ti trova automaticamente aziende con problemi di sicurezza sui loro siti.
-                Lead perfetti per i tuoi servizi di consulenza.
-              </p>
-              <Link
-                href="/register"
-                className="inline-flex items-center px-8 py-4 bg-white text-red-600 font-semibold rounded-xl hover:bg-gray-100 transition-colors"
-              >
-                Prova Gratis
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Link>
-            </div>
+          <div className="mt-6 max-w-md">
+            <NewsletterForm variant="inline" />
           </div>
         </section>
-      )}
-
-      {/* Features Section */}
-      {!result && (
-        <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-800">
-          <div className="max-w-5xl mx-auto">
-            <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-12">
-              Cosa analizza il Security Check
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {[
-                { icon: Lock, label: 'HTTPS', desc: 'Certificato SSL/TLS' },
-                { icon: ShieldCheck, label: 'HSTS', desc: 'HTTP Strict Transport' },
-                { icon: Shield, label: 'CSP', desc: 'Content Security Policy' },
-                { icon: Eye, label: 'X-Frame', desc: 'Protezione clickjacking' },
-                { icon: Server, label: 'Server Info', desc: 'Information disclosure' },
-                { icon: ShieldAlert, label: 'XSS Protection', desc: 'Cross-Site Scripting' },
-                { icon: EyeOff, label: 'Referrer', desc: 'Privacy policy' },
-                { icon: Cookie, label: 'Cookie', desc: 'Secure & HttpOnly' },
-              ].map((item, idx) => (
-                <div key={idx} className="text-center p-6 rounded-xl bg-gray-50 dark:bg-gray-700/50">
-                  <item.icon className="w-8 h-8 text-red-600 dark:text-red-400 mx-auto mb-3" />
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{item.label}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{item.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Other Tools Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-8">
-            Altri Tool Gratuiti
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Link
-              href="/tools/seo-checker"
-              className="p-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-green-500 transition-colors group"
-            >
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                  <TrendingUp className="w-6 h-6 text-green-600 dark:text-green-400" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400">
-                    SEO Checker
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Analisi SEO on-page
-                  </p>
-                </div>
-              </div>
-            </Link>
-            <Link
-              href="/tools/tech-detector"
-              className="p-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-purple-500 transition-colors group"
-            >
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                  <Code className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400">
-                    Tech Detector
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Scopri le tecnologie
-                  </p>
-                </div>
-              </div>
-            </Link>
-            <Link
-              href="/tools/public-scan"
-              className="p-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-500 transition-colors group"
-            >
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                  <Activity className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                    Analisi Completa
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Audit tecnico full
-                  </p>
-                </div>
-              </div>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Newsletter */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-800/50">
-        <div className="max-w-xl mx-auto text-center">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            Resta aggiornato sui nuovi tool
-          </h2>
-          <p className="text-gray-600 dark:text-gray-300 mb-8">
-            Iscriviti per sapere quando lanceremo nuovi strumenti gratuiti.
-          </p>
-          <NewsletterForm variant="compact" />
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-2">
-              <Target className="w-6 h-6 text-blue-400" />
-              <span className="font-bold">TrovaMi</span>
-            </div>
-            <div className="flex gap-6 text-sm text-gray-400">
-              <Link href="/privacy" className="hover:text-white">Privacy</Link>
-              <Link href="/terms" className="hover:text-white">Termini</Link>
-              <Link href="/contact" className="hover:text-white">Contatti</Link>
-            </div>
-            <div className="text-sm text-gray-400">
-              P.IVA 07327360488
-            </div>
-          </div>
-        </div>
-      </footer>
+      </main>
     </div>
   )
 }

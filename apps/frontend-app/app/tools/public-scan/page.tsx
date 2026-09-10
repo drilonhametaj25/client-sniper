@@ -1,32 +1,42 @@
 /**
- * Pagina pubblica per analisi freemium di siti web
- * Permette 2 analisi gratuite al giorno per IP senza registrazione
- * Ottimizzata per SEO con schema markup e meta tag avanzati
- * Include footer e struttura completa per migliorare il ranking
+ * Analisi gratuita di un sito web — la vetrina dei tool pubblici di TrovaMi.
+ *
+ * Percorso: apps/frontend-app/app/tools/public-scan/page.tsx
+ * Guida: apps/frontend-app/DESIGN.md
+ * Chiamata da: /tools (indice), Navbar (voce "Tools"), landing, ricerca organica.
+ * SEO e schema markup stanno nel layout.tsx accanto a questo file.
+ *
+ * Presentazione: primitive condivise di components/tools + token del design
+ * system. Il soggetto della pagina e' il risultato dell'analisi; l'invito a
+ * registrarsi compare una volta sola, dopo che l'utente ha visto il valore.
+ *
+ * Logica invariata: stessa GET /api/tools/public-scan per il contatore, stessa
+ * POST per l'analisi, stessi campi e stessi stati (errore, limite giornaliero,
+ * sito gia' presente nel database).
+ *
+ * Nota sul punteggio: qui e' la SALUTE del sito (piu' alto = sito piu' sano),
+ * il contrario dell'opportunity score dei lead. lib/utils/opportunity.ts non
+ * si usa in questa pagina.
  */
 
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { 
-  Search, 
-  AlertTriangle, 
-  CheckCircle, 
-  XCircle, 
-  Crown, 
-  Zap, 
-  Eye,
-  BarChart3,
-  ArrowRight,
-  Sparkles,
-  Lock,
-  Gift,
-  Target,
-  Shield,
-  Globe,
-  TrendingUp
-} from 'lucide-react'
+import {
+  ToolPageHeader,
+  ToolUrlForm,
+  ToolScore,
+  ToolCheckList,
+  ToolSummaryStats,
+  ToolStatusMessage,
+  ToolLoadingState,
+  ToolResultPanel,
+  ToolSignupCta,
+  ToolsCrossLinks,
+  type ToolCheckItem,
+  type ToolTone,
+} from '@/components/tools'
+import LinkButton from '@/components/ui/LinkButton'
 import NewsletterForm from '@/components/NewsletterForm'
 
 interface PublicAnalysisResult {
@@ -76,6 +86,88 @@ interface UsageInfo {
   limit: number
   remaining: number
   canAnalyze: boolean
+}
+
+/** Cosa vede chi arriva sulla pagina prima di lanciare l'analisi: gli stessi controlli, spiegati. */
+const WHAT_WE_CHECK: Array<{ term: string; description: string }> = [
+  {
+    term: 'Quello che legge Google',
+    description:
+      'Titolo, descrizione e titolo principale della pagina: sono le tre cose che decidono come il sito compare nei risultati di ricerca.',
+  },
+  {
+    term: 'Velocità di caricamento',
+    description:
+      'Quanto tempo passa prima che la pagina sia visibile. È la prima cosa che si nota e spesso la più semplice da sistemare.',
+  },
+  {
+    term: 'Adattamento agli smartphone',
+    description:
+      'Se il sito è pensato anche per gli schermi piccoli. Un sito che non si adatta si legge male da telefono.',
+  },
+  {
+    term: 'Connessione sicura',
+    description:
+      'Se il sito usa HTTPS. Senza, il browser avvisa chi lo apre che la connessione non è protetta.',
+  },
+  {
+    term: 'Statistiche e social',
+    description:
+      'Se sul sito è installato un sistema di statistiche e se le pagine rimandano ai profili social dell\'attività.',
+  },
+]
+
+/**
+ * Le soglie di questa pagina (70 / 40) sono quelle che il tool usava gia':
+ * sono piu' larghe di quelle di toolScoreVerdict, quindi parola e tinta si
+ * passano esplicite a ToolScore invece di reintrodurre un helper di colori.
+ */
+function scoreVerdict(score: number): { word: string; tone: ToolTone; caption: string } {
+  if (score >= 70) {
+    return {
+      word: 'Buono',
+      tone: 'success',
+      caption:
+        'Il sito è messo bene: i controlli di base sono a posto e resta poco da rifare.',
+    }
+  }
+
+  if (score >= 40) {
+    return {
+      word: 'Da migliorare',
+      tone: 'warning',
+      caption:
+        'Il sito funziona ma ha diversi punti deboli: c\'è materiale concreto da proporre a chi lo gestisce.',
+    }
+  }
+
+  return {
+    word: 'Critico',
+    tone: 'danger',
+    caption:
+      'Il sito ha problemi evidenti già sui controlli di base: chi lo gestisce ha bisogno di un intervento.',
+  }
+}
+
+/** Solo per la resa: mostra il dominio invece dell'URL intero. */
+function siteLabel(value: string): string {
+  try {
+    const parsed = new URL(value.startsWith('http') ? value : `https://${value}`)
+    return parsed.hostname.replace(/^www\./, '')
+  } catch {
+    return value
+  }
+}
+
+/** Millisecondi come li scrive un italiano: "1,8 s". Stesso arrotondamento di prima. */
+function formatSeconds(ms: number): string {
+  const seconds = Math.round((ms / 1000) * 10) / 10
+  return `${seconds.toFixed(1).replace('.', ',')} s`
+}
+
+function formatDate(value: string): string {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('it-IT')
 }
 
 export default function PublicScanPage() {
@@ -131,7 +223,7 @@ export default function PublicScanPage() {
       if (data.analysis) {
         setResult(data.analysis)
       }
-      
+
       // Rimuovi eventuali errori precedenti per lead esistenti
       if (data.existingLead) {
         setError(null)
@@ -147,557 +239,283 @@ export default function PublicScanPage() {
     }
   }
 
-  const getScoreColor = (score: number) => {
-    if (score >= 70) return 'text-green-600 dark:text-green-400'
-    if (score >= 40) return 'text-yellow-600 dark:text-yellow-400'
-    return 'text-red-600 dark:text-red-400'
-  }
+  // Limite giornaliero esaurito: stessa condizione di prima, scritta in un posto solo
+  const limitReached = usage !== null && !usage.canAnalyze
 
-  const getScoreBgColor = (score: number) => {
-    if (score >= 70) return 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
-    if (score >= 40) return 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
-    return 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
-  }
+  // Punteggio mostrato: stessa espressione dell'implementazione precedente
+  const overallScore = result ? result.overallScore || responseData?.leadInfo?.score || 0 : 0
+  const verdict = scoreVerdict(overallScore)
+
+  const analyzedUrl = result ? result.url || result.finalUrl || '' : ''
+  const isHttps = analyzedUrl.startsWith('https://')
+
+  const checks: ToolCheckItem[] = result
+    ? [
+        {
+          id: 'title',
+          name: 'Titolo della pagina',
+          status: result.seo?.hasTitle ? 'pass' : 'fail',
+          statusLabel: result.seo?.hasTitle ? 'Presente' : 'Assente',
+          recommendation: result.seo?.hasTitle
+            ? undefined
+            : 'È la riga che i motori di ricerca mostrano come titolo. Senza, il sito compare con un testo scelto da loro.',
+        },
+        {
+          id: 'meta-description',
+          name: 'Descrizione per i motori di ricerca',
+          status: result.seo?.hasMetaDescription ? 'pass' : 'fail',
+          statusLabel: result.seo?.hasMetaDescription ? 'Presente' : 'Assente',
+          recommendation: result.seo?.hasMetaDescription
+            ? undefined
+            : 'È il paragrafo sotto il titolo nei risultati di ricerca. Senza, chi cerca non sa cosa aspettarsi dal sito.',
+        },
+        {
+          id: 'h1',
+          name: 'Titolo principale della pagina',
+          status: result.seo?.hasH1 ? 'pass' : 'fail',
+          statusLabel: result.seo?.hasH1 ? 'Presente' : 'Assente',
+          recommendation: result.seo?.hasH1
+            ? undefined
+            : 'Dice ai motori di ricerca di cosa parla la pagina. Senza, il contenuto è più difficile da posizionare.',
+        },
+        {
+          id: 'responsive',
+          name: 'Adattamento agli smartphone',
+          status: result.performance?.isResponsive ? 'pass' : 'fail',
+          statusLabel: result.performance?.isResponsive ? 'Adattato' : 'Non adattato',
+          recommendation: result.performance?.isResponsive
+            ? undefined
+            : 'Il sito non è predisposto per gli schermi piccoli: da telefono si legge male e si naviga peggio.',
+        },
+        {
+          id: 'https',
+          name: 'Connessione sicura',
+          status: isHttps ? 'pass' : 'fail',
+          statusLabel: isHttps ? 'Attiva' : 'Assente',
+          recommendation: isHttps
+            ? undefined
+            : 'Il sito non usa HTTPS: il browser avvisa chi lo apre che la connessione non è protetta.',
+        },
+        ...((result.performance?.loadTime ?? 0) > 0
+          ? [
+              {
+                id: 'load-time',
+                name: 'Tempo di caricamento',
+                status:
+                  result.performance.loadTime > 3000
+                    ? ('fail' as const)
+                    : result.performance.loadTime > 2000
+                      ? ('warning' as const)
+                      : ('pass' as const),
+                statusLabel:
+                  result.performance.loadTime > 3000
+                    ? 'Lento'
+                    : result.performance.loadTime > 2000
+                      ? 'Migliorabile'
+                      : 'Veloce',
+                value: `${formatSeconds(result.performance.loadTime)} prima che la pagina sia visibile`,
+                recommendation:
+                  result.performance.loadTime > 2000
+                    ? 'Sopra i due secondi di attesa una parte dei visitatori chiude la pagina prima di vederla.'
+                    : undefined,
+              },
+            ]
+          : []),
+        {
+          id: 'tracking',
+          name: 'Strumenti di statistiche',
+          status: result.tracking?.hasAnyTracking ? 'pass' : 'warning',
+          statusLabel: result.tracking?.hasAnyTracking ? 'Installati' : 'Non rilevati',
+          recommendation: result.tracking?.hasAnyTracking
+            ? undefined
+            : 'Nessun sistema di statistiche rilevato: chi gestisce il sito non sa quante persone lo visitano né da dove arrivano.',
+        },
+        {
+          id: 'social',
+          name: 'Collegamenti ai social',
+          status: result.social?.hasAnySocial ? 'pass' : 'warning',
+          statusLabel: result.social?.hasAnySocial ? 'Presenti' : 'Nessuno',
+          value: result.social?.hasAnySocial
+            ? `${result.social.socialCount} collegamenti trovati nelle pagine`
+            : undefined,
+          recommendation: result.social?.hasAnySocial
+            ? undefined
+            : 'Il sito non rimanda a nessun profilo social: chi lo visita non ha modo di seguire l\'attività altrove.',
+        },
+      ]
+    : []
+
+  const passedChecks = checks.filter((check) => check.status === 'pass').length
 
   return (
-    <>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-        {/* Header */}
-        <header className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700" role="banner">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
-              <Link href="/" className="flex items-center space-x-3" aria-label="Torna alla homepage di TrovaMi">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <Search className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-xl font-bold text-gray-900 dark:text-white">TrovaMi</span>
-              </Link>
-              
-              <nav className="flex items-center space-x-4" aria-label="Navigazione principale">
-                <Link 
-                  href="/login"
-                  className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
-                >
-                  Accedi
-                </Link>
-                <Link 
-                  href="/register"
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Registrati Gratis
-                </Link>
-              </nav>
-            </div>
-          </div>
-        </header>
+    <div className="min-h-screen bg-surface">
+      <main className="mx-auto max-w-4xl px-4 pb-16 pt-24 sm:px-6 sm:pb-24 sm:pt-28 lg:px-8">
+        <ToolPageHeader
+          title="Analisi gratuita di un sito web"
+          description="Incolla l'indirizzo di un sito e vedi come sta: quello che legge Google, la velocità, l'adattamento agli smartphone, la connessione sicura e gli strumenti di statistiche. Senza registrarti."
+          usage={usage}
+          fallbackLimit={2}
+        >
+          <ToolUrlForm
+            id="website-url"
+            value={url}
+            onChange={setUrl}
+            onSubmit={() => handleAnalyze()}
+            loading={loading}
+            disabled={limitReached}
+            inputType="url"
+            required
+            label="Indirizzo del sito da analizzare"
+            placeholder="https://esempio.it"
+            hint="Scrivi l'indirizzo completo, con https:// davanti."
+          />
+        </ToolPageHeader>
 
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12" role="main">
-          {/* Hero Section */}
-          <section className="text-center mb-12">
-            <div className="flex items-center justify-center mb-4">
-              <Gift className="h-8 w-8 text-purple-600 dark:text-purple-400 mr-3" />
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-                Audit Digitale Gratuito
-              </h1>
-            </div>
-            <p className="text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-3xl mx-auto">
-              Audit tecnico professionale gratuito del tuo sito web. Analisi completa di oltre 70 parametri: 
-              performance, SEO tecnico, sicurezza e compliance GDPR in tempo reale.
-            </p>
-            
-            {/* Features highlights */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 max-w-2xl mx-auto">
-              <div className="flex items-center justify-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
-                <span>Audit Performance</span>
-              </div>
-              <div className="flex items-center justify-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                <span>SEO Tecnico</span>
-              </div>
-              <div className="flex items-center justify-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                <Globe className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                <span>Compliance Check</span>
-              </div>
-            </div>
-          </section>
+        {/* Limite giornaliero gia' esaurito quando la pagina si apre */}
+        {limitReached && !error && (
+          <ToolStatusMessage
+            tone="warning"
+            title="Hai usato tutte le analisi gratuite di oggi"
+            className="mt-8"
+            action={
+              <LinkButton href="/register" variant="secondary">
+                Crea un account gratuito
+              </LinkButton>
+            }
+          >
+            Il contatore riparte domani. Con un account gratuito hai un credito di prova per
+            vedere un lead completo, analisi tecnica inclusa.
+          </ToolStatusMessage>
+        )}
 
-          {/* Usage Info */}
-          {usage && (
-            <section className="mb-8" aria-labelledby="usage-info">
-              <div className="bg-gradient-to-r from-purple-50 dark:from-gray-900 to-blue-50 dark:to-gray-800 border border-purple-200 dark:border-purple-800 rounded-xl p-6">
-                <div className="flex items-center mb-4">
-                  <Eye className="h-5 w-5 text-purple-600 dark:text-purple-400 mr-2" />
-                  <h2 id="usage-info" className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Utilizzo Giornaliero
-                  </h2>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    Analisi utilizzate oggi: <strong>{usage.used}/{usage.limit}</strong>
-                  </span>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-20 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                      <div 
-                        className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${(usage.used / usage.limit) * 100}%` }}
-                      ></div>
-                    </div>
-                    <span className={`text-sm font-medium ${usage.canAnalyze ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {usage.remaining} rimaste
-                    </span>
-                  </div>
-                </div>
-                {!usage.canAnalyze && (
-                  <div className="mt-3 text-sm text-orange-600 dark:text-orange-400">
-                    Hai utilizzato tutte le <strong>{usage.limit}</strong> analisi gratuite di oggi. 
-                    <Link href="/register" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium ml-1">
-                      Registrati gratis per analisi illimitate!
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
+        {/* Errore dell'analisi, o limite restituito dall'API durante l'invio */}
+        {error && (
+          <ToolStatusMessage
+            tone="danger"
+            title="Non siamo riusciti ad analizzare il sito"
+            className="mt-8"
+          >
+            {error}
+          </ToolStatusMessage>
+        )}
 
-          {/* Analysis Form */}
-          <section className="mb-12" aria-labelledby="analysis-form">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8">
-              <h2 id="analysis-form" className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
-                Inserisci l'URL del sito da analizzare
-              </h2>
-              <form onSubmit={(e) => { e.preventDefault(); handleAnalyze(); }} className="space-y-6">
-                <div>
-                  <label htmlFor="website-url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    URL Sito Web
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="website-url"
-                      type="url"
-                      value={url}
-                      onChange={(e) => setUrl(e.target.value)}
-                      placeholder="https://esempio.com"
-                      className="w-full px-4 py-4 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
-                      disabled={loading || (usage ? !usage.canAnalyze : false)}
-                      required
-                      aria-describedby="url-help"
-                    />
-                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                      <Search className="h-5 w-5 text-gray-400" />
-                    </div>
-                  </div>
-                  <p id="url-help" className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                    Inserisci l'URL completo del sito web che vuoi analizzare (es. https://tuosito.com)
-                  </p>
-                </div>
+        {/* Il sito era gia' stato analizzato per un lead in archivio */}
+        {!error && responseData?.existingLead && (
+          <ToolStatusMessage
+            tone="accent"
+            title="Questo sito è già nel database di TrovaMi"
+            className="mt-8"
+          >
+            {responseData.leadInfo
+              ? `${responseData.leadInfo.businessName || 'Questa attività'} è stata analizzata il ${formatDate(responseData.leadInfo.analyzedDate)}. Qui sotto vedi il risultato di quell'analisi: non ti è stata scalata nessuna delle analisi di oggi.`
+              : responseData.message}
+          </ToolStatusMessage>
+        )}
 
-                {error && (
-                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4" role="alert">
-                    <div className="flex">
-                      <AlertTriangle className="h-5 w-5 text-red-400 mr-2 flex-shrink-0" />
-                      <div>
-                        <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
-                        {error.includes('limite') && (
-                          <p className="mt-2 text-sm text-red-600 dark:text-red-400">
-                            💡 <Link href="/register" className="underline font-medium">Registrati gratuitamente</Link> per ottenere analisi illimitate!
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
+        {loading && (
+          <ToolLoadingState className="mt-12 sm:mt-16" label="Analisi del sito in corso" />
+        )}
 
-                {/* Messaggio Lead Esistente */}
-                {responseData?.existingLead && (
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4" role="status">
-                    <div className="flex items-center mb-2">
-                      <CheckCircle className="h-5 w-5 text-blue-500 mr-2" />
-                      <span className="text-blue-800 dark:text-blue-300 font-medium">Sito già nel nostro database!</span>
-                    </div>
-                    <p className="text-blue-700 dark:text-blue-400 text-sm mb-3">{responseData.message}</p>
-                    {responseData.leadInfo && (
-                      <div className="bg-blue-100 dark:bg-blue-900/30 rounded-lg p-3">
-                        <p className="text-sm text-blue-800 dark:text-blue-300">
-                          <strong>Business:</strong> {responseData.leadInfo.businessName || 'N/A'}<br />
-                          <strong>Punteggio:</strong> {responseData.leadInfo.score}/100<br />
-                          <strong>Analizzato il:</strong> {new Date(responseData.leadInfo.analyzedDate).toLocaleDateString('it-IT')}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
+        {!loading && result && (
+          <ToolResultPanel
+            title="Risultato dell'analisi"
+            subject={siteLabel(analyzedUrl) || undefined}
+            className="mt-12 sm:mt-16"
+          >
+            <ToolScore
+              value={overallScore}
+              label="Punteggio complessivo"
+              qualifier={verdict.word}
+              tone={verdict.tone}
+              caption={verdict.caption}
+            />
 
-                <button
-                  type="submit"
-                  disabled={loading || !url.trim() || (usage ? !usage.canAnalyze : false)}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 px-6 rounded-lg font-semibold text-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center"
-                >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      Analisi in corso...
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="h-5 w-5 mr-2" />
-                      {usage ? !usage.canAnalyze ? 'Limite Giornaliero Raggiunto' : 'Analizza Gratis' : 'Analizza Gratis'}
-                    </>
-                  )}
-                </button>
-              </form>
-            </div>
-          </section>
-
-          {/* Results Section */}
-          {result && (
-            <section className="mb-12" aria-labelledby="analysis-results">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8">
-                <h2 id="analysis-results" className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
-                  Risultati Analisi per <span className="text-blue-600 dark:text-blue-400">{result.url || result.finalUrl || 'Sito Web'}</span>
-                </h2>
-                
-                {/* Overall Score */}
-                <div className={`border-2 rounded-xl p-6 mb-8 text-center ${getScoreBgColor(result.overallScore || responseData?.leadInfo?.score || 0)}`}>
-                  <div className={`text-6xl font-bold mb-2 ${getScoreColor(result.overallScore || responseData?.leadInfo?.score || 0)}`}>
-                    {result.overallScore || responseData?.leadInfo?.score || 0}/100
-                  </div>
-                  <div className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Punteggio Complessivo
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {(result.overallScore || responseData?.leadInfo?.score || 0) >= 70 && 'Sito ben ottimizzato - Poche opportunità di miglioramento'}
-                    {(result.overallScore || responseData?.leadInfo?.score || 0) >= 40 && (result.overallScore || responseData?.leadInfo?.score || 0) < 70 && 'Sito discreto - Buone opportunità di ottimizzazione'}
-                    {(result.overallScore || responseData?.leadInfo?.score || 0) < 40 && 'Molte opportunità di miglioramento - Potenziale lead caldo!'}
-                  </div>
-                  
-                  {result.isLimitedAnalysis && (
-                    <div className="mt-4 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 rounded-lg p-3">
-                      <div className="flex items-center justify-center">
-                        <Lock className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mr-2" />
-                        <span className="text-sm text-yellow-800 dark:text-yellow-300 font-medium">
-                          Analisi limitata - Registrati per vedere tutti i dettagli
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Analysis Details Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  {/* SEO Score */}
-                  <div className="bg-gradient-to-br from-green-50 dark:from-gray-900 to-emerald-50 dark:to-gray-800 border border-green-200 dark:border-green-800 rounded-lg p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">SEO Base</h3>
-                      <div className={`text-2xl font-bold ${getScoreColor(result.seo?.score || 0)}`}>
-                        {result.seo?.score || 0}/100
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-700 dark:text-gray-300">Title Tag</span>
-                        {result.seo?.hasTitle ? (
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                        ) : (
-                          <XCircle className="h-5 w-5 text-red-500" />
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-700 dark:text-gray-300">Meta Description</span>
-                        {result.seo?.hasMetaDescription ? (
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                        ) : (
-                          <XCircle className="h-5 w-5 text-red-500" />
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-700 dark:text-gray-300">Heading H1</span>
-                        {result.seo?.hasH1 ? (
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                        ) : (
-                          <XCircle className="h-5 w-5 text-red-500" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Performance Score */}
-                  <div className="bg-gradient-to-br from-blue-50 dark:from-gray-900 to-indigo-50 dark:to-gray-800 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Performance</h3>
-                      <div className={`text-2xl font-bold ${getScoreColor(result.performance?.score || 0)}`}>
-                        {result.performance?.score || 0}/100
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-700 dark:text-gray-300">Responsive Design</span>
-                        {result.performance?.isResponsive ? (
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                        ) : (
-                          <XCircle className="h-5 w-5 text-red-500" />
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                        <span className="text-sm text-gray-700 dark:text-gray-300">Tempo di Caricamento</span>
-                        <span className={`text-sm font-medium ${(result.performance?.loadTime || 0) > 3000 ? 'text-red-600 dark:text-red-400' : (result.performance?.loadTime || 0) > 2000 ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'}`}>
-                          {Math.round((result.performance?.loadTime || 0) / 1000 * 10) / 10}s
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-700 dark:text-gray-300">Sicurezza HTTPS</span>
-                        {(result.url || result.finalUrl || '').startsWith('https://') ? (
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                        ) : (
-                          <XCircle className="h-5 w-5 text-red-500" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Additional Info Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  {/* Tracking & Analytics */}
-                  <div className="bg-gradient-to-br from-purple-50 dark:from-gray-900 to-indigo-50 dark:to-gray-800 border border-purple-200 dark:border-purple-800 rounded-lg p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">🔍 Tracking & Analytics</h3>
-                      <div className={`px-3 py-1 rounded-full text-sm font-medium ${result.tracking?.hasAnyTracking ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'}`}>
-                        {result.tracking?.hasAnyTracking ? 'Installato' : 'Non rilevato'}
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-700 dark:text-gray-300">Sistema di Tracciamento</span>
-                        {result.tracking?.hasAnyTracking ? (
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                        ) : (
-                          <XCircle className="h-5 w-5 text-red-500" />
-                        )}
-                      </div>
-                      {!result.tracking?.hasAnyTracking && (
-                        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-                          <p className="text-xs text-yellow-800 dark:text-yellow-300">
-                            💡 Nessun pixel di tracking rilevato. Opportunità per migliorare l'analisi dei visitatori.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Social Presence */}
-                  <div className="bg-gradient-to-br from-pink-50 to-rose-50 border border-pink-200 rounded-lg p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">📱 Presenza Social</h3>
-                      <div className={`px-3 py-1 rounded-full text-sm font-medium ${result.social?.hasAnySocial ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}>
-                        {result.social?.socialCount || 0} link
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-700 dark:text-gray-300">Link Social Media</span>
-                        {result.social?.hasAnySocial ? (
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                        ) : (
-                          <XCircle className="h-5 w-5 text-red-500" />
-                        )}
-                      </div>
-                      {!result.social?.hasAnySocial && (
-                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                          <p className="text-xs text-blue-800 dark:text-blue-300">
-                            💡 Nessun link ai social media trovato. Opportunità per aumentare la presenza online.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* Upgrade CTA */}
-          <section className="mb-16" aria-labelledby="upgrade-cta">
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl shadow-lg p-8 text-white text-center">
-              <Crown className="h-12 w-12 mx-auto mb-4 text-yellow-300" />
-              <h2 id="upgrade-cta" className="text-2xl font-bold mb-4">
-                Ottieni l'Analisi Completa
-              </h2>
-              <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
-                L'analisi gratuita mostra solo il 20% dei problemi. 
-                Registrati gratuitamente per vedere l'analisi completa con raccomandazioni dettagliate, 
-                tracking avanzato, conformità GDPR e molto altro!
-              </p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-left">
-                <div className="bg-white/10 rounded-lg p-4">
-                  <h4 className="font-semibold mb-2">✅ Analisi Completa</h4>
-                  <p className="text-sm text-blue-100">Tutti i 50+ controlli tecnici</p>
-                </div>
-                <div className="bg-white/10 rounded-lg p-4">
-                  <h4 className="font-semibold mb-2">📊 Raccomandazioni</h4>
-                  <p className="text-sm text-blue-100">Lista prioritizzata di miglioramenti</p>
-                </div>
-                <div className="bg-white/10 rounded-lg p-4">
-                  <h4 className="font-semibold mb-2">🔄 Analisi Illimitate</h4>
-                  <p className="text-sm text-blue-100">Nessun limite giornaliero</p>
-                </div>
-              </div>
-              
-              <Link 
-                href="/register"
-                className="inline-flex items-center px-8 py-4 bg-white text-blue-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+            {result.isAccessible === false && (
+              <ToolStatusMessage
+                tone="warning"
+                title="Il sito non ha risposto come previsto"
+                className="mt-8"
               >
-                Registrati Gratis
-                <ArrowRight className="h-5 w-5 ml-2" />
-              </Link>
-            </div>
-          </section>
+                {result.httpStatus
+                  ? `Il server ha risposto con il codice ${result.httpStatus}. I controlli qui sotto possono essere incompleti.`
+                  : 'Il server non ha risposto correttamente. I controlli qui sotto possono essere incompleti.'}
+              </ToolStatusMessage>
+            )}
 
-          {/* SEO Content Section */}
-          <section className="mb-16" aria-labelledby="seo-content">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8">
-              <h2 id="seo-content" className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                Perché Analizzare il Tuo Sito Web?
+            <ToolSummaryStats
+              className="mt-8"
+              items={[
+                { label: 'Controlli superati', value: `${passedChecks} su ${checks.length}` },
+                { label: 'Punteggio SEO', value: Math.round(result.seo?.score ?? 0) },
+                {
+                  label: 'Punteggio prestazioni',
+                  value: Math.round(result.performance?.score ?? 0),
+                },
+              ]}
+            />
+
+            <ToolCheckList
+              className="mt-10"
+              title="Controlli eseguiti"
+              description={
+                result.isLimitedAnalysis
+                  ? 'Sono i controlli che si possono fare dall\'esterno. Dentro TrovaMi la stessa analisi prosegue su sicurezza, cookie e conformità GDPR, accessibilità e tecnologie usate.'
+                  : undefined
+              }
+              items={checks}
+            />
+          </ToolResultPanel>
+        )}
+
+        {/* Prima dell'analisi: cosa guarda il tool, detto senza gergo */}
+        {!loading && !result && (
+          <section className="mt-12 border-t border-edge pt-10 sm:mt-16 sm:pt-12">
+            <h2 className="text-heading font-semibold text-content">Cosa guarda questa analisi</h2>
+            <p className="mt-2 max-w-2xl text-body text-content-muted">
+              Sono i controlli che si possono fare dall&apos;esterno, senza accedere al sito.
+              Bastano per capire se chi lo gestisce ha bisogno di aiuto.
+            </p>
+
+            <dl className="mt-6 max-w-2xl">
+              {WHAT_WE_CHECK.map((item) => (
+                <div key={item.term} className="border-t border-edge py-4">
+                  <dt className="text-body font-medium text-content">{item.term}</dt>
+                  <dd className="mt-1 text-caption text-content-muted">{item.description}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        )}
+
+        <ToolSignupCta
+          className="mt-12 sm:mt-16"
+          title="Lo stesso lavoro, su migliaia di attività italiane"
+          description="Questa pagina analizza un sito alla volta, quello che scegli tu. TrovaMi passa controlli molto più approfonditi sui siti delle attività italiane e ti mostra quelle che hanno problemi che sai già risolvere, con nome, contatti e il dettaglio di cosa non va."
+        />
+
+        <ToolsCrossLinks currentSlug="public-scan" className="mt-12 sm:mt-16" />
+
+        <section className="mt-12 border-t border-edge pt-10 sm:mt-16 sm:pt-12">
+          <div className="grid gap-6 md:grid-cols-2 md:gap-12">
+            <div>
+              <h2 className="text-heading font-semibold text-content">
+                Una mail al mese, quando c&apos;è qualcosa da dire
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-                    🚀 Migliora le Performance
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    Un sito veloce migliora l'esperienza utente e il ranking sui motori di ricerca. 
-                    La nostra analisi identifica i colli di bottiglia che rallentano il tuo sito.
-                  </p>
-                  
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-                    📈 Ottimizza per i Motori di Ricerca
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Verifica se il tuo sito ha tutti gli elementi SEO essenziali: 
-                    title tag, meta description, heading strutturati e molto altro.
-                  </p>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-                    📱 Controlla la Responsività
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    Oltre il 60% del traffico web arriva da mobile. 
-                    Assicurati che il tuo sito sia perfettamente visualizzabile su tutti i dispositivi.
-                  </p>
-                  
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-                    🛡️ Verifica la Sicurezza
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Controlla se il tuo sito utilizza HTTPS e ha le configurazioni di sicurezza corrette 
-                    per proteggere i dati dei tuoi utenti.
-                  </p>
-                </div>
-              </div>
+              <p className="mt-2 text-body text-content-muted">
+                Opportunità selezionate e modi concreti per proporre i tuoi servizi. Niente altro.
+              </p>
             </div>
-          </section>
-
-          {/* Newsletter Section */}
-          <section className="mb-16" aria-labelledby="newsletter-section">
-            <div className="max-w-2xl mx-auto">
+            <div className="md:pt-1">
               <NewsletterForm
-                title="Vuoi Altri Consigli Gratuiti?"
-                description="Iscriviti e ricevi ogni mese lead gratuiti e strategie avanzate per l'acquisizione clienti"
+                placeholder="La tua email"
+                buttonText="Iscriviti"
                 source="public_scan"
-                variant="default"
+                variant="inline"
               />
             </div>
-          </section>
-        </main>
-      </div>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Newsletter compatta nel footer */}
-          <div className="mb-16 p-8 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-2xl border border-white/10">
-            <NewsletterForm
-              title="Newsletter Professionale"
-              description="Lead qualificati e strategie di acquisizione clienti"
-              placeholder="Il tuo indirizzo email"
-              buttonText="Iscriviti"
-              source="public_scan_footer"
-              variant="compact"
-              className="max-w-2xl mx-auto"
-            />
           </div>
-
-          <div className="grid md:grid-cols-4 gap-8 mb-12">
-            <div className="col-span-2">
-              <div className="flex items-center space-x-3 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                  <Target className="w-6 h-6 text-white" />
-                </div>
-                <span className="text-2xl font-bold">TrovaMi</span>
-              </div>
-              <p className="text-gray-400 text-lg leading-relaxed max-w-md">
-                La piattaforma più avanzata per trovare lead qualificati attraverso l'analisi automatizzata di siti web aziendali.
-              </p>
-              <div className="mt-6 flex space-x-4">
-                <a href="#" className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors" aria-label="Twitter">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M6.29 18.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0020 3.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.073 4.073 0 01.8 7.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 010 16.407a11.616 11.616 0 006.29 1.84" />
-                  </svg>
-                </a>
-                <a href="#" className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors" aria-label="LinkedIn">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.338 16.338H13.67V12.16c0-.995-.017-2.277-1.387-2.277-1.39 0-1.601 1.086-1.601 2.207v4.248H8.014v-8.59h2.559v1.174h.037c.356-.675 1.227-1.387 2.526-1.387 2.703 0 3.203 1.778 3.203 4.092v4.711zM5.005 6.575a1.548 1.548 0 11-.003-3.096 1.548 1.548 0 01.003 3.096zm-1.337 9.763H6.34v-8.59H3.667v8.59zM17.668 1H2.328C1.595 1 1 1.581 1 2.298v15.403C1 18.418 1.595 19 2.328 19h15.34c.734 0 1.332-.582 1.332-1.299V2.298C19 1.581 18.402 1 17.668 1z" clipRule="evenodd" />
-                  </svg>
-                </a>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Prodotto</h3>
-              <ul className="space-y-3">
-                <li><Link href="/#features" className="text-gray-400 hover:text-white transition-colors">Funzionalità</Link></li>
-                <li><Link href="/#pricing" className="text-gray-400 hover:text-white transition-colors">Prezzi</Link></li>
-                <li><Link href="/tools/public-scan" className="text-gray-400 hover:text-white transition-colors">Analisi Gratuita</Link></li>
-                <li><Link href="/login" className="text-gray-400 hover:text-white transition-colors">Login</Link></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Risorse</h3>
-              <ul className="space-y-3">
-                <li><Link href="/come-trovare-clienti" className="text-gray-400 hover:text-white transition-colors">Come Trovare Clienti</Link></li>
-                <li><Link href="/lead-generation-agenzie" className="text-gray-400 hover:text-white transition-colors">Lead Generation Agenzie</Link></li>
-                <li><Link href="/help" className="text-gray-400 hover:text-white transition-colors">Centro Assistenza</Link></li>
-                <li><Link href="/contact" className="text-gray-400 hover:text-white transition-colors">Contatti</Link></li>
-              </ul>
-            </div>
-          </div>
-          
-          <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center">
-            <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-6 mb-4 md:mb-0">
-              <p className="text-gray-400">
-                &copy; 2025 TrovaMi. Tutti i diritti riservati.
-              </p>
-              <div className="flex items-center space-x-4 text-sm">
-                <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">
-                  Privacy Policy
-                </Link>
-                <span className="text-gray-600 dark:text-gray-400">•</span>
-                <Link href="/terms" className="text-gray-400 hover:text-white transition-colors">
-                  Termini e Condizioni
-                </Link>
-              </div>
-            </div>
-            <div className="flex items-center space-x-6 text-sm text-gray-400">
-              <span>Made in Italy 🇮🇹</span>
-              <span>•</span>
-              <span>Powered by Drilon Hametaj</span>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </>
+        </section>
+      </main>
+    </div>
   )
 }

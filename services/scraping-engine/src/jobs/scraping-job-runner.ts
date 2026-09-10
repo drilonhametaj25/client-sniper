@@ -247,16 +247,28 @@ export class ScrapingJobRunner {
       recordZone(zone.location_name, businessData.length, saveResult.saved)
       this.logger.debug(`✅ Salvati ${saveResult.saved}/${analyzedBusinesses.length} lead nel database (${saveResult.errors} errori, ${saveResult.quarantined} in quarantena)`)
 
-      const savedLeads = analyzedBusinesses // Per compatibilità con il resto del codice
+      // Conta SOLO le righe realmente scritte: prima qui finiva
+      // analyzedBusinesses.length, quindi una zona con il 100% delle scritture
+      // fallite (schema disallineato, permessi) veniva loggata e registrata
+      // come riuscita con N lead. L'incidente PGRST204 su email_confidence e'
+      // rimasto invisibile per questo.
+      const persisted = saveResult.saved
+      const writeFailed = persisted === 0 && saveResult.errors > 0
 
-      job.leadsFound = savedLeads.length
-      job.status = 'completed'
+      job.leadsFound = persisted
+      job.status = writeFailed ? 'failed' : 'completed'
       job.endTime = new Date()
+      if (writeFailed) job.error = `Nessun lead scritto: ${saveResult.errors} scritture fallite`
 
       // Completa l'elaborazione della zona
-      await this.zoneManager.completeZoneProcessing(zone.id, savedLeads.length, true)
+      await this.zoneManager.completeZoneProcessing(zone.id, persisted, !writeFailed)
 
-      this.logger.info(`✅ Scraping completato: ${businessData.length} business trovati, ${savedLeads.length} lead salvati per ${zone.location_name}`)
+      if (writeFailed) {
+        increment('zonesFailed')
+        this.logger.error(`❌ Scraping ${zone.location_name}: ${businessData.length} business trovati ma NESSUN lead scritto (${saveResult.errors} errori) - vedi gli errori qui sopra`)
+      } else {
+        this.logger.info(`✅ Scraping completato: ${businessData.length} business trovati, ${persisted} lead salvati per ${zone.location_name}`)
+      }
 
     } catch (error) {
       job.status = 'failed'

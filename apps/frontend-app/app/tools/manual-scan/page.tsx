@@ -1,7 +1,20 @@
 /**
- * Pagina per l'analisi manuale di siti web
- * Permette agli utenti di inserire un URL e ottenere un'analisi completa
- * Consuma 1 credito per ogni analisi e salva il risultato come lead
+ * Analisi avanzata — lancia il motore di TrovaMi su un sito a scelta.
+ *
+ * Percorso: apps/frontend-app/app/tools/manual-scan/page.tsx
+ * Guida: apps/frontend-app/DESIGN.md
+ * Raggiunta da: l'indice /tools (voce "Analisi avanzata") e il dropdown "Tools"
+ * della Navbar. Richiede un account: senza sessione si viene mandati a /login.
+ *
+ * Qui cambia SOLO la presentazione: la sessione Supabase, la POST verso
+ * /api/tools/manual-scan, il consumo dei crediti, i campi letti dalla risposta
+ * e gli stati di errore sono quelli di prima. Il soggetto della pagina è il
+ * rapporto dell'analisi; il form e il saldo crediti stanno sopra e si tolgono
+ * di mezzo.
+ *
+ * Nota sul punteggio: qui alto = sito sano (è il punteggio dell'analizzatore,
+ * che parte da 100 e sottrae le penalità). NON è l'opportunity score dei lead,
+ * quindi lib/utils/opportunity.ts non si usa in questa pagina.
  */
 
 'use client'
@@ -9,7 +22,34 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
-import { WebsiteAnalysis } from '../../../lib/types/analysis'
+import Button from '@/components/ui/Button'
+import LinkButton from '@/components/ui/LinkButton'
+import {
+  ToolCheckList,
+  ToolLoadingState,
+  ToolPageHeader,
+  ToolResultPanel,
+  ToolScore,
+  ToolSignupCta,
+  ToolStatusMessage,
+  ToolSummaryStats,
+  ToolUrlForm,
+  ToolsCrossLinks,
+  type ToolCheckItem,
+  type ToolStat,
+  type ToolTone,
+} from '@/components/tools'
+import { formatCredits } from '@/lib/utils/credits-display'
+import type {
+  GDPRCompliance,
+  LegalCompliance,
+  PerformanceMetrics,
+  SEOAnalysis,
+  SocialPresence,
+  TechnicalIssues,
+  TrackingAnalysis,
+  WebsiteAnalysis,
+} from '@/lib/types/analysis'
 
 function getSupabase() {
   return createClient(
@@ -24,6 +64,490 @@ interface AnalysisResult {
   creditsRemaining: number
   isSimplifiedAnalysis?: boolean
 }
+
+/* ---------------------------------------------------------------------------
+ * Vocabolario: i problemi tecnici detti in italiano comprensibile.
+ * Il gergo (H1, meta description, HSTS) resta nel dettaglio dei controlli.
+ * ------------------------------------------------------------------------- */
+
+const ISSUE_LABELS: Array<{ key: keyof TechnicalIssues; text: string }> = [
+  { key: 'httpsIssues', text: 'Il sito non usa una connessione sicura: il browser lo segnala come "non sicuro" a chi lo visita.' },
+  { key: 'slowLoading', text: 'Il sito impiega troppo tempo a caricarsi.' },
+  { key: 'missingTitle', text: 'Manca il titolo della pagina, la riga che Google mostra nei risultati di ricerca.' },
+  { key: 'shortTitle', text: 'Il titolo della pagina è troppo corto per dire di cosa si occupa l’attività.' },
+  { key: 'missingMetaDescription', text: 'Manca la descrizione che compare sotto il titolo nei risultati di Google.' },
+  { key: 'shortMetaDescription', text: 'La descrizione mostrata nei risultati di Google è troppo corta.' },
+  { key: 'missingH1', text: 'La pagina non ha un titolo principale nel testo.' },
+  { key: 'brokenImages', text: 'Alcune immagini non si caricano.' },
+  { key: 'noTracking', text: 'Non c’è nessuno strumento di statistiche: chi gestisce il sito non sa quante visite riceve.' },
+  { key: 'noCookieConsent', text: 'Manca la richiesta di consenso ai cookie.' },
+  { key: 'missingPartitaIva', text: 'La partita IVA non è visibile sul sito, come invece richiede la legge.' },
+  { key: 'noSocialPresence', text: 'Dal sito non si arriva a nessun profilo social.' },
+]
+
+type SocialKey = 'facebook' | 'instagram' | 'linkedin' | 'youtube' | 'twitter' | 'tiktok'
+
+const SOCIAL_PLATFORMS: Array<{ key: SocialKey; label: string }> = [
+  { key: 'facebook', label: 'Facebook' },
+  { key: 'instagram', label: 'Instagram' },
+  { key: 'linkedin', label: 'LinkedIn' },
+  { key: 'youtube', label: 'YouTube' },
+  { key: 'twitter', label: 'X (Twitter)' },
+  { key: 'tiktok', label: 'TikTok' },
+]
+
+const VAT_LOCATIONS: Record<NonNullable<LegalCompliance['partitaIvaLocation']>, string> = {
+  footer: 'nel piè di pagina',
+  header: 'nell’intestazione',
+  contact: 'nella pagina contatti',
+  privacy: 'nell’informativa privacy',
+}
+
+/* ---------------------------------------------------------------------------
+ * Formattazione (solo presentazione)
+ * ------------------------------------------------------------------------- */
+
+/** Hostname leggibile: via protocollo, path e www. */
+function readableHost(value?: string): string {
+  if (!value) return ''
+  try {
+    const parsed = new URL(value.startsWith('http') ? value : `https://${value}`)
+    return parsed.hostname.replace(/^www\./, '')
+  } catch {
+    return value
+  }
+}
+
+/** Millisecondi in secondi, con la virgola decimale italiana. */
+function formatSeconds(ms?: number): string | undefined {
+  if (typeof ms !== 'number' || !Number.isFinite(ms)) return undefined
+  const seconds = (ms / 1000).toLocaleString('it-IT', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })
+  return `${seconds} s`
+}
+
+function formatDate(value?: Date | string): string | undefined {
+  if (!value) return undefined
+  const date = new Date(value as string)
+  if (Number.isNaN(date.getTime())) return undefined
+  return date.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+function plural(count: number, one: string, many: string): string {
+  return count === 1 ? one : many.replace('{n}', String(count))
+}
+
+/**
+ * Le soglie di questa pagina (80 / 60 / 40) sono quelle che c'erano prima:
+ * qui restano solo la parola e la frase che le spiegano, senza helper di colori.
+ */
+function scoreVerdict(score: number): { word: string; tone: ToolTone; caption: string } {
+  if (score >= 80) {
+    return {
+      word: 'Sito in ordine',
+      tone: 'success',
+      caption:
+        'Il sito è tecnicamente a posto: c’è poco da sistemare, e quindi poco da proporre a chi lo gestisce.',
+    }
+  }
+  if (score >= 60) {
+    return {
+      word: 'Qualche lacuna',
+      tone: 'warning',
+      caption:
+        'Il sito funziona, ma ha dei punti scoperti: si può proporre un intervento mirato, non un rifacimento.',
+    }
+  }
+  if (score >= 40) {
+    return {
+      word: 'Diverse lacune',
+      tone: 'warning',
+      caption:
+        'Ci sono problemi concreti su più fronti: c’è spazio per una proposta di lavoro con un motivo preciso.',
+    }
+  }
+  return {
+    word: 'Molti problemi',
+    tone: 'danger',
+    caption:
+      'Il sito ha problemi diffusi: è il tipo di situazione in cui un rifacimento si giustifica da solo.',
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Il rapporto vero e proprio.
+ * Legge gli stessi campi di prima; le sezioni compaiono solo se il campo
+ * corrispondente è arrivato (i lead già in archivio possono avere un'analisi
+ * salvata con una forma diversa).
+ * ------------------------------------------------------------------------- */
+
+function AnalysisReport({ analysis }: { analysis: WebsiteAnalysis }) {
+  const score = analysis.overallScore || 0
+  const verdict = scoreVerdict(score)
+
+  const performance = analysis.performance as PerformanceMetrics | undefined
+  const seo = analysis.seo as SEOAnalysis | undefined
+  const tracking = analysis.tracking as TrackingAnalysis | undefined
+  const gdpr = analysis.gdpr as GDPRCompliance | undefined
+  const legal = analysis.legal as LegalCompliance | undefined
+  const social = analysis.social as SocialPresence | undefined
+  const issues = analysis.issues as Partial<TechnicalIssues> | undefined
+
+  const problems = ISSUE_LABELS.filter(({ key }) => issues?.[key] === true)
+  const loadSeconds = formatSeconds(performance?.loadTime)
+
+  /* --- Riepilogo in cifre --- */
+  const stats: ToolStat[] = []
+  if (issues) {
+    stats.push({
+      label: 'Problemi rilevati',
+      value: problems.length,
+      tone: problems.length > 0 ? 'danger' : 'success',
+    })
+  }
+  if (loadSeconds) {
+    stats.push({ label: 'Caricamento', value: loadSeconds })
+  }
+  if (typeof performance?.totalImages === 'number') {
+    stats.push({ label: 'Immagini', value: performance.totalImages })
+  }
+  if (typeof performance?.averageImageSize === 'number') {
+    stats.push({ label: 'Peso medio immagine', value: `${Math.round(performance.averageImageSize)} KB` })
+  }
+  if (typeof performance?.networkRequests === 'number') {
+    stats.push({ label: 'Richieste di rete', value: performance.networkRequests })
+  }
+
+  /* --- Stato e velocità --- */
+  const statusChecks: ToolCheckItem[] = []
+  if (typeof analysis.isAccessible === 'boolean') {
+    statusChecks.push({
+      id: 'reachable',
+      name: 'Sito raggiungibile',
+      status: analysis.isAccessible ? 'pass' : 'fail',
+      statusLabel: analysis.isAccessible ? 'Raggiungibile' : 'Non raggiungibile',
+      meta: typeof analysis.httpStatus === 'number' ? `Risposta HTTP ${analysis.httpStatus}` : undefined,
+    })
+  }
+  if (typeof performance?.loadTime === 'number') {
+    const slow = performance.loadTime >= 3000
+    statusChecks.push({
+      id: 'load-time',
+      name: 'Tempo di caricamento',
+      status: performance.loadTime < 2000 ? 'pass' : slow ? 'fail' : 'warning',
+      statusLabel: performance.loadTime < 2000 ? 'Veloce' : slow ? 'Lento' : 'Nella media',
+      value: loadSeconds,
+      recommendation: slow
+        ? 'Oltre i tre secondi buona parte dei visitatori chiude la pagina prima che finisca di caricare.'
+        : undefined,
+    })
+  }
+  if (typeof performance?.isResponsive === 'boolean') {
+    statusChecks.push({
+      id: 'responsive',
+      name: 'Adattamento al telefono',
+      status: performance.isResponsive ? 'pass' : 'fail',
+      statusLabel: performance.isResponsive ? 'Si adatta' : 'Non si adatta',
+      recommendation: performance.isResponsive
+        ? undefined
+        : 'Da telefono la pagina non si riadatta: testo minuscolo e scorrimento laterale.',
+    })
+  }
+  if (typeof performance?.brokenImages === 'number') {
+    const broken = performance.brokenImages
+    statusChecks.push({
+      id: 'broken-images',
+      name: 'Immagini che non si caricano',
+      status: broken === 0 ? 'pass' : 'fail',
+      statusLabel: broken === 0 ? 'Nessuna' : plural(broken, '1 rotta', '{n} rotte'),
+      value:
+        typeof performance.totalImages === 'number'
+          ? `${broken} su ${performance.totalImages} immagini della pagina`
+          : undefined,
+    })
+  }
+
+  /* --- Come si presenta su Google --- */
+  const seoChecks: ToolCheckItem[] = []
+  if (seo) {
+    seoChecks.push({
+      id: 'title',
+      name: 'Titolo della pagina',
+      status: seo.hasTitle ? 'pass' : 'fail',
+      statusLabel: seo.hasTitle ? 'Presente' : 'Mancante',
+      value: seo.hasTitle ? `${seo.titleLength} caratteri` : undefined,
+      recommendation: seo.hasTitle
+        ? undefined
+        : 'È la riga che Google mostra come link nei risultati: senza, la pagina si presenta da sola.',
+    })
+    seoChecks.push({
+      id: 'meta-description',
+      name: 'Descrizione nei risultati di ricerca',
+      meta: 'meta description',
+      status: seo.hasMetaDescription ? 'pass' : 'fail',
+      statusLabel: seo.hasMetaDescription ? 'Presente' : 'Mancante',
+      value: seo.hasMetaDescription ? `${seo.metaDescriptionLength} caratteri` : undefined,
+      recommendation: seo.hasMetaDescription
+        ? undefined
+        : 'Senza descrizione, Google inventa un estratto qualsiasi preso dalla pagina.',
+    })
+    seoChecks.push({
+      id: 'h1',
+      name: 'Titolo principale nel testo',
+      meta: 'H1',
+      status: seo.hasH1 ? 'pass' : 'fail',
+      statusLabel: seo.hasH1 ? 'Presente' : 'Mancante',
+      value: seo.hasH1 ? plural(seo.h1Count, '1 titolo trovato', '{n} titoli trovati') : undefined,
+    })
+    seoChecks.push({
+      id: 'structured-data',
+      name: 'Dati strutturati',
+      status: seo.hasStructuredData ? 'pass' : 'warning',
+      statusLabel: seo.hasStructuredData ? 'Presenti' : 'Assenti',
+      recommendation: seo.hasStructuredData
+        ? undefined
+        : 'Servono a far comparire orari, indirizzo e recensioni direttamente nei risultati di Google.',
+    })
+  }
+
+  /* --- Statistiche e tracciamento --- */
+  const trackingChecks: ToolCheckItem[] = []
+  if (tracking) {
+    const detected = (installed: boolean, required: boolean): ToolCheckItem['status'] =>
+      installed ? 'pass' : required ? 'fail' : 'warning'
+
+    trackingChecks.push({
+      id: 'google-analytics',
+      name: 'Google Analytics',
+      status: detected(tracking.hasGoogleAnalytics, true),
+      statusLabel: tracking.hasGoogleAnalytics ? 'Installato' : 'Non rilevato',
+    })
+    trackingChecks.push({
+      id: 'google-tag-manager',
+      name: 'Google Tag Manager',
+      status: detected(tracking.hasGoogleTagManager, true),
+      statusLabel: tracking.hasGoogleTagManager ? 'Installato' : 'Non rilevato',
+    })
+    trackingChecks.push({
+      id: 'meta-pixel',
+      name: 'Meta Pixel',
+      meta: 'Facebook e Instagram',
+      status: detected(tracking.hasFacebookPixel, true),
+      statusLabel: tracking.hasFacebookPixel ? 'Installato' : 'Non rilevato',
+    })
+    trackingChecks.push({
+      id: 'hotjar',
+      name: 'Hotjar',
+      status: detected(tracking.hasHotjar, false),
+      statusLabel: tracking.hasHotjar ? 'Installato' : 'Non rilevato',
+    })
+    trackingChecks.push({
+      id: 'clarity',
+      name: 'Microsoft Clarity',
+      status: detected(tracking.hasClarityMicrosoft, false),
+      statusLabel: tracking.hasClarityMicrosoft ? 'Installato' : 'Non rilevato',
+    })
+
+    if (tracking.customTracking && tracking.customTracking.length > 0) {
+      trackingChecks.push({
+        id: 'custom-tracking',
+        name: 'Altri strumenti rilevati',
+        status: 'pass',
+        statusLabel: plural(tracking.customTracking.length, '1 trovato', '{n} trovati'),
+        details: tracking.customTracking,
+      })
+    }
+  }
+
+  /* --- Cookie e privacy --- */
+  const gdprChecks: ToolCheckItem[] = []
+  if (gdpr) {
+    const consentMethod =
+      gdpr.cookieConsentMethod === 'banner'
+        ? 'Raccolto con una fascia in fondo alla pagina'
+        : gdpr.cookieConsentMethod === 'popup'
+          ? 'Raccolto con una finestra sovrapposta'
+          : undefined
+
+    gdprChecks.push({
+      id: 'cookie-consent',
+      name: 'Consenso ai cookie',
+      status: gdpr.hasCookieBanner ? 'pass' : 'fail',
+      statusLabel: gdpr.hasCookieBanner ? 'Raccolto' : 'Non raccolto',
+      value: consentMethod,
+      recommendation: gdpr.hasCookieBanner
+        ? undefined
+        : 'Se il sito carica statistiche o contenuti esterni senza chiedere il consenso, è fuori norma.',
+    })
+    gdprChecks.push({
+      id: 'privacy-policy',
+      name: 'Informativa privacy',
+      status: gdpr.hasPrivacyPolicy ? 'pass' : 'fail',
+      statusLabel: gdpr.hasPrivacyPolicy ? 'Presente' : 'Assente',
+      value: gdpr.privacyPolicyUrl,
+      mono: Boolean(gdpr.privacyPolicyUrl),
+    })
+    gdprChecks.push({
+      id: 'terms',
+      name: 'Termini di servizio',
+      status: gdpr.hasTermsOfService ? 'pass' : 'warning',
+      statusLabel: gdpr.hasTermsOfService ? 'Presenti' : 'Assenti',
+    })
+
+    if (gdpr.riskyEmbeds && gdpr.riskyEmbeds.length > 0) {
+      gdprChecks.push({
+        id: 'risky-embeds',
+        name: 'Contenuti esterni caricati senza consenso',
+        status: 'warning',
+        statusLabel: plural(gdpr.riskyEmbeds.length, '1 trovato', '{n} trovati'),
+        details: gdpr.riskyEmbeds,
+        recommendation:
+          'Mappe e video incorporati che partono prima del consenso sono la violazione più comune.',
+      })
+    }
+  }
+
+  /* --- Dati dell'attività --- */
+  const legalChecks: ToolCheckItem[] = []
+  if (legal) {
+    legalChecks.push({
+      id: 'vat',
+      name: 'Partita IVA visibile',
+      status: legal.hasVisiblePartitaIva ? 'pass' : 'fail',
+      statusLabel: legal.hasVisiblePartitaIva ? 'Visibile' : 'Non trovata',
+      value:
+        legal.hasVisiblePartitaIva && legal.partitaIvaLocation
+          ? `Trovata ${VAT_LOCATIONS[legal.partitaIvaLocation]}`
+          : undefined,
+      recommendation: legal.hasVisiblePartitaIva
+        ? undefined
+        : 'Per un’attività italiana la partita IVA sul sito è un obbligo di legge.',
+    })
+    legalChecks.push({
+      id: 'address',
+      name: 'Indirizzo dell’attività',
+      status: legal.hasBusinessAddress ? 'pass' : 'warning',
+      statusLabel: legal.hasBusinessAddress ? 'Presente' : 'Non trovato',
+    })
+    legalChecks.push({
+      id: 'contacts',
+      name: 'Recapiti di contatto',
+      status: legal.hasContactInfo ? 'pass' : 'fail',
+      statusLabel: legal.hasContactInfo ? 'Presenti' : 'Mancanti',
+      recommendation: legal.hasContactInfo
+        ? undefined
+        : 'Senza un recapito in chiaro, chi visita il sito non ha modo di scrivere o chiamare.',
+    })
+
+    if (typeof legal.complianceScore === 'number') {
+      legalChecks.push({
+        id: 'compliance',
+        name: 'Completezza dei dati obbligatori',
+        status:
+          legal.complianceScore >= 70 ? 'pass' : legal.complianceScore >= 40 ? 'warning' : 'fail',
+        value: `${legal.complianceScore} su 100`,
+      })
+    }
+  }
+
+  /* --- Social --- */
+  const socialChecks: ToolCheckItem[] = []
+  if (social) {
+    const found = SOCIAL_PLATFORMS.filter(({ key }) => Boolean(social[key]))
+    socialChecks.push({
+      id: 'social',
+      name: 'Profili social collegati dal sito',
+      status: social.hasAnySocial ? 'pass' : 'warning',
+      statusLabel: social.hasAnySocial
+        ? plural(social.socialCount ?? found.length, '1 piattaforma', '{n} piattaforme')
+        : 'Nessuno',
+      details: found.map(({ label }) => label),
+      recommendation: social.hasAnySocial
+        ? undefined
+        : 'Se l’attività ha una pagina Facebook o un profilo Instagram, dal sito non si riesce a raggiungerli.',
+    })
+  }
+
+  return (
+    <div className="space-y-10 sm:space-y-12">
+      <ToolScore
+        value={score}
+        label="Punteggio tecnico"
+        qualifier={verdict.word}
+        tone={verdict.tone}
+        caption={verdict.caption}
+      />
+
+      {stats.length > 0 && <ToolSummaryStats items={stats} />}
+
+      {problems.length > 0 && (
+        <section>
+          <h3 className="text-heading font-semibold text-content">Cosa non va</h3>
+          <p className="mt-2 max-w-2xl text-body text-content-muted">
+            Detto senza gergo: sono i punti da cui puoi partire per una proposta.
+          </p>
+          <ul className="mt-4 space-y-2.5">
+            {problems.map(({ key, text }) => (
+              <li key={key} className="flex items-start gap-3 text-body text-content">
+                <span
+                  className="mt-2 h-1.5 w-1.5 shrink-0 rounded-pill bg-content-subtle"
+                  aria-hidden="true"
+                />
+                {text}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {statusChecks.length > 0 && (
+        <ToolCheckList
+          title="Stato del sito"
+          description="Se la pagina risponde, quanto ci mette e come si comporta da telefono."
+          items={statusChecks}
+        />
+      )}
+
+      {seoChecks.length > 0 && (
+        <ToolCheckList
+          title="Come si presenta su Google"
+          description="Gli elementi che i motori di ricerca leggono per capire di cosa parla la pagina."
+          items={seoChecks}
+        />
+      )}
+
+      {trackingChecks.length > 0 && (
+        <ToolCheckList
+          title="Statistiche e tracciamento"
+          description="Strumenti che dicono a chi gestisce il sito quante visite riceve e da dove arrivano."
+          items={trackingChecks}
+        />
+      )}
+
+      {gdprChecks.length > 0 && (
+        <ToolCheckList
+          title="Cookie e privacy"
+          description="Gli obblighi che riguardano i dati di chi visita il sito."
+          items={gdprChecks}
+        />
+      )}
+
+      {legalChecks.length > 0 && (
+        <ToolCheckList
+          title="Dati dell’attività"
+          description="Le informazioni che per legge devono essere raggiungibili dal sito."
+          items={legalChecks}
+        />
+      )}
+
+      {socialChecks.length > 0 && <ToolCheckList title="Presenza social" items={socialChecks} />}
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------------- */
 
 export default function ManualScanPage() {
   const [url, setUrl] = useState('')
@@ -67,7 +591,7 @@ export default function ManualScanPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    
+
     if (!url.trim()) {
       setError('Inserisci un URL valido')
       return
@@ -110,7 +634,7 @@ export default function ManualScanPage() {
       setResult(data.data)
       setUserCredits(data.data.creditsRemaining)
 
-      
+
     } catch (error) {
       console.error('Errore analisi:', error)
       setError(error instanceof Error ? error.message : 'Errore durante l\'analisi')
@@ -119,615 +643,214 @@ export default function ManualScanPage() {
     }
   }
 
-  function getScoreColor(score: number) {
-    if (score >= 80) return 'text-green-600 dark:text-green-400'
-    if (score >= 60) return 'text-yellow-600 dark:text-yellow-400'
-    return 'text-red-600 dark:text-red-400'
-  }
+  /* --- Presentazione --- */
 
-  function getScoreDescription(score: number) {
-    if (score >= 80) return 'Sito ottimizzato - Poche opportunità'
-    if (score >= 60) return 'Sito discreto - Alcune opportunità'
-    if (score >= 40) return 'Sito migliorabile - Buone opportunità'
-    return 'Sito problematico - Ottime opportunità!'
-  }
+  const hasNoCredits = userCredits !== null && userCredits < 1
+  const analysis = result?.analysis
+  const host = readableHost(analysis?.finalUrl || analysis?.url)
+  const analysisDate = formatDate(analysis?.analysisDate)
+  const isExistingLead = Boolean(responseData?.existingLead)
+  const leadInfo = responseData?.leadInfo
+
+  // La scheda del lead esiste solo se l'analisi è stata salvata: le analisi
+  // semplificate ricevono un id temporaneo che non corrisponde a nessuna riga.
+  const canOpenLead = Boolean(
+    result?.leadId && !result.isSimplifiedAnalysis && !result.leadId.startsWith('temp-')
+  )
+
+  const creditsNote =
+    userCredits === null
+      ? 'Controllo del saldo crediti in corso.'
+      : hasNoCredits
+        ? 'Non hai crediti disponibili per una nuova analisi.'
+        : userCredits === 1
+          ? 'Ti resta 1 credito. Ogni analisi ne consuma 1.'
+          : `Ti restano ${formatCredits(userCredits)} crediti. Ogni analisi ne consuma 1.`
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Header */}
-        <div id="manual-scan-header" className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            🔍 Analisi Manuale Siti Web
-          </h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Analizza qualsiasi sito web per identificare opportunità di business.
-            Ogni analisi costa <span className="font-semibold">1 credito</span>.
-          </p>
-          
-          {userCredits !== null && (
-            <div className="mt-4 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-              💳 Crediti rimanenti: {userCredits}
-            </div>
-          )}
-        </div>
+    <div className="min-h-screen bg-surface">
+      <div className="mx-auto max-w-4xl px-4 pb-16 pt-24 sm:px-6 sm:pb-24 sm:pt-28 lg:px-8">
+        <ToolPageHeader
+          title="Analisi avanzata di un sito"
+          description="Lancia su un indirizzo a tua scelta lo stesso motore che analizza i lead di TrovaMi. Il rapporto resta nel tuo account."
+          hideUsage
+        >
+          <ToolUrlForm
+            value={url}
+            onChange={setUrl}
+            onSubmit={handleSubmit}
+            loading={isLoading}
+            disabled={hasNoCredits}
+            inputType="url"
+            required
+            placeholder="https://esempio.it"
+            submitLabel="Analizza il sito"
+            hint="Controlliamo velocità, SEO, tracciamento, cookie e privacy, dati legali e profili social."
+          />
+          <p className="mt-3 text-caption text-content-subtle">{creditsNote}</p>
+        </ToolPageHeader>
 
-        {/* Form */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 p-6 mb-8">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                URL del sito da analizzare
-              </label>
-              <div className="flex gap-3">
-                <div className="flex-1 min-w-0">
-                  <input
-                    type="url"
-                    id="url"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    placeholder="https://esempio.com"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                    disabled={isLoading}
-                    required
-                  />
-                </div>
-                <div className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed font-medium">
-                  <button
-                    type="submit"
-                    disabled={isLoading || (userCredits !== null && userCredits < 1)}
-                    className="w-full"
-                  >
-                    {isLoading ? (
-                      <>
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Analizzando...
-                      </>
-                    ) : (
-                      '🔍 Analizza Sito'
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
+        {hasNoCredits && (
+          <ToolStatusMessage
+            tone="warning"
+            className="mt-8"
+            title="Servono crediti per lanciare un’analisi"
+            action={
+              <LinkButton href="/upgrade" variant="secondary">
+                Vedi i piani
+              </LinkButton>
+            }
+          >
+            Ogni analisi avanzata consuma 1 credito. Puoi cambiare piano oppure acquistare un
+            pacchetto di crediti.
+          </ToolStatusMessage>
+        )}
 
-            {/* Warning crediti */}
-            {userCredits !== null && userCredits < 1 && (
-              <div className="bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700 rounded-md p-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                      Crediti insufficienti
-                    </h3>
-                    <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
-                      Hai bisogno di almeno 1 credito per eseguire un'analisi. 
-                      <a href="/upgrade" className="font-medium underline hover:text-yellow-600 dark:hover:text-yellow-400 ml-1">
-                        Effettua l'upgrade del piano
-                      </a>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Conferma costo */}
-            {userCredits !== null && userCredits >= 1 && (
-              <div className="bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-md p-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                      💳 Costo analisi: 1 credito
-                    </h3>
-                    <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
-                      L'analisi includerà: SEO, Performance, Tracking, GDPR, Presenza Social e Score complessivo.
-                      Il sito analizzato verrà salvato anche come lead per altri utenti.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </form>
-        </div>
-
-        {/* Errore */}
         {error && (
-          <div className="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-md p-4 mb-8">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
-                  Errore durante l'analisi
-                </h3>
-                <p className="mt-1 text-sm text-red-700 dark:text-red-300">{error}</p>
-              </div>
-            </div>
-          </div>
+          <ToolStatusMessage tone="danger" className="mt-8">
+            {error}
+          </ToolStatusMessage>
         )}
 
-        {/* Messaggio Lead Esistente */}
-        {responseData?.existingLead && (
-          <div className="bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-md p-4 mb-8">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                  🔍 Lead già presente nel database
-                </h3>
-                <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">{responseData.message}</p>
-                {responseData.leadInfo && (
-                  <div className="mt-3 p-3 bg-blue-100 dark:bg-blue-800 rounded-md">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-blue-700 dark:text-blue-300">
-                      <div><strong>Nome Business:</strong> {responseData.leadInfo.businessName || 'Non disponibile'}</div>
-                      <div><strong>Punteggio:</strong> <span className={getScoreColor(responseData.leadInfo.score)}>{responseData.leadInfo.score}/100</span></div>
-                      <div><strong>Origine:</strong> {responseData.leadInfo.origin === 'manual' ? '🔍 Analisi Manuale' : '🤖 Scraping Automatico'}</div>
-                      <div><strong>Data Analisi:</strong> {new Date(responseData.leadInfo.analyzedDate).toLocaleDateString('it-IT')}</div>
-                      <div className="md:col-span-2"><strong>URL Originale:</strong> {responseData.leadInfo.websiteUrl}</div>
-                    </div>
-                  </div>
+        {isLoading && <ToolLoadingState className="mt-12 sm:mt-16" rows={6} />}
+
+        {!isLoading && result && analysis && (
+          <ToolResultPanel
+            className="mt-12 sm:mt-16"
+            title="Risultato dell’analisi"
+            subject={host || undefined}
+            meta={analysisDate ? `Analisi del ${analysisDate}` : undefined}
+            actions={
+              <>
+                {canOpenLead && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => router.push(`/lead/${result.leadId}`)}
+                  >
+                    Apri la scheda del lead
+                  </Button>
                 )}
-                <div className="mt-3 flex items-center space-x-2">
-                  <div className="flex items-center text-sm text-green-600 dark:text-green-400 font-medium">
-                    <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    ✅ Nessun credito consumato
-                  </div>
-                  <div className="text-sm text-blue-600 dark:text-blue-400">
-                    • Analisi completa disponibile qui sotto
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Risultati */}
-        {result && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 overflow-hidden">
-            {/* Header risultato */}
-            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    📊 Risultati Analisi
-                  </h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    {result.analysis.finalUrl}
-                  </p>
-                  {responseData?.existingLead ? (
-                    <div className="mt-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                      ♻️ Lead esistente - Nessun credito consumato
-                    </div>
-                  ) : result.isSimplifiedAnalysis ? (
-                    <div className="mt-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">
-                      ⚡ Analisi semplificata - 1 credito utilizzato
-                    </div>
-                  ) : (
-                    <div className="mt-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
-                      ✨ Nuovo lead creato - 1 credito utilizzato
-                    </div>
-                  )}
-                </div>
-                <div className="text-right">
-                  <div className={`text-2xl font-bold ${getScoreColor(result.analysis.overallScore || 0)}`}>
-                    {result.analysis.overallScore || 0}/100
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">Score Tecnico</div>
-                </div>
-              </div>
-              <div className="mt-2">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getScoreColor(result.analysis.overallScore || 0)} bg-opacity-10`}>
-                  {getScoreDescription(result.analysis.overallScore || 0)}
-                </span>
-              </div>
-            </div>
-
-            {/* Banner per analisi semplificata */}
-            {result.isSimplifiedAnalysis && (
-              <div className="mx-6 mt-4 mb-0 p-4 bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700 rounded-lg">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Analisi Semplificata</h3>
-                    <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
-                      <p>
-                        Questa è un'analisi semplificata eseguita senza browser. Alcune metriche come performance, immagini rotte e layout responsivo potrebbero non essere precise. 
-                        L'analisi semplificata non viene salvata nel database.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Contenuto risultato */}
-            <div className="p-6 space-y-6">
-              
-              {/* Status generale */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className={`text-lg font-semibold ${result.analysis.isAccessible ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {result.analysis.isAccessible ? '✅' : '❌'}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    {result.analysis.isAccessible ? 'Sito Accessibile' : 'Sito Non Accessibile'}
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    HTTP {result.analysis.httpStatus}
-                  </div>
-                </div>
-
-                <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className={`text-lg font-semibold ${result.analysis.performance.loadTime < 3000 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    ⚡
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Performance</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {(result.analysis.performance.loadTime / 1000).toFixed(1)}s caricamento
-                  </div>
-                </div>
-
-                <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className={`text-lg font-semibold ${result.analysis.performance.isResponsive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    📱
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Mobile</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {result.analysis.performance.isResponsive ? 'Responsive' : 'Non Responsive'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Dettagli analisi */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* SEO */}
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">🎯 SEO Base</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Titolo</span>
-                      <span className={`text-sm ${result.analysis.seo.hasTitle ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {result.analysis.seo.hasTitle ? `✅ (${result.analysis.seo.titleLength} char)` : '❌ Mancante'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Meta Description</span>
-                      <span className={`text-sm ${result.analysis.seo.hasMetaDescription ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {result.analysis.seo.hasMetaDescription ? `✅ (${result.analysis.seo.metaDescriptionLength} char)` : '❌ Mancante'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Header H1</span>
-                      <span className={`text-sm ${result.analysis.seo.hasH1 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {result.analysis.seo.hasH1 ? `✅ (${result.analysis.seo.h1Count})` : '❌ Mancante'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Dati Strutturati</span>
-                      <span className={`text-sm ${result.analysis.seo.hasStructuredData ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
-                        {result.analysis.seo.hasStructuredData ? '✅ Presenti' : '⚠️ Assenti'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Tracking */}
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">📈 Tracking & Analytics</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Google Analytics</span>
-                      <span className={`text-sm ${result.analysis.tracking.hasGoogleAnalytics ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {result.analysis.tracking.hasGoogleAnalytics ? '✅ Installato' : '❌ Non rilevato'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Facebook Pixel</span>
-                      <span className={`text-sm ${result.analysis.tracking.hasFacebookPixel ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {result.analysis.tracking.hasFacebookPixel ? '✅ Installato' : '❌ Non rilevato'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Google Tag Manager</span>
-                      <span className={`text-sm ${result.analysis.tracking.hasGoogleTagManager ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {result.analysis.tracking.hasGoogleTagManager ? '✅ Installato' : '❌ Non rilevato'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Hotjar</span>
-                      <span className={`text-sm ${result.analysis.tracking.hasHotjar ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
-                        {result.analysis.tracking.hasHotjar ? '✅ Installato' : '⚠️ Non rilevato'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Microsoft Clarity</span>
-                      <span className={`text-sm ${result.analysis.tracking.hasClarityMicrosoft ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
-                        {result.analysis.tracking.hasClarityMicrosoft ? '✅ Installato' : '⚠️ Non rilevato'}
-                      </span>
-                    </div>
-                    {result.analysis.tracking.customTracking.length > 0 && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Altri Tracking</span>
-                        <span className="text-sm text-blue-600 dark:text-blue-400">
-                          ℹ️ {result.analysis.tracking.customTracking.join(', ')}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Seconda riga - GDPR e Legal */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* GDPR & Privacy */}
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">🔒 GDPR & Privacy</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Cookie Banner</span>
-                      <span className={`text-sm ${result.analysis.gdpr.hasCookieBanner ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {result.analysis.gdpr.hasCookieBanner ? '✅ Presente' : '❌ Assente'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Privacy Policy</span>
-                      <span className={`text-sm ${result.analysis.gdpr.hasPrivacyPolicy ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {result.analysis.gdpr.hasPrivacyPolicy ? '✅ Presente' : '❌ Assente'}
-                      </span>
-                    </div>
-                    {result.analysis.gdpr.privacyPolicyUrl && (
-                      <div className="text-xs text-blue-600 dark:text-blue-400 truncate">
-                        🔗 {result.analysis.gdpr.privacyPolicyUrl}
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Termini di Servizio</span>
-                      <span className={`text-sm ${result.analysis.gdpr.hasTermsOfService ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
-                        {result.analysis.gdpr.hasTermsOfService ? '✅ Presenti' : '⚠️ Assenti'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Metodo Consenso</span>
-                      <span className="text-sm text-gray-900 dark:text-gray-300">
-                        {result.analysis.gdpr.cookieConsentMethod === 'banner' ? '📄 Banner' : 
-                         result.analysis.gdpr.cookieConsentMethod === 'popup' ? '🪟 Popup' : '❌ Nessuno'}
-                      </span>
-                    </div>
-                    {result.analysis.gdpr.riskyEmbeds.length > 0 && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Embed Rischiosi</span>
-                        <span className="text-sm text-orange-600">
-                          ⚠️ {result.analysis.gdpr.riskyEmbeds.join(', ')}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Legal Compliance */}
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">⚖️ Compliance Legale</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Partita IVA</span>
-                      <span className={`text-sm ${result.analysis.legal.hasVisiblePartitaIva ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {result.analysis.legal.hasVisiblePartitaIva ? '✅ Visibile' : '❌ Non trovata'}
-                      </span>
-                    </div>
-                    {result.analysis.legal.partitaIvaLocation && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        📍 Posizione: {result.analysis.legal.partitaIvaLocation}
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Indirizzo Business</span>
-                      <span className={`text-sm ${result.analysis.legal.hasBusinessAddress ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
-                        {result.analysis.legal.hasBusinessAddress ? '✅ Presente' : '⚠️ Non trovato'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Info Contatto</span>
-                      <span className={`text-sm ${result.analysis.legal.hasContactInfo ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {result.analysis.legal.hasContactInfo ? '✅ Presenti' : '❌ Mancanti'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Score Conformità</span>
-                      <span className={`text-sm font-medium ${result.analysis.legal.complianceScore >= 70 ? 'text-green-600' : 
-                                                                  result.analysis.legal.complianceScore >= 40 ? 'text-orange-600 dark:text-orange-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {result.analysis.legal.complianceScore}/100
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Terza riga - Social e Performance */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* Social Presence */}
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">📱 Presenza Social</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Presenza Social</span>
-                      <span className={`text-sm ${result.analysis.social.hasAnySocial ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
-                        {result.analysis.social.hasAnySocial ? `✅ ${result.analysis.social.socialCount} piattaforme` : '⚠️ Nessuna'}
-                      </span>
-                    </div>
-                    {result.analysis.social.facebook && (
-                      <div className="text-xs text-blue-600 dark:text-blue-400 truncate">
-                        📘 Facebook: {result.analysis.social.facebook}
-                      </div>
-                    )}
-                    {result.analysis.social.instagram && (
-                      <div className="text-xs text-pink-600 dark:text-pink-400 truncate">
-                        📷 Instagram: {result.analysis.social.instagram}
-                      </div>
-                    )}
-                    {result.analysis.social.linkedin && (
-                      <div className="text-xs text-blue-700 dark:text-blue-400 truncate">
-                        💼 LinkedIn: {result.analysis.social.linkedin}
-                      </div>
-                    )}
-                    {result.analysis.social.youtube && (
-                      <div className="text-xs text-red-600 dark:text-red-400 truncate">
-                        📺 YouTube: {result.analysis.social.youtube}
-                      </div>
-                    )}
-                    {result.analysis.social.twitter && (
-                      <div className="text-xs text-blue-400 truncate">
-                        🐦 Twitter/X: {result.analysis.social.twitter}
-                      </div>
-                    )}
-                    {result.analysis.social.tiktok && (
-                      <div className="text-xs text-black dark:text-gray-300 truncate">
-                        🎵 TikTok: {result.analysis.social.tiktok}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Performance Dettagliata */}
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">⚡ Performance Dettagliata</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Tempo Caricamento</span>
-                      <span className={`text-sm font-medium ${result.analysis.performance.loadTime < 2000 ? 'text-green-600' : 
-                                                               result.analysis.performance.loadTime < 3000 ? 'text-orange-600 dark:text-orange-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {(result.analysis.performance.loadTime / 1000).toFixed(1)}s
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Immagini Totali</span>
-                      <span className="text-sm text-gray-900 dark:text-gray-300">
-                        {result.analysis.performance.totalImages}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Immagini Rotte</span>
-                      <span className={`text-sm ${result.analysis.performance.brokenImages === 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {result.analysis.performance.brokenImages === 0 ? '✅ Nessuna' : `❌ ${result.analysis.performance.brokenImages}`}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Design Responsive</span>
-                      <span className={`text-sm ${result.analysis.performance.isResponsive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {result.analysis.performance.isResponsive ? '✅ Sì' : '❌ No'}
-                      </span>
-                    </div>
-                    {result.analysis.performance.averageImageSize && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Dimensione Media Img</span>
-                        <span className="text-sm text-gray-900 dark:text-gray-300">
-                          {Math.round(result.analysis.performance.averageImageSize)}KB
-                        </span>
-                      </div>
-                    )}
-                    {result.analysis.performance.networkRequests && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Richieste di Rete</span>
-                        <span className="text-sm text-gray-900 dark:text-gray-300">
-                          {result.analysis.performance.networkRequests}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Problemi identificati */}
-              {Object.values(result.analysis.issues).some(issue => issue) && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">⚠️ Problemi Identificati</h3>
-                  <div className="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-md p-4">
-                    <ul className="space-y-1 text-sm text-red-700 dark:text-red-300">
-                      {result.analysis.issues.missingTitle && <li>• Titolo mancante</li>}
-                      {result.analysis.issues.shortTitle && <li>• Titolo troppo corto</li>}
-                      {result.analysis.issues.missingMetaDescription && <li>• Meta description mancante</li>}
-                      {result.analysis.issues.shortMetaDescription && <li>• Meta description troppo corta</li>}
-                      {result.analysis.issues.missingH1 && <li>• Header H1 mancante</li>}
-                      {result.analysis.issues.slowLoading && <li>• Caricamento lento</li>}
-                      {result.analysis.issues.noTracking && <li>• Nessun sistema di tracking</li>}
-                      {result.analysis.issues.httpsIssues && <li>• Problemi HTTPS</li>}
-                    </ul>
-                  </div>
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex gap-4 pt-4 border-t dark:border-gray-700">
-                <button
-                  onClick={() => router.push(`/lead/${result.leadId}`)}
-                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium"
-                >
-                  📄 Vedi Lead Completo
-                </button>
-                
-                <button
+                <Button
+                  variant="secondary"
                   onClick={() => {
                     setResult(null)
                     setUrl('')
                     setError('')
                   }}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
-                  🔍 Nuova Analisi
-                </button>
-              </div>
+                  Analizza un altro sito
+                </Button>
+              </>
+            }
+          >
+            <div className="space-y-10 sm:space-y-12">
+              {isExistingLead && (
+                <ToolStatusMessage tone="accent" title="Questo dominio era già in archivio">
+                  <p>
+                    {responseData?.message ??
+                      'Ti mostriamo l’analisi già salvata invece di rifarla da capo.'}
+                  </p>
+                  {leadInfo && (
+                    <dl className="mt-4 grid gap-x-8 gap-y-2 sm:grid-cols-2">
+                      {leadInfo.businessName && (
+                        <div>
+                          <dt className="text-micro text-content-subtle">Attività</dt>
+                          <dd className="text-caption text-content">{leadInfo.businessName}</dd>
+                        </div>
+                      )}
+                      {leadInfo.origin && (
+                        <div>
+                          <dt className="text-micro text-content-subtle">Da dove arriva</dt>
+                          <dd className="text-caption text-content">
+                            {leadInfo.origin === 'manual'
+                              ? 'Analisi manuale di un utente'
+                              : 'Ricerca automatica di TrovaMi'}
+                          </dd>
+                        </div>
+                      )}
+                      {formatDate(leadInfo.analyzedDate) && (
+                        <div>
+                          <dt className="text-micro text-content-subtle">Analizzato il</dt>
+                          <dd className="text-caption text-content">
+                            {formatDate(leadInfo.analyzedDate)}
+                          </dd>
+                        </div>
+                      )}
+                      {leadInfo.websiteUrl && (
+                        <div className="min-w-0">
+                          <dt className="text-micro text-content-subtle">Indirizzo salvato</dt>
+                          <dd className="break-all text-caption text-content">
+                            {leadInfo.websiteUrl}
+                          </dd>
+                        </div>
+                      )}
+                    </dl>
+                  )}
+                </ToolStatusMessage>
+              )}
 
-              {/* Info finale */}
-              <div className="bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-md p-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                      ✨ Analisi completata!
-                    </h3>
-                    <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
-                      Il sito è stato analizzato e salvato nel database.
-                      <br />
-                      💳 Crediti rimanenti: {result.creditsRemaining}
-                    </p>
-                  </div>
-                </div>
+              {result.isSimplifiedAnalysis && (
+                <ToolStatusMessage tone="warning" title="Analisi semplificata">
+                  Il sito è stato letto senza aprirlo in un browser: velocità, immagini rotte e
+                  adattamento al telefono possono essere imprecisi. Questo rapporto non viene
+                  salvato nel tuo archivio.
+                </ToolStatusMessage>
+              )}
+
+              <AnalysisReport analysis={analysis} />
+
+              <div className="border-t border-edge pt-6 text-caption text-content-subtle">
+                <p>
+                  Crediti rimasti:{' '}
+                  <span className="tabular-nums text-content">
+                    {formatCredits(result.creditsRemaining)}
+                  </span>
+                </p>
+                {!result.isSimplifiedAnalysis && !isExistingLead && (
+                  <p className="mt-1">
+                    Il sito è stato salvato come lead: lo trovi nel tuo archivio e diventa
+                    visibile anche agli altri utenti di TrovaMi.
+                  </p>
+                )}
               </div>
             </div>
-          </div>
+          </ToolResultPanel>
         )}
+
+        {!isLoading && !result && (
+          <section className="mt-12 border-t border-edge pt-10 sm:mt-16 sm:pt-12">
+            <h2 className="text-heading font-semibold text-content">
+              Cosa succede quando lanci l&apos;analisi
+            </h2>
+            <ul className="mt-5 space-y-3">
+              {[
+                'Il motore apre il sito e controlla velocità, SEO, tracciamento, cookie e privacy, dati legali e profili social.',
+                'Il rapporto viene salvato come lead: lo ritrovi nel tuo archivio e diventa visibile anche agli altri utenti di TrovaMi.',
+                'Il credito viene scalato all’avvio, quindi anche se il sito risulta irraggiungibile.',
+              ].map((line) => (
+                <li key={line} className="flex items-start gap-3 text-body text-content-muted">
+                  <span
+                    className="mt-2 h-1.5 w-1.5 shrink-0 rounded-pill bg-content-subtle"
+                    aria-hidden="true"
+                  />
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <ToolSignupCta
+          className="mt-12 sm:mt-16"
+          variant="secondary"
+          title="Attività con questi problemi, senza cercarle a mano"
+          description="Qui analizzi un sito alla volta, quello che scegli tu. Nella dashboard ci sono le attività italiane già analizzate da TrovaMi, filtrate per zona, categoria e tipo di problema."
+          ctaLabel="Vai a trova clienti"
+          ctaHref="/dashboard"
+          note=""
+        />
+
+        <ToolsCrossLinks className="mt-12 sm:mt-16" currentSlug="manual-scan" />
       </div>
     </div>
   )

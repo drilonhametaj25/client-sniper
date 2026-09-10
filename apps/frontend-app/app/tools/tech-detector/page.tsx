@@ -1,35 +1,49 @@
 /**
- * Tech Stack Detector - Tool gratuito per identificare le tecnologie di un sito web
- * Analizza CMS, framework, librerie, analytics e altro
- * Parte della strategia di lead generation tramite tool gratuiti
+ * Tech Detector — tool pubblico che elenca le tecnologie usate da un sito.
+ *
+ * Percorso: apps/frontend-app/app/tools/tech-detector/page.tsx
+ * Guida: apps/frontend-app/DESIGN.md · Primitive: components/tools/ e components/ui/
+ * Chiamata da: indice /tools, voce "Tools" della Navbar, ricerca organica.
+ *
+ * Presentazione sui token del design system. Il risultato è il soggetto della
+ * pagina: le tecnologie sono raggruppate per categoria e dette come testo, non
+ * come una fila di badge colorati, e l'invito a registrarsi arriva una volta
+ * sola, dopo che l'utente ha visto l'esito.
+ *
+ * La logica è invariata: stessa chiamata a /api/tools/tech-detector, stessi
+ * campi della risposta, stessa gestione del limite giornaliero e degli errori.
+ * Header e footer per-pagina sono stati tolti: li copre la Navbar globale.
  */
 
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
 import {
-  Search,
-  Server,
-  Code,
   BarChart3,
-  Shield,
-  Globe,
-  Zap,
-  CheckCircle,
-  XCircle,
-  ArrowRight,
-  Layers,
-  Database,
-  Palette,
-  Activity,
   Cloud,
+  Code,
+  Database,
+  Layers,
+  Palette,
+  Puzzle,
+  Server,
+  Shield,
+  ShoppingCart,
   Type,
-  Lock,
-  Gift,
-  Target
+  type LucideIcon,
 } from 'lucide-react'
 import NewsletterForm from '@/components/NewsletterForm'
+import {
+  ToolLoadingState,
+  ToolPageHeader,
+  ToolResultPanel,
+  ToolSignupCta,
+  ToolStatusMessage,
+  ToolSummaryStats,
+  ToolUrlForm,
+  ToolsCrossLinks,
+  type ToolStat,
+} from '@/components/tools'
 
 interface TechStack {
   cms: string[]
@@ -63,18 +77,141 @@ interface UsageInfo {
   canAnalyze: boolean
 }
 
-const categoryConfig: Record<keyof TechStack, { icon: any; label: string; color: string }> = {
-  cms: { icon: Database, label: 'CMS', color: 'blue' },
-  frameworks: { icon: Code, label: 'Framework', color: 'purple' },
-  jsLibraries: { icon: Layers, label: 'Librerie JS', color: 'yellow' },
-  cssFrameworks: { icon: Palette, label: 'CSS Framework', color: 'pink' },
-  analytics: { icon: BarChart3, label: 'Analytics', color: 'green' },
-  cdn: { icon: Cloud, label: 'CDN', color: 'cyan' },
-  server: { icon: Server, label: 'Server', color: 'gray' },
-  ecommerce: { icon: Gift, label: 'E-commerce', color: 'orange' },
-  fonts: { icon: Type, label: 'Font', color: 'indigo' },
-  security: { icon: Shield, label: 'Sicurezza', color: 'red' },
-  other: { icon: Zap, label: 'Altro', color: 'slate' },
+/**
+ * Nome, icona di argomento e qualche esempio per ogni categoria dell'API.
+ * L'icona è un rinforzo quieto (16px, grigia): l'informazione è il nome.
+ */
+const CATEGORY_META: Record<
+  keyof TechStack,
+  { label: string; icon: LucideIcon; examples?: string }
+> = {
+  cms: {
+    label: 'CMS',
+    icon: Database,
+    examples: 'WordPress, Shopify, Wix, Squarespace, Webflow, Joomla',
+  },
+  ecommerce: {
+    label: 'E-commerce e pagamenti',
+    icon: ShoppingCart,
+    examples: 'WooCommerce, Shopify, BigCommerce, Stripe, PayPal',
+  },
+  frameworks: {
+    label: 'Framework',
+    icon: Code,
+    examples: 'React, Next.js, Vue, Angular, Laravel, Django',
+  },
+  jsLibraries: {
+    label: 'Librerie JavaScript',
+    icon: Layers,
+    examples: 'jQuery, GSAP, Chart.js, D3.js, Alpine.js',
+  },
+  cssFrameworks: {
+    label: 'Framework CSS',
+    icon: Palette,
+    examples: 'Bootstrap, Tailwind CSS, Material UI, Bulma',
+  },
+  analytics: {
+    label: 'Statistiche e tracciamento',
+    icon: BarChart3,
+    examples: 'Google Analytics, Tag Manager, Meta Pixel, Hotjar, Matomo',
+  },
+  cdn: {
+    label: 'Rete di distribuzione (CDN)',
+    icon: Cloud,
+    examples: 'Cloudflare, CloudFront, Fastly, Vercel, Netlify',
+  },
+  server: {
+    label: 'Server',
+    icon: Server,
+    examples: 'Apache, Nginx, IIS, PHP, Node.js',
+  },
+  security: {
+    label: 'Protezione dei moduli',
+    icon: Shield,
+    examples: 'reCAPTCHA, hCaptcha, Cloudflare',
+  },
+  fonts: {
+    label: 'Font',
+    icon: Type,
+    examples: 'Google Fonts, Adobe Fonts, Font Awesome',
+  },
+  other: {
+    label: 'Altro',
+    icon: Puzzle,
+  },
+}
+
+/** Ordine di lettura: prima ciò che dice come si mette mano al sito. */
+const CATEGORY_ORDER: Array<keyof TechStack> = [
+  'cms',
+  'ecommerce',
+  'frameworks',
+  'jsLibraries',
+  'cssFrameworks',
+  'analytics',
+  'cdn',
+  'server',
+  'security',
+  'fonts',
+  'other',
+]
+
+/** Le categorie con un esempio da mostrare prima dell'analisi. */
+const PREVIEW_CATEGORIES = CATEGORY_ORDER.filter((key) => Boolean(CATEGORY_META[key].examples))
+
+/** "a, b e c" — per scrivere gli elenchi dentro una frase. */
+function listToText(items: string[]): string {
+  if (items.length <= 1) return items.join('')
+  return `${items.slice(0, -1).join(', ')} e ${items[items.length - 1]}`
+}
+
+/**
+ * Due righe in italiano su cosa dicono le tecnologie trovate. Sono derivate
+ * dagli stessi campi che arrivano dall'API — nessuna chiamata in più — e
+ * restano prudenti: il rilevamento legge tracce, non certificati.
+ */
+function readTechStack(tech: TechStack): string[] {
+  const notes: string[] = []
+
+  if (tech.cms.length > 0) {
+    notes.push(
+      `Il sito è costruito su ${listToText(tech.cms)}: chi ci mette mano lavora sul tema e sui plugin, senza rifarlo da capo.`
+    )
+  } else if (tech.frameworks.length > 0) {
+    notes.push(
+      `Non compare nessun CMS: il sito sembra sviluppato su misura con ${listToText(tech.frameworks)}, quindi ogni modifica passa da chi lo ha scritto.`
+    )
+  }
+
+  if (tech.analytics.length === 0) {
+    notes.push(
+      'Nel codice della pagina non compare nessuno strumento di statistica: chi gestisce il sito probabilmente non sa quante persone lo visitano né da dove arrivano.'
+    )
+  }
+
+  return notes
+}
+
+/** L'hostname del sito analizzato, con ripiego sull'indirizzo così com'è. */
+function hostnameOf(url: string): string {
+  try {
+    return new URL(url).hostname
+  } catch {
+    return url
+  }
+}
+
+function formatAnalysisDate(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+
+  return date.toLocaleDateString('it-IT', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 export default function TechDetectorPage() {
@@ -137,329 +274,209 @@ export default function TechDetectorPage() {
     }
   }
 
-  const renderTechCategory = (category: keyof TechStack, techs: string[]) => {
-    if (techs.length === 0) return null
+  const limitReached = usage !== null && !usage.canAnalyze
 
-    const config = categoryConfig[category]
-    const IconComponent = config.icon
+  // Solo le categorie con almeno una tecnologia, nell'ordine di lettura
+  const detected = result
+    ? CATEGORY_ORDER.map((key) => ({ key, techs: result.techStack?.[key] ?? [] })).filter(
+        (entry) => entry.techs.length > 0
+      )
+    : []
 
-    return (
-      <div key={category} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-3 mb-4">
-          <div className={`p-2 rounded-lg bg-${config.color}-100 dark:bg-${config.color}-900/30`}>
-            <IconComponent className={`w-5 h-5 text-${config.color}-600 dark:text-${config.color}-400`} />
-          </div>
-          <h3 className="font-semibold text-gray-900 dark:text-white">{config.label}</h3>
-          <span className="ml-auto text-sm text-gray-500 dark:text-gray-400">{techs.length}</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {techs.map((tech, idx) => (
-            <span
-              key={idx}
-              className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full text-sm font-medium"
-            >
-              {tech}
-            </span>
-          ))}
-        </div>
-      </div>
-    )
-  }
+  const notes = result && result.totalTechnologies > 0 ? readTechStack(result.techStack) : []
+
+  const stats: ToolStat[] = result
+    ? [
+        { label: 'Tecnologie rilevate', value: result.totalTechnologies },
+        { label: 'Categorie', value: detected.length },
+        {
+          label: 'Risposta del sito',
+          value: `HTTP ${result.httpStatus}`,
+          tone: result.isAccessible ? undefined : 'danger',
+        },
+      ]
+    : []
+
+  const analysisDate = result ? formatAnalysisDate(result.analysisDate) : ''
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50/30 dark:from-gray-900 dark:via-purple-950/30 dark:to-gray-900">
-      {/* Header */}
-      <header className="border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <Target className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-              <span className="text-xl font-bold text-gray-900 dark:text-white">TrovaMi</span>
-            </Link>
-            <div className="flex items-center gap-4">
-              <Link
-                href="/tools/public-scan"
-                className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 text-sm font-medium"
+    <div className="min-h-screen bg-surface">
+      {/* pt generoso: la Navbar pubblica è fissa e non lascia spazio dietro di sé */}
+      <div className="mx-auto max-w-4xl px-4 pb-16 pt-24 sm:px-6 sm:pb-24 sm:pt-28 lg:px-8">
+        <ToolPageHeader
+          eyebrow="Tool gratuito"
+          title="Scopri con cosa è costruito un sito"
+          description="Incolla un indirizzo e vedi cosa c’è sotto: il sistema con cui è fatto il sito, le librerie che carica, gli strumenti di statistica e la rete che lo serve."
+          usage={usage}
+        >
+          <ToolUrlForm
+            value={url}
+            onChange={setUrl}
+            onSubmit={handleAnalyze}
+            loading={loading}
+            disabled={limitReached}
+            hint="Puoi scrivere solo il dominio: al resto dell’indirizzo pensiamo noi."
+          />
+        </ToolPageHeader>
+
+        {error && (
+          <ToolStatusMessage tone="danger" title="Analisi non riuscita" className="mt-8">
+            <p>{error}</p>
+            <p className="mt-1">
+              Controlla che l’indirizzo sia scritto per intero e che il sito si apra nel browser.
+            </p>
+          </ToolStatusMessage>
+        )}
+
+        {/* Un solo messaggio alla volta: se il server ha già risposto con un
+            errore (anche quello di limite raggiunto), non ne impiliamo un altro. */}
+        {limitReached && !error && (
+          <ToolStatusMessage
+            tone="warning"
+            title="Hai usato tutte le analisi gratuite di oggi"
+            className="mt-8"
+          >
+            Il contatore riparte domani. Se ti serve analizzare più siti nella stessa giornata, i
+            piani a pagamento alzano il limite.
+          </ToolStatusMessage>
+        )}
+
+        {loading && (
+          <ToolLoadingState
+            label="Analisi delle tecnologie in corso"
+            showScore={false}
+            rows={6}
+            className="mt-12 sm:mt-16"
+          />
+        )}
+
+        {!loading && result && (
+          <ToolResultPanel
+            title="Tecnologie rilevate"
+            subject={hostnameOf(result.finalUrl)}
+            meta={analysisDate ? `Analizzato il ${analysisDate}` : undefined}
+            className="mt-12 sm:mt-16"
+          >
+            <ToolSummaryStats items={stats} />
+
+            {!result.isAccessible && (
+              <ToolStatusMessage
+                tone="warning"
+                title="Il sito ha risposto con un errore"
+                className="mt-8"
               >
-                Analisi Sito
-              </Link>
-              <Link
-                href="/register"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-              >
-                Inizia Gratis
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+                La pagina ha restituito lo stato HTTP {result.httpStatus}. Quello che segue è stato
+                letto in quella risposta, quindi potrebbe non corrispondere al sito vero.
+              </ToolStatusMessage>
+            )}
 
-      {/* Hero Section */}
-      <section className="pt-16 pb-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center px-4 py-2 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-sm font-medium mb-6">
-            <Code className="w-4 h-4 mr-2" />
-            Tool Gratuito - {usage?.remaining ?? 3} analisi rimaste oggi
-          </div>
-
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
-            Tech Stack{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">
-              Detector
-            </span>
-          </h1>
-
-          <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-            Scopri quali tecnologie usa un sito web: CMS, framework, librerie, analytics e molto altro.
-            Analisi istantanea e gratuita.
-          </p>
-
-          {/* Search Form */}
-          <form onSubmit={handleAnalyze} className="max-w-2xl mx-auto">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Globe className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder="esempio.com"
-                  className="w-full pl-12 pr-4 py-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg dark:text-white dark:placeholder-gray-400"
-                  disabled={loading || (usage !== null && !usage.canAnalyze)}
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={loading || (usage !== null && !usage.canAnalyze)}
-                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Analizzando...
-                  </>
-                ) : (
-                  <>
-                    <Search className="w-5 h-5" />
-                    Analizza
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-
-          {/* Error Message */}
-          {error && (
-            <div className="mt-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-300 flex items-center gap-2">
-              <XCircle className="w-5 h-5 flex-shrink-0" />
-              {error}
-            </div>
-          )}
-
-          {/* Usage Limit Warning */}
-          {usage && !usage.canAnalyze && (
-            <div className="mt-6 p-6 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-xl">
-              <p className="text-yellow-800 dark:text-yellow-200 mb-4">
-                Hai esaurito le {usage.limit} analisi gratuite di oggi.
-              </p>
-              <Link
-                href="/register"
-                className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-              >
-                Registrati per analisi illimitate
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Link>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Results Section */}
-      {result && (
-        <section className="py-12 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-5xl mx-auto">
-            {/* Summary Card */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8 mb-8">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                    Risultati per {new URL(result.finalUrl).hostname}
-                  </h2>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">
-                    Analizzato il {new Date(result.analysisDate).toLocaleDateString('it-IT', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+            {notes.length > 0 && (
+              <div className="mt-6 space-y-2">
+                {notes.map((note) => (
+                  <p key={note} className="max-w-2xl text-body text-content-muted">
+                    {note}
                   </p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className={`px-4 py-2 rounded-lg ${result.isAccessible ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'}`}>
-                    {result.isAccessible ? (
-                      <span className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4" />
-                        Sito accessibile
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-2">
-                        <XCircle className="w-4 h-4" />
-                        Problemi di accesso
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
-                      {result.totalTechnologies}
+                ))}
+              </div>
+            )}
+
+            {detected.length === 0 ? (
+              <div className="mt-10 border-t border-edge pt-6">
+                <p className="max-w-2xl text-body text-content">
+                  Nessuna delle tecnologie che sappiamo riconoscere compare nel codice di questa
+                  pagina.
+                </p>
+                <p className="mt-2 max-w-2xl text-body text-content-muted">
+                  Succede con i siti scritti su misura, con quelli che caricano i contenuti dopo
+                  l’apertura della pagina e quando davanti al sito c’è un servizio di protezione
+                  che risponde al posto suo.
+                </p>
+              </div>
+            ) : (
+              <dl className="mt-10">
+                {detected.map(({ key, techs }) => {
+                  const Icon = CATEGORY_META[key].icon
+
+                  return (
+                    <div
+                      key={key}
+                      className="grid gap-1 border-t border-edge py-4 sm:grid-cols-[13rem_1fr] sm:gap-6"
+                    >
+                      <dt className="flex items-start gap-2 text-caption text-content-subtle sm:pt-0.5">
+                        <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                        {CATEGORY_META[key].label}
+                      </dt>
+                      <dd className="min-w-0 text-body text-content">{techs.join(', ')}</dd>
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">tecnologie</div>
-                  </div>
-                </div>
-              </div>
+                  )
+                })}
+              </dl>
+            )}
 
-              {result.totalTechnologies === 0 ? (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  <Code className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Nessuna tecnologia comune rilevata.</p>
-                  <p className="text-sm mt-2">Il sito potrebbe usare tecnologie personalizzate o poco diffuse.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {(Object.keys(result.techStack) as Array<keyof TechStack>).map(category =>
-                    renderTechCategory(category, result.techStack[category])
-                  )}
-                </div>
-              )}
-            </div>
+            <p className="mt-8 max-w-2xl text-caption text-content-subtle">
+              Il rilevamento si basa sulle tracce lasciate nel codice della pagina: qualcosa può
+              sfuggire e qualcosa può comparire per somiglianza di nomi. Prendilo come
+              un’indicazione, non come un elenco definitivo.
+            </p>
+          </ToolResultPanel>
+        )}
 
-            {/* CTA */}
-            <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-8 text-center text-white">
-              <h3 className="text-2xl font-bold mb-4">
-                Vuoi analizzare i siti dei tuoi potenziali clienti?
-              </h3>
-              <p className="text-purple-100 mb-6 max-w-2xl mx-auto">
-                TrovaMi ti trova automaticamente aziende con problemi tecnici sui loro siti.
-                Lead qualificati pronti per i tuoi servizi.
-              </p>
-              <Link
-                href="/register"
-                className="inline-flex items-center px-8 py-4 bg-white text-purple-600 font-semibold rounded-xl hover:bg-gray-100 transition-colors"
-              >
-                Prova Gratis
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Link>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Features Section */}
-      {!result && (
-        <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-800">
-          <div className="max-w-5xl mx-auto">
-            <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-12">
-              Cosa rileva il Tech Stack Detector
+        {/* Prima dell'analisi: la stessa forma del risultato, con degli esempi.
+            Così l'utente sa già che aspetto avrà l'esito. */}
+        {!loading && !result && (
+          <section className="mt-12 border-t border-edge pt-10 sm:mt-16 sm:pt-12">
+            <h2 className="text-heading font-semibold text-content">
+              Cosa cerchiamo nel codice della pagina
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {[
-                { icon: Database, label: 'CMS', desc: 'WordPress, Shopify, Wix...' },
-                { icon: Code, label: 'Framework', desc: 'React, Vue, Angular...' },
-                { icon: Layers, label: 'Librerie', desc: 'jQuery, GSAP, D3.js...' },
-                { icon: Palette, label: 'CSS', desc: 'Bootstrap, Tailwind...' },
-                { icon: BarChart3, label: 'Analytics', desc: 'GA, GTM, Meta Pixel...' },
-                { icon: Cloud, label: 'CDN', desc: 'Cloudflare, Vercel...' },
-                { icon: Server, label: 'Server', desc: 'Apache, Nginx, PHP...' },
-                { icon: Shield, label: 'Sicurezza', desc: 'reCAPTCHA, SSL...' },
-              ].map((item, idx) => (
-                <div key={idx} className="text-center p-6 rounded-xl bg-gray-50 dark:bg-gray-700/50">
-                  <item.icon className="w-8 h-8 text-purple-600 dark:text-purple-400 mx-auto mb-3" />
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{item.label}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{item.desc}</p>
-                </div>
-              ))}
-            </div>
+            <p className="mt-2 max-w-2xl text-body text-content-muted">
+              Sempre le stesse categorie, per ogni sito analizzato. Nel risultato compaiono solo
+              quelle in cui abbiamo trovato qualcosa.
+            </p>
+
+            <dl className="mt-6">
+              {PREVIEW_CATEGORIES.map((key) => {
+                const Icon = CATEGORY_META[key].icon
+
+                return (
+                  <div
+                    key={key}
+                    className="grid gap-1 border-t border-edge py-4 sm:grid-cols-[13rem_1fr] sm:gap-6"
+                  >
+                    <dt className="flex items-start gap-2 text-caption text-content-subtle sm:pt-0.5">
+                      <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                      {CATEGORY_META[key].label}
+                    </dt>
+                    <dd className="min-w-0 text-body text-content-muted">
+                      {CATEGORY_META[key].examples}
+                    </dd>
+                  </div>
+                )
+              })}
+            </dl>
+          </section>
+        )}
+
+        <ToolSignupCta
+          className="mt-12 sm:mt-16"
+          title="Sapere com’è fatto un sito è metà del lavoro"
+          description="L’altra metà è trovare i siti su cui vale la pena farsi avanti. TrovaMi passa i controlli tecnici sui siti delle attività italiane e ti mostra quelle che hanno problemi che sai già risolvere, con nome, contatti e il dettaglio di cosa non va."
+        />
+
+        <ToolsCrossLinks currentSlug="tech-detector" className="mt-12 sm:mt-16" />
+
+        <section className="mt-12 border-t border-edge pt-10 sm:mt-16 sm:pt-12">
+          <h2 className="text-heading font-semibold text-content">
+            Una mail al mese, quando c’è qualcosa da dire
+          </h2>
+          <p className="mt-2 max-w-2xl text-body text-content-muted">
+            Ti avvisiamo quando esce un tool nuovo o cambia qualcosa che vale la pena sapere.
+            Niente altro.
+          </p>
+          <div className="mt-6 max-w-md">
+            <NewsletterForm variant="inline" placeholder="La tua email" buttonText="Iscriviti" />
           </div>
         </section>
-      )}
-
-      {/* Other Tools Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-8">
-            Altri Tool Gratuiti
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Link
-              href="/tools/public-scan"
-              className="p-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-500 transition-colors group"
-            >
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                  <Activity className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                    Analisi Sito Web
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Verifica SEO, performance e problemi tecnici
-                  </p>
-                </div>
-                <ArrowRight className="w-5 h-5 text-gray-400 ml-auto group-hover:text-blue-600 dark:group-hover:text-blue-400" />
-              </div>
-            </Link>
-            <div className="p-6 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-gray-200 dark:bg-gray-600 rounded-lg">
-                  <Lock className="w-6 h-6 text-gray-500 dark:text-gray-400" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-500 dark:text-gray-400">
-                    SEO Checker
-                  </h3>
-                  <p className="text-sm text-gray-400 dark:text-gray-500">
-                    Prossimamente...
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Newsletter */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-800/50">
-        <div className="max-w-xl mx-auto text-center">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            Resta aggiornato sui nuovi tool
-          </h2>
-          <p className="text-gray-600 dark:text-gray-300 mb-8">
-            Iscriviti alla newsletter per sapere quando lanceremo nuovi strumenti gratuiti.
-          </p>
-          <NewsletterForm variant="compact" />
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-2">
-              <Target className="w-6 h-6 text-blue-400" />
-              <span className="font-bold">TrovaMi</span>
-            </div>
-            <div className="flex gap-6 text-sm text-gray-400">
-              <Link href="/privacy" className="hover:text-white">Privacy</Link>
-              <Link href="/terms" className="hover:text-white">Termini</Link>
-              <Link href="/contact" className="hover:text-white">Contatti</Link>
-            </div>
-            <div className="text-sm text-gray-400">
-              P.IVA 07327360488
-            </div>
-          </div>
-        </div>
-      </footer>
+      </div>
     </div>
   )
 }
